@@ -6,6 +6,14 @@ trait Has_Components {
 
     protected $components = [];
 
+    public function load_components ($path) {
+
+        foreach (glob($path . '/*.component.php') as $component_path) {
+            include $component_path;
+        }
+
+    }
+    
     public function component ($class_name, $params = [], $render = true) {
 
         $class_name = 'Digitalis\\' . $class_name;
@@ -14,7 +22,7 @@ trait Has_Components {
 
         $component = new $class_name($params);
         $component->init();
-        
+
         if ($render) $component->render();
 
         $key = $class_name . "-" . $component->get_instance();
