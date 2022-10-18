@@ -11,7 +11,7 @@ abstract class Singleton {
 
     public function __wakeup(){ throw new \Exception("You may not dream me into existence."); }
 
-    public static function getInstance(): Singleton {
+    public static function get_instance () {
 
         $class = static::class;
 
@@ -23,5 +23,7 @@ abstract class Singleton {
         return self::$instances[$class];
         
     }
+
+    public function run () {} // Override me :)
 
 }
