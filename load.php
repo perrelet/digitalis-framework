@@ -11,6 +11,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'has-post-types.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'has-taxonomies.trait.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'base.abstract.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'singleton.abstract.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'component.abstract.php';
