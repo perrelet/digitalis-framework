@@ -18,7 +18,11 @@ abstract class Post_Type extends Base {
         
         add_action('init', [$this, 'register']);
 
+        $this->run();
+
     }
+
+    public function run () {}
 
     public function register () {
 
