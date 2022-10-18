@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Component extends Base implements Component_Template {
+abstract class Component extends Base {
     
     public static $count = 0;
     protected $instance;
@@ -26,7 +26,7 @@ abstract class Component extends Base implements Component_Template {
 
     public function render () {
 
-        $this->render_component();
+        if (method_exists($this, 'render_component')) $this->render_component();
 
     }
 
