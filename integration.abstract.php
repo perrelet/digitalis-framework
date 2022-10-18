@@ -7,7 +7,7 @@ abstract class Integration {
 	
 	public function __construct () {
 		
-		if (!$this->condition) return false;
+		if (!$this->condition()) return false;
 
 		$this->loaded = true;
 		$this->run();
