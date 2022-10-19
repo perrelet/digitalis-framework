@@ -4,29 +4,23 @@ namespace Digitalis;
 
 trait Has_Taxonomies {
 
-    protected $taxonomies = [];
+    use Can_Load;
 
     public function load_taxonomies ($path) {
 
-        foreach (glob($path . '/*.taxonomy.php') as $taxonomy_path) {
-
-            include $taxonomy_path;
-            $class = end(get_declared_classes());
-		    $this->taxonomies[$class] = new $class();
-
-        }
+        $this->autoload('taxonomy', $path, 'taxonomy.php');
 
     }
 
     public function get_taxonomy ($class_name) {
 
-        return isset($this->taxonomies[$class_name]) ? $this->taxonomies[$class_name] : null;
+        return $this->get_object('taxonomy', $class_name);
 
     }
 
     public function get_taxonomies () {
 
-        return $this->taxonomies;
+        return $this->get_object_group('taxonomy');
 
     }
 

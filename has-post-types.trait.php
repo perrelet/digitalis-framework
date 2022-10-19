@@ -4,29 +4,23 @@ namespace Digitalis;
 
 trait Has_Post_Types {
 
-    protected $post_types = [];
+    use Can_Load;
 
     public function load_post_types ($path) {
 
-        foreach (glob($path . '/*.post-type.php') as $post_type_path) {
-
-            include $post_type_path;
-            $class = end(get_declared_classes());
-		    $this->post_types[$class] = new $class();
-
-        }
+        $this->autoload('post-type', $path, 'post-type.php');
 
     }
 
     public function get_post_type ($class_name) {
 
-        return isset($this->post_types[$class_name]) ? $this->post_types[$class_name] : null;
+        return $this->get_object('post-type', $class_name);
 
     }
 
     public function get_post_types () {
 
-        return $this->post_types;
+        return $this->get_object_group('post-type');
 
     }
 
