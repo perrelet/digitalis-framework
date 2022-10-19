@@ -4,7 +4,7 @@ namespace Digitalis;
 
 trait Can_Load {
 
-    protected $instantiation_queue = [];
+    protected $loaded_classes = [];
     protected $object_groups = [];
 
     public function autoload ($group_key, $dir_path, $ext = 'php') {
@@ -22,7 +22,7 @@ trait Can_Load {
         if (!is_file($file_path)) return false;
 
         include $file_path;
-        $this->instantiation_queue[] = $group_key;
+        $this->loaded_classes[] = $group_key;
 
         return true;
 
@@ -30,11 +30,11 @@ trait Can_Load {
 
     public function instantiate () {
 
-        if (!$this->instantiation_queue) return false;
+        if (!$this->loaded_classes) return false;
 
         $classes = get_declared_classes();
 
-        foreach ($this->instantiation_queue as $i => $group_key) {
+        foreach ($this->loaded_classes as $i => $group_key) {
 
             if (!isset($this->object_groups[$group_key])) $this->object_groups[$group_key] = [];
 
@@ -43,7 +43,7 @@ trait Can_Load {
 
         }
 
-        $this->instantiation_queue = [];
+        $this->loaded_classes = [];
 
     }
 
