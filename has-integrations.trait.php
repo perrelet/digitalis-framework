@@ -11,7 +11,8 @@ trait Has_Integrations {
         foreach (glob($path . '/*.integration.php') as $integration_path) {
 
             include $integration_path;
-            $integration_class = end(get_declared_classes());
+            $classes = get_declared_classes();
+            $integration_class = end($classes);
 		    $this->integrations[$integration_class] = new $integration_class();
 
         }
