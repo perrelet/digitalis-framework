@@ -19,3 +19,5 @@ require DIGITALIS_FRAMEWORK_PATH . 'post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'integration.abstract.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'updater.abstract.php';
