@@ -59,6 +59,8 @@ trait Can_Load {
 
     protected function get_class_name ($file) {
 
+        // https://stackoverflow.com/questions/7153000/get-class-name-from-file
+
         $fp = fopen($file, 'r');
         $class = $namespace = $buffer = '';
         $i = 0;
