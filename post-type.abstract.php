@@ -8,7 +8,7 @@ abstract class Post_Type extends Base {
     protected $archive      = 'post-types';
     protected $icon         = 'dashicons-format-aside';
 
-    protected $text_domain  = THEME_TEXT_DOMAIN;
+    protected $text_domain  = 'default';
     protected $singular     = 'Post Type';
     protected $plural       = 'Post Types';
 

@@ -7,7 +7,7 @@ abstract class Taxonomy extends Base {
     protected $slug = 'taxonomy';
     protected $post_types = [];
 
-    protected $text_domain  = THEME_TEXT_DOMAIN;
+    protected $text_domain  = 'default';
     protected $singular     = 'Taxonomy';
     protected $plural       = 'Taxonomies';
 
