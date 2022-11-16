@@ -23,3 +23,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'acf/bidirectional-relationship.integration.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'updater.abstract.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'theme.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'woocommerce.theme.php';
