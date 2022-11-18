@@ -1,119 +1,242 @@
 //https://dribbble.com/shots/16271760-Sidebar-navigation-for-Dashboard
 
+@mixin soft-shadow {
+    box-shadow:
+    0px 4.5px 3.6px rgba(0, 0, 0, 0.024),
+    0px 12.5px 10px rgba(0, 0, 0, 0.035),
+    0px 30.1px 24.1px rgba(0, 0, 0, 0.046),
+    0px 100px 80px rgba(0, 0, 0, 0.07)
+    ;
+  
+}
+
+//
+
+
+//
 
 body {
 
-    .woocommerce table.shop_table {
+    .woocommerce {
 
-        border-collapse: separate !important;
-        border-radius: 0.5rem;
+        table.shop_table {
 
-    }
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 0.5rem;
+            border: 0;
 
-    &.woocommerce-account {
-        
-        .woocommerce-MyAccount-navigation ul {
+            background: white;
+            @include soft-shadow();
+
+        }
+
+        form .form-row .woocommerce-input-wrapper {
 
             display: flex;
             flex-direction: column;
+    
+            .normal-description {
+    
+                display: block;
+                order: -1;
+                margin-bottom: 0.5em;
+                font-size: 0.9em;
+    
+            }
+    
+        }
+
+    }
+
+}
+
+body.woocommerce-account {
+
+    background-color: #fbfbfb;
+
+    .woocommerce {
+
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+
+        > * {
+
+            float: none;
+
+        }
         
-            li {
+        nav.woocommerce-MyAccount-navigation {
 
-                padding: 0.125rem 0;
-                
-                &.is-active a {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            max-width: 260px;
+            margin-right: 1rem;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
 
-                    text-decoration: none;
-                    background-color: #efefef99;
-                    color: #111;
+            background: white;
+            @include soft-shadow();
 
-                }
+            + div{
 
-                a {
+                width: 100%;
 
-                    position: relative;
+            }
+            
+            ul {
 
-                    transition: 0.2s;
+                display: flex;
+                flex-direction: column;
+                margin: 0;
+            
+                li {
 
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    justify-content: flex-start;
+                    padding: 0.125rem 0;
 
-                    padding: 0.5rem 1rem;
-                    border-radius: 0.5rem;
-                    color: #999999;
-                    font-weight: 600;
-                    font-size: 0.9em;
+                    &:first-child {
 
-                    &:before,
-                    &:after {
-                        content: "";
-                        position: absolute;
-                        width: 0.45em;
-                        height: 0.15em;
-                        right: 1em;
-                        top: 0;
-                        bottom: 0;
-                        margin-top: auto;
-                        margin-bottom: auto;
-                        transform-origin: calc(100% - (0.15em / 2)) 50%;
-                        background-color: currentColor;
-                        opacity: 0;
-                        transition: 0.2s;
+                        padding-top: 0;
+
                     }
-                
-                    &:before {
-                        transform: translate(-1em, 0.05em) rotate(45deg)
-                    }
-                
-                    &:after {
-                        transform: translate(-1em, 0.05em) rotate(-45deg)
-                    }
-
-                    i {
-                        margin-right: 0.75rem;
-                        font-size: 1.2em;
-                        display: block;
-                    }
-
-                    &:hover,
-                    &:active,
-                    &:focus-visible {
+                    
+                    &.is-active a {
 
                         text-decoration: none;
+                        background-color: #efefef99;
                         color: #111;
+
+                    }
+
+                    a {
+
+                        position: relative;
+
+                        transition: 0.2s;
+
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        justify-content: flex-start;
+
+                        padding: 0.5rem 1rem;
+                        border-radius: 0.5rem;
+                        color: #999999;
+                        font-weight: 600;
+                        font-size: 0.9em;
 
                         &:before,
                         &:after {
-                            opacity: 1;
+                            content: "";
+                            position: absolute;
+                            width: 0.45em;
+                            height: 0.15em;
+                            right: 1em;
+                            top: 0;
+                            bottom: 0;
+                            margin-top: auto;
+                            margin-bottom: auto;
+                            transform-origin: calc(100% - (0.15em / 2)) 50%;
+                            background-color: currentColor;
+                            opacity: 0;
+                            transition: 0.2s;
                         }
-
+                    
                         &:before {
-                            transform: translate(0px, 0.05em) rotate(45deg)
+                            transform: translate(-1em, 0.05em) rotate(45deg)
                         }
                     
                         &:after {
-                            transform: translate(0px, 0.05em) rotate(-45deg)
+                            transform: translate(-1em, 0.05em) rotate(-45deg)
+                        }
+
+                        i {
+                            margin-right: 0.75rem;
+                            font-size: 1.2em;
+                            display: block;
+                        }
+
+                        &:hover,
+                        &:active,
+                        &:focus-visible {
+
+                            text-decoration: none;
+                            color: #111;
+
+                            &:before,
+                            &:after {
+                                opacity: 1;
+                            }
+
+                            &:before {
+                                transform: translate(0px, 0.05em) rotate(45deg)
+                            }
+                        
+                            &:after {
+                                transform: translate(0px, 0.05em) rotate(-45deg)
+                            }
+
+                        }
+
+                        &:hover {
+
+                            background-color: #efefef;
+
+                        }
+
+                        &:active,
+                        &:focus-visible {
+
+                            background-color: #efefef99;
+
+                        }
+
+                        &:focus-visible {
+                            outline: #121212 auto 1px;
                         }
 
                     }
 
-                    &:hover {
+                }
 
-                        background-color: #efefef;
+            }
 
-                    }
+            @media only screen and (max-width: 600px) {
 
-                    &:active,
-                    &:focus-visible {
+                width: auto;
 
-                        background-color: #efefef99;
+                ul {
 
-                    }
+                    li {
 
-                    &:focus-visible {
-                        outline: #121212 auto 1px;
+                        a {
+
+                            font-size: 1em;
+                            padding: 0.75rem 1rem;
+
+                            &:before,
+                            &:after {
+                                content: none;
+                            }
+
+                            i {
+
+                                margin-right: 0;
+
+                            }
+
+                            span {
+
+                                position: absolute;
+                                opacity: 0;
+
+                            }
+
+                        }
+
                     }
 
                 }
