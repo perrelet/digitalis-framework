@@ -19,7 +19,7 @@ abstract class Woocommerce_Theme extends Theme {
         $template_directory = trailingslashit($this->path) . 'woocommerce/';
         $path = $template_directory . $template_name;
     
-        jprint($template_directory);
+        //jprint($template_directory);
 
         return file_exists($path) ? $path : $template;
     
