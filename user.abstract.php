@@ -5,6 +5,7 @@ namespace Digitalis;
 abstract class User {
 
     protected $id;
+    protected $wp_user;
 
     public function __construct ($user_id = null) {
 
@@ -21,6 +22,14 @@ abstract class User {
     public function get_id () {
 
         return $this->id;
+
+    }
+
+    public function get_wp_user () {
+
+        if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->id);
+
+        return $this->wp_user;
 
     }
 
