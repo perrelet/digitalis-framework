@@ -25,6 +25,14 @@ abstract class User {
 
     }
 
+    public function get_meta ($key, $single = true) {
+
+       return get_user_meta($this->id, $key, $single);
+
+    }
+
+    // https://developer.wordpress.org/reference/classes/wp_user/
+
     public function get_wp_user () {
 
         if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->id);

@@ -8,6 +8,8 @@ trait Is_Woo_Customer {
 
     protected $customer;
 
+    // https://woocommerce.github.io/code-reference/classes/WC-Customer.html
+
     public function get_customer () {
 
         if (is_null($this->customer)) {
