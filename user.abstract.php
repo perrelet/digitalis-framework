@@ -4,8 +4,19 @@ namespace Digitalis;
 
 abstract class User {
 
+    protected static $users = [];
+
     protected $id;
     protected $wp_user;
+
+    public static function get_user ($user_id = null) {
+
+        if (is_null($user_id)) $user_id = get_current_user_id();
+        if (!isset(self::$users[$user_id])) self::$users[$user_id] = new User($user_id);
+
+        return self::$users[$user_id];
+
+    }
 
     public function __construct ($user_id = null) {
 
