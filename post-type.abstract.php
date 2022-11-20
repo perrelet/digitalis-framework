@@ -18,6 +18,9 @@ abstract class Post_Type extends Base {
         
         add_action('init', [$this, 'register']);
 
+        if (method_exists($this, 'columns')) add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
+        if (method_exists($this, 'column')) add_filter("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
+
         $this->run();
 
     }
