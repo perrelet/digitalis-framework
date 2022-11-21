@@ -20,6 +20,8 @@ abstract class Post_Type extends Base {
 
         if (method_exists($this, 'columns')) add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
         if (method_exists($this, 'column')) add_filter("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
+        if (method_exists($this, 'filters')) add_action('restrict_manage_posts', [$this, 'filters_wrap']);
+        if (method_exists($this, 'query')) add_action('pre_get_posts', [$this, 'query_wrap']);
 
         $this->run();
 
@@ -133,6 +135,28 @@ abstract class Post_Type extends Base {
             'all_items'          => __( $this->plural,			    		    $this->text_domain ),
             'archive_title'      => __( $this->plural,			    		    $this->text_domain ),
         ]);
+
+    }
+
+    //
+
+    public function filters_wrap () {
+
+        global $pagenow, $post_type;
+
+        if (!is_admin() || ($post_type != $this->slug) || ($pagenow != 'edit.php')) return;
+
+        $this->filters();
+
+    }
+
+    public function query_wrap ($query) {
+
+        global $pagenow, $post_type;
+
+        if (!is_admin() || ($post_type != $this->slug) || ($pagenow != 'edit.php') || !isset($query->query_vars['post_type']) || ($query->query_vars['post_type'] != $this->slug)) return;
+
+        $this->query($query);
 
     }
 
