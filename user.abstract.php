@@ -52,4 +52,10 @@ abstract class User {
 
     }
 
+    public function get_display_name () {
+
+        return $this->get_wp_user()->display_name;
+
+    }
+
 }
