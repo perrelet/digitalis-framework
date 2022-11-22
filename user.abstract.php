@@ -2,6 +2,7 @@
 
 namespace Digitalis;
 
+use \WP_User;
 abstract class User {
 
     protected static $users = [];
@@ -49,6 +50,14 @@ abstract class User {
         if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->id);
 
         return $this->wp_user;
+
+    }
+
+    public function set_wp_user ($wp_user) {
+
+        if (!($wp_user instanceof WP_User)) return;
+
+        $this->wp_user = $wp_user;
 
     }
 
