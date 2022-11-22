@@ -27,5 +27,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'updater.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'woocommerce.theme.php';
+require DIGITALIS_FRAMEWORK_PATH . 'woocommerce-clean.theme.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'user.abstract.php';
