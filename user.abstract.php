@@ -61,9 +61,51 @@ abstract class User {
 
     }
 
+    public function get_username () {
+
+        return $this->get_wp_user()->user_login;
+
+    }
+
+    public function get_email () {
+
+        return $this->get_wp_user()->user_email;
+
+    }
+
     public function get_display_name () {
 
         return $this->get_wp_user()->display_name;
+
+    }
+
+    public function get_nicename () {
+
+        return $this->get_wp_user()->user_nicename;
+
+    }
+
+    public function get_nice_name () {
+
+        return $this->get_nicename();
+
+    }
+
+    public function get_first_name () {
+
+        return $this->get_wp_user()->user_firstname;
+
+    }
+
+    public function get_last_name () {
+
+        return $this->get_wp_user()->user_lastname;
+
+    }
+
+    public function get_full_name () {
+
+        return $this->get_first_name() . ($this->get_last_name() ? " " . $this->get_last_name() : "");
 
     }
 
