@@ -1,0 +1,43 @@
+body {
+
+    .inline { display: inline; }
+
+	.xl { font-size: 1.4em; }
+	.lg { font-size: 1.2em; }
+	.sm { font-size: 0.9em; }
+	
+	.xxxslow { animation-duration: 64s; }
+	.xxslow { animation-duration: 32s; }
+	.xslow { animation-duration: 16s; }
+	.slow { animation-duration: 8s; }
+
+	.reverse { animation-direction: reverse; }
+
+	.p-pad *:first-child,
+	.p-pad p + p,
+	.p-pad p + ul { margin-top: 0; }
+
+	.p-pad *:last-child { margin-bottom: 0; }
+
+    .full { width: 100%; }
+
+    .padding { padding: 2rem; }
+
+    .flex-center {
+        align-items: center;
+        justify-content: center;
+        align-content: center;
+        text-align: center;
+    }
+
+    .hide-lt-page { @include media("<page") { display: none; } }
+    .hide-lt-tablet { @include media("<tablet") { display: none; } }
+    .hide-lt-phone-landscape { @include media("<phone-landscape") { display: none; } }
+    .hide-lt-phone-portrait { @include media("<phone-portrait") { display: none; } }
+
+    .hide-gt-page { @include media(">=page") { display: none; } }
+    .hide-gt-tablet { @include media(">=tablet") { display: none; } }
+    .hide-gt-phone-landscape { @include media(">=phone-landscape") { display: none; } }
+    .hide-gt-phone-portrait { @include media(">=phone-portrait") { display: none; } }
+    
+}

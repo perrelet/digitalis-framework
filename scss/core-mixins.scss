@@ -1,0 +1,229 @@
+// !DEFAULTS
+
+$digitalis-column-padding: $col-px;
+$digitalis-stagger-iterations: 12 !default;
+
+// COLUMNS
+
+@mixin cols-2 {
+
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+
+    > * {
+    
+        width: 50%;
+
+        &:first-child {
+            margin-right: $digitalis-column-padding;
+        }
+        &:last-child {
+            margin-left: $digitalis-column-padding;
+        }
+
+    }
+
+}
+
+@mixin cols-collapse {
+
+    flex-direction: column;
+
+    > * {
+    
+        width: 100%;
+        /*max-width: 520px; */
+
+        &:first-child {
+            margin-right: 0;
+            margin-bottom: $digitalis-column-padding;
+        }
+        &:last-child {
+            margin-left: 0;
+        }
+
+    }
+
+    .explode {
+
+        margin-top: 0;
+        margin-bottom: 0;
+
+    }
+
+}
+
+// VISIBILITY
+
+@mixin remove-first ($when: "<=tablet") {
+
+    @include media($when) {
+
+        > * {
+
+            &:first-child {
+                display: none;
+            }
+
+        }
+
+    }
+
+}
+
+@mixin remove-last ($when: "<=tablet") {
+
+    @include media($when) {
+
+        > * {
+
+            &:last-child {
+                display: none;
+            }
+
+        }
+
+    }
+
+}
+
+// PSEUDO ELEMENTS
+
+@mixin cover-pseudo {
+
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+
+}
+
+@mixin cover-before {
+
+    position: relative;
+
+    &:before {
+
+        @include cover-pseudo();
+
+    }
+
+}
+
+@mixin cover-after {
+
+    position: relative;
+
+    &:after {
+
+        @include cover-pseudo();
+
+    }
+
+}
+
+@mixin cover-both {
+
+    position: relative;
+
+    &:before,
+    &:after {
+
+        @include cover-pseudo();
+
+    }
+
+}
+
+// TIME
+
+@mixin quick-slow {
+
+    transition: 0.5s;
+
+    &:hover {
+
+        transition: 0.05s;
+
+    }
+
+}
+
+@mixin quick-slow-pseudo {
+
+    &:before,
+    &:after {
+        transition: 0.5s;
+    }
+
+    &:hover {
+        &:before,
+        &:after {
+            transition: 0.05s;
+        }
+    }
+
+}
+
+// XYZ
+
+@mixin explode {
+    margin-top: $sec-py * -1.5;
+    margin-bottom: $sec-py * -1.5;
+    position: relative;
+    z-index: 1; 
+}
+
+// ANIMATION STAGGERING
+
+@mixin stagger-animation ($delay: 50ms, $n: $digitalis-stagger-iterations) {
+    @for $i from 0 to $n {
+        &:nth-child(#{$i + 1}) { animation-delay: #{$delay * $i}; }
+    }
+}
+
+@mixin stagger-transition ($delay: 50ms, $n: $digitalis-stagger-iterations) {
+    @for $i from 0 to $n {
+        &:nth-child(#{$i + 1}) { transition-delay: #{$delay * $i}; }
+    }
+}
+
+@mixin stagger-archive ($delay: 100ms, $break_1: 644px, $break_2: 944px) {
+
+    @for $i from 0 to 3 {
+        > *:nth-child(3n + #{$i + 1}) {
+            transition-delay: #{$delay * $i};
+        }
+    }
+
+    @media (max-width: $break_2) {
+
+        @for $i from 0 to 2 {
+            > *:nth-child(2n + #{$i + 1}) {
+                transition-delay: #{$delay * $i};
+            }
+        }
+
+    }
+
+    @media (max-width: $break_1) {
+        > *:nth-child(n) {
+            transition-delay: 0s;
+        }
+    }   
+
+}
+
+// TEXT FX
+
+@mixin text-clip {
+    -webkit-text-fill-color: transparent;
+    text-fill-color: transparent;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    -webkit-background-clip: text;
+    background-clip: text;
+}

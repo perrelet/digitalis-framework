@@ -1,0 +1,102 @@
+body *:focus { outline: none !important; }
+body .p-pad p:first-child,
+body .ct-inner-content p:first-child,
+body .ct-text-block p:first-child { margin-top: 0; }
+body .p-pad p:last-child,
+body .ct-inner-content p:last-child,
+body .ct-text-block p:last-child { margin-bottom: 0; }
+body iframe { border: 0; }
+body figure { margin: 0; }
+
+[data-width=full] > .ct-section-inner-wrap { max-width: 100%; }
+[data-padding=none] > .ct-section-inner-wrap { max-width: 100%; padding: 0; }
+
+/* @media (max-width:480px) {
+	body .ct-section-inner-wrap {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+} */
+
+.ct-text-block + .ct-text-block {
+    margin-top: 1rem;
+}
+
+.ct-headline + .ct-headline {
+    margin-top: 0;
+}
+
+.ct-headline,
+.ct-text-block {
+    max-width: $b-tablet * 1px;
+}
+
+.ct-section > .ct-section-inner-wrap {
+    align-items: center;
+}
+
+.ct-section-inner-wrap > .ct-headline:first-child,
+.ct-div-block > .ct-headline:first-child {
+    margin-top: 0;
+}
+
+// OXYGEN MIXINS
+
+@mixin hamburger-animation ($duration: 0.25s) {
+
+	.oxy-nav-menu-hamburger-wrap {
+
+		.oxy-nav-menu-hamburger-line {
+
+			transition: $duration;
+
+			&:nth-child(1) { transition-delay: 0s; }
+			&:nth-child(2) { transition-delay: $duration / 4; }
+			&:nth-child(3) { transition-delay: $duration / 2; }
+
+		}
+
+		&:hover,
+		&:active {
+
+			.oxy-nav-menu-hamburger-line {
+
+				transform: rotate(180deg);
+
+				&:nth-child(1) {
+					transform: rotate(90deg);
+				}
+				
+			}
+			
+		}
+
+	}
+
+}
+
+@mixin hamburger ($border-radius: 3px) {
+	.oxy-nav-menu-hamburger-wrap .oxy-nav-menu-hamburger-line {
+		border-radius: $border-radius;
+		@content;
+	}
+}
+
+@mixin hamburger-hover {
+	.oxy-nav-menu-hamburger-wrap:hover .oxy-nav-menu-hamburger-line {
+		@content;
+	}
+}
+
+@mixin hamburger-active {
+	.oxy-nav-menu-hamburger-wrap:active .oxy-nav-menu-hamburger-line {
+		@content;
+	}
+}
+
+@mixin hamburger-interact {
+	.oxy-nav-menu-hamburger-wrap:active .oxy-nav-menu-hamburger-line,
+	.oxy-nav-menu-hamburger-wrap:hover .oxy-nav-menu-hamburger-line {
+		@content;
+	}
+}

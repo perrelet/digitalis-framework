@@ -1,0 +1,126 @@
+@import 'core-mixins';
+
+// SECTIONS
+
+section.center-section > .ct-section-inner-wrap { align-items: center; }
+section.relative-section > .ct-section-inner-wrap { position: relative; }
+
+.ct-section.merge {
+    
+    > .ct-section-inner-wrap {
+        padding-bottom: $sec-py * 0.5;
+    }
+
+    + .ct-section .ct-section-inner-wrap {
+        padding-top: $sec-py * 0.5;
+    }
+
+    &.cols-2 {
+
+        @include media ("<=tablet") {
+
+            > .ct-section-inner-wrap {
+                padding-bottom: $sec-py * 0.25;
+            }
+        
+            + .ct-section .ct-section-inner-wrap {
+                padding-top: $sec-py * 0.25;
+            }
+
+        }
+
+    }
+
+}
+
+// COLUMNS
+
+div.cols-stretch,
+.ct-section.cols-stretch > .ct-section-inner-wrap { align-items: stretch; }
+
+div.cols-2,
+.ct-section.cols-2 > .ct-section-inner-wrap {
+
+    @include cols-2();
+    @include media("<=tablet") { @include cols-collapse(); }
+
+}
+
+div.cols-2-page,
+.ct-section.cols-2-page > .ct-section-inner-wrap {
+
+    @include cols-2();
+    @include media("<=page") { @include cols-collapse(); }
+
+}
+
+div.cols-2.phone-landscape,
+.ct-section.cols-2.phone-landscape > .ct-section-inner-wrap {
+
+    @include cols-2();
+    @include media("<=phone-landscape") { @include cols-collapse(); }
+
+}
+
+div.cols-2.swap,
+.ct-section.cols-2.swap > .ct-section-inner-wrap {
+
+    @include media("<=tablet") {
+
+        > * {
+
+            &:first-child {
+                order: 1;
+                margin-bottom: 0;
+            }
+            
+            &:last-child {
+                margin-bottom: $digitalis-column-padding;
+            }
+
+        }
+
+    }
+
+}
+
+// VISIBILITY
+
+div.cols-2.remove-first,
+.ct-section.cols-2.remove-first > .ct-section-inner-wrap { @include remove-first(); }
+
+div.cols-2.remove-last,
+.ct-section.cols-2.remove-last > .ct-section-inner-wrap { @include remove-last(); }
+
+div.cols-2-page.remove-first,
+.ct-section.cols-2-page.remove-first > .ct-section-inner-wrap { @include remove-first("<=page"); }
+
+div.cols-2-page.remove-last,
+.ct-section.cols-2-page.remove-last > .ct-section-inner-wrap { @include remove-last("<=page"); }
+
+// PSEUDO ELEMENTS
+
+.cover-pseudo { @include cover-pseudo(); }
+.cover-before { @include cover-before(); }
+.cover-after { @include cover-after(); }
+.cover-both { @include cover-both(); }
+
+// TIME
+
+.quick-slow { @include quick-slow(); }
+.quick-slow-pseudo { @include quick-slow-pseudo(); }
+
+// XYZ
+
+.explode { @include explode(); }
+
+// ANIMATION STAGGERING
+
+.stagger-ani { @include stagger-animation(); }
+.stagger-tran > * { @include stagger-transition(); }
+.stagger-archive { @include stagger-archive(); }
+
+// TEXT FX
+
+.text-clip { @include text-clip; }
+
