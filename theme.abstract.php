@@ -2,6 +2,7 @@
 
 namespace Digitalis;
 
+use \WP_Styles;
 abstract class Theme {
 
     protected $actions = [
@@ -11,9 +12,13 @@ abstract class Theme {
     protected $url;
     protected $path;
 
+    protected $styles;
+
     public function __construct () {
 
         foreach ($this->actions as $action => $method) if (is_callable([$this, $method])) add_action($action, [$this, $method]);
+
+        if (method_exists($this, 'init')) $this->init();
 
     }
 
@@ -24,6 +29,27 @@ abstract class Theme {
         $this->url = $url;
         $this->path = $path;
 
+    }
+
+    //
+
+    public function enqueue_style_last ($handle, $src, $deps = [], $version = false) {
+
+        if (is_null($this->styles)) {
+
+            $this->styles = new WP_Styles();
+
+            add_action('wp_head', function () {
+
+                $this->styles->do_items();
+    
+            }, PHP_INT_MAX);
+
+        }
+
+        $this->styles->add($handle, $src, $deps, $version);
+        $this->styles->enqueue($handle);
+    
     }
 
     //
