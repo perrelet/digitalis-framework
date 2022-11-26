@@ -1,0 +1,75 @@
+
+
+//
+// OXYGEN MENU
+//
+
+nav.oxy-nav-menu {
+
+    ul.oxy-nav-menu-list {
+
+        li.menu-item {
+
+            //
+
+            a {
+
+                //
+
+                &:hover {
+
+                    //                        
+
+                }
+
+                &:active {
+
+                    //
+
+                }
+
+            }
+
+            &.current-menu-item {
+
+                a {
+
+                    //
+
+                }
+
+            }
+
+        }
+
+    }
+
+    &.oxy-nav-menu-open {
+
+        ul.oxy-nav-menu-list {
+
+            li.menu-item {
+
+                a {
+
+                    //
+
+                }
+
+                &.current-menu-item {
+
+                    a {
+
+                        //
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+} // .nav.oxy-nav-menu
