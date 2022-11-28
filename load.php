@@ -23,6 +23,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'integration.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'acf/bidirectional-relationship.integration.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'builders/builder.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'builders/oxygen.builder.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'updater.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'theme.abstract.php';
