@@ -11,9 +11,7 @@ abstract class Theme {
 
     protected $url;
     protected $path;
-
-    protected $styles;
-
+    
     public function __construct () {
 
         foreach ($this->actions as $action => $method) if (is_callable([$this, $method])) add_action($action, [$this, $method]);
@@ -35,20 +33,25 @@ abstract class Theme {
 
     public function enqueue_style_last ($handle, $src, $deps = [], $version = false) {
 
-        if (is_null($this->styles)) {
+        if (defined("SHOW_CT_BUILDER") && !defined("OXYGEN_IFRAME")) return;
 
-            $this->styles = new WP_Styles();
+        global $digitalis_styles;
+
+        if (is_null($digitalis_styles)) {
+
+            $digitalis_styles = new WP_Styles();
 
             add_action('wp_head', function () {
 
-                $this->styles->do_items();
+                global $digitalis_styles;
+                $digitalis_styles->do_items();
     
             }, PHP_INT_MAX);
 
         }
 
-        $this->styles->add($handle, $src, $deps, $version);
-        $this->styles->enqueue($handle);
+        $digitalis_styles->add($handle, $src, $deps, $version);
+        $digitalis_styles->enqueue($handle);
     
     }
 
