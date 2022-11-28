@@ -4,6 +4,7 @@ namespace Digitalis;
 
 interface Builder_Interface {
 
+    public static function get_slug ();
     public static function get_name ();
     public static function is_loaded ();
     public static function is_backend ();
@@ -38,6 +39,18 @@ abstract class Builder implements Builder_Interface {
         }
 
         return self::$builder;
+
+    }
+
+    public static function call ($method) {
+
+        return self::get_builder() ? call_user_func(self::get_builder() . "::" . $method) : false;
+
+    }
+
+    public static function get_builder_slug () {
+
+        return self::call('get_slug');
 
     }
 

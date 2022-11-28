@@ -4,6 +4,12 @@ namespace Digitalis;
 
 class Oxygen extends Builder {
 
+    public static function get_slug () {
+
+        return "oxygen";
+
+    }
+
     public static function get_name () {
 
         return "Oxygen Builder";
