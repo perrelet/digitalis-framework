@@ -16,15 +16,16 @@ $type-ratios: (
     @return map-get($type-ratios, $key);
 }
 
-@mixin generate-headings ($ratio: "goldenRatio", $screen: 4vw, $reduction_1: 0.5) {
+@mixin generate-headings ($ratio: "goldenRatio", $screen: 4vw, $reduction_1: 0.5, $base-size: 1rem) {
 
-    $type-base-size: 1rem;                          // Recommended
+    $type-base-size: $base-size;                    // Recommended
     $type-size-ratio: type-ratio($ratio);           // Select by key of map, or use a custom value
     $type-levels: 4, 3, 2, 1;                       // List in descending order to prevent extra sort function Limited to high-touch heading styles
 
     // Create map with h[x] as key and computed font-size as value
     $type-styles: ();
     $level-size: $type-base-size;
+    //$level-size: $level-size / $type-size-ratio;
 
     @each $level in $type-levels {
 
