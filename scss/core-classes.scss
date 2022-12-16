@@ -2,8 +2,8 @@
 
 // SECTIONS
 
-section.center-section > .ct-section-inner-wrap { align-items: center; }
-section.relative-section > .ct-section-inner-wrap { position: relative; }
+.ct-section.center-section > .ct-section-inner-wrap { align-items: center; }
+.ct-section.relative-section > .ct-section-inner-wrap { position: relative; }
 
 .ct-section.merge {
     
@@ -33,7 +33,7 @@ section.relative-section > .ct-section-inner-wrap { position: relative; }
 
 }
 
-section.screen-height {
+.ct-section.screen-height {
 
     padding-top: 0;
     padding-bottom: 0;
