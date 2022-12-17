@@ -33,3 +33,5 @@ require DIGITALIS_FRAMEWORK_PATH . 'woocommerce.theme.php';
 require DIGITALIS_FRAMEWORK_PATH . 'woocommerce-clean.theme.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'user.abstract.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'functions.php';
