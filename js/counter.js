@@ -8,9 +8,7 @@
         init: function () {
 
             var url = new URL(window.location.href);
-            var ct_builder = url.searchParams.get("ct_builder");
-
-            if (ct_builder) return;
+            if (url.searchParams.get("ct_builder")) return;
 
             this.counters = document.querySelectorAll('.digitalis-counter');
 
