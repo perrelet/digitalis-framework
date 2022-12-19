@@ -39,31 +39,50 @@ body figure { margin: 0; }
 
 @mixin hamburger-animation ($duration: 0.25s) {
 
-	.oxy-nav-menu-hamburger-wrap {
+	nav {
 
-		.oxy-nav-menu-hamburger-line {
-
-			transition: $duration;
-
-			&:nth-child(1) { transition-delay: 0s; }
-			&:nth-child(2) { transition-delay: $duration / 4; }
-			&:nth-child(3) { transition-delay: $duration / 2; }
-
-		}
-
-		&:hover,
-		&:active {
+		.oxy-nav-menu-hamburger-wrap {
 
 			.oxy-nav-menu-hamburger-line {
-
-				transform: rotate(180deg);
-
-				&:nth-child(1) {
-					transform: rotate(90deg);
+	
+				transition: $duration;
+	
+				&:nth-child(1) { transition-delay: 0s; }
+				&:nth-child(2) { transition-delay: $duration / 4; }
+				&:nth-child(3) { transition-delay: $duration / 2; }
+	
+			}
+	
+			&:hover,
+			&:active {
+	
+				.oxy-nav-menu-hamburger-line {
+	
+					transform: rotate(180deg);
+					
 				}
 				
 			}
-			
+	
+		}
+
+		&.oxy-nav-menu-open {
+
+			.oxy-nav-menu-hamburger-wrap {
+
+				&:hover,
+				&:active {
+		
+					.oxy-nav-menu-hamburger-line:nth-child(1) {
+	
+						transform: rotate(90deg);
+						
+					}
+					
+				}
+
+			}
+
 		}
 
 	}
