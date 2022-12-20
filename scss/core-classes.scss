@@ -78,7 +78,7 @@ div.cols-2.phone-landscape,
 }
 
 div.cols-2.swap,
-.ct-section.cols-2.swap > .ct-section-inner-wrap {
+.ct-section.swap > .ct-section-inner-wrap {
 
     @include media("<=tablet") {
 

@@ -17,6 +17,26 @@ abstract class Builder implements Builder_Interface {
     protected static $builders = ['Oxygen'];
     protected static $builder;
 
+    protected static $utility_classes = [
+
+        'inline',
+        'xl', 'lg', 'sm',
+        'xxxslow', 'xxslow', 'xslow', 'slow', 'reverse',
+        'quick-slow', 'quick-slow-pseudo',
+        'p-pad',
+        'full', 'full-auto',
+        'flex-center',
+
+        'hide-lt-page', 'hide-lt-tablet', 'hide-lt-phone-landscape', 'hide-lt-phone-portrait', 
+        'hide-gt-page', 'hide-gt-tablet', 'hide-gt-phone-landscape', 'hide-gt-phone-portrait',
+
+        'center-section', 'relative-section', 'merge', 'screen-height', 'explode',
+        'cols-2', 'cols-stretch', 'cols-2-page', 'phone-landscape', 'swap', 'remove-first', 'remove-last',
+
+        'cover-pseudo', 'cover-before', 'cover-after', 'cover-both',
+
+    ];
+
     public static function get_builder () {
 
         if (is_null(self::$builder)) {
@@ -44,7 +64,7 @@ abstract class Builder implements Builder_Interface {
 
     public static function call ($method) {
 
-        return self::get_builder() ? call_user_func(self::get_builder() . "::" . $method) : false;
+        return self::get_builder() ? call_user_func([self::get_builder(), $method]) : false;
 
     }
 
@@ -53,5 +73,15 @@ abstract class Builder implements Builder_Interface {
         return self::call('get_slug');
 
     }
+
+    //
+
+    public static function install () {
+
+        static::install_classes();
+
+    }
+
+    public static function install_classes () {}
 
 }
