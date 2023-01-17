@@ -10,6 +10,7 @@ $woo-field-background: #f7f7f8 !default;
 $woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset !default;
 
 $woo-block-padding: 2rem !default;
+$woo-block-margin: 2rem !default;
 $woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07) !default;
 $woo-block-border: none !default;
 $woo-block-background: white !default;
@@ -55,6 +56,12 @@ $woo-required-color: #b81c23 !default;
     border-radius: initial;
     padding: 0;
     margin-bottom: 0;
+
+}
+
+.woo-block {
+
+    @include woo-block();
 
 }
 
@@ -362,7 +369,7 @@ body {
                 top: 0;
                 width: 100%;
                 max-width: 260px;
-                margin-right: 1rem;
+                margin-right: $woo-block-margin;
                 border-radius: $woo-border-radius;
                 padding: 0.5rem;
 
