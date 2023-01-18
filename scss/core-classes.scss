@@ -2,7 +2,10 @@
 
 // SECTIONS
 
+.ct-section.top-section > .ct-section-inner-wrap { align-items: flex-start; }
 .ct-section.center-section > .ct-section-inner-wrap { align-items: center; }
+.ct-section.bottom-section > .ct-section-inner-wrap { align-items: flex-end; }
+.ct-section.stretch-section > .ct-section-inner-wrap { align-items: stretch; }
 .ct-section.relative-section > .ct-section-inner-wrap { position: relative; }
 
 .ct-section.merge {
