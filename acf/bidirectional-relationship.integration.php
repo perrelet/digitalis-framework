@@ -8,6 +8,10 @@ abstract class Bidirectional_Relationship extends Integration {
 
     protected $key_1 = 'field_1';
     protected $key_2 = 'field_2';
+
+    protected $post_type_1 = [];
+    protected $post_type_2 = [];
+
     protected $log = false;
 
     public function __construct () {
@@ -21,6 +25,21 @@ abstract class Bidirectional_Relationship extends Integration {
 
         $field_name = $field['name'];
         $sync_field = ($field_name == $this->key_1) ? $this->key_2 : $this->key_1;
+
+        if ($post_type = ($field_name == $this->key_1) ? $this->post_type_1 : $this->post_type_2) {
+
+            if (is_array($post_type)) {
+
+                if (!in_array(get_post_type($updated_post_id), $post_type)) return;
+
+            } else {
+
+                if (get_post_type($updated_post_id) != $post_type) return;
+
+            }
+
+        }
+
         $global_flag = "updating_{$field_name}";
 
         if (isset($GLOBALS[$global_flag]) && $GLOBALS[$global_flag]) return $values;
@@ -34,12 +53,14 @@ abstract class Bidirectional_Relationship extends Integration {
 		$removed = array_diff($old_values, $values);
 
         if ($this->log) {
+
             error_log("--- Bidirectional_Relationship ---");
             error_log("Added Values:");
             error_log(print_r($added, true));
             error_log("Removed Values:");
             error_log(print_r($removed, true));
             error_log("--- End ---");
+            
         }
 
         $GLOBALS[$global_flag] = true;
