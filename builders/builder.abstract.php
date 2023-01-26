@@ -31,7 +31,7 @@ abstract class Builder implements Builder_Interface {
         'hide-gt-page', 'hide-gt-tablet', 'hide-gt-phone-landscape', 'hide-gt-phone-portrait',
 
         'top-section', 'center-section', 'bottom-section', 'stretch-section', 'relative-section', 'merge', 'screen-height', 'explode',
-        'cols-2', 'cols-stretch', 'cols-2-page', 'phone-landscape', 'swap', 'remove-first', 'remove-last',
+        'cols-2', 'cols-center', 'cols-stretch', 'cols-2-page', 'phone-landscape', 'swap', 'remove-first', 'remove-last',
 
         'cover-pseudo', 'cover-before', 'cover-after', 'cover-both',
 

@@ -53,6 +53,9 @@
 
 // COLUMNS
 
+div.cols-center,
+.ct-section.cols-center > .ct-section-inner-wrap { align-items: center; }
+
 div.cols-stretch,
 .ct-section.cols-stretch > .ct-section-inner-wrap { align-items: stretch; }
 
