@@ -8,6 +8,7 @@ $woo-border-radius: 0.5rem !default;
 
 $woo-field-background: #f7f7f8 !default;
 $woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset !default;
+$woo-field-label-color: #909090;
 
 $woo-block-padding: 2rem !default;
 $woo-block-margin: 2rem !default;
@@ -59,6 +60,17 @@ $woo-required-color: #b81c23 !default;
 
 }
 
+@mixin woo-table-block {
+
+    border-spacing: 0;
+    border-radius: $woo-border-radius;
+    border: 0;
+
+    background: white;
+    box-shadow: $woo-block-shadow;
+
+}
+
 .woo-block {
 
     @include woo-block();
@@ -91,15 +103,25 @@ body {
 
         }
 
+        a.remove {
+
+            color: var(--wc-red) !important;
+            line-height: 0.95;
+
+            &:hover {
+
+                text-decoration: none;
+                background: var(--wc-red);
+
+            }
+
+        }
+
         table.shop_table {
 
-            border-collapse: separate;
-            border-spacing: 0;
-            border-radius: $woo-border-radius;
-            border: 0;
+            @include woo-table-block();
 
-            background: white;
-            box-shadow: $woo-block-shadow;
+            border-collapse: separate;
 
             td {
                 border-top: 1px solid $woo-border-color;
@@ -134,7 +156,7 @@ body {
                     margin-bottom: 0;
                     line-height: 1.4;
                     font-weight: 600;
-                    color: #909090;
+                    color: $woo-field-label-color;
 
                 }
 
@@ -191,6 +213,41 @@ body {
                     color: #b6b6b6;
                 }
 
+                &:focus {
+                    box-shadow: none;
+                }
+
+            }
+
+            .show-password-input {
+
+                top: 0;
+
+                &.display-password::after {
+
+                    color: var(--wc-highlight);
+
+                }
+
+            }
+
+            fieldset {
+
+                margin-bottom: 1rem;
+                border-radius: $woo-border-radius;
+                border: 1px solid $woo-field-label-color;
+                padding: 0 1rem;
+
+                legend {
+
+                    display: block;
+                    padding-left: 0.25em;
+                    padding-right: 0.25em;
+                    color: $woo-field-label-color;
+                    font-size: 0.8em;
+                    font-weight: normal;
+                }
+
             }
 
             span.select2 {
@@ -231,20 +288,20 @@ body {
 
                 input {
 
-                    font-size: 1.4em;
+                    font-size: 1.2em;
 
                 }
 
                 .show-password-input {
 
-                    top: 0.5em;
-                    right: 0.8em;
+                    top: 0.4em;
+                    right: 0.5em;
 
-                    &.display-password:after {
+                }
 
-                        color: #949494;
+                label.woocommerce-form__label.woocommerce-form__label-for-checkbox.woocommerce-form-login__rememberme {
 
-                    }
+                    margin-top: 0;
 
                 }
 
@@ -262,6 +319,21 @@ body {
                 .lost_password {
 
                     margin-bottom: 0;
+                    margin-top: 1rem;
+
+                }
+
+                .form-row:nth-child(3) { // Submit + remember me row
+
+                    display: flex;
+                    flex-direction: row-reverse;
+                    align-items: center;
+
+                    .woocommerce-form-login__rememberme {
+
+                        margin-left: auto;
+
+                    }
 
                 }
 
@@ -557,6 +629,85 @@ body {
 
     } // body.woocommerce-account
 
+    // CART
+
+    &.woocommerce-cart {
+
+        form.woocommerce-cart-form {
+
+            td.actions {
+
+                padding: 0;
+                padding-top: 1rem;
+
+                > .coupon {
+
+                    button {
+
+                        align-items: center;
+
+                    }
+
+                }
+
+                > button[name="update_cart"] {
+
+                    display: block;
+                    margin-left: auto;
+
+                }
+
+                @include media ("<768px") {
+
+                    background-color: transparent;
+
+                    > .coupon {
+
+                        margin-bottom: 1rem;
+                        padding-bottom: 0;
+
+                        input,
+                        button {
+
+                            width: calc(50% - 0.5rem) !important;
+
+                        }
+
+                    }
+
+                }
+
+            } // form.woocommerce-cart-form
+
+        }
+
+        .cart-collaterals {
+
+            table.shop_table {
+
+                @include woo-table-block();
+
+                border: 0;
+
+                tr:first-child {
+
+                    border-top: 0;
+
+                }
+
+                th,
+                td {
+
+                    vertical-align: middle;
+
+                }
+
+            }
+
+        }
+
+    }
+
     // CHECKOUT
 
     &.woocommerce-checkout {
@@ -566,6 +717,8 @@ body {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
+            padding: 0 !important;
+            overflow: hidden;
 
             .customer-details-wrap {
 
@@ -577,7 +730,6 @@ body {
             .checkout-order-review-wrap {
 
                 width: 50%;
-                width: calc(50% - 1rem);
 
                 @media only screen and (max-width: 900px) {
 
@@ -589,11 +741,20 @@ body {
 
             .col2-set {
 
+                padding: $woo-block-padding;
+                border: 0;
+
                 > div {
 
                     width: 100%;
                     /* max-width: 600px; */
                     float: none
+
+                }
+
+                h3 {
+
+                    margin-top: 0;
 
                 }
 
@@ -624,6 +785,10 @@ body {
 
             .checkout-order-review-wrap {
 
+                background-color: $woo-field-background;
+                padding: $woo-block-padding;
+                border-left: 1px solid $woo-border-color;
+
                 table.woocommerce-checkout-review-order-table {
 
                     @include woo-nested-block();
@@ -632,7 +797,13 @@ body {
         
                 }
 
-            }
+                h3 {
+
+                    margin-top: 0;
+
+                }
+
+            } // .checkout-order-review-wrap
 
         }
 
