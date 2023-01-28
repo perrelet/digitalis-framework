@@ -130,6 +130,25 @@ body {
 
         }
 
+        // RESET OXYGEN - WOO
+
+        form.woocommerce-ResetPassword.lost_reset_password,
+        .woocommerce-EditAccountForm,
+        .woocommerce-address-fields,
+        .col2-set,
+        #reviews #comments ol.commentlist li .comment-text,
+        form.login, 
+        form.register,
+        form.checkout_coupon,
+        table.shop_table {
+
+            padding: 0;
+            border: 0;
+            box-shadow: none;
+            background: transparent;
+
+        }
+
         form:not(.woocommerce-cart-form):not(.dummy) {
 
             @include woo-block;
@@ -620,6 +639,13 @@ body {
                 form {
 
                     /* @include woo-block(); */
+
+                }
+
+                header.woocommerce-Address-title {
+
+                    display: flex;
+                    flex-direction: column;
 
                 }
 
