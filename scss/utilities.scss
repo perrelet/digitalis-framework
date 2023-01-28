@@ -38,5 +38,8 @@ body {
     .hide-gt-tablet { @include media(">=tablet") { display: none; } }
     .hide-gt-phone-landscape { @include media(">=phone-landscape") { display: none; } }
     .hide-gt-phone-portrait { @include media(">=phone-portrait") { display: none; } }
+
+    &.logged-in .hide-logged-in { display: none !important; }
+    &:not(.logged-in) .hide-logged-out { display: none !important; }
     
 }
