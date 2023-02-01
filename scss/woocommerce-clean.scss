@@ -1,45 +1,19 @@
-// DEFAULTS
-
-$woo-h3-margin-bottom: 0.5em !default;
-
-$woo-font-family: 'Nunito', sans-serif !default;
-$woo-border-color: #eee !default;
-$woo-border-radius: 0.5rem !default;
-
-$woo-field-background: #f7f7f8 !default;
-$woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset !default;
-$woo-field-label-color: #909090;
-
-$woo-block-padding: 2rem !default;
-$woo-block-margin: 2rem !default;
-$woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07) !default;
-$woo-block-border: none !default;
-$woo-block-background: white !default;
-
-$woo-nested-block-shadow: none !default;
-$woo-nested-block-border: 1px solid $woo-border-color !default;
-
-$woo-coupon-field-text-transform: uppercase !default;
-$woo-coupon-field-letter-spacing: 1px !default;
-
-$woo-required-color: #b81c23 !default;
-
 // MIXINS
 
 @mixin woo-block {
-    box-shadow: $woo-block-shadow;
-    border-radius: $woo-border-radius;
-    background: $woo-block-background;
-    padding: $woo-block-padding;    
+    box-shadow: var(--woo-block-shadow);
+    border-radius: var(--woo-border-radius);
+    background: var(--woo-block-background);
+    padding: var(--woo-block-padding);    
 }
 
 @mixin woo-nested-block {
-    box-shadow: $woo-nested-block-shadow;
-    border: $woo-nested-block-border;
+    box-shadow: var(--woo-nested-block-shadow);
+    border: var(--woo-nested-block-border);
 }
 
 @mixin woo-field-focus {
-    box-shadow: $woo-field-focus-box-shadow;
+    box-shadow: var(--woo-field-focus-box-shadow);
 }
 
 @mixin woo-reset-field-focus {
@@ -47,8 +21,8 @@ $woo-required-color: #b81c23 !default;
 }
 
 @mixin woo-coupon-field {
-    text-transform: $woo-coupon-field-text-transform;
-    letter-spacing: $woo-coupon-field-letter-spacing;
+    text-transform: var(--woo-coupon-field-text-transform);
+    letter-spacing: var(--woo-coupon-field-letter-spacing);
 }
 
 @mixin woo-reset-form-row {
@@ -63,17 +37,58 @@ $woo-required-color: #b81c23 !default;
 @mixin woo-table-block {
 
     border-spacing: 0;
-    border-radius: $woo-border-radius;
+    border-radius: var(--woo-border-radius);
     border: 0;
 
     background: white;
-    box-shadow: $woo-block-shadow;
+    box-shadow: var(--woo-block-shadow);
 
 }
 
 .woo-block {
 
     @include woo-block();
+
+}
+
+// CSS VARIABLES
+
+:root {
+
+    --woo-page-background: #fbfbfb;
+
+    --woo-h3-margin-bottom: 0.5em;
+
+    --woo-border-color: #eee;
+    --woo-border-radius: 0.5rem;
+
+    --woo-field-background: #f7f7f8;
+    --woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset;
+    --woo-field-label-color: #909090;
+    --woo-field-color: #111;
+
+    --woo-block-padding: 2rem;
+    --woo-block-margin: 2rem;
+    --woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07);
+    --woo-block-border: none;
+    --woo-block-background: white;
+
+    --woo-nested-block-shadow: none;
+    --woo-nested-block-border: 1px solid var(--woo-border-color);
+
+    --woo-coupon-field-text-transform: uppercase;
+    --woo-coupon-field-letter-spacing: 1px;
+
+}
+
+@media only screen and (max-width: 420px) {
+
+    :root {
+
+        --woo-block-padding: 1rem;
+        --woo-block-margin: 1rem;
+
+    }
 
 }
 
@@ -99,7 +114,7 @@ body {
 
         h3 {
 
-            margin-bottom: $woo-h3-margin-bottom;
+            margin-bottom: var(--woo-h3-margin-bottom);
 
         }
 
@@ -117,6 +132,30 @@ body {
 
         }
 
+        table tr:first-child {
+
+            border-top: 0;
+
+        }
+
+        form {
+
+            .form-row-first,
+            .form-row-last {
+            
+                width: calc(50% - 0.5rem);
+
+                @include media("<phone-landscape") {
+
+                    width: 100%;
+                    float: none;
+
+                }
+
+            }
+
+        }
+
         table.shop_table {
 
             @include woo-table-block();
@@ -124,7 +163,7 @@ body {
             border-collapse: separate;
 
             td {
-                border-top: 1px solid $woo-border-color;
+                border-top: 1px solid var(--woo-border-color);
             }
 
 
@@ -149,6 +188,18 @@ body {
 
         }
 
+        table.shop_table td,
+        table.shop_table tfoot td,
+        table.shop_table tfoot th,
+        table.shop_table th {
+
+            padding: 1rem;
+
+        }
+
+
+        // END OXY RESET
+
         form:not(.woocommerce-cart-form):not(.dummy) {
 
             @include woo-block;
@@ -158,8 +209,8 @@ body {
 
             .form-row {
 
-                background-color: $woo-field-background;
-                border-radius: $woo-border-radius;
+                background-color: var(--woo-field-background);
+                border-radius: var(--woo-border-radius);
                 padding: 0.5rem 0.75rem;
                 margin-bottom: 1rem;
 
@@ -175,7 +226,7 @@ body {
                     margin-bottom: 0;
                     line-height: 1.4;
                     font-weight: 600;
-                    color: $woo-field-label-color;
+                    color: var(--woo-field-label-color);
 
                 }
 
@@ -197,7 +248,7 @@ body {
 
                 .required {
 
-                    color: $woo-required-color;
+                    color: var(--woo-required-color);
 
                 }
 
@@ -210,10 +261,10 @@ body {
                 border: 0;
                 background-color: transparent;
                 padding: 0.25em 0;
-                font-family: $woo-font-family;
+                /* font-family: var(--woo-font-family; */
                 font-size: 1em;
                 line-height: 1;
-                color: #111;
+                color: var(--woo-field-color);
 
                 &:focus-within {
                     border: 0;
@@ -253,18 +304,27 @@ body {
             fieldset {
 
                 margin-bottom: 1rem;
-                border-radius: $woo-border-radius;
-                border: 1px solid $woo-field-label-color;
+                border-radius: var(--woo-border-radius);
+                border: 0.25rem solid var(--woo-field-background);
                 padding: 0 1rem;
 
                 legend {
 
                     display: block;
-                    padding-left: 0.25em;
-                    padding-right: 0.25em;
-                    color: $woo-field-label-color;
+                    padding-left: 0.5rem;
+                    padding-right: 0.5rem;
+                    color: #cacaca;
                     font-size: 0.8em;
-                    font-weight: normal;
+                    font-weight: bold;
+
+                }
+                
+                @media only screen and (max-width: 420px) {
+
+                    border-radius: var(--woo-border-radius) 0 0 var(--woo-border-radius);
+                    padding-right: 0;
+                    border-right: 0;
+
                 }
 
             }
@@ -275,14 +335,14 @@ body {
 
                     border: 0;
                     background-color: transparent;
-                    font-family: $woo-font-family;
+                    /* font-family: var(--woo-font-family); */
                     font-size: 1em;
                     padding: 0.5em 0;
                     height: auto;
 
                     .select2-selection__rendered {
 
-                        color: #111;
+                        color: var(--woo-field-color);
                         line-height: 1;
                         padding: 0;
 
@@ -369,7 +429,7 @@ body {
 
                 .woocommerce-password-strength {
 
-                    border-radius: $woo-border-radius;
+                    border-radius: var(--woo-border-radius);
 
                 }
 
@@ -432,7 +492,7 @@ body {
 
     &.woocommerce-account {
 
-        background-color: #fbfbfb;
+        background: var(--woo-page-background);
 
         .woocommerce {
 
@@ -440,7 +500,7 @@ body {
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            flex-wrap: wrap;
+            /* flex-wrap: wrap; */
 
             > * {
 
@@ -453,19 +513,25 @@ body {
                 width: 100%;
 
             }
-            
+
             nav.woocommerce-MyAccount-navigation {
 
-                position: sticky;
-                top: 0;
+                /* position: sticky;
+                top: 0; */
                 width: 100%;
                 max-width: 260px;
-                margin-right: $woo-block-margin;
-                border-radius: $woo-border-radius;
+                margin-right: var(--woo-block-margin);
+                border-radius: var(--woo-border-radius);
                 padding: 0.5rem;
 
                 background: white;
-                box-shadow: $woo-block-shadow;
+                box-shadow: var(--woo-block-shadow);
+
+                /* @include media ("<phone-landscape") {
+
+                    margin-right: calc(var(--woo-block-margin) * 0.5);
+
+                } */
 
                 + div{
 
@@ -509,7 +575,7 @@ body {
                             justify-content: flex-start;
 
                             padding: 0.5rem 1rem;
-                            border-radius: $woo-border-radius;
+                            border-radius: var(--woo-border-radius);
                             color: #999999;
                             font-weight: 600;
                             font-size: 0.9em;
@@ -590,7 +656,9 @@ body {
 
                 }
 
-                @media only screen and (max-width: 600px) {
+                // Maybe when we have more time to make a fancy mobile menu:
+
+                /* @media only screen and (max-width: 600px) {
 
                     width: auto;
 
@@ -627,7 +695,7 @@ body {
 
                     }
 
-                }
+                } */
 
             } // nav.woocommerce-MyAccount-navigation
 
@@ -642,6 +710,35 @@ body {
 
                 }
 
+                table.woocommerce-orders-table {
+
+                    @include woo-block();
+                    padding: 0;
+
+                    .woocommerce-orders-table__cell-order-actions {
+
+                        &:before {
+
+                            content: none;
+
+                        }
+
+                        a {
+
+                            padding: 0.5rem 1rem;
+
+                            &:last-child {
+
+                                margin-bottom: 0;
+    
+                            }
+
+                        }
+
+                    }
+
+                }
+
                 header.woocommerce-Address-title {
 
                     display: flex;
@@ -650,6 +747,19 @@ body {
                 }
 
             } // .woocommerce-MyAccount-content
+
+            @media only screen and (max-width: 600px) { // &.woocommerce-account .woocommerce
+
+                flex-direction: column;
+
+                nav.woocommerce-MyAccount-navigation {
+
+                    max-width: initial;
+                    margin-bottom: var(--woo-block-margin);
+
+                }
+
+            }
 
         }
 
@@ -731,7 +841,7 @@ body {
             }
 
         }
-
+ 
     }
 
     // CHECKOUT
@@ -767,7 +877,7 @@ body {
 
             .col2-set {
 
-                padding: $woo-block-padding;
+                padding: var(--woo-block-padding);
                 border: 0;
 
                 > div {
@@ -811,9 +921,9 @@ body {
 
             .checkout-order-review-wrap {
 
-                background-color: $woo-field-background;
-                padding: $woo-block-padding;
-                border-left: 1px solid $woo-border-color;
+                background-color: var(--woo-field-background);
+                padding: var(--woo-block-padding);
+                border-left: 1px solid var(--woo-border-color);
 
                 table.woocommerce-checkout-review-order-table {
 
