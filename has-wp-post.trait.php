@@ -6,14 +6,18 @@ use \WP_Post;
 
 trait Has_WP_Post {
 
+    protected $id;
     protected $post_id;
     protected $wp_post;
+
+    protected function is_post () { return false; } // Override as required
 
     public function set_post ($post_id) {
 
         if ($post_id instanceof WP_Post) $post_id = $post_id->ID;
 
         $this->post_id = $post_id;
+        if ($this->is_post()) $this->id = $post_id;
         $this->wp_post = WP_Post::get_instance($post_id);
 
     }
