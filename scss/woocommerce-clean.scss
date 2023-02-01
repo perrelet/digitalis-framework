@@ -81,6 +81,17 @@
 
 }
 
+@media only screen and (max-width: 420px) {
+
+    :root {
+
+        --woo-block-padding: 1rem;
+        --woo-block-margin: 1rem;
+
+    }
+
+}
+
 // LETS GO
 
 body {
@@ -294,17 +305,26 @@ body {
 
                 margin-bottom: 1rem;
                 border-radius: var(--woo-border-radius);
-                border: 1px solid var(--woo-field-label-color);
+                border: 0.25rem solid var(--woo-field-background);
                 padding: 0 1rem;
 
                 legend {
 
                     display: block;
-                    padding-left: 0.25em;
-                    padding-right: 0.25em;
-                    color: var(--woo-field-label-color);
+                    padding-left: 0.5rem;
+                    padding-right: 0.5rem;
+                    color: #cacaca;
                     font-size: 0.8em;
-                    font-weight: normal;
+                    font-weight: bold;
+
+                }
+                
+                @media only screen and (max-width: 420px) {
+
+                    border-radius: var(--woo-border-radius) 0 0 var(--woo-border-radius);
+                    padding-right: 0;
+                    border-right: 0;
+
                 }
 
             }
@@ -480,7 +500,7 @@ body {
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            flex-wrap: wrap;
+            /* flex-wrap: wrap; */
 
             > * {
 
@@ -496,8 +516,8 @@ body {
 
             nav.woocommerce-MyAccount-navigation {
 
-                position: sticky;
-                top: 0;
+                /* position: sticky;
+                top: 0; */
                 width: 100%;
                 max-width: 260px;
                 margin-right: var(--woo-block-margin);
@@ -506,6 +526,12 @@ body {
 
                 background: white;
                 box-shadow: var(--woo-block-shadow);
+
+                /* @include media ("<phone-landscape") {
+
+                    margin-right: calc(var(--woo-block-margin) * 0.5);
+
+                } */
 
                 + div{
 
@@ -630,7 +656,9 @@ body {
 
                 }
 
-                @media only screen and (max-width: 600px) {
+                // Maybe when we have more time to make a fancy mobile menu:
+
+                /* @media only screen and (max-width: 600px) {
 
                     width: auto;
 
@@ -667,7 +695,7 @@ body {
 
                     }
 
-                }
+                } */
 
             } // nav.woocommerce-MyAccount-navigation
 
@@ -719,6 +747,19 @@ body {
                 }
 
             } // .woocommerce-MyAccount-content
+
+            @media only screen and (max-width: 600px) { // &.woocommerce-account .woocommerce
+
+                flex-direction: column;
+
+                nav.woocommerce-MyAccount-navigation {
+
+                    max-width: initial;
+                    margin-bottom: var(--woo-block-margin);
+
+                }
+
+            }
 
         }
 
