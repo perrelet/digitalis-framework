@@ -1,6 +1,6 @@
 @if not mixin-exists(generate-shades) {
 
-    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1) {
+    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1, $label_style: 'count') {
 
         $lightness: lightness($base-color);
         $shades: ceil($lightness * $n / 100);
@@ -19,11 +19,15 @@
                 
                 $tint: max(min($l * $i, 100%), -100%);
 
-                @if ($i == 0) {
-                    $name: --c-#{$base-name};
-                } @else {
-                    $name: --c-#{$base-name}-#{$i};
-                }
+                @if ($label_style == 'split') {
+                    @if ($i == 0) {
+                        $name: --c-#{$base-name};
+                    } @else {
+                        $name: --c-#{$base-name}-#{$i};
+                    }
+                } @else if ($label_style == 'count') {
+                    $name: --c-#{$base-name}-#{$tints - $i + 1};
+                } 
 
                 #{$name}: #{adjust-color($base-color, $lightness: $tint)};
 
@@ -40,7 +44,11 @@
             @for $i from 1 through $shades {
 
                 $shade: max(min($l * $i, 100%), -100%);
-                $name: --c-#{$base-name}--#{$i};
+                @if ($label_style == 'split') {
+                    $name: --c-#{$base-name}--#{$i};
+                } @else if ($label_style == 'count') {
+                    $name: --c-#{$base-name}-#{$tints + $i + 1};
+                }
         
                 #{$name}: #{adjust-color($base-color, $lightness: $shade)};
             
