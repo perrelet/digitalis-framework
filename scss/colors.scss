@@ -1,0 +1,53 @@
+@if not mixin-exists(generate-shades) {
+
+    @mixin generate-shades ($base-color, $base-name, $n: 10, $black_point: 0, $white_point: 1) {
+
+        $lightness: lightness($base-color);
+        $shades: floor($lightness * $n / 100);
+        $shades: $shades / ($shades * 0 + 1);
+        $tints: $n - $shades;
+
+        $l: $white_point * (100% - $lightness) / $tints; 
+
+        @if ($tints > 0) {
+
+            // Calculate Tints
+
+            @for $i from $tints through 0 {
+
+                //--tint-#{$i}-lightness: #{$lightness + ($l * $i)};
+                
+                $tint: max(min($l * $i, 100%), -100%);
+
+                @if ($i == 0) {
+                    $name: --c-#{$base-name};
+                } @else {
+                    $name: --c-#{$base-name}-#{$i};
+                }
+
+                #{$name}: #{adjust-color($base-color, $lightness: $tint)};
+
+            }
+
+        }
+
+        @if ($shades > 0) {
+
+            // Calculate Shades
+
+            $l:  (1 - $black_point) * (-1 * $lightness) / $shades; 
+
+            @for $i from 1 through $shades {
+
+                $shade: max(min($l * $i, 100%), -100%);
+                $name: --c-#{$base-name}--#{$i};
+        
+                #{$name}: #{adjust-color($base-color, $lightness: $shade)};
+            
+            }
+
+        }
+
+    }
+
+}
