@@ -1,9 +1,9 @@
 @if not mixin-exists(generate-shades) {
 
-    @mixin generate-shades ($base-color, $base-name, $n: 10, $black_point: 0, $white_point: 1) {
+    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1) {
 
         $lightness: lightness($base-color);
-        $shades: floor($lightness * $n / 100);
+        $shades: ceil($lightness * $n / 100);
         $shades: $shades / ($shades * 0 + 1);
         $tints: $n - $shades;
 
