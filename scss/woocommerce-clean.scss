@@ -127,6 +127,7 @@ body {
 
                 text-decoration: none;
                 background: var(--wc-red);
+                font-family: monospace;
 
             }
 
@@ -193,14 +194,14 @@ body {
         table.shop_table tfoot th,
         table.shop_table th {
 
-            padding: 1rem;
+            padding: calc(var(--woo-block-padding) / 2);
 
         }
 
 
         // END OXY RESET
 
-        form:not(.woocommerce-cart-form):not(.dummy) {
+        form:not(.dummy) {
 
             @include woo-block;
 
@@ -435,7 +436,7 @@ body {
 
             }
 
-        } // form:not(.woocommerce-cart-form)
+        } // form:not(.dummy)
 
         form.checkout_coupon {
 
@@ -770,6 +771,14 @@ body {
     &.woocommerce-cart {
 
         form.woocommerce-cart-form {
+
+            padding: 0;
+
+            tr:last-child td {
+
+                padding: calc(var(--woo-block-padding) / 2);
+
+            }
 
             td.actions {
 

@@ -1,0 +1,35 @@
+@function soft-shadow-power ($x) {
+
+    @return max(min($x * $x * $x, 1), 0);
+
+}
+
+@function soft-shadow-smoothstep ($x) {
+
+    @return max(min($x * $x * (3 - (2 * $x)), 1), 0);
+
+}
+
+@mixin soft-shadow ($x_dist: 0px, $y_dist: 100px, $layers: 6, $alpha: 0.07, $blur_strength: 80px, $reduce_spread: 0px, $invert_alpha: false) {
+
+    $value: ();
+
+    @for $i from 1 through $layers {
+
+        $fraction: $i / $layers;
+
+        $dist_ease: soft-shadow-power($fraction);
+
+        @if ($invert_alpha) {
+            $alpha_ease: 1 - $fraction;
+        } @else {
+            $alpha_ease: $fraction;
+        }
+
+        $value: append($value, #{$x_dist * $dist_ease} #{$y_dist * $dist_ease} #{$blur_strength * $dist_ease} #{-1 * $reduce_spread} rgba(0,0,0, #{$alpha * $alpha_ease}), comma);
+
+    }
+
+    box-shadow: $value;
+
+}
