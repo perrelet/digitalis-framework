@@ -201,7 +201,7 @@ body {
 
         // END OXY RESET
 
-        form:not(.dummy) {
+        form:not(.woocommerce-shipping-calculator):not(.dummy) {
 
             @include woo-block;
 
@@ -822,11 +822,13 @@ body {
 
                 }
 
-            } // form.woocommerce-cart-form
+            }
 
-        }
+        } // form.woocommerce-cart-form
 
         .cart-collaterals {
+
+            position: relative;
 
             table.shop_table {
 
