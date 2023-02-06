@@ -6,6 +6,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     protected $do_account_icons = true;
     protected $do_wrap_elements = true;
+    protected $do_modify_fields = true;
 
     protected $icon_library = 'iconoir';
     protected $template_overrides = [];
@@ -25,6 +26,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
         if ($this->do_account_icons) $this->account_menu_icons();
         if ($this->do_wrap_elements) $this->wrap_woocommerce_elements();
+        if ($this->do_modify_fields) $this->modify_fields();
 
         parent::__construct();
         
@@ -95,6 +97,26 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
         add_action('woocommerce_checkout_before_order_review_heading', function () { echo "<div class='checkout-order-review-wrap'>"; });
         add_action('woocommerce_checkout_after_order_review', function () { echo "</div><!-- .checkout-order-review-wrap -->"; });
+
+    }
+
+    protected function modify_fields () {
+
+        add_filter('woocommerce_form_field', function ($field, $key, $args, $value) {
+
+            return str_replace("woocommerce-input-wrapper", "woocommerce-input-wrapper woocommerce-input-wrapper-{$args['type']}", $field);
+
+        }, 10, 4);
+
+        add_filter('woocommerce_form_field_radio', function ($field, $key, $args, $value) {
+
+            /* $field = str_replace("&lt;", "<", $field);
+            $field = str_replace("&gt;", ">", $field);
+            $field = str_replace("&quot;", '"', $field); */
+
+            return htmlspecialchars_decode($field, ENT_QUOTES);
+
+        }, 10, 4);
 
     }
 

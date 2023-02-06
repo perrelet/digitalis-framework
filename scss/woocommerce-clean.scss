@@ -104,8 +104,26 @@ body {
     .woocommerce-message {
 
         @include woo-block();
-        padding: 1em;  
-        padding-left: 3.5em;
+        padding: var(--woo-spacing);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        //padding-left: 3.5em;
+
+        &:before {
+
+            position: static;
+            margin-right: var(--woo-spacing);
+
+        }
+
+        a.button {
+
+            float: none;
+            order: 1;
+            margin-left: auto;
+
+        }
 
     }
 
@@ -218,10 +236,11 @@ body {
                 background-color: var(--woo-field-background);
                 border-radius: var(--woo-border-radius);
                 padding: calc(var(--woo-spacing) / 2) calc(3 * var(--woo-spacing) / 4);
+                margin-bottom: var(--woo-spacing);
 
-                &:not(:last-child) {
+                &:last-child {
 
-                    margin-bottom: var(--woo-spacing);
+                    margin-bottom: 0;
 
                 }
 
@@ -245,6 +264,83 @@ body {
 
                     display: flex;
                     flex-direction: column;
+
+                    &.woocommerce-input-wrapper-radio {
+
+                        $woo-input-radio-width: 24px;
+
+                        flex-direction: row;
+                        flex-wrap: wrap;
+                        align-items: center;
+
+                        input[type=radio],
+                        label {
+
+                            margin-top: var(--woo-spacing);
+                            cursor: pointer;
+
+                            &:last-of-type {
+
+                                margin-bottom: calc(var(--woo-spacing) / 2);
+
+                            }
+
+                        }
+
+                        input[type=radio] {
+
+                            background: white;
+                            display: block;
+                            width: $woo-input-radio-width;
+                            height: $woo-input-radio-width;
+                            border: 0;
+
+                            &:hover {
+
+                                box-shadow: 0px 0px 0px 2px var(--woo-field-color);
+                                
+                            }
+
+                            &:checked {
+
+                                background-color: var(--woo-field-color);
+                                box-shadow: 0px 0px 0px 6px inset white, 0px 0px 0px 2px var(--woo-field-color);
+
+                                &:hover {
+
+                                    box-shadow: 0px 0px 0px 8px inset white, 0px 0px 0px 2px var(--woo-field-color);
+
+                                }
+
+                            }
+            
+                        }
+
+                        label {
+
+                            flex-grow: 1;
+                            display: block;
+                            width: calc(100% - #{$woo-input-radio-width});
+                            padding-left: var(--woo-spacing);
+                            line-height: initial;
+                            color: initial;
+                            font-size: 0.9em;
+
+                            span.line {
+
+                                display: block;
+
+                                &:not(:last-child) {
+
+                                    margin-bottom: calc(var(--woo-spacing) / 4);
+
+                                }
+
+                            }
+
+                        }
+
+                    }
             
                     .normal-description {
             
@@ -778,7 +874,8 @@ body {
                 nav.woocommerce-MyAccount-navigation {
 
                     max-width: initial;
-                    margin-bottom: var(--woo-block-margin);
+                    margin-bottom: calc(var(--woo-spacing) * 2);
+                    margin-right: 0;
 
                 }
 
@@ -952,6 +1049,17 @@ body {
     
                 }
 
+                .woocommerce-shipping-fields {
+
+
+                }
+
+                .woocommerce-additional-fields {
+
+                    margin-top: var(--woo-spacing);
+
+                }
+
             } // .col2-set
 
             .checkout-order-review-wrap {
@@ -997,7 +1105,8 @@ body {
 
                             float: none;
                             width: 100%;
-                            margin-top: var(--woo-block-margin);
+                            margin-top: var(--woo-spacing);
+                            margin-bottom: 0;
 
                         }
 
