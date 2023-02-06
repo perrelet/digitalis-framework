@@ -58,6 +58,7 @@
     --woo-page-background: #fbfbfb;
 
     --woo-header-margin-bottom: 0.5em;
+    --woo-spacing: 1rem;
 
     --woo-border-color: #eee;
     --woo-border-radius: 0.5rem;
@@ -67,8 +68,8 @@
     --woo-field-label-color: #909090;
     --woo-field-color: #111;
 
-    --woo-block-padding: 2rem;
-    --woo-block-margin: 2rem;
+    --woo-block-padding: calc(var(--woo-spacing) * 2);
+    --woo-block-margin: calc(var(--woo-spacing) * 2);
     --woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07);
     --woo-block-border: none;
     --woo-block-background: white;
@@ -85,8 +86,8 @@
 
     :root {
 
-        --woo-block-padding: 1rem;
-        --woo-block-margin: 1rem;
+        --woo-block-padding: var(--woo-spacing);
+        --woo-block-margin: var(--woo-spacing);
 
     }
 
@@ -148,7 +149,7 @@ body {
             .form-row-first,
             .form-row-last {
             
-                width: calc(50% - 0.5rem);
+                width: calc(50% - (var(--woo-spacing) / 2));
 
                 @media only screen and (max-width: 600px) {
 
@@ -216,8 +217,13 @@ body {
 
                 background-color: var(--woo-field-background);
                 border-radius: var(--woo-border-radius);
-                padding: 0.5rem 0.75rem;
-                margin-bottom: 1rem;
+                padding: calc(var(--woo-spacing) / 2) calc(3 * var(--woo-spacing) / 4);
+
+                &:not(:last-child) {
+
+                    margin-bottom: var(--woo-spacing);
+
+                }
 
                 &:focus-within {
 
@@ -308,16 +314,16 @@ body {
 
             fieldset {
 
-                margin-bottom: 1rem;
+                margin-bottom: var(--woo-spacing);
                 border-radius: var(--woo-border-radius);
-                border: 0.25rem solid var(--woo-field-background);
-                padding: 0 1rem;
+                border: calc(var(--woo-spacing) / 4) solid var(--woo-field-background);
+                padding: 0 var(--woo-spacing);
 
                 legend {
 
                     display: block;
-                    padding-left: 0.5rem;
-                    padding-right: 0.5rem;
+                    padding-left: calc(var(--woo-spacing) / 2);
+                    padding-right: calc(var(--woo-spacing) / 2);
                     color: #cacaca;
                     font-size: 0.8em;
                     font-weight: bold;
@@ -355,10 +361,10 @@ body {
 
                     .select2-selection__arrow {
 
-                        width: 1rem;
-                        height: 1rem;
+                        width: var(--woo-spacing);
+                        height: var(--woo-spacing);
                         top: auto;
-                        bottom: 0.5rem;
+                        bottom: calc(var(--woo-spacing) / 2);
                         right: 0;
 
                     }
@@ -403,7 +409,7 @@ body {
                 .lost_password {
 
                     margin-bottom: 0;
-                    margin-top: 1rem;
+                    margin-top: var(--woo-spacing);
 
                 }
 
@@ -451,7 +457,7 @@ body {
             > p:not(.form-row) {
 
                 margin: 0;
-                margin-bottom: 0.5rem;
+                margin-bottom: calc(var(--woo-spacing) / 2);
                 width: 100%;
 
             }
@@ -464,7 +470,7 @@ body {
                 &.form-row-first {
 
                     flex-grow: 1;
-                    margin-right: 1rem;
+                    margin-right: var(--woo-spacing);
 
                     input {
 
@@ -538,7 +544,7 @@ body {
                 max-width: 260px;
                 margin-right: var(--woo-block-margin);
                 border-radius: var(--woo-border-radius);
-                padding: 0.5rem;
+                padding: calc(var(--woo-spacing) / 2);
 
                 background: white;
                 box-shadow: var(--woo-block-shadow);
@@ -563,7 +569,8 @@ body {
                 
                     li {
 
-                        padding: 0.125rem 0;
+                        padding: calc(var(--woo-spacing) / 8) 0;
+                        //padding: 0.125rem 0;
 
                         &:first-child {
 
@@ -590,7 +597,7 @@ body {
                             align-items: center;
                             justify-content: flex-start;
 
-                            padding: 0.5rem 1rem;
+                            padding: calc(var(--woo-spacing) / 2) var(--woo-spacing);
                             border-radius: var(--woo-border-radius);
                             color: #999999;
                             font-weight: 600;
@@ -622,7 +629,7 @@ body {
                             }
 
                             i {
-                                margin-right: 0.75rem;
+                                margin-right: calc(3 * var(--woo-spacing) / 4);
                                 font-size: 1.2em;
                                 display: block;
                             }
@@ -685,7 +692,7 @@ body {
                             a {
 
                                 font-size: 1em;
-                                padding: 0.75rem 1rem;
+                                padding: calc(3 * var(--woo-spacing) / 4) var(--woo-spacing);
 
                                 &:before,
                                 &:after {
@@ -741,7 +748,7 @@ body {
 
                         a {
 
-                            padding: 0.5rem 1rem;
+                            padding: calc(var(--woo-spacing) / 2) var(--woo-spacing);
 
                             &:last-child {
 
@@ -799,7 +806,7 @@ body {
             td.actions {
 
                 padding: 0;
-                padding-top: 1rem;
+                padding-top: var(--woo-spacing);
 
                 > .coupon {
 
@@ -824,13 +831,13 @@ body {
 
                     > .coupon {
 
-                        margin-bottom: 1rem;
+                        margin-bottom: var(--woo-spacing);
                         padding-bottom: 0;
 
                         input,
                         button {
 
-                            width: calc(50% - 0.5rem) !important;
+                            width: calc(50% - (var(--woo-spacing) / 2)) !important;
 
                         }
 
@@ -881,18 +888,19 @@ body {
             flex-wrap: wrap;
             justify-content: space-between;
             padding: 0 !important;
-            overflow: hidden;
+            /* overflow: hidden; */
 
             .customer-details-wrap {
 
-                width: 100%;
+                width: 50%;
+                padding: var(--woo-block-padding);
 
             }
 
             .col2-set,
             .checkout-order-review-wrap {
 
-                width: 50%;
+                width: 100%;
 
                 @media only screen and (max-width: 900px) {
 
@@ -904,7 +912,7 @@ body {
 
             .col2-set {
 
-                padding: var(--woo-block-padding);
+                /* padding: var(--woo-block-padding); */
                 border: 0;
 
                 > div {
@@ -938,7 +946,7 @@ body {
                     > #billing_last_name_field {
     
                         width: 50%;
-                        width: calc(50% - 0.5rem);
+                        width: calc(50% - (var(--woo-spacing) / 2));
     
                     }
     
@@ -948,27 +956,76 @@ body {
 
             .checkout-order-review-wrap {
 
+                position: relative;
                 background-color: var(--woo-field-background);
                 padding: var(--woo-block-padding);
                 border-left: 1px solid var(--woo-border-color);
-
-                table.woocommerce-checkout-review-order-table {
-
-                    @include woo-nested-block();
-
-                    width: 100%;
-        
-                }
+                border-radius: 0 var(--woo-border-radius) var(--woo-border-radius) 0;
+                width: 50%;
 
                 h3 {
-
+    
                     margin-top: 0;
+
+                }
+
+                .woocommerce-checkout-review-order {
+
+                    position: sticky;
+                    top: calc(3 * var(--woo-spacing));
+
+                    table.woocommerce-checkout-review-order-table {
+
+                        @include woo-nested-block();
+    
+                        width: 100%;
+                        background-color: var(--woo-block-background);
+            
+                    }
+
+                    #payment {
+
+                        background-color: var(--woo-block-background);
+                        
+                        .form-row {
+
+                            background-color: transparent;
+
+                        }
+
+                        #place_order {
+
+                            float: none;
+                            width: 100%;
+                            margin-top: var(--woo-block-margin);
+
+                        }
+
+                    }
 
                 }
 
             } // .checkout-order-review-wrap
 
-        }
+            @media only screen and (max-width: 960px) {
+
+                flex-direction: column;
+
+                .customer-details-wrap {
+
+                    width: 100%;
+
+                }
+
+                .checkout-order-review-wrap {
+
+                    width: 100%;
+
+                }
+                
+            }
+
+        } // form.checkout
 
     } // body.woocommerce-checkout
 
