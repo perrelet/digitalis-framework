@@ -57,7 +57,7 @@
 
     --woo-page-background: #fbfbfb;
 
-    --woo-h3-margin-bottom: 0.5em;
+    --woo-header-margin-bottom: 0.5em;
 
     --woo-border-color: #eee;
     --woo-border-radius: 0.5rem;
@@ -112,9 +112,13 @@ body {
 
         // GENERIC ELEMENTS
 
-        h3 {
+        &:not(.dummy) {
 
-            margin-bottom: var(--woo-h3-margin-bottom);
+            h2, h3 {
+
+                margin-bottom: var(--woo-header-margin-bottom); 
+                
+            }
 
         }
 
@@ -201,7 +205,7 @@ body {
 
         // END OXY RESET
 
-        form:not(.woocommerce-shipping-calculator):not(.dummy) {
+        form:not(.woocommerce-shipping-calculator) { // Do not add further list of :not( ... ) here to avoid increasing the specifity.
 
             @include woo-block;
 
@@ -436,7 +440,7 @@ body {
 
             }
 
-        } // form:not(.dummy)
+        } // form:not(.woocommerce-shipping-calculator)
 
         form.checkout_coupon {
 
@@ -495,13 +499,24 @@ body {
 
         background: var(--woo-page-background);
 
+        &:not(.logged-in) {
+
+            // Login Screen
+
+            .woocommerce {
+
+                flex-direction: column;
+        
+            }
+
+        }
+
         .woocommerce {
 
             position: relative;
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            /* flex-wrap: wrap; */
 
             > * {
 
@@ -773,6 +788,7 @@ body {
         form.woocommerce-cart-form {
 
             padding: 0;
+            margin-bottom: var(--woo-block-margin);
 
             tr:last-child td {
 
