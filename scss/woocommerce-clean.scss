@@ -99,9 +99,17 @@ body {
 
     // NOTICES
 
+    .woocommerce-notices-wrapper {
+
+        margin-bottom: var(--woo-spacing);
+
+    }
+
     .woocommerce-error,
     .woocommerce-info,
     .woocommerce-message {
+
+        margin-bottom: 0;
 
         @include woo-block();
 
@@ -112,6 +120,12 @@ body {
         display: flex;
         flex-direction: row;
         align-items: center;
+
+        &:not(:last-child) {
+
+            margin-bottom: var(--woo-spacing);
+
+        }
 
         &:before {
 
