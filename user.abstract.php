@@ -109,4 +109,16 @@ abstract class User {
 
     }
 
+    public function get_url () {
+
+        return get_author_posts_url($this->id);
+
+    }
+
+    public function get_edit_url () {
+
+        return get_edit_profile_url($this->id);
+
+    }
+
 }
