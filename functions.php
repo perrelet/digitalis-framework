@@ -9,3 +9,13 @@ if (!function_exists('get_tax_field')) {
     }
 
 }
+
+if (!function_exists('get_field_element')) {
+
+    function get_field_element ($selector, $key, $post_id = false, $format_value = true) {
+
+        return ($field = get_field($selector, $post_id, $format_value)) ? (isset($field[$key]) ? $field[$key] : null) : null;
+    
+    }
+
+}
