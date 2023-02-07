@@ -1178,6 +1178,32 @@ body {
 
         } // form.checkout
 
+        form#order_review { //pay_for_order
+
+            padding: 0;
+
+            table.shop_table {
+
+                width: 100%;
+
+            }
+
+            #payment {
+
+                padding: var(--woo-block-padding);
+                background-color: var(--woo-field-background);
+
+                .wc_payment_methods,
+                .form-row {
+                    
+                    background: var(--woo-block-background);
+
+                }
+
+            }
+
+        } // form#order_review
+
     } // body.woocommerce-checkout
 
 } // body
