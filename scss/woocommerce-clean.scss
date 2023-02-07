@@ -104,11 +104,14 @@ body {
     .woocommerce-message {
 
         @include woo-block();
+
+        /* padding: 1em;
+        padding-left: 3.5em; */
+
         padding: var(--woo-spacing);
         display: flex;
         flex-direction: row;
         align-items: center;
-        //padding-left: 3.5em;
 
         &:before {
 
@@ -122,6 +125,21 @@ body {
             float: none;
             order: 1;
             margin-left: auto;
+
+        }
+
+    }
+
+    .woocommerce-NoticeGroup {
+
+        width: 100%;
+
+        .woocommerce-error,
+        .woocommerce-info,
+        .woocommerce-message {
+
+            flex-direction: column;
+            align-items: flex-start;
 
         }
 
@@ -986,6 +1004,16 @@ body {
             justify-content: space-between;
             padding: 0 !important;
             /* overflow: hidden; */
+
+            .woocommerce-error {
+
+                box-shadow: none;
+                border-radius: 10px 10px 0 0;
+                border-left: 0;
+                border-right: 0;
+                margin-bottom: 0;
+
+            }
 
             .customer-details-wrap {
 
