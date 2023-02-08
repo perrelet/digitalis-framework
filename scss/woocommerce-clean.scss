@@ -932,6 +932,27 @@ body {
 
             }
 
+            td.product-thumbnail {
+
+                a {
+
+                    &:hover {
+
+                        opacity: 0.9;
+
+                    }
+
+                    img {
+
+                        border-radius: calc(var(--woo-border-radius) / 2);
+                        border: 0;
+    
+                    }
+
+                }
+
+            }
+
             td.actions {
 
                 padding: 0;
