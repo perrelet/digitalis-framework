@@ -84,6 +84,18 @@ trait Has_WP_Post {
 
     }
 
+    public function get_image ($size = 'post-thumbnail', $attr = '') {
+
+        return get_the_post_thumbnail($this->post_id, $size, $attr);
+
+    }
+
+    public function get_image_url ($size = 'post-thumbnail') {
+
+        return get_the_post_thumbnail_url($this->post_id, $size);
+
+    }
+
     public function get_meta ($key = '', $single = false) {
 
         return get_post_meta($this->post_id, $key, $single);
