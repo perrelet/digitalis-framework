@@ -73,6 +73,7 @@
     --woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset;
     --woo-field-label-color: #909090;
     --woo-field-color: #111;
+    --woo-required-color: var(--wc-red);
 
     --woo-block-padding: calc(var(--woo-spacing) * 2);
     --woo-block-margin: calc(var(--woo-spacing) * 2);
@@ -394,9 +395,10 @@ body {
             
                     .normal-description {
             
-                        display: block;
+                        display: flex;
                         order: -1;
                         margin-bottom: 0.5em;
+                        margin-top: 0.25em;
                         font-size: 0.9em;
             
                     }
@@ -443,6 +445,12 @@ body {
                 &:focus {
                     box-shadow: none;
                 }
+
+            }
+
+            textarea {
+
+                resize: vertical;
 
             }
 
@@ -1276,5 +1284,78 @@ body {
         }
 
     } // body.woocommerce-checkout
+
+    // ORDER RECEIVED
+
+    &.woocommerce-order-received {
+
+        .woocommerce {
+
+            ul.woocommerce-order-overview {
+
+                @include woo-block();
+
+                display: flex;
+                flex-direction: row;
+                font-size: 1em;
+
+                li {
+
+                    margin: 0;
+
+                    &:not(:last-child) {
+
+                        margin-right: var(--woo-spacing);
+
+                    }
+
+                    strong {
+
+                        margin-top: 0.5em;
+
+                    }
+
+                }
+
+                @media only screen and (max-width: 768px) {
+
+                    flex-direction: column;
+
+                    li {
+
+                        margin-right: 0;
+
+                        &:not(:last-child) {
+
+                            margin-bottom: var(--woo-spacing);
+    
+                        }
+
+                    }
+
+                }
+
+            }
+
+            table.woocommerce-table--order-details {
+
+                width: 100%;
+
+            }
+
+            section.woocommerce-customer-details {
+
+                address {
+    
+                    border: 0;
+                    @include woo-block();
+    
+                }
+    
+            }
+
+        }
+
+    } // body.woocommerce-order-received
 
 } // body
