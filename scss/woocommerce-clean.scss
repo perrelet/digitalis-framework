@@ -160,13 +160,11 @@ body {
 
         @include woo-block();
 
-        /* padding: 1em;
-        padding-left: 3.5em; */
-
         padding: var(--woo-spacing);
         display: flex;
-        flex-direction: row;
-        align-items: center;
+        flex-direction: column;
+        justify-content: center;
+        padding-left: 3.5em;
 
         &:not(:last-child) {
 
@@ -176,8 +174,8 @@ body {
 
         &:before {
 
-            position: static;
-            margin-right: var(--woo-spacing);
+            position: absolute;
+            top: initial;
 
         }
 
@@ -186,6 +184,16 @@ body {
             float: none;
             order: 1;
             margin-left: auto;
+
+        }
+
+        > li {
+
+            &:not(:last-child) {
+
+                margin-bottom: calc(var(--woo-spacing) / 4);
+
+            }
 
         }
 
