@@ -2,8 +2,9 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION', 	'0.0.1');
-define('DIGITALIS_FRAMEWORK_PATH', 	    plugin_dir_path( __FILE__ ) );
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.0.1');
+define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
+define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/has-instances.trait.php';
@@ -38,3 +39,12 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
+
+add_filter('sassy-variables', function ($variables) {
+
+    $variables['digitalis_path'] = DIGITALIS_FRAMEWORK_PATH;
+    $variables['digitalis_uri'] = DIGITALIS_FRAMEWORK_URI;
+
+    return $variables;
+
+});
