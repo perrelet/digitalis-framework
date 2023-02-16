@@ -2,6 +2,8 @@
 
 namespace Digitalis;
 
+// Consider changing to has-identifier
+
 abstract class Base {
 
     protected $identifier;
