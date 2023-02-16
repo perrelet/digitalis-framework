@@ -6,6 +6,7 @@ define('DIGITALIS_FRAMEWORK_VERSION', 	'0.0.1');
 define('DIGITALIS_FRAMEWORK_PATH', 	    plugin_dir_path( __FILE__ ) );
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/has-instances.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/singleton.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
