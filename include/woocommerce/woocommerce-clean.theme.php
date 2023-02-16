@@ -69,12 +69,19 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     public function account_menu_items_add_icons ($items) {
 
-        foreach ($this->page_icons as $slug => $page_icon) if (isset($items[$slug])) {
-            
+        if ($items) foreach ($items as $slug => $title) {
+
+            $icon = null;
+            if (isset($this->page_icons[$slug])) $icon = $this->page_icons[$slug];
+            if ($page = Woo_Account_Page::get_page($slug)) if ($page->get_icon()) $icon = $page->get_icon();
+            $icon = apply_filters('digitalis_woocommerce_account_page_icon', $icon, $slug);
+
+            if (!$icon) continue;
+
             switch ($this->icon_library) {
 
                 case 'iconoir':
-                    $items[$slug] = "<i class='iconoir-{$page_icon}'></i><span>{$items[$slug]}</span>";
+                    $items[$slug] = "<i class='iconoir-{$icon}'></i><span>{$title}</span>";
                     break;
 
             }
