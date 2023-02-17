@@ -12,7 +12,7 @@ abstract class Woo_Account_Page {
     protected $active = true;
     protected $hidden = false;
     protected $capability = false;
-    protected $position = null;
+    protected $position = 0;
     
     protected static $static_init = false;
 
@@ -154,7 +154,8 @@ abstract class Woo_Account_Page {
 
     public function is_current () {
 
-        return (bool) WC()->query->get_current_endpoint() == $this->slug;
+        if (!is_account_page()) return false;
+        return (WC()->query->get_current_endpoint() == ($this->slug == 'dashboard' ? false : $this->slug));
 
     }
 
