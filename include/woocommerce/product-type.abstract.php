@@ -14,7 +14,13 @@ abstract class Product_Type extends Integration {
     public function __construct() {
 
         Task_Handler::get_instance()->add_task("install_product_{$this->slug}", [$this, 'install_product']);
-        add_action('woocommerce_loaded',            [$this, 'load_product']);
+
+        if (did_action('plugins_loaded')) {
+            $this->load_product();
+        } else {
+            add_action('plugins_loaded',            [$this, 'load_product']);
+        }
+        
         add_filter('woocommerce_product_class',     [$this, 'product_class'], 10, 2);
         add_filter('product_type_selector',         [$this, 'product_selector']);
 
