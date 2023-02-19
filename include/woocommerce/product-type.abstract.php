@@ -4,7 +4,6 @@ namespace Digitalis;
 
 abstract class Product_Type extends Integration {
 
-    protected $root_file;
     protected $slug;
     protected $name;
     protected $class_path;
@@ -14,7 +13,7 @@ abstract class Product_Type extends Integration {
 
     public function __construct() {
 
-        register_activation_hook($this->root_file,  [$this, 'install_product']);
+        Task_Handler::get_instance()->add_task("install_product_{$this->slug}", [$this, 'install_product']);
         add_action('woocommerce_loaded',            [$this, 'load_product']);
         add_filter('woocommerce_product_class',     [$this, 'product_class'], 10, 2);
         add_filter('product_type_selector',         [$this, 'product_selector']);
