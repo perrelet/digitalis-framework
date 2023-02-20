@@ -117,7 +117,19 @@ abstract class User {
 
     public function get_edit_url () {
 
-        return get_edit_profile_url($this->id);
+        return get_edit_user_link($this->id);
+
+    }
+
+    public function get_avatar_url ($args = null) {
+
+        return get_avatar_url($this->id, $args);
+
+    }
+
+    public function get_avatar ($size = 96, $default = '', $alt = '', $args = null) {
+
+        return get_avatar($this->id, $size, $default, $alt, $args);
 
     }
 
