@@ -517,6 +517,12 @@ body {
 
                 }
 
+                .form-row:last-child {
+
+                    margin-bottom: var(--woo-spacing);
+
+                }
+
             }
 
             span.select2 {
