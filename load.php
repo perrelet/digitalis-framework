@@ -44,8 +44,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
 
 add_filter('sassy-variables', function ($variables) {
 
-    $variables['digitalis_path'] = DIGITALIS_FRAMEWORK_PATH;
-    $variables['digitalis_uri'] = DIGITALIS_FRAMEWORK_URI;
+    $variables['digitalis_path'] = '"' . str_replace('\\', '/', DIGITALIS_FRAMEWORK_PATH) . '"';
+    $variables['digitalis_uri'] = '"' . str_replace('\\', '/', DIGITALIS_FRAMEWORK_URI) . '"';
 
     return $variables;
 
