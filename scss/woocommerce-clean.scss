@@ -4,7 +4,7 @@
     box-shadow: var(--woo-block-shadow);
     border-radius: var(--woo-border-radius);
     background: var(--woo-block-background);
-    padding: var(--woo-block-padding);    
+    padding: var(--woo-block-padding);
 }
 
 @mixin woo-nested-block {
@@ -984,6 +984,7 @@ body {
 
                 padding: 0;
                 margin-bottom: var(--woo-block-margin);
+                box-shadow: none; // Prevent double shadow
     
                 tr:last-child td {
     
