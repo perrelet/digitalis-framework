@@ -1023,6 +1023,26 @@ body {
                     padding-top: var(--woo-spacing);
     
                     > .coupon {
+
+                        display: flex;
+                        flex-direction: row;
+
+                        input {
+
+                            min-width: 160px;
+                            margin-right: var(--woo-spacing);
+                            border: 1px solid var(--woo-border-color);
+                            background: var(--woo-field-background);
+                            @include woo-coupon-field();
+
+                            &:focus {
+
+                                box-shadow: none;
+                                border: 1px solid currentColor;
+
+                            }
+
+                        }
     
                         button {
     
