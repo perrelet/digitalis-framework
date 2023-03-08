@@ -3,6 +3,7 @@
 @mixin woo-block {
     box-shadow: var(--woo-block-shadow);
     border-radius: var(--woo-border-radius);
+    border: var(--woo-block-border);
     background: var(--woo-block-background);
     padding: var(--woo-block-padding);
 }
@@ -44,10 +45,10 @@
 
     border-spacing: 0;
     border-radius: var(--woo-border-radius);
-    border: 0;
-
-    background: white;
+    border: var(--woo-block-border);
+    background: var(--woo-block-background);
     box-shadow: var(--woo-block-shadow);
+    padding: var(--woo-table-padding);
 
 }
 
@@ -80,6 +81,8 @@
     --woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07);
     --woo-block-border: none;
     --woo-block-background: white;
+
+    --woo-table-padding: 0;
 
     --woo-nested-block-shadow: none;
     --woo-nested-block-border: 1px solid var(--woo-border-color);
@@ -733,6 +736,7 @@ body {
 
                 background: white;
                 box-shadow: var(--woo-block-shadow);
+                border: var(--woo-block-border);
 
                 /* @include media ("<phone-landscape") {
 
@@ -1066,8 +1070,6 @@ body {
                 table.shop_table {
     
                     @include woo-table-block();
-    
-                    border: 0;
     
                     tr:first-child {
     
