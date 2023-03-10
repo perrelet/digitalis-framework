@@ -6,6 +6,9 @@
     border: var(--woo-block-border);
     background: var(--woo-block-background);
     padding: var(--woo-block-padding);
+
+    @include p-pad();
+
 }
 
 @mixin woo-nested-block {
@@ -754,7 +757,9 @@ body {
 
                     display: flex;
                     flex-direction: column;
+                    list-style: none;
                     margin: 0;
+                    padding-left: 0;
                 
                     li {
 
@@ -920,6 +925,12 @@ body {
 
                     /* @include woo-block(); */
 
+                    h3:first-of-type {
+
+                        margin-top: 0;
+
+                    }
+
                 }
 
                 table.woocommerce-orders-table {
@@ -990,10 +1001,16 @@ body {
                 margin-bottom: var(--woo-block-margin);
                 box-shadow: none; // Prevent double shadow
     
-                tr:last-child td {
+                tr:last-child {
+
+                    border-top: 0;
+
+                    td {
     
-                    padding: calc(var(--woo-block-padding) / 2);
-    
+                        padding: calc(var(--woo-block-padding) / 2);
+        
+                    }
+
                 }
     
                 td.product-thumbnail {
@@ -1031,7 +1048,7 @@ body {
 
                             min-width: 160px;
                             margin-right: var(--woo-spacing);
-                            border: 1px solid var(--woo-border-color);
+                            border: 1px solid transparent;
                             background: var(--woo-field-background);
                             @include woo-coupon-field();
 
