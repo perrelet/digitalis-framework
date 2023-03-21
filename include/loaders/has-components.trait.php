@@ -6,6 +6,8 @@ trait Has_Components {
 
     protected $components = [];
 
+    public function get_component_namespace() { return __NAMESPACE__; }
+
     public function load_components ($path) {
 
         foreach (glob($path . '/*.component.php') as $component_path) {
@@ -16,7 +18,7 @@ trait Has_Components {
     
     public function component ($class_name, $params = [], $render = true) {
 
-        $class_name = 'Digitalis\\' . $class_name;
+        $class_name = $this->get_component_namespace() . '\\' . $class_name;
 
         if (!class_exists($class_name)) return;
 
@@ -34,7 +36,7 @@ trait Has_Components {
 
     public function get_component ($class_name, $instance = 1) {
 
-        $class_name = 'Digitalis\\' . $class_name;
+        $class_name = $this->get_component_namespace() . '\\' . $class_name;
         $key = $class_name . "-" . $instance;
 
         return isset($this->components[$key]) ? $this->components[$key] : null;
