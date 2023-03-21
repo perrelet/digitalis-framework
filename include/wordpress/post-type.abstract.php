@@ -12,6 +12,8 @@ abstract class Post_Type extends Base {
     protected $singular     = 'Post Type';
     protected $plural       = 'Post Types';
 
+    protected $removed_supports = [];
+
     public function __construct ($flush = false) {
 
         if ($flush) flush_rewrite_rules();
@@ -36,6 +38,8 @@ abstract class Post_Type extends Base {
         $args['supports']   = $this->get_supports($this->get_default_supports());
         $args['labels']     = $this->get_labels($this->get_default_labels());
 
+        if ($this->removed_supports) $args['supports'] = array_diff($args['supports'], $this->removed_supports);
+
         $args = apply_filters("digitalis-" . $this->get_identifier() . "-args", $args);
 
         register_post_type(
@@ -45,6 +49,15 @@ abstract class Post_Type extends Base {
         
     }
 
+    //
+
+    protected function remove_support ($support) {
+
+        $this->removed_supports[] = $support;
+
+    }
+
+    //
 
     protected function get_args ($args) {           // You may wish to override this...
 
