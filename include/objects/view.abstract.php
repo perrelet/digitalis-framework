@@ -5,6 +5,7 @@ namespace Digitalis;
 abstract class View {
 
     protected static $defaults = [];
+    protected static $params = [];
     protected static $template = null;
     protected static $template_path = __DIR__ . "/../../templates/";
 
@@ -12,14 +13,16 @@ abstract class View {
 
     public static function render ($params = [], $print = true) {
 
+        if (method_exists(get_called_class(), 'footer') && !has_action('wp_print_footer_scripts', [get_called_class(), 'footer'])) add_action('wp_print_footer_scripts', [get_called_class(), 'footer']);
+
         if (!$print) ob_start();
 
-        $params = wp_parse_args($params, static::$defaults);
-        $params = static::params($params);
+        static::$params = wp_parse_args($params, static::$defaults);
+        static::$params = static::params(static::$params);
 
         if (is_null(static::$template)) {
 
-            static::view($params);
+            static::view(static::$params);
 
         } else {
 
@@ -27,7 +30,7 @@ abstract class View {
 
             if (file_exists($path)) {
 
-                extract($params, EXTR_SKIP);
+                extract(static::$params, EXTR_SKIP);
                 require $path;
 
             }
