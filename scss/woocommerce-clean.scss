@@ -1,6 +1,7 @@
 // MIXINS
 
 @mixin woo-block {
+    
     box-shadow: var(--woo-block-shadow);
     border-radius: var(--woo-border-radius);
     border: var(--woo-block-border);
@@ -158,7 +159,9 @@ body {
     .woocommerce-info,
     .woocommerce-message {
 
-        @include woo-block();
+        box-shadow: var(--woo-block-shadow);
+        border-radius: var(--woo-border-radius);
+        background: var(--woo-block-background);
 
         border-left: 0;
         border-right: 0;
