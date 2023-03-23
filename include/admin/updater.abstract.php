@@ -113,8 +113,14 @@ class Updater {
 			&& 'plugin' === $options[ 'type' ]
 		) {
 			// just clean the cache when new plugin version is installed
-			delete_transient( $this->cache_key );
+			$this->delete_transient();
 		}
+
+	}
+
+	public function delete_transient () {
+
+		delete_transient( $this->cache_key );
 
 	}
 
