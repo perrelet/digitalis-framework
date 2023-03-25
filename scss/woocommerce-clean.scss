@@ -1429,4 +1429,22 @@ body {
 
     } // body.woocommerce-order-received
 
+    // LOST PASSWORD
+
+    &.woocommerce-lost-password {
+
+        .woocommerce {
+
+            flex-direction: column;
+
+            form.woocommerce-ResetPassword {
+
+                @include woo-block();
+
+            }
+
+        }
+
+    } // body.woocommerce-lost-password
+
 } // body
