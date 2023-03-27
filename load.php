@@ -14,6 +14,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/iterator.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/loaders/can-load.trait.php';

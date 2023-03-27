@@ -1,0 +1,147 @@
+.digitalis-iterator:not(.running) button[data-task='stop'] { display:none; }
+.digitalis-iterator.running button[data-task='start'] { display:none; }
+.digitalis-iterator.running button[data-task='reset'] { display:none; }
+
+.digitalis-iterator.running .status-bar { color: #00b199; }
+.digitalis-iterator.running .progress-bar { color: #00ffdc; }
+
+.digitalis-iterator.err .progress-bar { color: #be0000; }
+
+.digitalis-iterator {
+
+    margin-top: 1rem;
+
+}
+
+.digitalis-iterator .controls {
+
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: row;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.1), 0px 1px 2px rgba(0,0,0,0.1);
+
+}
+
+.digitalis-iterator .controls button {
+
+    padding: 12px 24px;
+    text-transform: uppercase;
+    letter-spacing: 0.4em;
+    background-color: white;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.1), 0px 1px 2px rgba(0,0,0,0.1);
+    font-size: 1.4em;
+    font-weight: 400;
+    cursor: pointer;
+    transition: 0.25s;
+    margin-right: 1rem;
+
+}
+
+.digitalis-iterator .controls button:hover { background-color: #f7f7f7; }
+
+.digitalis-iterator .controls button[data-task='start'] {
+
+    background-color: #11ffd5;
+    color: #002f27;
+
+}
+
+.digitalis-iterator .controls button[data-task='start']:hover { background-color: #65ffe4; }
+
+.digitalis-iterator .controls button[data-task='stop'] {
+
+    background-color: #ff6b8c;
+    color: #b00d31;
+
+}
+
+.digitalis-iterator .controls button[data-task='stop']:hover { background-color: #ff9db3; }
+
+.digitalis-iterator .progress {
+
+    width: 100%;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.1), 0px 1px 2px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+    margin-bottom: 1rem;
+
+}
+
+.digitalis-iterator .status-bar {
+
+    font-weight: 500;
+    color: #939393;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+
+}
+
+.digitalis-iterator .progress-track {
+
+    width: 100%;
+    border-radius: 6px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.1) inset, 0px 1px 2px rgba(0,0,0,0.1) inset;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+
+}
+
+.digitalis-iterator .progress-bar {
+
+    height: 22px;
+    background: currentColor;
+    /* border-radius: 6px; */
+    transition: 0.1s;
+    box-shadow: 0px 1px 2px currentColor inset, 0px -3px 10px rgba(0,0,0,0.3) inset, 0px 6px 4px rgba(255,255,255,0.7) inset;
+    color: #ababab;
+    width: 1%;
+
+}
+
+.digitalis-iterator .log-wrap {
+
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.1), 0px 1px 2px rgba(0,0,0,0.1);
+
+}
+
+.digitalis-iterator .log-wrap label {
+
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 0.5em;
+    display: block;
+
+}
+
+.digitalis-iterator .log-wrap .iterator-log {
+
+    width: 100%;
+    resize: vertical;
+    height: 75vh;
+    border: #f0f0f1 4px solid;
+    font-family: monospace;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-sizing: border-box;
+    overflow: scroll;
+
+}
+
+.digitalis-iterator .log-wrap .iterator-log .log-error { color: #a00000; }
+.digitalis-iterator .log-wrap .iterator-log .log-batch { color: #a6a6a6; }
