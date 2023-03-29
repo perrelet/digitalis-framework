@@ -43,6 +43,30 @@ abstract class User {
 
     }
 
+    public function update_meta ($key, $value, $prev_value = '') {
+
+        return update_user_meta($this->id, $key, $value, $prev_value);
+ 
+    }
+
+    public function add_meta ($key, $value, $unique = false) {
+
+        return add_user_meta($this->id, $key, $value, $unique);
+ 
+    }
+
+    public function get_field ($selector, $format_value = true) {
+
+        return get_field($selector, "user_{$this->get_id()}", $format_value);
+
+    }
+
+    public function update_field ($selector, $value) {
+
+        return update_field($selector, $value, "user_{$this->get_id()}");
+
+    }
+
     // https://developer.wordpress.org/reference/classes/wp_user/
 
     public function get_wp_user () {
