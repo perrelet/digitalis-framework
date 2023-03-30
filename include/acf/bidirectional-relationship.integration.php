@@ -48,8 +48,10 @@ abstract class Bidirectional_Relationship extends Integration {
         if (!$this->validate_post_type($field_name, $updated_post_id))                  return true;
 
         $old_values = get_field($field['name'], $updated_post_id, false);
-        if (empty($values))     $values = [];
-		if (empty($old_values)) $old_values = [];
+        if (empty($values))         $values = [];
+		if (empty($old_values))     $old_values = [];
+        if (!is_array($values))     $values = [$values];
+        if (!is_array($old_values)) $values = [$old_values];
 
         if ($adding = array_diff($values, $old_values)) foreach ($adding as $post_id) {
 
@@ -80,8 +82,10 @@ abstract class Bidirectional_Relationship extends Integration {
         if (!$this->validate_post_type($field_name, $updated_post_id))  return $values;
 
         $old_values = get_field($field['name'], $updated_post_id, false);
-        if (empty($values))     $values = [];
-		if (empty($old_values)) $old_values = [];
+        if (empty($values))         $values = [];
+		if (empty($old_values))     $old_values = [];
+        if (!is_array($values))     $values = [$values];
+        if (!is_array($old_values)) $values = [$old_values];
 
         $added = array_diff($values, $old_values);
 		$removed = array_diff($old_values, $values);
