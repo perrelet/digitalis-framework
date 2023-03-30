@@ -13,9 +13,43 @@ abstract class User {
     public static function get_user ($user_id = null) {
 
         if (is_null($user_id)) $user_id = get_current_user_id();
-        if (!isset(self::$users[$user_id])) self::$users[$user_id] = new User($user_id);
+        if (!isset(static::$users[$user_id])) {
 
-        return self::$users[$user_id];
+            $class_name = get_called_class();
+            static::$users[$user_id] = new $class_name($user_id);
+
+        }
+
+        return static::$users[$user_id];
+
+    }
+
+    public static function get_by ($field, $value) {
+
+        if (!$wp_user = get_user_by($field, $value)) return;
+        if (!$user = static::get_user($wp_user->ID)) return;
+
+        $user->set_wp_user($wp_user);
+
+        return $user;
+
+    }
+
+    public static function get_by_email ($email) {
+
+        return static::get_by('email', $email);
+
+    }
+
+    public static function get_by_login ($login) {
+
+        return static::get_by('login', $login);
+
+    }
+
+    public static function get_by_slug ($slug) {
+
+        return static::get_by('slug', $slug);
 
     }
 
