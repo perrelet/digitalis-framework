@@ -9,11 +9,17 @@ abstract class View {
     protected static $template = null;
     protected static $template_path = __DIR__ . "/../../templates/";
 
+    protected static $indexes = [];
+
     public static function params ($params) { return $params; }
 
     public static function render ($params = [], $print = true) {
 
-        if (method_exists(get_called_class(), 'footer') && !has_action('wp_print_footer_scripts', [get_called_class(), 'footer'])) add_action('wp_print_footer_scripts', [get_called_class(), 'footer']);
+        if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
+        self::$indexes[static::class]++;
+        $params['index'] = self::$indexes[static::class];
+
+        if (method_exists(static::class, 'footer') && !has_action('wp_print_footer_scripts', [static::class, 'footer'])) add_action('wp_print_footer_scripts', [static::class, 'footer']);
 
         if (!$print) ob_start();
 
