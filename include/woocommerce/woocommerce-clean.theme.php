@@ -74,7 +74,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
             $icon = null;
             if (isset($this->page_icons[$slug])) $icon = $this->page_icons[$slug];
             if ($page = Woo_Account_Page::get_page($slug)) if ($page->get_icon()) $icon = $page->get_icon();
-            $icon = apply_filters('digitalis_woocommerce_account_page_icon', $icon, $slug);
+            $icon = apply_filters('digitalis_woocommerce_account_page_icon', $icon, $slug, $page);
 
             if (!$icon) continue;
 
