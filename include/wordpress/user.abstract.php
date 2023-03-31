@@ -191,4 +191,24 @@ abstract class User {
 
     }
 
+    public function get_posts_count ($post_type = 'post', $public_only = false) {
+
+        return count_user_posts($this->id, $post_type, $public_only);
+
+    }
+
+    //
+
+    public function is_super_admin () {
+
+        return is_super_admin($this->id);
+
+    }
+
+    public function can ($capability, ...$args) {
+
+        return user_can($this->id, $capability, ...$args);
+
+    }
+
 }
