@@ -15,7 +15,7 @@ abstract class User {
         if (is_null($user_id)) $user_id = get_current_user_id();
         if (!isset(static::$users[$user_id])) {
 
-            $class_name = get_called_class();
+            $class_name = static::class;
             static::$users[$user_id] = new $class_name($user_id);
 
         }

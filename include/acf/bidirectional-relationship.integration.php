@@ -114,7 +114,7 @@ abstract class Bidirectional_Relationship extends Integration {
 
         if ($this->log) {
 
-            error_log("--- Bidirectional_Relationship : " . get_called_class() . " ---");
+            error_log("--- Bidirectional_Relationship : " . static::class . " ---");
             error_log("Syncing: " . get_post_type($updated_post_id) . " (" . get_the_title($updated_post_id) . " #{$updated_post_id}): {$field['name']} -> {$sync_field_key}");
             if ($added) error_log("Values added to " . get_the_title($added[array_key_first($added)]) . ".{$sync_field_key} = " . implode(", ", $added));
             if ($removed) error_log("Values removed from " . get_post_type($removed[array_key_first($removed)]) . ".{$sync_field_key} = " . implode(", ", $removed));
@@ -130,7 +130,7 @@ abstract class Bidirectional_Relationship extends Integration {
 
     public function check_global_flag ($action, $field_name) {
 
-        $global_flag = "{$action}_{$field_name}_" . get_called_class();
+        $global_flag = "{$action}_{$field_name}_" . static::class;
         if (isset($GLOBALS[$global_flag]) && $GLOBALS[$global_flag]) return false;
         $GLOBALS[$global_flag] = true;
 
@@ -140,7 +140,7 @@ abstract class Bidirectional_Relationship extends Integration {
 
     public function release_global_flag ($action, $field_name) {
 
-        $global_flag = "{$action}_{$field_name}_" . get_called_class();
+        $global_flag = "{$action}_{$field_name}_" . static::class;
         $GLOBALS[$global_flag] = false;
 
     }
