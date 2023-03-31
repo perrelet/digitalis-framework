@@ -783,6 +783,12 @@ body {
 
                         }
 
+                        &.has-parent a {
+
+                            padding-left: calc(1.5 * var(--woo-spacing));
+
+                        }
+
                         a {
 
                             position: relative;

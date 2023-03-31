@@ -13,6 +13,10 @@ abstract class Woo_Account_Page {
     protected $hidden = false;
     protected $capability = false;
     protected $position = 0;
+    protected $parent = false;
+    protected $collapsable = true;
+
+    protected $children = [];
     
     protected static $static_init = false;
 
@@ -22,6 +26,8 @@ abstract class Woo_Account_Page {
     protected static $renamed_pages = [];
     protected static $protected_pages = [];     
     protected static $page_positions = [];      // $slug => $position
+
+    protected static $current_endpoint;
 
     public static function get_page ($slug) {
 
@@ -53,9 +59,30 @@ abstract class Woo_Account_Page {
 
     }
 
+    public static function get_current_endpoint () {
+
+        if (is_null(self::$current_endpoint)) self::$current_endpoint = WC()->query->get_current_endpoint();
+        return self::$current_endpoint;
+
+    }
+
     //
 
     public function __construct () {
+
+        self::$pages[$this->slug] = $this;
+
+        if (is_null($this->endpoint)) $this->endpoint = $this->slug;
+
+        add_action('init', [$this, 'init']);
+        add_action('init', [$this, 'add_endpoints']);
+        add_action('parse_request', [$this, 'maybe_add_permission_notice']);
+        add_filter('woocommerce_get_query_vars', [$this, 'get_query_vars']);
+        add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
+
+    }
+
+    public function init () {
 
         if (!self::$static_init) {
             
@@ -64,15 +91,14 @@ abstract class Woo_Account_Page {
 
         }
 
-        self::$pages[$this->slug] = $this;
+        if ($parent = $this->get_parent_page()) {
 
-        if (is_null($this->endpoint)) $this->endpoint = $this->slug;
-        if (is_numeric($this->position)) self::$page_positions[$this->slug] = $this->position;
+            $parent->add_child($this);
 
-        add_action('init', [$this, 'add_endpoints']);
-        add_action('parse_request', [$this, 'maybe_add_permission_notice']);
-        add_filter('woocommerce_get_query_vars', [$this, 'get_query_vars']);
-        add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
+        }
+
+        $position = ($parent) ? ($parent->get_position() + $this->position * 0.01) : $this->position;
+        self::$page_positions[$this->slug] = $position;
 
     }
 
@@ -86,6 +112,14 @@ abstract class Woo_Account_Page {
     // OVERRIDE
 
     protected function render() {}
+
+    // INTERNAL
+
+    protected function add_child ($page) {
+
+        $this->children[$page->get_slug()] = $page;
+
+    }
 
     // GETTERS
 
@@ -125,6 +159,36 @@ abstract class Woo_Account_Page {
 
     }
 
+    public function get_parent () {
+
+        return $this->parent;
+
+    }
+
+    public function get_parent_page () {
+
+        return $this->parent ? self::get_page($this->parent) : false;
+
+    }
+
+    public function get_children () {
+
+        return $this->children;
+
+    }
+
+    public function get_child ($slug) {
+
+        return isset($this->children[$slug]) ? $this->children[$slug] : null;
+
+    }
+
+    public function get_collapsable () {
+
+        return $this->collapsable;
+
+    }
+
     // STATE
 
     public function is_active () {
@@ -147,15 +211,38 @@ abstract class Woo_Account_Page {
 
     public function can_access ($user = null) {
 
+        if (!$this->is_protected()) return true; 
+
         if (is_null($user)) $user = wp_get_current_user();
-        return $this->is_protected() ? user_can($user, $this->capability) : true;
+        return $this->get_user_permission($user);
+
+    }
+
+    public function get_user_permission ($user) {
+
+        return user_can($user, $this->capability);
 
     }
 
     public function is_current () {
 
         if (!is_account_page()) return false;
-        return (WC()->query->get_current_endpoint() == ($this->slug == 'dashboard' ? false : $this->slug));
+        return (self::get_current_endpoint() == ($this->slug == 'dashboard' ? false : $this->slug));
+
+    }
+
+    public function is_open () {
+
+        if ($this->is_current()) return true;
+
+        if ($parent = $this->get_parent_page()) {
+
+            if ($parent->is_current()) return true;
+            if ($children = $parent->get_children()) foreach ($children as $child) if ($child->is_current()) return true;
+
+        }
+
+        return false;
 
     }
 
@@ -221,12 +308,13 @@ abstract class Woo_Account_Page {
         foreach (self::$page_positions as $slug => $position) {
 
             if ($page = self::get_page($slug)) {
-                
-                if (!$page->is_hidden() && $page->is_active() && $page->can_access()) {
-                    
-                    $items[$page->get_endpoint()] = $page->get_title();
 
-                }
+                $visible = true;
+
+                if ($page->is_hidden() || !$page->is_active() || !$page->can_access()) $visible = false;
+                if ($visible && ($parent = $page->get_parent_page()) && $parent->get_collapsable() && !$page->is_open()) $visible = false;
+
+                if ($visible) $items[$page->get_endpoint()] = $page->get_title();
 
             } else if (isset($old_items[$slug])) {
 
