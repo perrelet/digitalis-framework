@@ -9,8 +9,7 @@ abstract class Theme {
         'wp_enqueue_scripts' => 'style',
     ];
 
-    protected $url;
-    protected $path;
+    protected $features;
     
     public function __construct () {
 
@@ -22,10 +21,63 @@ abstract class Theme {
 
     //
 
+    protected function register_features () { // Features registered by child classes will be automatically appended to the features array
+
+        return [
+            'js_modules' => function () {
+                add_filter('script_loader_tag', [$this, 'add_modules_attribute'], 10, 3);
+            },
+        ];
+
+    }
+
+    protected function get_features () {
+
+        if (is_null($this->features)) {
+
+            $this->features = $this->register_features();
+
+            $class = get_called_class();
+            while ($class = get_parent_class($class)) $this->features += call_user_func($class . "::" . 'register_features');
+
+        }
+
+        return $this->features;
+
+    }
+
+    protected function activate_feature ($slug) {
+
+        if (isset($this->get_features()[$slug])) {
+
+            $func = $this->get_features()[$slug];
+            $func();
+
+        }
+
+    }
+
+    // Consider removing / depreciating:
+
+    protected $url;
+    protected $path;
+
     public function set_location ($url, $path) {
 
         $this->url = $url;
         $this->path = $path;
+
+    }
+
+    public function get_url () {
+
+        return $this->url;
+
+    }
+
+    public function get_path () {
+
+        return $this->path;
 
     }
 
@@ -57,15 +109,11 @@ abstract class Theme {
 
     //
 
-    public function get_url () {
+    public function add_modules_attribute ($tag, $handle, $src) {
 
-        return $this->url;
+        if (strpos($handle, '-module')) $tag = str_replace("<script", "<script type='module'", $tag);
 
-    }
-
-    public function get_path () {
-
-        return $this->path;
+        return $tag;
 
     }
 
