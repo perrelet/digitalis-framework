@@ -20,10 +20,16 @@ abstract class Post_Type extends Base {
         
         add_action('init', [$this, 'register']);
 
-        if (method_exists($this, 'columns')) add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
-        if (method_exists($this, 'column')) add_filter("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
-        if (method_exists($this, 'filters')) add_action('restrict_manage_posts', [$this, 'filters_wrap']);
-        if (method_exists($this, 'query')) add_action('pre_get_posts', [$this, 'query_wrap']);
+        // Front
+
+        if (method_exists($this, 'main_query'))          add_action('pre_get_posts', [$this, 'main_query_wrap']);
+
+        // Admin
+
+        if (method_exists($this, 'columns'))        add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
+        if (method_exists($this, 'column'))         add_filter("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
+        if (method_exists($this, 'filters'))        add_action('restrict_manage_posts', [$this, 'filters_wrap']);
+        if (method_exists($this, 'admin_query'))    add_action('pre_get_posts', [$this, 'admin_query_wrap']);
 
         $this->run();
 
@@ -153,6 +159,16 @@ abstract class Post_Type extends Base {
 
     //
 
+    public function main_query_wrap ($query) {
+
+        if (!$query->is_main_query() || ($query->get('post_type') != $this->slug)) return;
+
+        $this->main_query($query);
+
+    }
+
+    //
+
     public function filters_wrap () {
 
         global $pagenow, $post_type;
@@ -163,13 +179,13 @@ abstract class Post_Type extends Base {
 
     }
 
-    public function query_wrap ($query) {
+    public function admin_query_wrap ($query) {
 
         global $pagenow, $post_type;
 
         if (!is_admin() || ($post_type != $this->slug) || ($pagenow != 'edit.php') || !isset($query->query_vars['post_type']) || ($query->query_vars['post_type'] != $this->slug)) return;
 
-        $this->query($query);
+        $this->admin_query($query);
 
     }
 
