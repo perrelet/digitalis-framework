@@ -162,4 +162,10 @@ trait Has_WP_Post {
 
     }
 
+    public function get_terms ($taxonomy) {
+
+        return get_the_terms($this->post_id, $taxonomy);
+
+    }
+
 }
