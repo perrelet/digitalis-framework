@@ -14,6 +14,8 @@ abstract class Post_Type extends Base {
 
     protected $removed_supports = [];
 
+    protected $post_type;
+
     public function __construct ($flush = false) {
 
         if ($flush) flush_rewrite_rules();
@@ -48,7 +50,7 @@ abstract class Post_Type extends Base {
 
         $args = apply_filters("digitalis-" . $this->get_identifier() . "-args", $args);
 
-        register_post_type(
+        $this->post_type = register_post_type(
             $this->slug,
             $args
         );
