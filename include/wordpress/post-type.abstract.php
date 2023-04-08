@@ -161,7 +161,7 @@ abstract class Post_Type extends Base {
 
     public function main_query_wrap ($query) {
 
-        if (!$query->is_main_query() || ($query->get('post_type') != $this->slug)) return;
+        if (is_admin() || !$query->is_main_query() || ($query->get('post_type') != $this->slug)) return;
 
         $this->main_query($query);
 
