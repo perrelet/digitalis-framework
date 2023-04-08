@@ -30,6 +30,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/updater.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
 
