@@ -11,6 +11,8 @@ abstract class Taxonomy extends Base {
     protected $singular     = 'Taxonomy';
     protected $plural       = 'Taxonomies';
 
+    protected $taxonomy;
+
     public function __construct ($flush = false) {
 
         if ($flush) flush_rewrite_rules();
@@ -28,7 +30,7 @@ abstract class Taxonomy extends Base {
 
         $args = apply_filters("digitalis-" . $this->get_identifier() . "-args", $args);
 
-        register_taxonomy(
+        $this->taxonomy = register_taxonomy(
             $this->slug,
             $this->post_types,
             $args
