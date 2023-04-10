@@ -12,9 +12,12 @@ abstract class Post_Type extends Base {
     protected $singular     = 'Post Type';
     protected $plural       = 'Post Types';
 
-    protected $removed_supports = [];
+    protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, args => [ ... ], ...] || 'months_dropdown'
+
+    //
 
     protected $post_type;
+    protected $removed_supports = [];
 
     public function __construct ($flush = false) {
 
@@ -22,16 +25,20 @@ abstract class Post_Type extends Base {
         
         add_action('init', [$this, 'register']);
 
-        // Front
-
-        if (method_exists($this, 'main_query'))          add_action('pre_get_posts', [$this, 'main_query_wrap']);
-
         // Admin
 
         if (method_exists($this, 'columns'))        add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
-        if (method_exists($this, 'column'))         add_filter("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
-        if (method_exists($this, 'filters'))        add_action('restrict_manage_posts', [$this, 'filters_wrap']);
+        if (method_exists($this, 'column'))         add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
+
+        if (!in_array('publish_month', $this->filters)) add_filter('disable_months_dropdown',   [$this, 'disable_months_dropdown'], 10, 2);
+        add_action('restrict_manage_posts',     [$this, 'render_filters']);
+        add_action('pre_get_posts',             [$this, 'admin_controller']);
+
         if (method_exists($this, 'admin_query'))    add_action('pre_get_posts', [$this, 'admin_query_wrap']);
+
+        // Front
+
+        if (method_exists($this, 'main_query'))     add_action('pre_get_posts', [$this, 'main_query_wrap']);
 
         $this->run();
 
@@ -163,7 +170,7 @@ abstract class Post_Type extends Base {
 
     public function main_query_wrap ($query) {
 
-        if (is_admin() || !$query->is_main_query() || ($query->get('post_type') != $this->slug)) return;
+        if (!$this->is_main_query($query)) return;
 
         $this->main_query($query);
 
@@ -171,24 +178,215 @@ abstract class Post_Type extends Base {
 
     //
 
-    public function filters_wrap () {
+    protected function get_filters () {
 
-        global $pagenow, $post_type;
+        if ($this->filters) foreach ($this->filters as $key => &$filter) {
 
-        if (!is_admin() || ($post_type != $this->slug) || ($pagenow != 'edit.php')) return;
+            if (!is_array($filter)) $filter = ['type'  => $filter];
 
-        $this->filters();
+            $filter = wp_parse_args($filter, [
+                'type'  => 'taxonomy',
+                'name'  => $key,
+                'args'  => [],
+            ]);
+
+            switch ($filter['type']) {
+
+                case 'taxonomy':
+
+                    $taxonomy = get_taxonomy($key);
+
+                    $filter['args'] = wp_parse_args($filter['args'], [
+                        'taxonomy'          => $key,
+                        'name'              => "tax[{$filter['name']}]",
+                        'value_field'       => 'term_id',
+                        'hide_empty'        => true,
+                        'hide_if_empty'     => true,
+                        'selected'          => $_REQUEST['tax'][$key] ?? false,
+                        'show_option_none'  => "Filter by {$taxonomy->labels->singular_name}",
+                        'option_none_value' => 0,
+                    ]);
+
+                    break;
+
+                case 'acf':
+
+                    $filter['args'] = wp_parse_args($filter['args'], [
+                        'hide_falsy'    => true,
+                        'compare'       => '=',
+                    ]);
+
+            }
+
+        }
+
+        return $this->filters;
+
+    }
+
+    public function admin_controller ($query) {
+
+        if (!$this->is_main_admin_query($query)) return;
+
+        $this->get_filters();
+
+        if ($this->filters) foreach ($this->filters as $key => $filter) {
+
+            $value = false;
+
+            switch ($filter['type']) {
+
+                case 'taxonomy':
+
+                    if ($value = $_REQUEST['tax'][$key] ?? false) {
+
+                        if (!isset($query->query_vars['tax_query'])) $query->query_vars['tax_query'] = [];
+
+                        $query->query_vars['tax_query'][] = [
+                            'taxonomy' => $key,
+                            'field'    => $filter['args']['value_field'] == 'term_id' ? 'id' : $filter['args']['value_field'],
+                            'terms'    => $value,
+                        ];
+
+                    }
+
+                    break;
+
+                case 'acf':
+
+                    if ($value = $_REQUEST['meta'][$key] ?? false) {
+
+                        if (!isset($query->query_vars['meta_query'])) $query->query_vars['meta_query'] = [];
+
+                        $query->query_vars['meta_query'][] = [
+                            'key'     => $key,
+                            'value'   => $value,
+                            'compare' => $filter['args']['compare'],
+                        ];
+
+                    }
+
+                    break;
+
+            }
+
+        }
+
+    }
+
+    public function disable_months_dropdown ($disable, $post_type) {
+
+        return ($post_type == $this->slug) ? true : $disable;
+
+    }
+
+    public function render_filters () {
+
+        if (!$this->is_admin_archive()) return;
+
+        if (method_exists($this, 'before_render_filters')) $this->before_render_filters();
+
+        if ($this->filters) foreach ($this->filters as $key => $filter) {
+
+            switch ($filter['type']) {
+
+                case 'taxonomy':
+
+                    wp_dropdown_categories($filter['args']);
+                    
+                    break;
+
+                case 'acf':
+
+                    $current_value = $_REQUEST['meta'][$key] ?? false;
+
+                    $post_ids = (new \WP_Query([
+                        'post_type'         => $this->slug,
+                        'post_status'       => 'any',
+                        'posts_per_page'    => 1,
+                        'fields'            => 'ids',
+                    ]))->get_posts();
+
+                    if (!$post_ids) break;
+                    if (!$field = get_field_object($key, $post_ids[0])) break;
+
+                    if (isset($field['choices']) && ($options = $field['choices'])) {
+
+                        echo "<select name='meta[{$filter['name']}]'>";
+
+                            echo "<option value='0'>Filter by {$field['label']}</option>";
+
+                            foreach ($options as $value => $label) {
+
+                                if ($filter['args']['hide_falsy'] && !$value) continue;
+                                echo "<option value='{$value}' " . selected($value, $current_value, false) . ">{$label}</option>";
+
+                            }
+
+                        echo "</select>";
+                    } else {
+
+                        // Text field
+
+                    }
+
+                    break;
+
+            }
+
+        }
+
+        if (method_exists($this, 'after_render_filters')) $this->after_render_filters();
 
     }
 
     public function admin_query_wrap ($query) {
 
-        global $pagenow, $post_type;
-
-        if (!is_admin() || ($post_type != $this->slug) || ($pagenow != 'edit.php') || !isset($query->query_vars['post_type']) || ($query->query_vars['post_type'] != $this->slug)) return;
+        if (!$this->is_main_admin_query($query)) return;
 
         $this->admin_query($query);
 
     }
+
+    //
+
+    protected function is_main_query ($query) {
+
+        return (!is_admin() && $query->is_main_query() && ($query->get('post_type') == $this->slug));
+
+    }
+
+    protected function is_main_admin_query ($query) {
+
+        return ($this->is_admin_archive() && $query->is_main_query() && isset($query->query_vars['post_type']) && ($query->query_vars['post_type'] == $this->slug));
+
+    }
+
+    protected function is_admin_archive () {
+
+        global $pagenow, $post_type;
+
+        return (is_admin() && ($post_type == $this->slug) && ($pagenow == 'edit.php'));
+
+    }
+
+    //
+
+    /* public function columns ($columns) {
+
+        return $columns;
+        
+    }
+
+    public function column ($column, $post_id) {
+
+        switch ($column) {
+
+            case '':
+                return;
+
+        }
+
+    } */
 
 }
