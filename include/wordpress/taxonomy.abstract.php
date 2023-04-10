@@ -19,6 +19,9 @@ abstract class Taxonomy extends Base {
 
         add_action('init', [$this, 'register']);
 
+        if (method_exists($this, 'columns'))    add_filter("manage_edit-{$this->slug}_columns",     [$this, 'columns']);
+        if (method_exists($this, 'column'))     add_filter("manage_{$this->slug}_custom_column",    [$this, 'column'], 10, 3);
+
     }
 
     public function register () {
@@ -107,5 +110,27 @@ abstract class Taxonomy extends Base {
         ]);
 
     }
+
+    //
+
+    /* public function columns ($columns) {
+
+        return $columns;
+
+    }
+    
+    public function column ($output, $column, $term_id) {
+
+        switch ($column) {
+
+            case '':
+                return;
+
+        }
+
+
+        return $output;
+
+    } */
 
 }
