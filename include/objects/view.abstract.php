@@ -13,6 +13,8 @@ abstract class View {
 
     public static function params ($params) { return $params; }
 
+    public static function get_template () { return static::$template; }
+
     public static function render ($params = [], $print = true) {
 
         if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
@@ -26,13 +28,13 @@ abstract class View {
         static::$params = wp_parse_args($params, static::$defaults);
         static::$params = static::params(static::$params);
 
-        if (is_null(static::$template)) {
+        if (is_null(static::get_template())) {
 
             static::view(static::$params);
 
         } else {
 
-            $path = static::$template_path . static::$template . '.php';
+            $path = static::$template_path . static::get_template() . '.php';
 
             if (file_exists($path)) {
 
