@@ -7,6 +7,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
     protected $do_account_icons = true;
     protected $do_wrap_elements = true;
     protected $do_modify_fields = true;
+    protected $do_modify_cart = true;
 
     protected $icon_library = 'iconoir';
     protected $template_overrides = [];
@@ -16,9 +17,12 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
         'orders'            => '3d-select-solid',
         'downloads'         => 'download',
         'edit-address'      => 'home-alt-slim-horiz',
+        'payment-methods'   => 'card-security',
         'edit-account'      => 'key-alt',
         'customer-logout'   => 'log-out',
     ];
+
+    protected $default_page_icon = 'circle';
 
     public function __construct() {
 
@@ -27,6 +31,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
         if ($this->do_account_icons) $this->account_menu_icons();
         if ($this->do_wrap_elements) $this->wrap_woocommerce_elements();
         if ($this->do_modify_fields) $this->modify_fields();
+        if ($this->do_modify_cart) $this->modify_cart();
 
         parent::__construct();
         
@@ -71,7 +76,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
         if ($items) foreach ($items as $slug => $title) {
 
-            $icon = null;
+            $icon = $this->default_page_icon;;
             if (isset($this->page_icons[$slug])) $icon = $this->page_icons[$slug];
             if ($page = Woo_Account_Page::get_page($slug)) if ($page->get_icon()) $icon = $page->get_icon();
             $icon = apply_filters('digitalis_woocommerce_account_page_icon', $icon, $slug, $page);
@@ -124,6 +129,20 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
             return htmlspecialchars_decode($field, ENT_QUOTES);
 
         }, 10, 4);
+
+    }
+
+    protected function modify_cart() {
+
+        add_filter('woocommerce_quantity_input_type', [$this, 'quantity_input_type'], PHP_INT_MAX);
+
+    }
+
+    public function quantity_input_type ($type) {
+
+        if ($type == 'hidden') echo "&nbsp";
+
+        return $type;
 
     }
 
