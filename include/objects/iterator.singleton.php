@@ -11,6 +11,7 @@ abstract class Iterator extends Singleton {
 
     protected $halt_on_fail     = false;
     protected $dynamic_total    = false;
+    protected $print_results    = true;
 
     protected $labels = [
         'single'    => 'item',
@@ -206,6 +207,7 @@ abstract class Iterator extends Singleton {
             'batch_size'    => $this->batch_size,
             'halt_on_fail'  => $this->halt_on_fail,
             'dynamic_total' => $this->dynamic_total,
+            'print_results' => $this->print_results,
             'labels'        => $this->labels,
         ]);
 

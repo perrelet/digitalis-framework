@@ -104,9 +104,13 @@
             if (response.hasOwnProperty('log') && response.log) for (const line of response.log) this.log(line);
             if (response.hasOwnProperty('errors') && response.errors) for (const line of response.errors) this.error(line, false);
 
-            if (response.results.processed.length)  for (const id of response.results.processed)    this.batch_log(` - OK: #${id}`);
-            if (response.results.skipped.length)    for (const id of response.results.skipped)      this.batch_log(` - Skipped: #${id}`);
-            if (response.results.failed.length)     for (const id of response.results.failed)       this.error(` - Failed: #${id}`, false);
+            if (this.params.print_results) {
+
+                if (response.results.processed.length)  for (const id of response.results.processed)    this.batch_log(` - OK: #${id}`);
+                if (response.results.skipped.length)    for (const id of response.results.skipped)      this.batch_log(` - Skipped: #${id}`);
+                if (response.results.failed.length)     for (const id of response.results.failed)       this.error(` - Failed: #${id}`, false);
+
+            }
 
             if (response.results.failed.length && this.params.halt_on_fail) {
                 
