@@ -18,12 +18,14 @@ abstract class Singleton {
         if (!isset(self::$instances[$class])) {
             self::$instances[$class] = new static();
             self::$instances[$class]->run();
+            self::$instances[$class]->init();
         }
 
         return self::$instances[$class];
         
     }
 
-    public function run () {} // Override me :)
+    public function run () {} // Depreciated
+    public function init () {} // Override me :)
 
 }
