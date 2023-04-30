@@ -3,31 +3,33 @@
 namespace Digitalis;
 
 use \WP_User;
-abstract class User {
+
+abstract class User extends Model {
 
     protected static $users = [];
 
     protected $id;
     protected $wp_user;
 
+    public static function extract_id ($id = null) {
+
+        if (is_null($id)) $id = get_current_user_id();
+        if ($id instanceof WP_User) $id = $id->ID;
+
+        return $id;
+
+    }
+
     public static function get_user ($user_id = null) {
 
-        if (is_null($user_id)) $user_id = get_current_user_id();
-        if (!isset(static::$users[$user_id])) {
-
-            $class_name = static::class;
-            static::$users[$user_id] = new $class_name($user_id);
-
-        }
-
-        return static::$users[$user_id];
+        return static::get_instance($user_id);
 
     }
 
     public static function get_by ($field, $value) {
 
         if (!$wp_user = get_user_by($field, $value)) return;
-        if (!$user = static::get_user($wp_user->ID)) return;
+        if (!$user = static::get_instance($wp_user->ID)) return;
 
         $user->set_wp_user($wp_user);
 
