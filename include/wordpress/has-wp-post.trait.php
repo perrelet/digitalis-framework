@@ -114,7 +114,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_time ($format = 'U', $gmt = false, $translate = false) {
+    public function get_post_time ($format = 'U', $gmt = false, $translate = false) {
 
         return get_post_time($format, $gmt, $this->wp_post, $translate);
 
