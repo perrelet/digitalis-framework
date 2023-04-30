@@ -57,7 +57,7 @@ abstract class Iterator extends Singleton {
 
     //
 
-    public function run () {
+    public function init () {
 
         add_action('admin_menu', [$this, 'add_admin_page']);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
