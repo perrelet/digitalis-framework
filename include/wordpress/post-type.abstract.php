@@ -43,10 +43,12 @@ abstract class Post_Type extends Base {
         if (method_exists($this, 'main_query'))     add_action('pre_get_posts', [$this, 'main_query_wrap']);
 
         $this->run();
+        $this->init();
 
     }
 
-    public function run () {}
+    public function run () {}  // Depreciated.
+    public function init () {} // Override me :)
 
     public function register () {
 
