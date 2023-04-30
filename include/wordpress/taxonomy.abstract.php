@@ -22,7 +22,11 @@ abstract class Taxonomy extends Base {
         if (method_exists($this, 'columns'))    add_filter("manage_edit-{$this->slug}_columns",     [$this, 'columns']);
         if (method_exists($this, 'column'))     add_filter("manage_{$this->slug}_custom_column",    [$this, 'column'], 10, 3);
 
+        $this->init();
+
     }
+    
+    public function init () {}  // Override me :)
 
     public function register () {
 
