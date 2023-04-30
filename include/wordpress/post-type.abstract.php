@@ -34,6 +34,8 @@ abstract class Post_Type extends Base {
         add_action('restrict_manage_posts',     [$this, 'render_filters']);
         add_action('pre_get_posts',             [$this, 'admin_controller']);
 
+        if (method_exists($this, 'after_insert'))   add_action("wp_after_insert_post", [$this, 'after_insert_wrap'], 10, 4);
+
         if (method_exists($this, 'admin_query'))    add_action('pre_get_posts', [$this, 'admin_query_wrap']);
 
         // Front
@@ -337,6 +339,14 @@ abstract class Post_Type extends Base {
         }
 
         if (method_exists($this, 'after_render_filters')) $this->after_render_filters();
+
+    }
+
+    public function after_insert_wrap ($post_id, $post, $update, $post_before) {
+
+        if ($post->post_type != $this->slug) return;
+
+        $this->after_insert($post_id, $post, $update, $post_before);
 
     }
 
