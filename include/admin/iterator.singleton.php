@@ -11,7 +11,7 @@ abstract class Iterator extends Singleton {
 
     protected $halt_on_fail     = false;
     protected $dynamic_total    = false;
-    protected $print_results    = true;
+    protected $print_results    = false;
 
     protected $labels = [
         'single'    => 'item',
