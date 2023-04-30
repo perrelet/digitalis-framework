@@ -168,4 +168,24 @@ trait Has_WP_Post {
 
     }
 
+    // ACF
+
+    public function get_field ($selector, $format_value = true) {
+
+        return get_field($selector, $this->post_id, $format_value);
+
+    }
+
+    public function esc_field ($selector, $format_value = true) {
+
+        return trim(esc_attr($this->get_field($selector, $format_value)));
+
+    }
+
+    public function update_field ($selector, $value) {
+
+        return update_field($selector, $value, $this->post_id);
+        
+    }
+
 }
