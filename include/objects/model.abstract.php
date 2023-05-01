@@ -8,15 +8,21 @@ class Model {
 
     public static function extract_id ($id = null) {
 
-        if ($id instanceof self) $id = $id->get_id();
+        if ($id instanceof self) return $id->get_id();
 
         return $id;
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate ($data) {
 
         return true;
+
+    }
+
+    public static function validate_id ($id) {
+
+        return ($id > 0);
 
     }
 
@@ -26,9 +32,9 @@ class Model {
 
     }
 
-    public static function get_instance ($id = null) {
+    public static function get_instance ($data = null) {
 
-        $id = static::extract_id($id);
+        $id = static::extract_id($data);
         if (is_null($id)) return null;
 
         $class_name = static::get_class_name();
@@ -37,9 +43,10 @@ class Model {
         
         if (!isset(self::$instances[$class_name][$id])) {
             
-            if (static::validate_id($id)) {
+            if (static::validate($data) && static::validate_id($id)) {
 
                 self::$instances[$class_name][$id] = new $class_name($id);
+                self::$instances[$class_name][$id]->init($data);
 
             } else {
 
@@ -63,6 +70,20 @@ class Model {
 
     }
 
+    public static function get_all_instances ($class_name = null) {
+
+        if ($class_name) {
+
+            return isset(self::$instances[$class_name]) ? self::$instances[$class_name] : [];
+
+        } else {
+
+            return self::$instances;
+
+        }
+
+    }
+
     //
 
     protected $id;
@@ -74,7 +95,7 @@ class Model {
 
     }
 
-    public function init () {}  // Override me.
+    public function init ($data = null) {}  // Override me.
 
     public function get_id () {
 
@@ -87,5 +108,7 @@ class Model {
         return $this->id == array_key_first(self::$instances[static::get_class_name()]);
 
     }
+
+
 
 }
