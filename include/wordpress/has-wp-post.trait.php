@@ -10,7 +10,7 @@ trait Has_WP_Post {
     protected $post_id;
     protected $wp_post;
 
-    protected function is_post () { return false; } // Override as required
+    protected function is_post () { return true; } // Override as required
 
     public function set_post ($post_id) {
 
