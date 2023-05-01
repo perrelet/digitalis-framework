@@ -13,8 +13,8 @@ abstract class User extends Model {
 
     public static function extract_id ($id = null) {
 
-        if (is_null($id)) $id = get_current_user_id();
-        if ($id instanceof WP_User) $id = $id->ID;
+        if (is_null($id))              return get_current_user_id();
+        if ($id instanceof WP_User)    return $id->ID;
 
         return $id;
 

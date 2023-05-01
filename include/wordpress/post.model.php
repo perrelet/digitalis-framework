@@ -17,12 +17,10 @@ abstract class Post extends Model {
 
         global $post;
 
-        if (is_null($id) && $post)  $id = $post->ID;
-        if ($id instanceof WP_Post) $id = $id->ID;
+        if (is_null($id) && $post)     return $post->ID;
+        if ($id instanceof WP_Post)    return $id->ID;
 
-        $id = parent::extract_id($id);
-
-        return $id;
+        return parent::extract_id($id);
 
     }
 
