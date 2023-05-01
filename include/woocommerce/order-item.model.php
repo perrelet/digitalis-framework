@@ -22,7 +22,7 @@ class Order_Item extends Model {
         if (static::$product_type) {
 
             $item = ($data instanceof WC_Order_Item) ? $data : new WC_Order_Item_Product($data);
-            return ($item && $product = $item->get_product() && ($product->get_type() == static::$product_type));
+            return ($item && ($product = $item->get_product()) && ($product->get_type() == static::$product_type));
 
         } else {
 
@@ -41,12 +41,6 @@ class Order_Item extends Model {
         $sql = "SELECT 'order_item_id' FROM {$items_table} WHERE order_item_id = '%d'";
 
         return (bool) $wpdb->get_row($wpdb->prepare($sql, $item_id));
-
-    }
-
-    public static function get_from_item ($item) {
-        
-        return static::get_instance($item);
 
     }
 
