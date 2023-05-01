@@ -5,7 +5,7 @@ namespace Digitalis;
 use \WP_Post;
 use \WP_Query;
 
-abstract class WP_Post_Model extends Model {
+abstract class Post extends Model {
 
     use Has_WP_Post;
 
@@ -67,14 +67,13 @@ abstract class WP_Post_Model extends Model {
 
     //
 
-    public function __construct($post_id) {
+    public function __construct ($post_id) {
 
         $this->set_post($post_id);
-        $this->init();
+
+        parent::__construct($post_id);
 
     }
-
-    public function init () {}  // Override me.
 
 
 }
