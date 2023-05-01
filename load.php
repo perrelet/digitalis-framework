@@ -40,6 +40,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.integration.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
