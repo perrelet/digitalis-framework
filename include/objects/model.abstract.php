@@ -18,14 +18,20 @@ class Model {
 
         return true;
 
-    } 
+    }
+
+    public static function get_class_name () {
+
+        return apply_filters('digitalis_class_' . static::class, static::class);
+
+    }
 
     public static function get_instance ($id = null) {
 
         $id = static::extract_id($id);
         if (is_null($id)) return null;
 
-        $class_name = apply_filters('digitalis_class_' . static::class, static::class);
+        $class_name = static::get_class_name();
 
         if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
         
@@ -51,10 +57,34 @@ class Model {
 
         $instances = [];
 
-        if ($ids) foreach ($ids as $id) {
-            $instances[] = static::get_instance($id);
-        }
+        if ($ids) foreach ($ids as $id) $instances[] = static::get_instance($id);
+
         return $instances;
+
+    }
+
+    //
+
+    protected $id;
+
+    public function __construct ($id) {
+
+        $this->id = $id;
+        $this->init();
+
+    }
+
+    public function init () {}  // Override me.
+
+    public function get_id () {
+
+        return $this->id;
+
+    }
+
+    public function is_first_instance () {
+
+        return $this->id == array_key_first(self::$instances[static::get_class_name()]);
 
     }
 
