@@ -8,7 +8,7 @@ trait Has_Taxonomies {
 
     public function load_taxonomies ($path) {
 
-        $this->autoload('taxonomy', $path, 'taxonomy.php');
+        $this->autoload('taxonomy', $path, 'taxonomy.php', 'get_instance');
 
     }
 

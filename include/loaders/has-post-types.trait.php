@@ -8,7 +8,7 @@ trait Has_Post_Types {
 
     public function load_post_types ($path) {
 
-        $this->autoload('post-type', $path, 'post-type.php');
+        $this->autoload('post-type', $path, 'post-type.php', 'get_instance');
 
     }
 

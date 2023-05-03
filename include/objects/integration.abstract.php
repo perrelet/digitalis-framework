@@ -1,7 +1,8 @@
 <?php
 
 namespace Digitalis;
-abstract class Integration {
+
+abstract class Integration extends Singleton {
 	
 	protected $loaded = false;
 	

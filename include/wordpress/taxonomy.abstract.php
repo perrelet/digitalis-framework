@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Taxonomy extends Base {
+abstract class Taxonomy extends Singleton {
 
     protected $slug = 'taxonomy';
     protected $post_types = [];
@@ -22,11 +22,11 @@ abstract class Taxonomy extends Base {
         if (method_exists($this, 'columns'))    add_filter("manage_edit-{$this->slug}_columns",     [$this, 'columns']);
         if (method_exists($this, 'column'))     add_filter("manage_{$this->slug}_custom_column",    [$this, 'column'], 10, 3);
 
-        $this->init();
+        $this->run();
 
     }
     
-    public function init () {}  // Override me :)
+    public function run () {}  // Override me :)
 
     public function register () {
 
@@ -35,7 +35,7 @@ abstract class Taxonomy extends Base {
         $args['rewrite']    = $this->get_rewrite($this->get_default_rewrite());
         $args['labels']     = $this->get_labels($this->get_default_labels());
 
-        $args = apply_filters("digitalis-" . $this->get_identifier() . "-args", $args);
+        $args = apply_filters("Digitalis\\" . static::class . "\\Args", $args);
 
         $this->taxonomy = register_taxonomy(
             $this->slug,
@@ -89,7 +89,7 @@ abstract class Taxonomy extends Base {
 
     protected function get_default_labels () {
 
-        return apply_filters("digitalis-" . $this->get_identifier() . "-labels",
+        return apply_filters("Digitalis\\" . static::class . "\\Labels",
         [
             'name'                          => __( $this->singular,                         $this->text_domain ),
             'singular_name'                 => __( $this->singular,                         $this->text_domain ),

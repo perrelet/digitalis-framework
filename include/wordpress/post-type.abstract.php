@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Post_Type extends Base {
+abstract class Post_Type extends Singleton {
 
     protected $slug         = 'post-type';
     protected $archive      = 'post-types';
@@ -19,9 +19,9 @@ abstract class Post_Type extends Base {
     protected $post_type;
     protected $removed_supports = [];
 
-    public function __construct ($flush = false) {
+    public function init () {
 
-        if ($flush) flush_rewrite_rules();
+        //if ($flush) flush_rewrite_rules();
         
         add_action('init', [$this, 'register']);
 
@@ -42,13 +42,19 @@ abstract class Post_Type extends Base {
 
         if (method_exists($this, 'main_query'))     add_action('pre_get_posts', [$this, 'main_query_wrap']);
 
+        if (method_exists($this, 'ajax_query')) {
+            
+            $action = "query_" . $this->slug;
+            add_action("wp_ajax_{$action}",         [$this, 'ajax_query_wrap']);
+            add_action("wp_ajax_nopriv_{$action}",  [$this, 'ajax_query_wrap']);
+
+        }
+
         $this->run();
-        $this->init();
 
     }
 
-    public function run () {}  // Depreciated.
-    public function init () {} // Override me :)
+    public function run () {}  // Override me :)
 
     public function register () {
 
@@ -59,7 +65,7 @@ abstract class Post_Type extends Base {
 
         if ($this->removed_supports) $args['supports'] = array_diff($args['supports'], $this->removed_supports);
 
-        $args = apply_filters("digitalis-" . $this->get_identifier() . "-args", $args);
+        $args = apply_filters("Digitalis\\" . static::class . "\\Args", $args);
 
         $this->post_type = register_post_type(
             $this->slug,
@@ -124,7 +130,7 @@ abstract class Post_Type extends Base {
 
     protected function get_default_rewrite () {
 
-        return apply_filters("digitalis-" . $this->get_identifier() . "-rewrite",
+        return apply_filters("Digitalis\\" . static::class . "\\Rewrite",
         [
             'slug'          => $this->archive,
             'with_front'    => false,
@@ -136,7 +142,7 @@ abstract class Post_Type extends Base {
 
     protected function get_default_supports () {
 
-        return apply_filters("digitalis-" . $this->get_identifier() . "-supports",
+        return apply_filters("Digitalis\\" . static::class . "\\Supports",
         [
             'title',
             'editor',
@@ -150,7 +156,7 @@ abstract class Post_Type extends Base {
 
     protected function get_default_labels () {
 
-        return apply_filters("digitalis-" . $this->get_identifier() . "-labels",
+        return apply_filters("Digitalis\\" . static::class . "\\Labels",
         [
             'name'               => __( $this->plural,                          $this->text_domain ),
             'singular_name'      => __( $this->singular,                        $this->text_domain ),
@@ -177,6 +183,16 @@ abstract class Post_Type extends Base {
         if (!$this->is_main_query($query)) return;
 
         $this->main_query($query);
+
+    }
+
+    public function ajax_query_wrap () {
+
+        global $wp, $wp_query;
+        $wp->parse_request();
+        $wp_query->query_vars = $wp->query_vars;
+
+        return $this->ajax_query();
 
     }
 

@@ -8,7 +8,7 @@ trait Has_Integrations {
 
     public function load_integrations ($path) {
 
-        $this->autoload('integration', $path, 'integration.php');
+        $this->autoload('integration', $path, 'integration.php', 'get_instance');
 
     }
 
