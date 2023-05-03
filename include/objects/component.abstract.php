@@ -2,6 +2,8 @@
 
 namespace Digitalis;
 
+// Depreciated
+
 abstract class Component extends Base {
     
     public static $count = 0;
