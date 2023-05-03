@@ -27,7 +27,19 @@ trait Can_Load {
             if (!$class_name = $this->get_class_name($file_path)) return false;
 
             if (!isset($this->object_groups[$group_key])) $this->object_groups[$group_key] = [];
-            $this->object_groups[$group_key][$class_name] = new $class_name();
+
+            if ($instantiate === true) {
+
+                $this->object_groups[$group_key][$class_name] = new $class_name();
+
+            } else {
+
+                $call = $class_name . "::" . $instantiate;
+                if (is_callable($call)) call_user_func($call);
+
+            }
+
+            
 
         }
 
