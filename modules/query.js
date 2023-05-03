@@ -77,8 +77,6 @@ export class Digitalis_Query {
             paged: 1,
         });
 
-        console.log();
-
     }
 
     on_page_change = (event) => {
@@ -110,6 +108,8 @@ export class Digitalis_Query {
         const form_data = new FormData(this.elements.form);
 
         data = Object.assign(Object.fromEntries(form_data), data);
+
+        // console.log(data);
 
         let url = new URL(new_url ? new_url : window.location.href);
         for (const [key, value] of Object.entries(data)) url.searchParams.set(key, value);
