@@ -18,8 +18,7 @@ abstract class View {
     public static function render ($params = [], $print = true) {
 
         if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
-        self::$indexes[static::class]++;
-        $params['index'] = self::$indexes[static::class];
+        $params['index'] = ++self::$indexes[static::class];
 
         if (method_exists(static::class, 'footer') && !has_action('wp_print_footer_scripts', [static::class, 'footer'])) add_action('wp_print_footer_scripts', [static::class, 'footer']);
 
@@ -27,6 +26,8 @@ abstract class View {
 
         static::$params = wp_parse_args($params, static::$defaults);
         static::$params = static::params(static::$params);
+
+        if ($params['index'] == 1) static::before_first($params);
 
         if (is_null(static::get_template())) {
 
@@ -45,6 +46,8 @@ abstract class View {
 
         }
 
+        if ($params['index'] == 1) static::after_first($params);
+
         if (!$print) {
             $html = ob_get_contents();
             ob_end_clean();
@@ -52,6 +55,9 @@ abstract class View {
         }
 
     }
+
+    protected static function before_first ($params = []) {}
+    protected static function after_first ($params = []) {}
 
     protected static function view ($params = []) {}
 
