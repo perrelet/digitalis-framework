@@ -24,7 +24,7 @@ trait Can_Load {
 
         if ($instantiate !== false) {
          
-            if (!$class_name = $this->get_class_name($file_path)) return false;
+            if (!$class_name = $this->extract_class_name($file_path)) return false;
 
             if (!isset($this->object_groups[$group_key])) $this->object_groups[$group_key] = [];
 
@@ -69,7 +69,7 @@ trait Can_Load {
 
     //
 
-    protected function get_class_name ($file) {
+    protected function extract_class_name ($file) {
 
         // https://stackoverflow.com/questions/7153000/get-class-name-from-file
 
