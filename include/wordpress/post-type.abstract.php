@@ -65,7 +65,7 @@ abstract class Post_Type extends Singleton {
 
         if ($this->removed_supports) $args['supports'] = array_diff($args['supports'], $this->removed_supports);
 
-        $args = apply_filters("Digitalis\\" . static::class . "\\Args", $args);
+        $args = apply_filters("Digitalis/Post_Type/" . static::class . "/Args", $args);
 
         $this->post_type = register_post_type(
             $this->slug,
@@ -130,7 +130,7 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_rewrite () {
 
-        return apply_filters("Digitalis\\" . static::class . "\\Rewrite",
+        return apply_filters("Digitalis/Post_Type/" . static::class . "/Rewrite",
         [
             'slug'          => $this->archive,
             'with_front'    => false,
@@ -142,7 +142,7 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_supports () {
 
-        return apply_filters("Digitalis\\" . static::class . "\\Supports",
+        return apply_filters("Digitalis/Post_Type/" . static::class . "/Supports",
         [
             'title',
             'editor',
@@ -156,7 +156,7 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_labels () {
 
-        return apply_filters("Digitalis\\" . static::class . "\\Labels",
+        return apply_filters("Digitalis/Post_Type/" . static::class . "/Labels",
         [
             'name'               => __( $this->plural,                          $this->text_domain ),
             'singular_name'      => __( $this->singular,                        $this->text_domain ),

@@ -35,7 +35,7 @@ abstract class Taxonomy extends Singleton {
         $args['rewrite']    = $this->get_rewrite($this->get_default_rewrite());
         $args['labels']     = $this->get_labels($this->get_default_labels());
 
-        $args = apply_filters("Digitalis\\" . static::class . "\\Args", $args);
+        $args = apply_filters("Digitalis/Taxonomy/" . static::class . "/Args", $args);
 
         $this->taxonomy = register_taxonomy(
             $this->slug,
@@ -89,7 +89,7 @@ abstract class Taxonomy extends Singleton {
 
     protected function get_default_labels () {
 
-        return apply_filters("Digitalis\\" . static::class . "\\Labels",
+        return apply_filters("Digitalis/Taxonomy/" . static::class . "/Labels",
         [
             'name'                          => __( $this->singular,                         $this->text_domain ),
             'singular_name'                 => __( $this->singular,                         $this->text_domain ),

@@ -28,7 +28,7 @@ class Model {
 
     public static function get_class_name () {
 
-        return apply_filters('digitalis_class_' . static::class, static::class);
+        return apply_filters('Digitalis/Class/' . static::class, static::class);
 
     }
 
