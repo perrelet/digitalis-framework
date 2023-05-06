@@ -46,6 +46,21 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstrac
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date-picker.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/radio.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/radio-buttons.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select-nice.field.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/archive.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/query-filters.view.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
 
 add_filter('sassy-variables', function ($variables) {
