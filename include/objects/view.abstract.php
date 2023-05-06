@@ -4,16 +4,17 @@ namespace Digitalis;
 
 abstract class View {
 
-    protected static $defaults = [];
-    protected static $params = [];
-    protected static $template = null;
-    protected static $template_path = __DIR__ . "/../../templates/";
+    protected static $defaults = [];                                        // Default args. Inherited by all derivative classes. 
+    protected static $merge_args = [];                                      // Selected args will be merged (rather than overridden) by derivative classes.
+    protected static $params = [];                                          // Calculated args are cached here.
+    protected static $template = null;                                      // The name of the template file to load (.php extension not required). If null provided view will render via the static::view($p) method.
+    protected static $template_path = __DIR__ . "/../../templates/";        // Absolute path to the template directory.
 
     protected static $indexes = [];
 
     public static function params ($params) { return $params; }
 
-    public static function get_template () { return static::$template; }
+    public static function get_template ($params) { return static::$template; }
 
     public static function render ($params = [], $print = true) {
 
@@ -24,18 +25,41 @@ abstract class View {
 
         if (!$print) ob_start();
 
-        static::$params = wp_parse_args($params, static::$defaults);
+        $defaults   = static::$defaults;
+        $class      = static::class;
+
+        while ($class = get_parent_class($class)) {
+
+            if ($class::$merge_args) foreach ($class::$merge_args as $arg) {
+
+                if (isset($class::$defaults[$arg]) && is_array($class::$defaults[$arg]) && $class::$defaults[$arg] && ($defaults[$arg] !== $class::$defaults[$arg])) {
+
+                    if (!isset($defaults[$arg])) $defaults[$arg] = [];
+                    $defaults[$arg] = wp_parse_args($defaults[$arg], $class::$defaults[$arg]);
+
+                }
+
+            }
+
+            $defaults = wp_parse_args($defaults, $class::$defaults);
+
+        }
+
+        static::$params = wp_parse_args($params, $defaults);
         static::$params = static::params(static::$params);
 
-        if ($params['index'] == 1) static::before_first($params);
+        //
 
-        if (is_null(static::get_template())) {
+        if ($params['index'] == 1) static::before_first(static::$params);
+        static::before(static::$params);
+
+        if (is_null($template = static::get_template(static::$params))) {
 
             static::view(static::$params);
 
         } else {
 
-            $path = static::$template_path . static::get_template() . '.php';
+            $path = trailingslashit(static::$template_path) . $template . '.php';
 
             if (file_exists($path)) {
 
@@ -46,7 +70,8 @@ abstract class View {
 
         }
 
-        if ($params['index'] == 1) static::after_first($params);
+        static::after(static::$params);
+        if ($params['index'] == 1) static::after_first(static::$params);
 
         if (!$print) {
             $html = ob_get_contents();
@@ -56,8 +81,11 @@ abstract class View {
 
     }
 
-    protected static function before_first ($params = []) {}
-    protected static function after_first ($params = []) {}
+    protected static function before ($params) {}
+    protected static function after ($params) {}
+
+    protected static function before_first ($params) {}
+    protected static function after_first ($params) {}
 
     protected static function view ($params = []) {}
 
