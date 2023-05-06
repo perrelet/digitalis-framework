@@ -5,7 +5,7 @@ namespace Digitalis;
 abstract class View {
 
     protected static $defaults = [];                                        // Default args. Inherited by all derivative classes. 
-    protected static $merge_args = [];                                      // Selected args will be merged (rather than overridden) by derivative classes.
+    protected static $merge = [];                                           // Selected args will be merged (rather than overridden) by derivative classes.
     protected static $params = [];                                          // Calculated args are cached here.
     protected static $template = null;                                      // The name of the template file to load (.php extension not required). If null provided view will render via the static::view($p) method.
     protected static $template_path = __DIR__ . "/../../templates/";        // Absolute path to the template directory.
@@ -30,12 +30,12 @@ abstract class View {
 
         while ($class = get_parent_class($class)) {
 
-            if ($class::$merge_args) foreach ($class::$merge_args as $arg) {
+            if ($class::$merge) foreach ($class::$merge as $arg) {
 
-                if (isset($class::$defaults[$arg]) && is_array($class::$defaults[$arg]) && $class::$defaults[$arg] && ($defaults[$arg] !== $class::$defaults[$arg])) {
+                if (isset($class::$defaults[$arg]) && is_array($class::$defaults[$arg]) && $class::$defaults[$arg]) {
 
                     if (!isset($defaults[$arg])) $defaults[$arg] = [];
-                    $defaults[$arg] = wp_parse_args($defaults[$arg], $class::$defaults[$arg]);
+                    $defaults[$arg] = array_unique(wp_parse_args($defaults[$arg], $class::$defaults[$arg]), SORT_REGULAR);
 
                 }
 

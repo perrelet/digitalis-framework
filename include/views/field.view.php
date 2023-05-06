@@ -28,7 +28,7 @@ class Field extends View {
         'wrap'          => true,
         'width'         => 1,
     ];
-    protected static $merge_args = ['classes', 'styles', 'row_classes', 'row_styles', 'attributes'];
+    protected static $merge = ['classes', 'styles', 'row_classes', 'row_styles', 'attributes'];
 
     public static function generate_classes ($classes) {
 
