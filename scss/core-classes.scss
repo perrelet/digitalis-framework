@@ -105,6 +105,14 @@ div.cols-2.swap,
 
 }
 
+div.cols-3,
+.ct-section.cols-3 > .ct-section-inner-wrap {
+
+    @include cols-3();
+    @include media("<=tablet") { @include cols-collapse(); }
+
+}
+
 // VISIBILITY
 
 div.cols-2.remove-first,
