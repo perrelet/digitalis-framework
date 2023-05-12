@@ -161,7 +161,7 @@ abstract class Post_Type extends Singleton {
             'name'               => __( $this->plural,                          $this->text_domain ),
             'singular_name'      => __( $this->singular,                        $this->text_domain ),
             'menu_name'          => __( $this->plural,                          $this->text_domain ),
-            'name_admin_bar'     => __( $this->plural,                          $this->text_domain ),
+            'name_admin_bar'     => __( $this->singular,                        $this->text_domain ),
             'add_new'            => __( "Add New {$this->singular}",            $this->text_domain ),
             'add_new_item'       => __( "Add New {$this->singular}",            $this->text_domain ),
             'edit_item'          => __( "Edit {$this->singular}",               $this->text_domain ),
