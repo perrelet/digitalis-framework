@@ -102,6 +102,12 @@ trait Has_WP_Post {
 
     }
 
+    public function update_meta ($key, $value, $prev_value = '') {
+
+        return update_post_meta($this->post_id, $key, $value, $prev_value);
+
+    }
+
     public function get_permalink ($leavename = false) {
 
         return get_permalink($this->wp_post, $leavename);
