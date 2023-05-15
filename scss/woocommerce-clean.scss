@@ -206,7 +206,23 @@ body {
 
     .woocommerce-notices-wrapper {
 
-        /* margin-bottom: var(--woo-spacing); */
+        > ul > li {
+
+            clear: both;
+
+            &:not(:last-of-type) {
+
+                margin-bottom: calc(var(--woo-spacing) / 4);
+
+                a {
+
+                    margin-bottom: calc(var(--woo-spacing) / 4);
+
+                }
+
+            }
+
+        }
 
     }
 
@@ -622,7 +638,7 @@ body {
 
             &.woocommerce-form-login {
 
-                > p:nth-child(3) {
+                > p:nth-of-type(3) {
 
                     @include woo-reset-form-row();
                     @include woo-reset-field-focus();
@@ -636,7 +652,7 @@ body {
 
                 }
 
-                .form-row:nth-child(3) { // Submit + remember me row
+                .form-row:nth-of-type(3) { // Submit + remember me row
 
                     display: flex;
                     flex-direction: row-reverse;
@@ -664,6 +680,12 @@ body {
                 .woocommerce-password-strength {
 
                     border-radius: var(--woo-border-radius);
+
+                }
+
+                .woocommerce-privacy-policy-text {
+
+                    font-size: 0.9em;
 
                 }
 
