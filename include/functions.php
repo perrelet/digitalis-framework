@@ -36,15 +36,3 @@ if (!function_exists('field_not_empty')) {
     }
 
 }
-
-// UTIL: Pluck key from array or object into new array
-
-if (!function_exists('array_pluck')) {
-
-    function array_pluck ($array, $key) {
-        return array_map(function($item) use ($key) {
-            return is_array($item) ? $item[$key] : $item->$key;
-        }, $array);
-    }
-
-}
