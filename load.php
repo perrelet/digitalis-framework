@@ -23,8 +23,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/loaders/has-integrations.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/loaders/has-taxonomies.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/loaders/has-post-types.trait.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/builders/oxygen.builder.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder-manager.singleton.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder.integration.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/iterator.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/user-iterator.iterator.php';

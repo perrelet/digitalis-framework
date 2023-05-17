@@ -85,7 +85,7 @@ abstract class Theme {
 
     public function enqueue_style_last ($handle, $src, $deps = [], $version = false) {
 
-        if (defined("SHOW_CT_BUILDER") && !defined("OXYGEN_IFRAME")) return;
+        if (Builder_Manager::get_instance()->is_backend_ui()) return;
 
         global $digitalis_styles;
 

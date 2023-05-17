@@ -4,60 +4,66 @@ namespace Digitalis;
 
 class Oxygen extends Builder {
 
-    public static function get_slug () {
-
-        return "oxygen";
-
-    }
-
-    public static function get_name () {
-
-        return "Oxygen Builder";
-
-    }
-
-    public static function is_loaded () {
-
+    protected $slug = 'oxygen';
+    
+    public function condition () {
+        
         return defined("CT_VERSION");
+    
+    }
+
+    public function is_backend () {
+
+        return defined("SHOW_CT_BUILDER");
 
     }
 
-    public static function is_backend () {
+    public function is_backend_content () {
 
-        return self::is_loaded() && defined("SHOW_CT_BUILDER");
-
-    }
-
-    public static function is_backend_iframe () {
-
-        return self::is_backend() && defined("OXYGEN_IFRAME");
+        return $this->is_backend() && defined("OXYGEN_IFRAME");
 
     }
 
-    //
+    public function is_backend_ui () {
 
-    public static function install_classes () {
+        return $this->is_backend() && !defined("OXYGEN_IFRAME");
+
+    }
+
+    public function add_classes ($install_classes, $args = []) {
+
+        $args = wp_parse_args($args, [
+            'overwrite' => true,
+            'folder'    => 'digitalis',
+            'lock'      => true,
+        ]);
 
         $existing_classes = get_option('ct_components_classes', []);
         $existing_folders = get_option('ct_style_folders', []);
 
-        $folder_name = 'digitalis';
+        $folder_name = $args['folder'];
 
         $classes = [];
 
-        foreach (self::$utility_classes as $class) {
+        if ($install_classes) foreach ($install_classes as $class) {
+
+            $lock = $args['lock'] ? 'true' : 'false';
 
             if (isset($existing_classes[$class])) {
 
-                $existing_classes[$class]['parent'] = $folder_name;
-                $existing_classes[$class]['original']['selector-locked'] = 'true';
+                if ($args['overwrite']) {
+
+                    $existing_classes[$class]['parent'] = $folder_name;
+                    $existing_classes[$class]['original']['selector-locked'] = $lock;
+
+                }
 
             } else {
 
                 $classes[$class] = [
                     'parent' => $folder_name,
                     'original' => [
-                        'selector-locked' => 'true',
+                        'selector-locked' => $lock,
                     ],
                 ];
 
@@ -83,4 +89,144 @@ class Oxygen extends Builder {
 
     }
 
+    public function remove_classes ($remove_classes, $args = []) {
+
+        $existing_classes = get_option('ct_components_classes', []);
+
+        if ($remove_classes) foreach ($remove_classes as $class) {
+
+            if (isset($existing_classes[$class])) unset($existing_classes[$class]);
+
+        }
+
+        update_option('ct_components_classes', $existing_classes, get_option("oxygen_options_autoload"));
+
+    }
+
+    //
+
+    public function add_colors ($colors, $args = []) {
+
+        $args = wp_parse_args($args, [
+            'overwrite' => true,
+            'folder'    => 'digitalis',
+        ]);
+
+        if (!$existing_colors = oxy_get_global_colors()) return;
+
+        //dprint($existing_colors);
+
+        $set_names = wp_list_pluck($existing_colors['sets'], 'name');
+        $color_names = wp_list_pluck($existing_colors['colors'], 'name');
+
+        //dprint($set_names);
+        //dprint($color_names);
+        
+        $set_index = array_search($args['folder'], $set_names);
+        $set_id = null;
+
+        if ($set_index === false) {
+
+            $existing_colors['setsIncrement']++;
+            $set_id = $existing_colors['setsIncrement'];
+
+            $existing_colors['sets'][] = [
+                'id'    => $set_id,
+                'name'  => $args['folder'],
+            ];
+
+        } else {
+
+            $set_id = $existing_colors['sets'][$set_index]['id'];
+
+        }
+
+        if ($colors) foreach ($colors as $color => $name) {
+            
+            $color_index = array_search($name, $color_names);
+
+            if ($color_index === false) {
+
+                $existing_colors['colorsIncrement']++;
+
+                $existing_colors['colors'][] = [
+                    'id'    => $existing_colors['colorsIncrement'],
+                    'name'  => $name,
+                    'value' => $color,
+                    'set'   => $set_id,
+                ];
+
+            } else {
+
+                if ($args['overwrite']) {
+
+                    $existing_colors['colors'][$color_index]['value']   = $color;
+                    $existing_colors['colors'][$color_index]['set']     = $set_id;
+
+                }
+
+            }
+            
+        }
+
+        //dprint($existing_colors);
+
+        update_option('oxygen_vsb_global_colors', $existing_colors);
+
+    }
+
+    public function remove_colors ($colors, $args = []) {
+
+        if (!$existing_colors = oxy_get_global_colors()) return;
+
+        //dprint($existing_colors);
+
+        $set_names = wp_list_pluck($existing_colors['sets'], 'name');
+        $color_names = wp_list_pluck($existing_colors['colors'], 'name');
+
+        if ($colors) foreach ($colors as $color => $name) {
+
+            $color_index = array_search($name, $color_names);
+            if ($color_index !== false) unset($existing_colors['colors'][$color_index]);
+            
+        }
+
+        // Remove empty sets
+
+        /* $set_counts = [];
+        $set_indexes = [];
+
+        if ($sets = $existing_colors['sets']) foreach ($sets as $i => $set) {
+
+            $set_id = $set['id'];
+            $set_counts[$set_id] = 0;
+            $set_indexes[$set_id] = $i;
+
+        }
+
+        if ($existing_colors['colors']) foreach ($existing_colors['colors'] as $color) {
+
+            $set_id = $color['set'];
+            if (isset($set_counts[$set_id])) $set_counts[$set_id]++;
+
+        }
+
+        if ($set_counts) foreach ($set_counts as $set_id => $set_count) {
+            
+            if ($set_count == 0) unset($existing_colors['sets'][$set_indexes[$set_id]]);
+            
+        } */
+
+        //
+
+        //dprint($existing_colors);
+
+        update_option('oxygen_vsb_global_colors', $existing_colors);
+
+    }
+
 }
+
+add_action('init', function () {
+    echo "hello";
+});
