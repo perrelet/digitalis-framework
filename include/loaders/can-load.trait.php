@@ -14,6 +14,8 @@ trait Can_Load {
 
         }
 
+        return $this->get_object_group($group_key);
+
     }
 
     public function load_class ($group_key, $file_path, $instantiate = true) {
@@ -35,7 +37,7 @@ trait Can_Load {
             } else {
 
                 $call = $class_name . "::" . $instantiate;
-                if (is_callable($call)) call_user_func($call);
+                if (is_callable($call)) $this->object_groups[$group_key][$class_name] = call_user_func($call);
 
             }
 
