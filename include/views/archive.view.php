@@ -67,7 +67,7 @@ abstract class Archive extends View {
 
         $query;
 
-        if ($items = static::get_items($p['query_vars'], $query)) {
+        if ($items = static::get_items($p['query_args'], $query)) {
 
             foreach ($items as $item) static::render_item($item);
 
