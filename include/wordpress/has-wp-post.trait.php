@@ -174,6 +174,12 @@ trait Has_WP_Post {
 
     }
 
+    public function has_term ($term = '', $taxonomy = '') {
+        
+        return has_term($term, $taxonomy, $this->post_id);
+        
+    }
+
     // ACF
 
     public function get_field ($selector, $format_value = true) {
