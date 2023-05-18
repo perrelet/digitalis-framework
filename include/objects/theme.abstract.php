@@ -6,7 +6,8 @@ use \WP_Styles;
 abstract class Theme {
 
     protected $actions = [
-        'wp_enqueue_scripts' => 'style',
+        'wp_enqueue_scripts'    => 'style',
+        'after_setup_theme'     => 'theme_supports',
     ];
 
     protected $features;
@@ -54,6 +55,12 @@ abstract class Theme {
             $func();
 
         }
+
+    }
+
+    public function theme_supports () {
+
+        // ..
 
     }
 
