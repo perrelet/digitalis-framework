@@ -31,6 +31,12 @@ abstract class Singleton {
         
     }
 
+    public static function inst () {
+        
+        return self::get_instance();
+        
+    }
+
     //public function run () {} // Depreciated
     public function init () {} // Override me :)
 

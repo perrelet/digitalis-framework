@@ -60,6 +60,12 @@ class Model {
 
     }
 
+    public static function inst () {
+        
+        return self::get_instance();
+        
+    }
+
     public static function get_instances ($ids) {
 
         $instances = [];
