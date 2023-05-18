@@ -9,7 +9,8 @@ abstract class Post extends Model {
 
     use Has_WP_Post;
 
-    protected static $post_type = 'post'; // Override me.
+    protected static $post_type = 'post';                           // Override me.
+    protected static $post_type_class = false;      // Override me - Used when querying the model. With this we can get the main query args from the CPT.
 
     public function is_post () { return true; }
 
@@ -30,11 +31,19 @@ abstract class Post extends Model {
 
     } 
 
-    public static function get_query_args ($args = []) { // Override me.
+    public static function get_query_args ($args = []) {
 
-        return wp_parse_args($args, [
-            // ..
-        ]);
+        $call = static::$post_type_class . "::get_query_args";
+
+        if (is_callable($call)) {
+
+            return call_user_func($call, $args);
+
+        } else {
+
+            return $args;
+
+        }
 
     }
 
@@ -52,6 +61,7 @@ abstract class Post extends Model {
 
         } else {
 
+            if ($wp_query->query_vars) $args = wp_parse_args($args, $wp_query->query_vars);
             $args = static::get_query_args($args);
             $args['post_type'] = static::$post_type;
             $query = new WP_Query($args);

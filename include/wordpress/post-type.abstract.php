@@ -35,10 +35,12 @@ abstract class Post_Type extends Singleton {
         add_action('pre_get_posts',             [$this, 'admin_controller']);
 
         if (method_exists($this, 'after_insert'))   add_action("wp_after_insert_post", [$this, 'after_insert_wrap'], 10, 4);
-
+        
         if (method_exists($this, 'admin_query'))    add_action('pre_get_posts', [$this, 'admin_query_wrap']);
 
         // Front
+
+        if (method_exists($this, 'query_vars'))     add_action('query_vars',    [$this, 'query_vars_wrap']);
 
         if (method_exists($this, 'main_query'))     add_action('pre_get_posts', [$this, 'main_query_wrap']);
 
@@ -360,6 +362,8 @@ abstract class Post_Type extends Singleton {
 
     }
 
+    //
+
     public function after_insert_wrap ($post_id, $post, $update, $post_before) {
 
         if ($post->post_type != $this->slug) return;
@@ -377,6 +381,12 @@ abstract class Post_Type extends Singleton {
     }
 
     //
+
+    public function query_vars_wrap ($vars) {
+
+        return $this->query_vars($vars);
+        
+    }
 
     protected function is_main_query ($query) {
 
@@ -397,24 +407,5 @@ abstract class Post_Type extends Singleton {
         return (is_admin() && ($post_type == $this->slug) && ($pagenow == 'edit.php'));
 
     }
-
-    //
-
-    /* public function columns ($columns) {
-
-        return $columns;
-        
-    }
-
-    public function column ($column, $post_id) {
-
-        switch ($column) {
-
-            case '':
-                return;
-
-        }
-
-    } */
 
 }
