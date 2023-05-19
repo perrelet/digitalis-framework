@@ -61,6 +61,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select-nice.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/archive.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/query-filters.view.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/utils/utility.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
 
 add_filter('sassy-variables', function ($variables) {
