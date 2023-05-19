@@ -2,6 +2,8 @@
 
 namespace Digitalis;
 
+use Digitalis\Field\Input;
+
 class Field_Group extends View {
 
     protected static $template = 'field-group';
@@ -49,7 +51,7 @@ class Field_Group extends View {
         if ($p['fields']) foreach ($p['fields'] as &$field) {
 
             $field = wp_parse_args($field, [
-                'field' => '\Digitalis\Field\Input',
+                'field' => Input::class,
             ]);
 
         }
