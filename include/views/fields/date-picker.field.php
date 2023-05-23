@@ -17,7 +17,8 @@ class Date_Picker extends Field {
     public static function params ($p) {
 
         $p['date-picker'] = wp_parse_args($p['date-picker'], [
-            'autohide' => false,
+            'autohide'  => false,
+            'format'    => "dd/mm/yyyy",
         ]);
 
         $p = parent::params($p);
