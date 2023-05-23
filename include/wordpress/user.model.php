@@ -55,6 +55,20 @@ abstract class User extends Model {
 
     }
 
+    //
+
+    public function get_roles () {
+
+        return ($wp_user = $this->get_wp_user()) ? $wp_user->roles : [];
+
+    }
+
+    public function has_role ($role) {
+
+        return ($roles = $this->get_roles()) ? (array_search($role, $roles) !== false) : false;
+
+    }
+
     public function get_meta ($key, $single = true) {
 
        return get_user_meta($this->id, $key, $single);
