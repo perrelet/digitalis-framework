@@ -10,13 +10,13 @@ class List_Utility extends Utility {
 
     public static function get_primary_keys () {
 
-        // ..
+        return [];
 
     }
 
     public static function get_primary_labels () {
 
-        // ..
+        return [];
 
     }
 
@@ -35,7 +35,7 @@ class List_Utility extends Utility {
         if (!is_array($primary_labels)) $primary_labels = [$primary_labels];
 
         if ($primary_keys)      $list = array_merge($list, static::lookup($primary_keys));
-        if ($primary_labels)    $list = array_merge($list, static::lookup($primary_labels));
+        if ($primary_labels)    $list = array_merge($list, static::reverse_lookup($primary_labels));
 
         $list = array_merge($list, static::$list);
 
