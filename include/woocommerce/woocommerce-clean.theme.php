@@ -7,7 +7,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
     protected $do_account_icons = true;
     protected $do_wrap_elements = true;
     protected $do_modify_fields = true;
-    protected $do_modify_cart = true;
+    protected $do_modify_cart   = true;
 
     protected $icon_library = 'iconoir';
     protected $template_overrides = [];
@@ -27,6 +27,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
     public function __construct() {
 
         add_filter('woocommerce_locate_template', [$this, 'locate_clean_template'], 10, 3);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_woo_clean_scripts']);
 
         if ($this->do_account_icons) $this->account_menu_icons();
         if ($this->do_wrap_elements) $this->wrap_woocommerce_elements();
@@ -49,12 +50,24 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     //
 
+    public function enqueue_woo_clean_scripts () {
+
+        if ($this->do_account_icons) wp_enqueue_script('woo-clean', DIGITALIS_FRAMEWORK_URI . 'assets/js/woo-clean.js', [], DIGITALIS_FRAMEWORK_VERSION);
+
+    }
+
+    //
+
     public function account_menu_icons () {
 
         $this->template_overrides[] = 'myaccount/navigation.php';
 
         add_action('wp_enqueue_scripts', [$this, 'enqueue_account_menu_icons']);
         add_filter('woocommerce_account_menu_items', [$this, 'account_menu_items_add_icons'], PHP_INT_MAX);
+
+        add_action('woocommerce_digitalis_account_navigation_classes', [$this, 'account_navigation_classes']);
+        add_action('woocommerce_digitalis_before_account_navigation_loop', [$this, 'before_account_navigation_loop']);
+        
         
     }
 
@@ -95,6 +108,26 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
         return $items;
 
+    }
+
+    public function account_navigation_classes () {
+        
+        if (isset($_COOKIE['woo_clean_ui'])) {
+
+            $state = json_decode(html_entity_decode(stripslashes($_COOKIE['woo_clean_ui'])), true);
+            echo ($state['account_nav'] ?? false) ? '' : 'collapse';
+        
+        }
+        
+    }
+
+    public function before_account_navigation_loop () {
+        
+        echo "<div class='nav-controls'>";
+        echo "<i data-action='collapse-menu' class='control iconoir-cancel'></i>";
+        echo "<i data-action='expand-menu' class='control iconoir-fast-arrow-right'></i>";
+        echo "</div>";
+        
     }
 
     //

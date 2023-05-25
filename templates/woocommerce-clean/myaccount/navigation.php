@@ -22,7 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 do_action( 'woocommerce_before_account_navigation' );
 ?>
 
-<nav class="woocommerce-MyAccount-navigation">
+<nav class="woocommerce-MyAccount-navigation <?php do_action('woocommerce_digitalis_account_navigation_classes'); ?>">
+	<?php do_action('woocommerce_digitalis_before_account_navigation_loop'); ?>
 	<ul>
 		<?php foreach ( wc_get_account_menu_items() as $endpoint => $label ) : ?>
 			<li class="<?php echo wc_get_account_menu_item_classes( $endpoint ); ?>">
