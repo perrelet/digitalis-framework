@@ -15,6 +15,8 @@ class Field extends View {
     protected static $defaults = [
         'key'           => 'field-key',
         'id'            => null,
+        'type'          => 'text',
+        'default'       => '',
         'classes'       => [],
         'styles'        => [],
         'row_classes'   => [],
@@ -93,7 +95,7 @@ class Field extends View {
     public static function generate_attributes ($p) {
 
         $p['attributes']['class'] = $p['classes'];
-        $p['attributes']['style'] = $p['style'];
+        $p['attributes']['style'] = $p['styles'];
 
         $attributes = '';
         if ($p['attributes']) foreach ($p['attributes'] as $att_name => $att_value) $attributes .= " {$att_name}='{$att_value}'";
@@ -107,7 +109,7 @@ class Field extends View {
 
         if (is_null($p['id'])) $p['id'] = $key . '-field';
 
-        if (isset($_REQUEST[$key])) $p['value'] = $_REQUEST[$key];
+        $p['value'] = isset($_REQUEST[$key]) ? $_REQUEST[$key] : $p['default'];
 
         $p['classes']       = static::generate_classes(static::get_field_classes($p));
         $p['row_classes']   = static::generate_classes(static::get_row_classes($p));
