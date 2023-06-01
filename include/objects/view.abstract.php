@@ -30,12 +30,12 @@ abstract class View {
 
         while ($class = get_parent_class($class)) {
 
-            if ($class::$merge) foreach ($class::$merge as $arg) {
+            if ($class::$merge) foreach ($class::$merge as $key) {
 
-                if (isset($class::$defaults[$arg]) && is_array($class::$defaults[$arg]) && $class::$defaults[$arg]) {
+                if (isset($class::$defaults[$key]) && is_array($class::$defaults[$key]) && $class::$defaults[$key]) {
 
-                    if (!isset($defaults[$arg])) $defaults[$arg] = [];
-                    $defaults[$arg] = array_unique(wp_parse_args($defaults[$arg], $class::$defaults[$arg]), SORT_REGULAR);
+                    if (!isset($defaults[$key])) $defaults[$key] = [];
+                    $defaults[$key] = array_unique(wp_parse_args($defaults[$key], $class::$defaults[$key]), SORT_REGULAR);
 
                 }
 
@@ -45,7 +45,23 @@ abstract class View {
 
         }
 
+        //
+
         static::$params = wp_parse_args($params, $defaults);
+
+        if (static::$merge) foreach (static::$merge as $key) {
+
+            if (isset($params[$key]) && is_array($params[$key])) {
+
+                if (!isset($defaults[$key])) $defaults[$key] = [];
+                static::$params[$key] = wp_parse_args($params[$key], $defaults[$key]);
+
+            }
+
+        }
+
+        //
+
         static::$params = static::params(static::$params);
 
         //
@@ -63,7 +79,7 @@ abstract class View {
 
             if (file_exists($path)) {
 
-                extract(static::$params, EXTR_SKIP);
+                extract(static::$params, EXTR_OVERWRITE);
                 require $path;
 
             }
