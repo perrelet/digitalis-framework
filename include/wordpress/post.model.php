@@ -61,7 +61,7 @@ abstract class Post extends Model {
 
         } else {
 
-            if ($wp_query->query_vars) $args = wp_parse_args($args, $wp_query->query_vars);
+            if (!$skip_main && $wp_query->query_vars) $args = wp_parse_args($args, $wp_query->query_vars);
             $args = static::get_query_args($args);
             $args['post_type'] = static::$post_type;
             $query = new WP_Query($args);
