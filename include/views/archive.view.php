@@ -12,12 +12,42 @@ abstract class Archive extends View {
         'query_args'    => [],
         'posts_only'    => false,
         'no_posts'      => 'No posts found.',
+        'pagination'    => true,
         'loader'        => 'sliding-dots.gif',
+        'loader_type'   => 'image',
     ];
 
-    protected static function get_loader () {
+    protected static $merge = [
+        'classes',
+        'query_args',
+    ];
 
-        return DIGITALIS_URI . "assets/loaders/" . static::$params['loader'];
+    protected static function get_loader ($p) {
+
+        switch ($p['loader_type']) {
+
+            case "image":
+
+                $url = file_exists(DIGITALIS_FRAMEWORK_PATH . "assets/img/loaders/" . $p['loader']) ?
+                    DIGITALIS_FRAMEWORK_URI . "assets/img/loaders/" . $p['loader'] :
+                    $p['loader'];
+
+                return "<img src='{$url}'>";
+
+            case "file":
+
+                return file_exists($p['loader']) ? file_get_contents($p['loader']) : '';
+
+            case "callback":
+
+                return is_callable($p['loader']) ? call_user_func($p['loader']) : '';
+
+            case "html":
+            default:
+
+                return $p['loader'];
+
+        }
 
     }
 
@@ -60,7 +90,7 @@ abstract class Archive extends View {
         if (!$p['posts_only']) {
 
             echo "<div id='{$p['id']}' class='$classes'>";
-            echo "<div class='digitalis-loader'><img src='" . DIGITALIS_FRAMEWORK_URI . "assets/img/loaders/sliding-dots.gif'></div>";
+            echo "<div class='digitalis-loader'>" . static::get_loader($p) . "</div>";
             echo "<div class='posts'>";
 
         }
@@ -71,7 +101,7 @@ abstract class Archive extends View {
 
             foreach ($items as $item) static::render_item($item);
 
-            if (($query instanceof WP_Query) && ($query->max_num_pages > 1)) echo paginate_links([
+            if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) echo paginate_links([
                 'current'   => max(1, $query->get('paged')),
                 'total'     => $query->max_num_pages,
             ]);
