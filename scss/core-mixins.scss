@@ -11,7 +11,8 @@ $digitalis-stagger-iterations: 12 !default;
     flex-direction: row;
     width: 100%;
 
-    > * {
+    > *:first-child,
+    > *:last-child {
 
         width: 50%;
 
