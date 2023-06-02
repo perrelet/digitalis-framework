@@ -36,6 +36,12 @@ trait Has_WP_Post {
 
     //
 
+    public function get_slug () {
+        
+        return $this->wp_post->post_name;
+        
+    }
+
     public function get_author_id () {
 
         return $this->wp_post->post_author;
