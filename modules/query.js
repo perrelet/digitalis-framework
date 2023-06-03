@@ -85,9 +85,10 @@ export class Digitalis_Query {
 
         let page = this.get_page_from_url(event.target.href);
 
-        this.request_posts({
-            paged: page,
-        });
+        let data = {};
+        if (page) data.paged = page;
+
+        this.request_posts(data);
 
     }
 
@@ -112,6 +113,7 @@ export class Digitalis_Query {
         // console.log(data);
 
         let url = new URL(new_url ? new_url : window.location.href);
+        if (!data.hasOwnProperty('paged') && url.searchParams.has('paged')) url.searchParams.delete('paged');
         for (const [key, value] of Object.entries(data)) url.searchParams.set(key, value);
 
         this.request(this.options.action, data, url.href);
