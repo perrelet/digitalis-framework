@@ -79,15 +79,15 @@ abstract class View {
 
             if (file_exists($path)) {
 
-                extract(static::$params, EXTR_OVERWRITE);
+                if (static::$params) extract(static::$params, EXTR_OVERWRITE);
                 require $path;
 
             }
 
         }
 
-        static::after(static::$params);
         if ($params['index'] == 1) static::after_first(static::$params);
+        static::after(static::$params);
 
         if (!$print) {
             $html = ob_get_contents();
