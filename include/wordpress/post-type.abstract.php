@@ -12,6 +12,8 @@ abstract class Post_Type extends Singleton {
     protected $singular     = 'Post Type';
     protected $plural       = 'Post Types';
 
+    protected $model_class  = false;
+
     protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, args => [ ... ], ...] || 'months_dropdown'
 
     //
@@ -24,6 +26,7 @@ abstract class Post_Type extends Singleton {
         //if ($flush) flush_rewrite_rules();
         
         add_action('init', [$this, 'register']);
+        add_action('template_redirect', [$this, 'instantiate_model']);
 
         // Admin
 
@@ -73,6 +76,27 @@ abstract class Post_Type extends Singleton {
             $this->slug,
             $args
         );
+        
+    }
+
+    public function instantiate_model () {
+
+        global $wp_query;
+
+        if ($this->model_class && $wp_query && $wp_query->is_single && $this->is_main_query($wp_query)) {
+
+           $call = "{$this->model_class}::get_instance";
+            
+            if (is_callable($call)) {
+
+                $global_var = $this->slug;
+                if (in_array($global_var, ['post' , 'page', 'multipage', 'menu'])) $global_var = "_{$global_var}"; // https://codex.wordpress.org/Global_Variables
+
+                $GLOBALS[$global_var] = call_user_func($call);
+
+            }
+
+        }
         
     }
 
