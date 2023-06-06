@@ -10,6 +10,11 @@ class Select_Nice extends Select {
     ];
 
     public static function params ($p) {
+
+        $js_var = str_replace("-", "_", $p['key']) . "_nice";
+
+        $p['js_var'] = $js_var;
+        $p['attributes']['data-js-var'] = $js_var;
  
         $p['nice-select'] = wp_parse_args($p['nice-select'], [
             'searchable'    => true,
@@ -31,10 +36,16 @@ class Select_Nice extends Select {
 
     }
 
+    public static function after_first ($p) {
+
+        echo "<script>let nice_selects = {};</script>";
+
+    }
+
     public static function after ($p) {
 
         $json = json_encode($p['nice-select']);
-        echo "<script>NiceSelect.bind(document.getElementById('{$p['id']}'), {$json});</script>";
+        echo "<script>nice_selects.{$p['js_var']} = NiceSelect.bind(document.getElementById('{$p['id']}'), {$json});</script>";
 
         parent::after($p);
 
