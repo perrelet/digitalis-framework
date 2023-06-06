@@ -6,6 +6,9 @@ use WP_Query;
 
 abstract class Archive extends View {
 
+    protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
+    protected static $template = null;
+
     protected static $defaults = [
         'id'            => 'digitalis-archive',
         'classes'       => [],
@@ -15,6 +18,7 @@ abstract class Archive extends View {
         'pagination'    => true,
         'loader'        => 'sliding-dots.gif',
         'loader_type'   => 'image',
+        'controls'      => [],
     ];
 
     protected static $merge = [
@@ -63,6 +67,12 @@ abstract class Archive extends View {
     
     }
 
+    protected static function render_items ($items) {
+        
+        if ($items) foreach ($items as $item) static::render_item($item);
+        
+    }
+
     //
 
     public static function get_classes ($p) {
@@ -90,6 +100,22 @@ abstract class Archive extends View {
         if (!$p['posts_only']) {
 
             echo "<div id='{$p['id']}' class='$classes'>";
+
+            if (get_current_user_id() == 1) {
+
+                if ($p['controls']) {
+
+                    Field_Group::render([
+                        'fields'    => $p['controls'],
+                        'id'        => $p['id'] . '-controls',
+                        'classes'   => ['archive-controls'],
+                        'tag'       => 'form',
+                    ]);
+        
+                }
+
+            }
+
             echo "<div class='digitalis-loader'>" . static::get_loader($p) . "</div>";
             echo "<div class='posts'>";
 
@@ -99,7 +125,7 @@ abstract class Archive extends View {
 
         if ($items = static::get_items($p['query_args'], $query)) {
 
-            foreach ($items as $item) static::render_item($item);
+            static::render_items($items);
 
             if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) echo paginate_links([
                 'current'   => max(1, $query->get('paged')),
