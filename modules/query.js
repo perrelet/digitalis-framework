@@ -96,10 +96,9 @@ export class Digitalis_Query {
                         default:
                             field.value = value;
 
-
                     }
 
-                    if (field.classList.contains('field-nice-select')) nice_selects[field_name.replace('-', '_') + '_nice'].update();
+                    if (field.classList.contains('field-nice-select')) nice_selects[field.getAttribute('data-js-var')].update();
 
                 }
 
@@ -153,6 +152,7 @@ export class Digitalis_Query {
 
         const form_data = new FormData(this.elements.form);
         data = Object.assign(Object.fromEntries(form_data), data);
+        this.state.form = Object.fromEntries(form_data);
 
         if (this.elements.controls) {
 
@@ -200,10 +200,7 @@ export class Digitalis_Query {
                             this[success_callback](response.data, http);
 
                             let state = response.data;
-                            const form_data = new FormData(this.elements.form);
-                            state.form = Object.fromEntries(form_data);
-
-                            console.log(form_data);
+                            state.form = this.state.form;
 
                             if (new_url) window.history.pushState(state, '', new_url);
 
