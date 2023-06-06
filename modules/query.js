@@ -8,13 +8,14 @@ export class Digitalis_Query {
             form:       '#filters',
         },
 
-        base_url: window.location.origin,
-        ajax_url: '/wp-admin/admin-ajax.php',
-        action: 'digitalis_query',
-        nonce: false,
+        base_url:               window.location.origin,
+        ajax_url:               '/wp-admin/admin-ajax.php',
+        action:                 'digitalis_query',
+        nonce:                  false,
+        cache_initial_posts:    true,
 
-        page_query_param: 'paged',
-        page_url_param: 'page',
+        page_query_param:       'paged',
+        page_url_param:         'page',
         
     };
 
@@ -37,7 +38,7 @@ export class Digitalis_Query {
         this.add_event_listeners();
         this.setup_pagination();
 
-        this.state.original_html = this.elements.posts.innerHTML;
+        this.state.initial_posts = this.options.cache_initial_posts ? this.elements.posts.innerHTML : false;
 
     }
 
@@ -46,6 +47,7 @@ export class Digitalis_Query {
         this.elements.archive = document.querySelector(this.options.selectors.archive);
         this.elements.posts = document.querySelector(this.options.selectors.posts);
         this.elements.form = document.querySelector(this.options.selectors.form);
+        this.elements.controls = document.querySelector(this.options.selectors.archive + " .archive-controls");
 
     }
 
@@ -58,7 +60,50 @@ export class Digitalis_Query {
 
         window.addEventListener("popstate", (event) => {
 
-            this.update_posts(event.state && event.state.hasOwnProperty('html') ? event.state.html : this.state.original_html);
+            if (event.state && event.state.hasOwnProperty('html')) {
+
+                this.update_posts(event.state.html);
+
+            } else if (this.state.initial_posts) {
+
+                this.update_posts(this.state.initial_posts);
+
+            }
+
+            if (event.state && event.state.hasOwnProperty('js')) eval(event.state.js);
+
+            //console.log(event.state.form);
+
+            if (event.state && event.state.hasOwnProperty('form')) for (const field_name in event.state.form) {
+
+                let field_selector = `${this.options.selectors.form} [name='${field_name}']:not([type='hidden'])`;
+                let field = document.querySelector(field_selector);
+
+                if (field) {
+
+                    let value = event.state.form[field_name];
+
+                    switch (field.type) {
+
+                        case 'radio':
+                            document.querySelectorAll(field_selector).forEach(el => { if (el.value == value) el.checked = true; });
+                            break;
+
+                        case 'checkbox':
+                            field.checked = Boolean(parseInt(value));
+                            break;
+
+                        default:
+                            field.value = value;
+
+
+                    }
+
+                    if (field.classList.contains('field-nice-select')) nice_selects[field_name.replace('-', '_') + '_nice'].update();
+
+                }
+
+            }
 
         });
         
@@ -107,8 +152,14 @@ export class Digitalis_Query {
     request_posts (data = {}, new_url = false) {
 
         const form_data = new FormData(this.elements.form);
-
         data = Object.assign(Object.fromEntries(form_data), data);
+
+        if (this.elements.controls) {
+
+            const controls_data = new FormData(this.elements.controls);
+            data = Object.assign(Object.fromEntries(controls_data), data);
+
+        }
 
         // console.log(data);
 
@@ -147,7 +198,14 @@ export class Digitalis_Query {
                         if (response.success) {
 
                             this[success_callback](response.data, http);
-                            if (new_url) window.history.pushState(response.data, '', new_url);
+
+                            let state = response.data;
+                            const form_data = new FormData(this.elements.form);
+                            state.form = Object.fromEntries(form_data);
+
+                            console.log(form_data);
+
+                            if (new_url) window.history.pushState(state, '', new_url);
 
                         } else {
 
@@ -171,7 +229,8 @@ export class Digitalis_Query {
 
     success (data, http = null) {
 
-        this.update_posts(data.html);
+        if (data.hasOwnProperty('html')) this.update_posts(data.html);
+        if (data.hasOwnProperty('js'))   eval(data.js);
 
     }
 
