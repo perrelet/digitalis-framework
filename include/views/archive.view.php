@@ -73,6 +73,12 @@ abstract class Archive extends View {
         
     }
 
+    protected static function render_no_posts ($p) {
+        
+        echo "<div class='no_posts'>{$p['no_posts']}</div>";
+        
+    }
+
     //
 
     public static function get_classes ($p) {
@@ -134,7 +140,7 @@ abstract class Archive extends View {
 
         } else {
 
-            echo "<div class='no_posts'>{$p['no_posts']}</div>";
+            static::render_no_posts($p);
 
         }
 
