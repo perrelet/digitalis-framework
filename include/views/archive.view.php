@@ -107,19 +107,15 @@ abstract class Archive extends View {
 
             echo "<div id='{$p['id']}' class='$classes'>";
 
-            if (get_current_user_id() == 1) {
+            if ($p['controls']) {
 
-                if ($p['controls']) {
-
-                    Field_Group::render([
-                        'fields'    => $p['controls'],
-                        'id'        => $p['id'] . '-controls',
-                        'classes'   => ['archive-controls'],
-                        'tag'       => 'form',
-                    ]);
-        
-                }
-
+                Field_Group::render([
+                    'fields'    => $p['controls'],
+                    'id'        => $p['id'] . '-controls',
+                    'classes'   => ['archive-controls'],
+                    'tag'       => 'form',
+                ]);
+    
             }
 
             echo "<div class='digitalis-loader'>" . static::get_loader($p) . "</div>";
