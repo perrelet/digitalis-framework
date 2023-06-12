@@ -6,9 +6,15 @@ class Model {
 
     protected static $instances = [];
 
-    public static function extract_id ($id = null) {
+    public static function extract_id ($data = null) {
 
-        if ($id instanceof self) return $id->get_id();
+        if ($data instanceof self) return $data->get_id();
+
+        return $data;
+
+    }
+
+    public static function extract_uid ($id, $data = null) {
 
         return $id;
 
@@ -35,34 +41,36 @@ class Model {
     public static function get_instance ($data = null) {
 
         $id = static::extract_id($data);
-        if (is_null($id)) return null;
+        $uid = static::extract_uid($id, $data);
+
+        if (is_null($uid) || is_null($id)) return null;
 
         $class_name = static::get_class_name();
 
         if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
         
-        if (!isset(self::$instances[$class_name][$id])) {
+        if (!isset(self::$instances[$class_name][$uid])) {
             
             if (static::validate($data) && static::validate_id($id)) {
 
-                self::$instances[$class_name][$id] = new $class_name($id);
-                self::$instances[$class_name][$id]->init($data);
+                self::$instances[$class_name][$uid] = new $class_name($id);
+                self::$instances[$class_name][$uid]->init($data);
 
             } else {
 
-                self::$instances[$class_name][$id] = null;
+                self::$instances[$class_name][$uid] = null;
 
             }
 
         }
 
-        return self::$instances[$class_name][$id];
+        return self::$instances[$class_name][$uid];
 
     }
 
-    public static function inst () {
+    public static function inst ($data = null) {
         
-        return self::get_instance();
+        return self::get_instance($data);
         
     }
 
@@ -97,7 +105,6 @@ class Model {
     public function __construct ($id) {
 
         $this->id = $id;
-        $this->init();
 
     }
 
