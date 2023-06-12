@@ -206,7 +206,7 @@ abstract class Post_Type extends Singleton {
 
     public function main_query_wrap ($query) {
 
-        if (!$this->is_main_query($query)) return;
+        if (!is_archive() || !$this->is_main_query($query)) return;
 
         $this->main_query($query);
 
