@@ -9,7 +9,7 @@ abstract class Post extends Model {
 
     use Has_WP_Post;
 
-    protected static $post_type = 'post';                           // Override me.
+    protected static $post_type = 'post';           // Override me.
     protected static $post_type_class = false;      // Override me - Used when querying the model. With this we can get the main query args from the CPT.
 
     public function is_post () { return true; }
@@ -31,19 +31,17 @@ abstract class Post extends Model {
 
     } 
 
-    public static function get_query_args ($args = []) {
+    public static function get_query_vars () {
 
-        $call = static::$post_type_class . "::get_query_args";
+        $call = static::$post_type_class . "::get_query_vars";
+        return is_callable($call) ? call_user_func($call) : [];
 
-        if (is_callable($call)) {
+    }
 
-            return call_user_func($call, $args);
+    public static function get_admin_query_vars () {
 
-        } else {
-
-            return $args;
-
-        }
+        $call = static::$post_type_class . "::get_admin_query_vars";
+        return is_callable($call) ? call_user_func($call) : [];
 
     }
 
@@ -51,21 +49,50 @@ abstract class Post extends Model {
 
         global $wp_query;
 
-        $instances = [];
-        $posts = [];
+        $instances      = [];
+        $posts          = [];
+        $this_post_type = false;
 
-        if (!$skip_main && $wp_query && $wp_query->is_main_query() && ($wp_query->get('post_type') === static::$post_type)) {
+        if ($wp_query && ($queried_post_type = $wp_query->get('post_type'))) {
+
+            if (is_array($queried_post_type)) {
+
+                if (in_array('any', $queried_post_type) || in_array(static::$post_type, $queried_post_type)) $this_post_type = true;
+
+            } else {
+
+                if (($queried_post_type == 'any') || ($queried_post_type == static::$post_type)) $this_post_type = true;
+
+            }
+
+        }
+
+        if (!$skip_main && $wp_query && $wp_query->is_main_query() && $this_post_type) {
 
             $query = $wp_query;
             $posts = $wp_query->posts;
 
         } else {
 
-            if (!$skip_main && $wp_query->query_vars) $args = wp_parse_args($args, $wp_query->query_vars);
-            $args = static::get_query_args($args);
+            /* if (!$skip_main && $wp_query->query_vars) $args = wp_parse_args($args, $wp_query->query_vars);
+            $args = static::get_query_vars($args);
             $args['post_type'] = static::$post_type;
-            $query = new WP_Query($args);
-            $posts = $query->get_posts();
+            $posts = (new WP_Query($args))->posts; */
+
+            //if (!$skip_main && $this_post_type && $wp_query->query_vars) $args = merge_query_vars($args, $wp_query->query_vars); // ?
+            /* $args = merge_query_vars([
+                'post_type' => static::$post_type,
+            ], $args);
+            $args = merge_query_vars($args, is_admin() ? static::get_admin_query_vars() : static::get_query_vars());
+            $posts = (new WP_Query($args))->posts; */
+
+            //
+
+            $query = new Digitalis_Query();
+            $query->set_var('post_type', static::$post_type);
+            $query->merge(is_admin() ? static::get_admin_query_vars() : static::get_query_vars());
+            $query->merge($args);
+            $posts = $query->query();
 
         }
 
@@ -83,5 +110,10 @@ abstract class Post extends Model {
 
     }
 
+    public function get_global_var () {
+
+        return "_" . static::$post_type;
+
+    }
 
 }
