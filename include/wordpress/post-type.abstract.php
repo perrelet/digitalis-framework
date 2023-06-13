@@ -30,6 +30,8 @@ abstract class Post_Type extends Singleton {
 
         // Admin
 
+        add_action('pre_get_posts', [$this, 'admin_query_wrap']);
+
         if (method_exists($this, 'columns'))        add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
         if (method_exists($this, 'column'))         add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
 
@@ -37,15 +39,12 @@ abstract class Post_Type extends Singleton {
         add_action('restrict_manage_posts',     [$this, 'render_filters']);
         add_action('pre_get_posts',             [$this, 'admin_controller']);
 
-        if (method_exists($this, 'after_insert'))   add_action("wp_after_insert_post", [$this, 'after_insert_wrap'], 10, 4);
-        
-        if (method_exists($this, 'admin_query'))    add_action('pre_get_posts', [$this, 'admin_query_wrap']);
+        if (method_exists($this, 'after_insert'))   add_action('wp_after_insert_post',  [$this, 'after_insert_wrap'], 10, 4);
 
         // Front
 
-        if (method_exists($this, 'query_vars'))     add_action('query_vars',    [$this, 'query_vars_wrap']);
-
-        if (method_exists($this, 'main_query'))     add_action('pre_get_posts', [$this, 'main_query_wrap']);
+        add_action('query_vars',    [$this, 'register_query_vars']);
+        add_action('pre_get_posts', [$this, 'main_query_wrap']);
 
         if (method_exists($this, 'ajax_query')) {
             
@@ -85,14 +84,12 @@ abstract class Post_Type extends Singleton {
 
         if ($this->model_class && $wp_query && $wp_query->is_single && $this->is_main_query($wp_query)) {
 
-           $call = "{$this->model_class}::get_instance";
-            
-            if (is_callable($call)) {
+            $call = "{$this->model_class}::get_instance";
 
-                $global_var = $this->slug;
-                if (in_array($global_var, ['post' , 'page', 'multipage', 'menu'])) $global_var = "_{$global_var}"; // https://codex.wordpress.org/Global_Variables
-
-                $GLOBALS[$global_var] = call_user_func($call);
+            if (is_callable($call) && ($instance = call_user_func($call))) {
+                
+                //while (isset($GLOBALS[$global_var])) $global_var = "_{$global_var}";
+                $GLOBALS[$instance->get_global_var()] = $instance;
 
             }
 
@@ -204,6 +201,12 @@ abstract class Post_Type extends Singleton {
 
     //
 
+    public static function get_query_vars () {
+
+        return [];
+
+    }
+
     public function main_query_wrap ($query) {
 
         if (!is_archive() || !$this->is_main_query($query)) return;
@@ -211,6 +214,48 @@ abstract class Post_Type extends Singleton {
         $this->main_query($query);
 
     }
+
+    public function main_query ($wp_query) {
+
+        //$wp_query->query_vars = wp_parse_args(static::get_query_vars(), $wp_query->query_vars);
+
+        //merge_query(static::get_query_vars(), $wp_query);
+
+        $query = new Digitalis_Query($wp_query->query_vars);
+        $query->merge(static::get_query_vars());
+        $wp_query->query_vars = $query->get_query();
+
+    }
+
+    // Admin Query
+
+    public static function get_admin_query_vars () {
+
+        return [];
+
+    }
+
+    public function admin_query_wrap ($query) {
+
+        if (!$this->is_main_admin_query($query)) return;
+
+        $this->admin_query($query);
+
+    }
+
+    public function admin_query ($wp_query) {
+
+        //$wp_query->query_vars = wp_parse_args(static::get_admin_query_vars(), $wp_query->query_vars);
+
+        //merge_query(static::get_admin_query_vars(), $wp_query);
+
+        $query = new Digitalis_Query($wp_query->query_vars);
+        $query->merge(static::get_query_vars());
+        $wp_query->query_vars = $query->get_query();
+
+    }
+
+    //
 
     public function ajax_query_wrap () {
 
@@ -396,19 +441,11 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function admin_query_wrap ($query) {
-
-        if (!$this->is_main_admin_query($query)) return;
-
-        $this->admin_query($query);
-
-    }
-
     //
 
-    public function query_vars_wrap ($vars) {
+    public function register_query_vars ($vars) {
 
-        return $this->query_vars($vars);
+        return $vars;
         
     }
 

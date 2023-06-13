@@ -122,6 +122,10 @@ class Model {
 
     }
 
+    public function get_global_var () {
 
+        return static::class;
+
+    }
 
 }
