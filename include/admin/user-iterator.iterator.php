@@ -6,7 +6,7 @@ use \WP_User_Query;
 
 abstract class User_Iterator extends Iterator {
 
-    public function get_default_query_args () {
+    public function get_default_query_vars () {
 
         return [
             'number'    => $this->batch_size,
@@ -17,15 +17,15 @@ abstract class User_Iterator extends Iterator {
 
     }
 
-    public function get_query_args ($args) {
+    public function get_query_vars ($vars) {
 
-        return $args;
+        return $vars;
 
     }
 
     public function get_items () {
 
-        $query = new WP_User_Query($this->get_query_args($this->get_default_query_args()));
+        $query = new WP_User_Query($this->get_query_vars($this->get_default_query_vars()));
 
         return $query->get_results();
 
