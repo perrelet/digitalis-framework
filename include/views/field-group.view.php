@@ -11,6 +11,7 @@ class Field_Group extends View {
 
     protected static $defaults = [
         'fields'        => [],
+        'label'         => false,
         'id'            => false,
         'tag'           => 'div',
         'classes'       => [],
@@ -69,6 +70,8 @@ class Field_Group extends View {
             $field = wp_parse_args($field, [
                 'field' => Input::class,
             ]);
+
+            $field = apply_filters('Digitalis/Field_Group/Field', $field, $p, static::class);
 
         }
 
