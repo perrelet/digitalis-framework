@@ -34,7 +34,7 @@ export class Digitalis_Query {
 
     init () {
 
-        this.find_elements();
+        if (!this.find_elements()) return;
         this.add_event_listeners();
         this.setup_pagination();
 
@@ -48,6 +48,8 @@ export class Digitalis_Query {
         this.elements.posts = document.querySelector(this.options.selectors.posts);
         this.elements.form = document.querySelector(this.options.selectors.form);
         this.elements.controls = document.querySelector(this.options.selectors.archive + " .archive-controls");
+
+        return this.elements.archive;
 
     }
 
