@@ -46,9 +46,25 @@ class Field_Group extends View {
 
     }
 
+    public static function get_fields ($fields) {
+        
+        return $fields;
+        
+    }
+
+    public static function get_field_options ($options, $field) {
+        
+        return $options;
+        
+    }
+
     public static function params ($p) {
 
+        $p['fields'] = static::get_fields($p['fields']);
+
         if ($p['fields']) foreach ($p['fields'] as &$field) {
+
+            if (isset($field['options'])) $field['options'] = static::get_field_options($field['options'], $field);
 
             $field = wp_parse_args($field, [
                 'field' => Input::class,
