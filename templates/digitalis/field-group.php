@@ -1,5 +1,6 @@
 <<?= $tag ?> <?= $id ? "id='{$id}'" : "" ?> <?= $attributes ?>>
     <?php if ($fields) foreach ($fields as $field) {
-        call_user_func($field['field'] . "::render", $field);
+        $call = $field['field'] . "::render";
+        if (is_callable($call)) call_user_func($call, $field);
     } ?>
 </<?= $tag ?>>
