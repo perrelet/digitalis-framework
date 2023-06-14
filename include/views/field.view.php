@@ -64,7 +64,9 @@ class Field extends View {
 
         $classes = [
             "row",
+            "field-row",
             "row-{$p['type']}",
+            "row-{$p['key']}",
         ];
 
         if ($p['row_classes']) array_merge($classes, $p['row_classes']);
