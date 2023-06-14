@@ -17,6 +17,8 @@ abstract class Query_Filters extends Field_Group {
 
     protected static function before_first ($p) {
 
+        if (!$p['module_url']) return;
+
         $js_params = wp_parse_args($p['js_params'], [
             'ajax_url'          => admin_url('admin-ajax.php'),
             'action'            => $p['action'],
