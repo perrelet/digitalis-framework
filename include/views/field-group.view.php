@@ -18,6 +18,11 @@ class Field_Group extends View {
         'attributes'    => [],
     ];
 
+    protected static $merge = [
+        'classes',
+        'attributes',
+    ];
+
     public static function get_classes ($p) {
 
         $classes = [
