@@ -5,6 +5,7 @@ export class Digitalis_Query {
         selectors: {
             archive:    '#archive',
             posts:      '#archive .posts',
+            controls:   '#archive .archive-controls',
             form:       '#filters',
         },
 
@@ -46,8 +47,8 @@ export class Digitalis_Query {
 
         this.elements.archive = document.querySelector(this.options.selectors.archive);
         this.elements.posts = document.querySelector(this.options.selectors.posts);
+        this.elements.controls = document.querySelector(this.options.selectors.controls);
         this.elements.form = document.querySelector(this.options.selectors.form);
-        this.elements.controls = document.querySelector(this.options.selectors.archive + " .archive-controls");
 
         return this.elements.archive;
 
@@ -153,7 +154,12 @@ export class Digitalis_Query {
     request_posts (data = {}, new_url = false) {
 
         const form_data = new FormData(this.elements.form);
-        data = Object.assign(Object.fromEntries(form_data), data);
+        const entries = Object.fromEntries(Array.from(form_data.keys(), key => {
+            const val = form_data.getAll(key)
+            return [ key, val.length > 1 ? val : val.pop() ]
+        }))
+        data = Object.assign(entries, data);
+        //data = Object.assign(Object.fromEntries(form_data), data);
         this.state.form = Object.fromEntries(form_data);
 
         if (this.elements.controls) {
