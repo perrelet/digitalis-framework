@@ -35,7 +35,9 @@ abstract class View {
                 if (isset($class::$defaults[$key]) && is_array($class::$defaults[$key]) && $class::$defaults[$key]) {
 
                     if (!isset($defaults[$key])) $defaults[$key] = [];
-                    $defaults[$key] = array_unique(wp_parse_args($defaults[$key], $class::$defaults[$key]), SORT_REGULAR);
+                    $defaults[$key] = wp_parse_args($defaults[$key], $class::$defaults[$key]);
+                    
+                    if (array_is_list($defaults[$key])) $defaults[$key] = array_unique($defaults[$key], SORT_REGULAR);
 
                 }
 
