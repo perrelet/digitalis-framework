@@ -53,6 +53,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox-group.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox-buttons.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date-picker.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/radio.field.php';
