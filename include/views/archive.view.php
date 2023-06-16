@@ -111,8 +111,11 @@ abstract class Archive extends View {
 
                 Field_Group::render([
                     'fields'    => $p['controls'],
-                    'id'        => $p['id'] . '-controls',
-                    'classes'   => ['archive-controls'],
+                    'id'        => "{$p['id']}-controls",
+                    'classes'   => [
+                        'archive-controls',
+                        "{$p['id']}-controls",
+                    ],
                     'tag'       => 'form',
                 ]);
     
