@@ -59,3 +59,71 @@
     }
 
 }
+
+@if not function-exists(generate-mix) {
+
+    @function generate-mix ($base: #7F7F7F, $n: 8, $dest: #ffffff, $method: oklab) {
+
+        $colors: ();
+
+        @for $i from 1 through $n {
+
+            $mix: 100 * (1 - (($i - 1) / ($n - 1)));
+            $colors: append($colors, color-mix(in #{$method}, #{$base} #{$mix}%, #{$dest}));
+
+        }
+
+        @return $colors;
+
+
+    }
+
+}
+
+@if not mixin-exists(generate-mix) {
+
+    @mixin generate-mix ($base: #7F7F7F, $name: grey, $n: 8, $dest: #ffffff, $method: oklab, $offset: 0) {
+
+        $colors: generate-mix($base: $base, $n: $n, $dest: $dest, $method: $method);
+
+        @for $i from 1 through length($colors) {
+
+            $color-name: --c-#{$name}-#{$i + $offset};
+            #{$color-name}: nth($colors, $i);
+
+        }
+
+    }
+
+}
+
+@if not mixin-exists(generate-mixes) {
+
+    @mixin generate-mixes ($stops: (white, red, blue, green, black), $name: palette, $n: 6, $method: oklab) {
+
+        $index: 1;
+
+        @for $i from 1 through (length($stops) - 1) {
+
+            $colors: generate-mix($base: nth($stops, $i), $dest: nth($stops, $i + 1), $n: $n, $method: $method);
+            
+            @if ($i == (length($stops) - 1)) {
+                $length: length($colors);
+            } @else {
+                $length: length($colors) - 1;
+            }
+
+            @for $j from 1 through $length {
+
+                $color-name: --c-#{$name}-#{$index};
+                #{$color-name}: nth($colors, $j);
+
+                $index: $index + 1;
+
+            }
+
+        }
+
+    }
+
+}
