@@ -42,7 +42,7 @@
 
 @mixin soft-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $reduce: 0px, $distance: 0px, $invert: false, $inset: false, $color: rgba(0,0,0,0)) {
 
-    box-shadow: soft-shadow($x, $y, $n, $alpha, $blur, $reduce, $invert, $inset, $color);
+    box-shadow: soft-shadow($x: $x, $y: $y, $n: $n, $alpha: $alpha, $blur: $blur, $reduce: $reduce, $distance: $distance, $invert: $invert, $inset: $inset, $color: $color);
 
 }
 
