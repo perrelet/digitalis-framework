@@ -16,15 +16,8 @@ abstract class View {
 
     public static function get_template ($params) { return static::$template; }
 
-    public static function render ($params = [], $print = true) {
-
-        if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
-        $params['index'] = ++self::$indexes[static::class];
-
-        if (method_exists(static::class, 'footer') && !has_action('wp_print_footer_scripts', [static::class, 'footer'])) add_action('wp_print_footer_scripts', [static::class, 'footer']);
-
-        if (!$print) ob_start();
-
+    public static function get_defaults () {
+        
         $defaults   = static::$defaults;
         $class      = static::class;
 
@@ -47,9 +40,17 @@ abstract class View {
 
         }
 
-        //
+        return $defaults;
+        
+    }
+
+    public static function compute_params ($params = []) {
+        
+        $defaults = static::get_defaults();
 
         static::$params = wp_parse_args($params, $defaults);
+
+        //
 
         if (static::$merge) foreach (static::$merge as $key) {
 
@@ -65,8 +66,21 @@ abstract class View {
         //
 
         static::$params = static::params(static::$params);
+        
+    }
+
+    public static function render ($params = [], $print = true) {
+
+        if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
+        $params['index'] = ++self::$indexes[static::class];
+
+        if (method_exists(static::class, 'footer') && !has_action('wp_print_footer_scripts', [static::class, 'footer'])) add_action('wp_print_footer_scripts', [static::class, 'footer']);
+
+        static::compute_params($params);
 
         //
+
+        if (!$print) ob_start();
 
         if ($params['index'] == 1) static::before_first(static::$params);
         static::before(static::$params);
