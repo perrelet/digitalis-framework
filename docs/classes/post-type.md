@@ -36,7 +36,7 @@ The label of the post type when referencing multiple instances (e.g 'Books').
 
 **`protected $model_class: string|false`**
 
-Accepts a fully qualified class name. The corresponding class must extend `Digitalis\Model`. Used to automatically instantiate models upon `template_redirect`.
+Accepts a fully qualified class name of a class that extends `Digitalis\Model`. When this parameter is set, the corresponding model will automatically be instantiate models upon `template_redirect`.
 
 ---
 
@@ -102,7 +102,7 @@ Echo the content for a given post_id and column slug in the admin post table.
 
 Method will fire on action [`wp_after_insert_post`](https://developer.wordpress.org/reference/hooks/wp_after_insert_post/) for the given post type.
 
---
+---
 
 **`public function ajax_query()`**
 
