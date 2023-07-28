@@ -1,1 +1,3 @@
-`Hello Docs`
+## Navigation
+
+- [Post Type](classes/post-type.md)
