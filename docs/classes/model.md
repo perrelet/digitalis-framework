@@ -6,13 +6,13 @@
 
 **`public static function extract_id ($data = null): string`**
 
-Given the models constructor `$data`, return the id of the models instance in the database or other data store.
+`$data: mixed` The first parameter of the models constructor.
+
+Return the id of the models instance in the database or other data store.
 
 **`public static function extract_uid ($id, $data = null): string`**
 
-| Parameter | Description |
-| - | - |
-| `$id: string` | Title |
-| `$data: mixed` | Text |
+`$id: string` The value returned from `extract_id`
+`$data: mixed` The first parameter of the models constructor.
 
-`$id: string`
+
