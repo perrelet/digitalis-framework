@@ -1,8 +1,8 @@
-# Post Type Class
+# Taxonomy Class
 
-The `Digitalis\Taxonomy` class provides scaffolding to rapidly deploy custom taxonomies in WordPress.
+The [`Digitalis\Taxonomy`](https://github.com/perrelet/digitalis-framework/blob/main/include/wordpress/taxonomy.abstract.php) class provides scaffolding to rapidly deploy custom taxonomies in WordPress.
 
-## Required Member Variables
+## Required Properties
 
 **`protected $slug: string`**
 
@@ -26,7 +26,7 @@ The label of the taxonomy when referencing a single instance (e.g 'Grade').
 
 The label of the taxonomy when referencing multiple instances (e.g 'Grades').
 
-## Optional Member Variables
+## Optional Properties
 
 **`protected $text_domain: string`**
 

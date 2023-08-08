@@ -1,8 +1,8 @@
-# Post Type Class
+# Post_Type Class
 
-The `Digitalis\Post_Type` class provides scaffolding to rapidly deploy custom post types in WordPress.
+The [`Digitalis\Post_Type`](https://github.com/perrelet/digitalis-framework/blob/main/include/wordpress/post-type.abstract.php) class provides scaffolding to rapidly deploy custom post types in WordPress.
 
-## Required Member Variables
+## Required Properties
 
 **`protected $slug: string`**
 
@@ -32,7 +32,7 @@ The label of the post type when referencing a single instance (e.g 'Book').
 
 The label of the post type when referencing multiple instances (e.g 'Books').
 
-## Optional Member Variables
+## Optional Properties
 
 **`protected $model_class: string|false`**
 
