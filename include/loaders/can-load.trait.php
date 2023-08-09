@@ -27,6 +27,7 @@ trait Can_Load {
         if ($instantiate !== false) {
          
             if (!$class_name = $this->extract_class_name($file_path)) return false;
+            if (!apply_filters('Digitalis/Instantiate/' . ltrim($class_name, '\\'), true, $file_path)) return false;
 
             if (!isset($this->object_groups[$group_key])) $this->object_groups[$group_key] = [];
 
