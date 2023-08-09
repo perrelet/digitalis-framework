@@ -15,6 +15,8 @@ abstract class Bidirectional_Relationship extends Integration {
     protected $limit_1 = false;
     protected $limit_2 = false;
 
+    protected $allow_self = false;
+
     protected $log = false;
 
     public function __construct () {
@@ -91,6 +93,13 @@ abstract class Bidirectional_Relationship extends Integration {
 		$removed = array_diff($old_values, $values);
 
         if ($added) foreach ($added as $post_id) {
+
+            if (!$this->allow_self && ($post_id == $updated_post_id)) {
+
+                if (($self_key = array_search($post_id, $values)) !== false) unset($values[$self_key]);
+                continue;
+
+            }
 
 			$sync_ids = get_field($sync_field_key, $post_id, false);
 			if (empty($sync_ids)) $sync_ids = [];
