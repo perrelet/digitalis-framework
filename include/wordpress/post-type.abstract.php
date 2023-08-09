@@ -287,7 +287,7 @@ abstract class Post_Type extends Singleton {
 
                     $taxonomy = get_taxonomy($key);
 
-                    $filter['args'] = wp_parse_args($filter['args'], [
+                    if ($taxonomy) $filter['args'] = wp_parse_args($filter['args'], [
                         'taxonomy'          => $key,
                         'name'              => "tax[{$filter['name']}]",
                         'value_field'       => 'term_id',
