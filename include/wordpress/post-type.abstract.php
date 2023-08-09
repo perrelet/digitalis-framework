@@ -35,7 +35,7 @@ abstract class Post_Type extends Singleton {
         if (method_exists($this, 'columns'))        add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
         if (method_exists($this, 'column'))         add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
 
-        if (!in_array('publish_month', $this->filters)) add_filter('disable_months_dropdown',   [$this, 'disable_months_dropdown'], 10, 2);
+        if (!in_array('publish_month', $this->get_filters())) add_filter('disable_months_dropdown',   [$this, 'disable_months_dropdown'], 10, 2);
         add_action('restrict_manage_posts',     [$this, 'render_filters']);
         add_action('pre_get_posts',             [$this, 'admin_controller']);
 
@@ -270,8 +270,14 @@ abstract class Post_Type extends Singleton {
     //
 
     protected function get_filters () {
+        
+        return $this->filters;
+        
+    }
 
-        if ($this->filters) foreach ($this->filters as $key => &$filter) {
+    protected function build_filters () {
+
+        if ($filters = $this->get_filters()) foreach ($filters as $key => &$filter) {
 
             if (!is_array($filter)) $filter = ['type'  => $filter];
 
@@ -303,15 +309,18 @@ abstract class Post_Type extends Singleton {
                 case 'acf':
 
                     $filter['args'] = wp_parse_args($filter['args'], [
-                        'hide_falsy'    => true,
-                        'compare'       => '=',
+                        'hide_falsy'     => true,
+                        'compare'        => '=',
+                        'label'          => null,
+                        'type'           => null,
+                        'value_callback' => false,
                     ]);
 
             }
 
         }
 
-        return $this->filters;
+        $this->filters = $filters;
 
     }
 
@@ -319,7 +328,7 @@ abstract class Post_Type extends Singleton {
 
         if (!$this->is_main_admin_query($query)) return;
 
-        $this->get_filters();
+        $this->build_filters();
 
         if ($this->filters) foreach ($this->filters as $key => $filter) {
 
@@ -346,6 +355,8 @@ abstract class Post_Type extends Singleton {
                 case 'acf':
 
                     if ($value = $_REQUEST['meta'][$key] ?? false) {
+                        
+                        if (is_callable($filter['args']['value_callback'])) $value = call_user_func($filter['args']['value_callback'], $value);
 
                         if (!isset($query->query_vars['meta_query'])) $query->query_vars['meta_query'] = [];
 
@@ -383,7 +394,7 @@ abstract class Post_Type extends Singleton {
 
                 case 'taxonomy':
 
-                    wp_dropdown_categories($filter['args']);
+                    if (get_taxonomy($key)) wp_dropdown_categories($filter['args']);
                     
                     break;
 
@@ -401,23 +412,28 @@ abstract class Post_Type extends Singleton {
                     if (!$post_ids) break;
                     if (!$field = get_field_object($key, $post_ids[0])) break;
 
+                    $label = is_null($filter['args']['label']) ? $field['label'] : $filter['args']['label'];
+
                     if (isset($field['choices']) && ($options = $field['choices'])) {
 
                         echo "<select name='meta[{$filter['name']}]'>";
 
                             echo "<option value='0'>Filter by {$field['label']}</option>";
 
-                            foreach ($options as $value => $label) {
+                            foreach ($options as $value => $option_label) {
 
                                 if ($filter['args']['hide_falsy'] && !$value) continue;
-                                echo "<option value='{$value}' " . selected($value, $current_value, false) . ">{$label}</option>";
+                                echo "<option value='{$value}' " . selected($value, $current_value, false) . ">{$option_label}</option>";
 
                             }
 
                         echo "</select>";
+
                     } else {
 
-                        // Text field
+                        $type = is_null($filter['args']['type']) ? 'text' : $filter['args']['type'];
+
+                        echo "<input type='{$type}' name='meta[{$filter['name']}]' value='{$current_value}' placeholder='Filter by {$label}'>";
 
                     }
 
