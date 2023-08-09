@@ -8,6 +8,7 @@ define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/has-instances.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/singleton.abstract.php';
@@ -15,6 +16,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
 
