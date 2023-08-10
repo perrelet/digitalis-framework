@@ -314,6 +314,7 @@ abstract class Post_Type extends Singleton {
                         'label'          => null,
                         'type'           => null,
                         'value_callback' => false,
+                        'query_callback' => false,
                     ]);
 
             }
@@ -340,13 +341,19 @@ abstract class Post_Type extends Singleton {
 
                     if ($value = $_REQUEST['tax'][$key] ?? false) {
 
+                        if (is_callable($filter['args']['value_callback'])) $value = call_user_func($filter['args']['value_callback'], $value);
+
                         if (!isset($query->query_vars['tax_query'])) $query->query_vars['tax_query'] = [];
 
-                        $query->query_vars['tax_query'][] = [
+                        $tax_query = [
                             'taxonomy' => $key,
                             'field'    => $filter['args']['value_field'] == 'term_id' ? 'id' : $filter['args']['value_field'],
                             'terms'    => $value,
                         ];
+
+                        if (is_callable($filter['args']['query_callback'])) $tax_query = call_user_func($filter['args']['query_callback'], $tax_query);
+
+                        $query->query_vars['tax_query'][] = $tax_query;
 
                     }
 
@@ -360,11 +367,15 @@ abstract class Post_Type extends Singleton {
 
                         if (!isset($query->query_vars['meta_query'])) $query->query_vars['meta_query'] = [];
 
-                        $query->query_vars['meta_query'][] = [
+                        $meta_query = [
                             'key'     => $key,
                             'value'   => $value,
                             'compare' => $filter['args']['compare'],
                         ];
+
+                        if (is_callable($filter['args']['query_callback'])) $meta_query = call_user_func($filter['args']['query_callback'], $meta_query);
+
+                        $query->query_vars['meta_query'][] = $meta_query;
 
                     }
 
