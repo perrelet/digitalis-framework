@@ -70,4 +70,14 @@ abstract class View_Route extends Route {
         
     }
 
+    //
+
+    protected function is_this_route (WP_REST_Request $request) {
+
+        if (parent::is_this_route($request)) return true;
+
+        return (ltrim($request->get_route(), "/") == "{$this->namespace_prefix}{$this->namespace}/{$this->route}");
+
+    }
+
 }
