@@ -90,6 +90,12 @@ trait Has_WP_Post {
 
     }
 
+    public function has_image () {
+        
+        return has_post_thumbnail($this->post_id);
+        
+    }
+
     public function get_image ($size = 'post-thumbnail', $attr = '') {
 
         return get_the_post_thumbnail($this->post_id, $size, $attr);
@@ -99,6 +105,18 @@ trait Has_WP_Post {
     public function get_image_url ($size = 'post-thumbnail') {
 
         return get_the_post_thumbnail_url($this->post_id, $size);
+
+    }
+
+    public function get_image_id () {
+        
+        return get_post_thumbnail_id($this->post_id);
+        
+    }
+
+    public function get_attachments ($post_mime_type) {
+
+        return get_attached_media($post_mime_type, $this->post_id);
 
     }
 
