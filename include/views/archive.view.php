@@ -26,6 +26,8 @@ abstract class Archive extends View {
         'query_vars',
     ];
 
+    protected static $items = [];
+
     protected static function get_loader ($p) {
 
         switch ($p['loader_type']) {
@@ -128,9 +130,9 @@ abstract class Archive extends View {
 
         $query;
 
-        if ($items = static::get_items($p['query_vars'], $query)) {
+        if (static::$items = static::get_items($p['query_vars'], $query)) {
 
-            static::render_items($items);
+            static::render_items(static::$items);
 
             if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) echo paginate_links([
                 'current'   => max(1, $query->get('paged')),
