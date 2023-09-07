@@ -78,6 +78,8 @@ abstract class View {
 
         static::compute_params($params);
 
+        if (!static::permission(static::$params)) return;
+
         //
 
         if (!$print) ob_start();
@@ -111,6 +113,12 @@ abstract class View {
             return $html;
         }
 
+    }
+
+    protected static function permission ($params) {
+        
+        return true;
+    
     }
 
     protected static function before ($params) {}
