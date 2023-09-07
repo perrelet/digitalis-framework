@@ -66,7 +66,7 @@ abstract class Route {
         
     }
 
-    public function permission () {
+    public function permission (WP_REST_Request $request) {
         
         return true;
         
