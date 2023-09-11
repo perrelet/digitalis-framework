@@ -373,6 +373,24 @@
 
         }
 
+        &.row-date-range {
+
+            .date-range {
+
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+
+                input {
+
+                    text-align: center;
+                    
+                }
+
+            }
+
+        }
+
     }
 
 }
