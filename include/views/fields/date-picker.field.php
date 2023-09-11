@@ -29,8 +29,8 @@ class Date_Picker extends Field {
 
     public static function before_first ($p) {
 
-        echo '<link href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.1/dist/css/datepicker.min.css" rel="stylesheet">';
-        echo '<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.1/dist/js/datepicker-full.min.js"></script>';
+        echo '<link href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/css/datepicker.min.css" rel="stylesheet">';
+        echo '<script src="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.4/dist/js/datepicker-full.min.js"></script>';
 
         parent::before_first($p);
 
@@ -40,7 +40,7 @@ class Date_Picker extends Field {
 
         $json = json_encode($p['date-picker']);
 
-        echo "<script>new Datepicker(document.getElementById('{$p['id']}'), {$json});</script>";
+        if (strpos(static::class, 'Date_Range') === false) echo "<script>new Datepicker(document.getElementById('{$p['id']}'), {$json});</script>";
 
         parent::after($p);
 
