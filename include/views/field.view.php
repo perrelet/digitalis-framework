@@ -67,6 +67,7 @@ class Field extends View {
             "field-row",
             "row-{$p['type']}",
             "row-{$p['key']}",
+            "row-" . strtolower(str_replace(['_', '\\'], '-', str_replace('Digitalis\\Field\\', '', static::class))),
         ];
 
         if ($p['row_classes']) array_merge($classes, $p['row_classes']);
