@@ -8,6 +8,7 @@ abstract class Iterator extends Singleton {
     protected $key              = 'digitalis_iterator';
     protected $batch_size       = 1;
     protected $capability       = 'administrator';
+    protected $description      = false;
 
     protected $halt_on_fail     = false;
     protected $dynamic_total    = false;
@@ -216,12 +217,13 @@ abstract class Iterator extends Singleton {
         <style><?= file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css');?></style>
 
         <div class='digitalis-iterator iterator iterator-<?= $this->key; ?>'>
-            <div class='controls'>
+            <?php if ($this->description) echo "<div class='iterator-panel description'>{$this->description}</div>"; ?>
+            <div class='iterator-panel controls'>
                 <button data-task='start'>Start</button>
                 <button data-task='stop'>Stop</button>
                 <button data-task='reset'>Reset</button>
             </div>
-            <div class='progress'>
+            <div class='iterator-panel progress'>
                 <div class='status-bar'>
                     <div class='index-total'>Progress: <span class='index'><?= $this->index; ?></span> / <span class='total'><?= $total; ?></span></div>
                     <div class="status">Ready</div>
@@ -235,7 +237,7 @@ abstract class Iterator extends Singleton {
                 </div>
             </div>
 
-            <div class='log-wrap'>
+            <div class='iterator-panel log-wrap'>
                 <label>Batch Log:</label>
                 <div class='iterator-log'>
                     <?php if ($this->store['errors']) echo "<div class='log-error'>" . implode("</div><div class='log-error'>", array_reverse($this->store['errors'])) . "</div>"; ?>
