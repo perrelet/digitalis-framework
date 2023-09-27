@@ -48,6 +48,12 @@ trait Has_WP_Post {
 
     }
 
+    public function get_author_model () {
+
+        return User::get_instance($this->get_author_id());
+
+    }
+
     public function get_classes ($class = '') {
 
         return get_post_class($class, $this->wp_post);
