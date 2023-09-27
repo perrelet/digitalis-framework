@@ -4,7 +4,7 @@ namespace Digitalis;
 
 use \WP_User;
 
-abstract class User extends Model {
+class User extends Model {
 
     protected static $users = [];
 
