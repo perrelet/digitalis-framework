@@ -100,6 +100,8 @@ class Field extends View {
         $p['attributes']['class'] = $p['classes'];
         $p['attributes']['style'] = $p['styles'];
 
+        if ($p['placeholder']) $p['attributes']['placeholder'] = $p['placeholder'];
+
         $attributes = '';
         if ($p['attributes']) foreach ($p['attributes'] as $att_name => $att_value) $attributes .= " {$att_name}='{$att_value}'";
         return $attributes;
