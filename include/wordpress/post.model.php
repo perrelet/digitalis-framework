@@ -65,6 +65,10 @@ abstract class Post extends Model {
 
             }
 
+        } elseif ((static::$post_type == 'post') && $wp_query) {
+
+            $this_post_type = $wp_query->is_posts_page;
+
         }
 
         if (!$skip_main && $wp_query && $wp_query->is_main_query() && $this_post_type) {
@@ -89,6 +93,9 @@ abstract class Post extends Model {
             //
 
             $query = new Digitalis_Query();
+
+            if (!$skip_main && $wp_query) $query->merge($wp_query->query_vars);
+
             $query->set_var('post_type', static::$post_type);
             $query->merge(is_admin() ? static::get_admin_query_vars() : static::get_query_vars());
             $query->merge($args);
