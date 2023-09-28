@@ -210,6 +210,18 @@ trait Has_WP_Post {
         
     }
 
+    public function has_post_parent () {
+        
+        return has_post_parent($this->wp_post);
+        
+    }
+
+    public function get_post_parent () {
+        
+        return get_post_parent($this->wp_post);
+        
+    }
+
     // Password Protection
 
     public function is_password_protected () {
