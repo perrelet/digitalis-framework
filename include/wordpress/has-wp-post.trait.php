@@ -210,6 +210,12 @@ trait Has_WP_Post {
         
     }
 
+    public function is_sticky () {
+
+        return is_sticky($this->post_id);
+
+    }
+
     public function has_post_parent () {
         
         return has_post_parent($this->wp_post);
