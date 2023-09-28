@@ -3,6 +3,7 @@
 namespace Digitalis;
 
 use \WP_User;
+use \DateTime;
 
 class User extends Model {
 
@@ -135,6 +136,12 @@ class User extends Model {
 
     }
 
+    public function get_nick_name () {
+
+        return get_the_author_meta('nickname', $this->id);
+
+    }
+
     public function get_nicename () {
 
         return $this->get_wp_user()->user_nicename;
@@ -189,6 +196,24 @@ class User extends Model {
 
     }
 
+    public function get_description () {
+        
+        return get_the_author_meta('description', $this->id);
+        
+    }
+
+    public function get_registered_date () {
+        
+        return get_the_author_meta('user_registered', $this->id);
+        
+    }
+
+    public function get_registered_datetime () {
+
+        return DateTime::createFromFormat('Y-m-d H:i:s', $this->get_registered_date());
+
+    }
+
     public function get_posts_count ($post_type = 'post', $public_only = false) {
 
         return count_user_posts($this->id, $post_type, $public_only);
@@ -207,6 +232,12 @@ class User extends Model {
 
         return user_can($this->id, $capability, ...$args);
 
+    }
+
+    public function get_admin_color () {
+        
+        return get_the_author_meta('admin_color', $this->id);
+        
     }
 
 }
