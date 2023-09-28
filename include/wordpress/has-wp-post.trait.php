@@ -84,7 +84,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_excerpt ($format = '') {
+    public function get_excerpt () {
 
         return get_the_excerpt($this->wp_post);
 
@@ -207,6 +207,20 @@ trait Has_WP_Post {
     public function has_term ($term = '', $taxonomy = '') {
         
         return has_term($term, $taxonomy, $this->post_id);
+        
+    }
+
+    // Password Protection
+
+    public function is_password_protected () {
+
+        return post_password_required($this->wp_post);
+
+    }
+
+    public function get_password_form () {
+        
+        return get_the_password_form($this->wp_post);
         
     }
 
