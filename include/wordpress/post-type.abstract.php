@@ -13,6 +13,7 @@ abstract class Post_Type extends Singleton {
     protected $plural       = 'Post Types';
 
     protected $model_class  = false;
+    protected $register     = true;
 
     protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, args => [ ... ], ...] || 'months_dropdown'
 
@@ -25,7 +26,7 @@ abstract class Post_Type extends Singleton {
 
         //if ($flush) flush_rewrite_rules();
         
-        add_action('init', [$this, 'register']);
+        if ($this->register) add_action('init', [$this, 'register']);
         add_action('template_redirect', [$this, 'instantiate_model']);
 
         // Admin
@@ -246,7 +247,6 @@ abstract class Post_Type extends Singleton {
     public function admin_query ($wp_query) {
 
         //$wp_query->query_vars = wp_parse_args(static::get_admin_query_vars(), $wp_query->query_vars);
-
         //merge_query(static::get_admin_query_vars(), $wp_query);
 
         $query = new Digitalis_Query($wp_query->query_vars);
@@ -262,6 +262,7 @@ abstract class Post_Type extends Singleton {
         global $wp, $wp_query;
         $wp->parse_request();
         $wp_query->query_vars = $wp->query_vars;
+        //$wp_query->set('post_type', $this->slug);
 
         return $this->ajax_query();
 
