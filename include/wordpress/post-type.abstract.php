@@ -44,7 +44,7 @@ abstract class Post_Type extends Singleton {
 
         // Front
 
-        add_action('query_vars',    [$this, 'register_query_vars']);
+        add_action('query_vars',    [$this, 'register_query_vars_wrap']);
         add_action('pre_get_posts', [$this, 'main_query_wrap']);
 
         if (method_exists($this, 'ajax_query')) {
@@ -202,6 +202,24 @@ abstract class Post_Type extends Singleton {
 
     //
 
+    public function call_model ($method, $default = [], $args = []) {
+
+        $call = false;
+
+        if ($this->model_class)             $call = $this->model_class . "::" . $method;
+        if (!$call || !is_callable($call))  $call = static::class . "::" . $method;
+        if (!$call || !is_callable($call))  $call = [$this, $method];      
+
+        return is_callable($call) ? call_user_func_array($call, $args) : $default;
+        
+    }
+
+    public function query_vars () {
+
+        return $this->call_model('get_query_vars', []);
+
+    }
+
     public static function get_query_vars () {
 
         return [];
@@ -219,16 +237,22 @@ abstract class Post_Type extends Singleton {
     public function main_query ($wp_query) {
 
         //$wp_query->query_vars = wp_parse_args(static::get_query_vars(), $wp_query->query_vars);
-
         //merge_query(static::get_query_vars(), $wp_query);
 
         $query = new Digitalis_Query($wp_query->query_vars);
-        $query->merge(static::get_query_vars());
+        //$query->merge(static::get_query_vars());
+        $query->merge($this->query_vars());
         $wp_query->query_vars = $query->get_query();
 
     }
 
     // Admin Query
+
+    public function admin_query_vars () {
+
+        return $this->call_model('get_admin_query_vars', []);
+
+    }
 
     public static function get_admin_query_vars () {
 
@@ -250,7 +274,8 @@ abstract class Post_Type extends Singleton {
         //merge_query(static::get_admin_query_vars(), $wp_query);
 
         $query = new Digitalis_Query($wp_query->query_vars);
-        $query->merge(static::get_admin_query_vars());
+        //$query->merge(static::get_admin_query_vars());
+        $query->merge(static::admin_query_vars());
         $wp_query->query_vars = $query->get_query();
 
     }
@@ -471,10 +496,16 @@ abstract class Post_Type extends Singleton {
 
     //
 
+    public function register_query_vars_wrap ($vars) {
+
+        return $this->call_model('register_query_vars', $vars, [$vars]);
+
+    }
+
     public function register_query_vars ($vars) {
 
         return $vars;
-        
+
     }
 
     protected function is_main_query ($query) {
