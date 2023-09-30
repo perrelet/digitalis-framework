@@ -275,7 +275,7 @@ abstract class Post_Type extends Singleton {
 
         $query = new Digitalis_Query($wp_query->query_vars);
         //$query->merge(static::get_admin_query_vars());
-        $query->merge(static::admin_query_vars());
+        $query->merge($this->admin_query_vars());
         $wp_query->query_vars = $query->get_query();
 
     }
