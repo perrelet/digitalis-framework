@@ -97,7 +97,7 @@ abstract class Post extends Model {
             if (!$skip_main && $wp_query) $query->merge($wp_query->query_vars);
 
             $query->set_var('post_type', static::$post_type);
-            $query->merge(is_admin() ? static::get_admin_query_vars() : static::get_query_vars());
+            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars() : static::get_query_vars());
             $query->merge($args);
             $posts = $query->query();
 
