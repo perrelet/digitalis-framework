@@ -45,10 +45,10 @@ export class Digitalis_Query {
 
     find_elements () {
 
-        this.elements.archive = document.querySelector(this.options.selectors.archive);
-        this.elements.posts = document.querySelector(this.options.selectors.posts);
+        this.elements.archive  = document.querySelector(this.options.selectors.archive);
+        this.elements.posts    = document.querySelector(this.options.selectors.posts);
         this.elements.controls = document.querySelector(this.options.selectors.controls);
-        this.elements.form = document.querySelector(this.options.selectors.form);
+        this.elements.form     = document.querySelector(this.options.selectors.form);
 
         return this.elements.archive;
 
@@ -190,6 +190,8 @@ export class Digitalis_Query {
         http.open('POST', url.href, true);
         http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
         http.send(new URLSearchParams(data).toString());
+
+        document.dispatchEvent(new CustomEvent('Digitalis/Query/Request', {detail: {action: action, data: data, url: url, http: http}}));
         
         http.onreadystatechange = function() {
 
@@ -198,6 +200,8 @@ export class Digitalis_Query {
                 this.loaded();
 
                 let response = JSON.parse(http.responseText);
+
+                document.dispatchEvent(new CustomEvent('Digitalis/Query/Response', {detail: {action: action, data: data, url: url, http: http, response: response, status: http.status}}));
 
                 switch (http.status) {
 
@@ -211,6 +215,8 @@ export class Digitalis_Query {
                             state.form = this.state.form;
 
                             if (new_url) window.history.pushState(state, '', new_url);
+
+                            document.dispatchEvent(new CustomEvent('Digitalis/Query/Response/200', {detail: {action: action, data: data, url: url, http: http, response: response}}));
 
                         } else {
 
