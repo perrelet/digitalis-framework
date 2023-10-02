@@ -46,6 +46,38 @@
 
 }
 
+@function soft-text-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0), $alpha-start: 0) {
+
+    $value: ();
+  
+
+    @for $i from 1 through $n {
+
+        $fraction: $i / $n;
+
+        $dist_ease: soft-shadow-power($fraction);
+
+        @if ($invert) {
+            $alpha_ease: 1 - $fraction;
+        } @else {
+            $alpha_ease: $fraction;
+        }
+
+        $color: change-color($color, $alpha: $alpha-start + (($alpha - $alpha-start) * $alpha_ease));
+        $value: append($value, #{$x * $dist_ease} #{$y * $dist_ease} #{$blur * $dist_ease} #{$color}, comma);
+
+    }
+
+    @return $value;
+
+}
+
+@mixin soft-text-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0), $alpha-start: 0) {
+
+    text-shadow: soft-text-shadow($x: $x, $y: $y, $n: $n, $alpha: $alpha, $blur: $blur, $invert: $invert, $color: $color, $alpha-start: $alpha-start);
+
+}
+
 @function soft-drop-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0)) {
 
     $value: ();
