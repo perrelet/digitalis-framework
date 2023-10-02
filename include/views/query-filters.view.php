@@ -15,6 +15,7 @@ abstract class Query_Filters extends Field_Group {
         'module_version'    => DIGITALIS_FRAMEWORK_VERSION,
         'module_url'        => DIGITALIS_FRAMEWORK_URI . 'modules/query.js',
         'action'            => 'query_[post_type]',
+        'js_params_object'  => 'query_params',
         'classes'           => ['digitalis-filters'],
         'fields'            => [],
         'tag'               => 'form',
@@ -53,7 +54,7 @@ abstract class Query_Filters extends Field_Group {
         $handle = static::class . '-query-module';
 
         wp_enqueue_script($handle, $p['module_url'], [], $p['module_version'], true);
-        wp_localize_script($handle, 'query_params', $js_params);
+        wp_localize_script($handle, $p['js_params_object'], $js_params);
 
     }
 
