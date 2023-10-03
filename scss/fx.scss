@@ -10,7 +10,19 @@
 
 }
 
-@function soft-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $reduce: 0px, $distance: 0px, $invert: false, $inset: false, $color: rgba(0,0,0,0)) {
+@function soft-shadow (
+    $x:           0px,
+    $y:           100px,
+    $n:           6,
+    $alpha:       0.07,
+    $blur:        80px,
+    $reduce:      0px,
+    $distance:    0px,
+    $invert:      false,
+    $inset:       false,
+    $color:     rgba(0,0,0,0),
+    $alpha-start: 0
+) {
 
     $value: ();
   
@@ -27,7 +39,7 @@
             $alpha_ease: $fraction;
         }
 
-        $color: change-color($color, $alpha: $alpha * $alpha_ease);
+        $color: change-color($color, $alpha: $alpha-start + (($alpha - $alpha-start) * $alpha_ease));
         $value: append($value, #{$x * $dist_ease} #{$y * $dist_ease} #{$blur * $dist_ease} #{$distance - $reduce} #{$color}, comma);
 
         //$value: append($value, #{$x * $dist_ease} #{$y * $dist_ease} #{$blur * $dist_ease} #{-1 * $reduce} rgba(0,0,0, #{$alpha * $alpha_ease}), comma);
@@ -40,16 +52,48 @@
 
 }
 
-@mixin soft-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $reduce: 0px, $distance: 0px, $invert: false, $inset: false, $color: rgba(0,0,0,0)) {
+@mixin soft-shadow (
+    $x:           0px,
+    $y:           100px,
+    $n:           6,
+    $alpha:       0.07,
+    $blur:        80px,
+    $reduce:      0px,
+    $distance:    0px,
+    $invert:      false,
+    $inset:       false,
+    $color:     rgba(0,0,0,0),
+    $alpha-start: 0
+) {
 
-    box-shadow: soft-shadow($x: $x, $y: $y, $n: $n, $alpha: $alpha, $blur: $blur, $reduce: $reduce, $distance: $distance, $invert: $invert, $inset: $inset, $color: $color);
+    box-shadow: soft-shadow(
+        $x:           $x,
+        $y:           $y,
+        $n:           $n,
+        $alpha:       $alpha,
+        $blur:        $blur, 
+        $reduce:      $reduce,
+        $distance:    $distance,
+        $invert:      $invert,
+        $inset:       $inset,
+        $color:       $color,
+        $alpha-start: $alpha-start
+    );
 
 }
 
-@function soft-text-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0), $alpha-start: 0) {
+@function soft-text-shadow (
+    $x:           0px,
+    $y:           100px,
+    $n:           6,
+    $alpha:       0.07,
+    $blur:        80px,
+    $invert:      false,
+    $color:     rgba(0,0,0,0),
+    $alpha-start: 0
+) {
 
     $value: ();
-  
 
     @for $i from 1 through $n {
 
@@ -72,13 +116,40 @@
 
 }
 
-@mixin soft-text-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0), $alpha-start: 0) {
+@mixin soft-text-shadow (
+    $x:           0px,
+    $y:           100px,
+    $n:           6,
+    $alpha:       0.07,
+    $blur:        80px,
+    $invert:      false,
+    $color:     rgba(0,0,0,0),
+    $alpha-start: 0
+) {
 
-    text-shadow: soft-text-shadow($x: $x, $y: $y, $n: $n, $alpha: $alpha, $blur: $blur, $invert: $invert, $color: $color, $alpha-start: $alpha-start);
+    text-shadow: soft-text-shadow(
+        $x:           $x,
+        $y:           $y,
+        $n:           $n,
+        $alpha:       $alpha,
+        $blur:        $blur,
+        $invert:      $invert,
+        $color:       $color,
+        $alpha-start: $alpha-start
+    );
 
 }
 
-@function soft-drop-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0)) {
+@function soft-drop-shadow (
+    $x:           0px,
+    $y:           100px,
+    $n:           6,
+    $alpha:       0.07,
+    $blur:        80px,
+    $invert:      false,
+    $color:     rgba(0,0,0,0),
+    $alpha-start: 0
+) {
 
     $value: ();
 
@@ -94,7 +165,7 @@
             $alpha_ease: $fraction;
         }
 
-        $color: change-color($color, $alpha: $alpha * $alpha_ease);
+        $color: change-color($color, $alpha: $alpha-start + (($alpha - $alpha-start) * $alpha_ease));
         $value: append($value, drop-shadow( #{$x * $dist_ease} #{$y * $dist_ease} #{$blur * $dist_ease} #{$color} ), space);
 
     }
@@ -103,8 +174,17 @@
 
 }
 
-@mixin soft-drop-shadow ($x: 0px, $y: 100px, $n: 6, $alpha: 0.07, $blur: 80px, $invert: false, $color: rgba(0,0,0,0)) {
+@mixin soft-drop-shadow (
+    $x:           0px,
+    $y:           100px,
+    $n:           6,
+    $alpha:       0.07,
+    $blur:        80px,
+    $invert:      false,
+    $color:     rgba(0,0,0,0),
+    $alpha-start: 0
+) {
 
-    filter: soft-drop-shadow($x, $y, $n, $alpha, $blur, $invert, $color);
+    filter: soft-drop-shadow($x, $y, $n, $alpha, $blur, $invert, $color, $alpha-start);
 
 }
