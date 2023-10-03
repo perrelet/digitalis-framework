@@ -79,6 +79,7 @@ abstract class View {
         static::compute_params($params);
 
         if (!static::permission(static::$params)) return;
+        if (!static::condition(static::$params))  return;
 
         //
 
@@ -116,6 +117,12 @@ abstract class View {
     }
 
     protected static function permission ($params) {
+        
+        return true;
+    
+    }
+
+    protected static function condition ($params) {
         
         return true;
     
