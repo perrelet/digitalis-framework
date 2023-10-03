@@ -8,8 +8,17 @@ abstract class ACF_Block {
     protected $view     = View::class;
 
     protected $block    = [
-        'title'         => 'Custom Block',
-        'description'   => '',
+        'title'           => 'Custom Block',
+        'description'     => '',
+        'category'        => 'common',
+        'icon'            => '',
+        'mode'            => 'preview',
+        'keywords'        => [],
+        'supports'        => [],
+        'post_types'      => [],
+        'enqueue_style'   => false,
+        'enqueue_script'  => false,
+        'enqueue_assets'  => false,
     ];
 
     protected $fields   = [];
