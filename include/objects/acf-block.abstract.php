@@ -103,7 +103,13 @@ abstract class ACF_Block {
 
     public function render ($block, $content = '', $is_preview = false, $post_id = 0, $wp_block = false, $context = false) {
 
-        $params = [];
+        $params = [
+            'block'      => $block,
+            'content'    => $content,
+            'is_preview' => $is_preview,
+            'wp_block'   => $wp_block,
+            'context'    => $context,
+        ];
 
         if ($this->fields) foreach ($this->fields as $key => $field) {
 
@@ -111,8 +117,26 @@ abstract class ACF_Block {
 
         }
 
-        call_user_func("{$this->view}::render", $params);
+        if ($this->view) {
+
+            $html = call_user_func("{$this->view}::render", $params, false);
+
+        } else {
+
+            $html = $this->view($params);
+
+        }
+
+        if ($is_preview) $html = str_replace("<a", "<a onclick='return false;'", $html);
+
+        echo $html;
         
+    }
+
+    public function view ($params = []) {
+
+        return '';
+
     }
 
 }
