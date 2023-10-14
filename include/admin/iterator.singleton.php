@@ -319,19 +319,19 @@ abstract class Iterator extends Singleton {
     
     protected function log ($msg = '') {
 
-        $this->log[] = $this->line($msg);
+        $this->log[] = $this->line(print_r($msg, true));
 
     }
 
     protected function error ($msg = '') {
 
-        $this->errors[] = $this->line("Error: " . $msg);
+        $this->errors[] = $this->line("Error: " . print_r($msg, true));
 
     }
 
     protected function line ($msg) {
 
-        return ucfirst($this->labels['single']) . " #{$this->item_id}: {$msg}";
+        return ucfirst($this->labels['single']) . " #{$this->item_id}: " . print_r($msg, true);
 
     }
 
