@@ -8,6 +8,8 @@ abstract class Iterator extends Singleton {
     protected $key              = 'digitalis_iterator';
     protected $batch_size       = 1;
     protected $capability       = 'administrator';
+    protected $menu_slug        = null;
+    protected $parent_menu_slug = 'tools.php';
     protected $description      = false;
 
     protected $halt_on_fail     = false;
@@ -60,7 +62,7 @@ abstract class Iterator extends Singleton {
 
     public function init () {
 
-        add_action('admin_menu', [$this, 'add_admin_page']);
+        add_action('admin_menu', [$this, 'add_admin_page'], 99);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
 
         //if (isset($_GET['reset'])) $this->reset();
@@ -171,12 +173,14 @@ abstract class Iterator extends Singleton {
 
     public function add_admin_page () {
 
+        $menu_slug = $this->menu_slug ? $this->menu_slug : $this->get_option_key();
+
         add_submenu_page(
-            'tools.php',
+            $this->parent_menu_slug,
             $this->title,
             $this->title,
             $this->capability,
-            $this->get_option_key(),
+            $menu_slug,
             [$this, 'render_admin_page']
         );
 
