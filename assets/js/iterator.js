@@ -15,6 +15,7 @@
         init: function (params) {
 
             this.params = params;
+            this.params.index = parseInt(this.params.index);
 
             //console.log("hello");
             //console.log(this.params);
@@ -38,7 +39,7 @@
         add_event_listeners: function () {
 
             if (this.els.start) this.els.start.addEventListener('click', this.start.bind(this));
-            if (this.els.stop) this.els.stop.addEventListener('click', this.stop.bind(this));
+            if (this.els.stop) this.els.stop.addEventListener('click', this.maybe_stop.bind(this));
             if (this.els.reset) this.els.reset.addEventListener('click', this.maybe_reset.bind(this));
 
             console.log(this.els);
@@ -138,6 +139,35 @@
                 this.request('iterate', this.iterate.bind(this));
 
             }
+
+        },
+
+        maybe_stop: function () {
+
+            if (this.params.doing_cron) {
+
+                if (confirm("Are you sure you want to cancel the current cron task?")) {
+
+                    this.els.status.innerHTML = 'Stopping Cron Task';
+                    this.batch_log(`Stopping cron task.`);
+                    this.request('stop_cron', this.stop_cron_complete.bind(this));
+
+                }
+
+            } else {
+
+                this.stop();
+
+            }
+
+        },
+
+        stop_cron_complete: function () {
+
+            this.els.status.innerHTML = 'Cron Task Stopped';
+            this.batch_log(`Cron task stopped.`);
+            this.params.doing_cron = false;
+            this.els.iterator.classList.remove('running');
 
         },
 

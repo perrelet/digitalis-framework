@@ -2,19 +2,31 @@
 
 namespace Digitalis;
 
+use DateTime;
+use DateTimeZone;
+
 abstract class Iterator extends Singleton {
 
-    protected $title            = 'Iterator';
-    protected $key              = 'digitalis_iterator';
-    protected $batch_size       = 1;
-    protected $capability       = 'administrator';
-    protected $menu_slug        = null;
-    protected $parent_menu_slug = 'tools.php';
-    protected $description      = false;
+    protected $title              = 'Iterator';
+    protected $key                = 'digitalis_iterator';
+    protected $batch_size         = 1;
+    protected $capability         = 'administrator';
+    protected $menu_slug          = null;
+    protected $parent_menu_slug   = 'tools.php';
+    protected $timezone           = 'UCT';
+    protected $description        = false;
+  
+    protected $halt_on_fail       = false;
+    protected $dynamic_total      = false;
+    protected $print_results      = false;
+  
+    protected $cron               = false;
+    protected $cron_time          = '00:00:00';
+    protected $cron_schedule      = 'daily';
+    protected $cron_loop_schedule = 'every_minute';
 
-    protected $halt_on_fail     = false;
-    protected $dynamic_total    = false;
-    protected $print_results    = false;
+    protected $cron_run_action  = false;
+    protected $cron_loop_action = false;
 
     protected $labels = [
         'single'    => 'item',
@@ -65,9 +77,34 @@ abstract class Iterator extends Singleton {
         add_action('admin_menu', [$this, 'add_admin_page'], 99);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
 
-        //if (isset($_GET['reset'])) $this->reset();
+        if ($this->cron) {
+
+            $cron_action_start = $this->get_option_key() . '_start';
+            $cron_action_loop  = $this->get_option_key() . '_loop';
+
+            add_action($cron_action_start, [$this, 'cron_start']);
+            add_action($cron_action_loop,  [$this, 'cron_loop']);
+
+            if (!wp_next_scheduled($cron_action_start)) {
+
+                $date_string = (new DateTime)->format('Y-m-d') . ' ' . $this->cron_time;
+                $date_time = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
+
+                wp_schedule_event($date_time->getTimestamp(), $this->cron_schedule, $cron_action_start);
+
+            }
+
+            if (!wp_next_scheduled($cron_action_loop)) {
+
+                wp_schedule_event(time(), $this->cron_loop_schedule, $cron_action_loop);
+
+            }
+
+        }
 
     }
+
+    //
 
     public function ajax () {
 
@@ -89,7 +126,7 @@ abstract class Iterator extends Singleton {
         switch ($_REQUEST['task']) {
 
             case "total":
-                wp_send_json($this->get_total_items());
+                wp_send_json($this->get_total_items_wrap());
 
             case "iterate":
                 wp_send_json($this->iterate());
@@ -97,9 +134,30 @@ abstract class Iterator extends Singleton {
             case "reset":
                 wp_send_json($this->reset());
 
+            case "stop_cron":
+                wp_send_json($this->stop_cron());
+
         }
 
     }
+
+    public function cron_start () {
+
+        $this->set_doing_cron(true);
+        $this->reset();
+        $this->iterate();
+    
+    }
+
+    public function cron_loop () {
+    
+        if (!$this->is_doing_cron()) return;
+
+        $this->iterate();
+    
+    }
+
+    //
 
     public function iterate ($return_store = false) {
 
@@ -109,8 +167,10 @@ abstract class Iterator extends Singleton {
             'skipped'   => [],
         ];
 
-        $this->get_store();
+        $this->warm_up();
         $this->items = $this->get_items();
+
+        if ($this->index == 0) $this->log('Starting process.', true);
 
         if ($this->items) foreach ($this->items as $item) {
 
@@ -147,6 +207,15 @@ abstract class Iterator extends Singleton {
 
         }
 
+        $this->log("Batch complete - {$count} {$this->labels['plural']} processed (" . count($results['skipped']) . " skipped, "  . count($results['failed']) . " failed)", true);
+
+        if ($this->is_complete()) {
+
+            $this->log('Process complete 🚀', true);
+            $this->set_doing_cron(false);
+
+        }
+
         $this->update_store();
 
         if ($return_store) {
@@ -163,13 +232,15 @@ abstract class Iterator extends Singleton {
                 'errors'    => $this->errors,
             ];
 
-            if ($this->dynamic_total) $response['total'] = $this->get_total_items();
+            if ($this->dynamic_total) $response['total'] = $this->get_total_items_wrap();
 
             return $response;
 
         }
 
     }
+
+    //
 
     public function add_admin_page () {
 
@@ -200,8 +271,9 @@ abstract class Iterator extends Singleton {
 
     public function render_controller () {
 
-        $this->get_store();
-        $total = $this->get_total_items();
+        $this->warm_up();
+
+        $total = $this->get_total_items_wrap();
 
         wp_enqueue_script('digitalis-iterator', DIGITALIS_FRAMEWORK_URI . 'assets/js/iterator.js', [], DIGITALIS_FRAMEWORK_VERSION, true);
         wp_localize_script('digitalis-iterator', 'iterator_params', [
@@ -213,6 +285,7 @@ abstract class Iterator extends Singleton {
             'halt_on_fail'  => $this->halt_on_fail,
             'dynamic_total' => $this->dynamic_total,
             'print_results' => $this->print_results,
+            'doing_cron'    => $this->is_doing_cron(),
             'labels'        => $this->labels,
         ]);
 
@@ -220,7 +293,7 @@ abstract class Iterator extends Singleton {
 
         <style><?= file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css');?></style>
 
-        <div class='digitalis-iterator iterator iterator-<?= $this->key; ?>'>
+        <div class='digitalis-iterator iterator iterator-<?= $this->key; ?><?= $this->is_doing_cron() ? ' doing_cron running' : '' ?>'>
             <?php if ($this->description) echo "<div class='iterator-panel description'>{$this->description}</div>"; ?>
             <div class='iterator-panel controls'>
                 <button data-task='start'>Start</button>
@@ -230,14 +303,14 @@ abstract class Iterator extends Singleton {
             <div class='iterator-panel progress'>
                 <div class='status-bar'>
                     <div class='index-total'>Progress: <span class='index'><?= $this->index; ?></span> / <span class='total'><?= $total; ?></span></div>
-                    <div class="status">Ready</div>
+                    <div class="status"><?= $this->is_doing_cron() ? 'Running' : 'Ready' ?></div>
                 </div>
                 <div class='progress-track'>
                     <div class='progress-bar' style='width: <?= $total ? (100 * $this->index / $total) : 0; ?>%;'></div>
                 </div>
                 <div class='status-bar'>
                     <div class='percent'><?= $total ? floor(100 * $this->index / $total) : 0 ?>%</div>
-                    <div class='time'>00:00:00</div>
+                    <div class='time'><?= $this->is_doing_cron() ? 'Cron Task' : '00:00:00' ?></div>
                 </div>
             </div>
 
@@ -257,17 +330,51 @@ abstract class Iterator extends Singleton {
 
     //
 
-    public function get_option_key () {
+    public function warm_up () {
 
-        return "iterator_" . $this->key;
+        $this->get_store();
+        $this->index = (int) $this->store['index'];
+
+    }
+
+    public function get_progress () {
+    
+        $total = $this->get_total_option();
+
+        return $total ? ($this->get_index() / $total) : 0;
+    
+    }
+
+    public function is_complete () {
+    
+        return $this->get_progress() >= 1;
+    
+    }
+
+    public function get_option_key ($suffix = false) {
+
+        $key = "iterator_" . $this->key;
+        if ($suffix) $key .= ' ' . $suffix;
+
+        return $key;
+
+    }
+
+    public function get_total_items_wrap () {
+
+        $total = $this->get_total_items();
+        $this->set_total_option($total);
+
+        return $total;
 
     }
 
     public function get_store () {
 
         if (is_null($this->store)) {
+
             $this->store = get_option($this->get_option_key(), $this->default_store);
-            $this->index = $this->store['index'];
+
         }
 
         return $this->store;
@@ -278,17 +385,77 @@ abstract class Iterator extends Singleton {
 
         $this->get_store();
 
-        $this->store['index']   = $this->index;
-        $this->store['log']     = array_merge($this->store['log'], $this->log);
-        $this->store['errors']  = array_merge($this->store['errors'], $this->errors);
+        $this->store['index']  = $this->index;
+        $this->store['log']    = array_merge($this->store['log'], $this->log);
+        $this->store['errors'] = array_merge($this->store['errors'], $this->errors);
 
         update_option($this->get_option_key(), $this->store, false);
+
+    }
+
+    public function get_index () {
+    
+        if (is_null($this->index)) $this->warm_up();
+
+        return $this->index;
+    
+    }
+
+    public function get_total_option () {
+    
+        $total = get_option($this->get_option_key('total'), false);
+
+        if ($total === false) $total = $this->get_total_items_wrap();
+
+        return $total;
+    
+    }
+
+    public function set_total_option ($total) {
+    
+        update_option($this->get_option_key('total'), $total);
+    
+    }
+
+    public function is_doing_cron () {
+    
+        return get_option($this->get_option_key('cron'), false);
+    
+    }
+
+    public function set_doing_cron ($state) {
+    
+        update_option($this->get_option_key('cron'), (bool) $state);
+    
+    }
+
+    public function get_timezone () {
+    
+        return $this->timezone;
+    
+    }
+
+    public function set_batch_size ($batch_size) {
+
+        $this->batch_size = $batch_size;
+
+    }
+
+    //
+
+    public function stop_cron () {
+
+        $this->set_doing_cron(false);
+
+        return true;
 
     }
 
     public function reset () {
 
         $this->store = $this->default_store;
+        $this->index = 0;
+
         update_option($this->get_option_key(), $this->store, false);
 
         return $this->store;
@@ -307,35 +474,35 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function set_batch_size ($batch_size) {
-
-        $this->batch_size = $batch_size;
-
-    }
-
-    public function set_max_index ($max_index) {
-
-        $this->max_index = $max_index;
-
-    }
-
     //
     
-    protected function log ($msg = '') {
+    protected function log ($msg = '', $global = false) {
 
-        $this->log[] = $this->line(print_r($msg, true));
-
-    }
-
-    protected function error ($msg = '') {
-
-        $this->errors[] = $this->line("Error: " . print_r($msg, true));
+        $this->log[] = $this->line(print_r($msg, true), $global);
 
     }
 
-    protected function line ($msg) {
+    protected function error ($msg = '', $global = false) {
 
-        return ucfirst($this->labels['single']) . " #{$this->item_id}: " . print_r($msg, true);
+        $this->errors[] = $this->line("Error: " . print_r($msg, true), $global);
+
+    }
+
+    protected function line ($msg, $global = false) {
+        
+        $line = '[' . (new DateTime('now', new DateTimeZone($this->get_timezone())))->format('Y-m-d H:i:s') . '] ';
+
+        if ($global) {
+
+            $line .= print_r($msg, true);
+
+        } else {
+
+            $line .= ucfirst($this->labels['single']) . " #{$this->item_id}: " . print_r($msg, true);
+
+        }
+
+        return $line;
 
     }
 
