@@ -2,7 +2,7 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.1.1');
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.1.1.p');
 define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
@@ -20,6 +20,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/loaders/can-load.trait.php';
@@ -31,8 +32,11 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/loaders/has-post-types.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder-manager.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder.integration.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/iterator.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/user-iterator.iterator.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/iterator.singleton.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/csv-iterator.iterator.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/post-iterator.iterator.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/user-iterator.iterator.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/updater.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';

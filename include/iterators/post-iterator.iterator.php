@@ -9,6 +9,16 @@ abstract class Post_Iterator extends Iterator {
     protected $post_type   = 'post';
     protected $post_status = 'any';
 
+    public function get_query_vars ($vars) {
+
+        return $vars;
+
+    }
+
+    public function process_post ($wp_post) {}
+
+    //
+
     public function get_default_query_vars () {
 
         return [
@@ -19,12 +29,6 @@ abstract class Post_Iterator extends Iterator {
             'orderby'        => 'ID',
             'order'          => 'ASC',
         ];
-
-    }
-
-    public function get_query_vars ($vars) {
-
-        return $vars;
 
     }
 
@@ -59,7 +63,5 @@ abstract class Post_Iterator extends Iterator {
         return $this->process_post($item);
 
     }
-
-    public function process_post ($wp_post) {}
 
 }
