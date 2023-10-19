@@ -28,6 +28,9 @@ abstract class CSV_Iterator extends Iterator {
 
         $rows = [];
 
+        $index_start = $this->index + ($this->has_header ? 1 : 0);
+        $index_end =   $index_start + $this->batch_size;
+
         for ($i = 0; $row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape); $i++) {
 
             if (($i == 0) && $this->has_header) {
@@ -37,8 +40,8 @@ abstract class CSV_Iterator extends Iterator {
 
             }
 
-            if ($i < $this->index)                     continue;
-            if ($i > $this->index + $this->batch_size) break;
+            if ($i < $index_start) continue;
+            if ($i >= $index_end)  break;
 
             if ($this->headers && $row) {
 
@@ -80,7 +83,7 @@ abstract class CSV_Iterator extends Iterator {
 
     public function get_item_id ($item) {
 
-        return $this->has_header ? ($this->index + 2) : ($this->index + 1);
+        return $this->index + 1;
 
     }
 
