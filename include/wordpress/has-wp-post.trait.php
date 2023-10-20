@@ -60,9 +60,11 @@ trait Has_WP_Post {
 
     }
 
-    public function get_content ($more_link_text = null, $strip_teaser = false) {
+    public function get_content ($apply_filters = true, $more_link_text = null, $strip_teaser = false) {
 
-        return get_the_content($more_link_text, $strip_teaser, $this->wp_post);
+        $content = get_the_content($more_link_text, $strip_teaser, $this->wp_post);
+
+        return $apply_filters ? apply_filters('the_content', $content) : $content;
 
     }
 
