@@ -155,11 +155,11 @@ export class Digitalis_Query {
 
         const form_data = new FormData(this.elements.form);
         const entries = Object.fromEntries(Array.from(form_data.keys(), key => {
-            const val = form_data.getAll(key)
-            return [ key, val.length > 1 ? val : val.pop() ]
-        }))
+            let val = form_data.getAll(key)
+            if (val.length > 1) val = val.filter(v => v !== '0'); // remove dummy checkbox values
+            return [key, val.length > 1 ? val : val.pop()]
+        }));
         data = Object.assign(entries, data);
-        //data = Object.assign(Object.fromEntries(form_data), data);
         this.state.form = Object.fromEntries(form_data);
 
         if (this.elements.controls) {
@@ -176,23 +176,26 @@ export class Digitalis_Query {
         for (const [key, value] of Object.entries(data)) url.searchParams.set(key, value);
 
         this.request(this.options.action, data, url.href);
-        this.loading();
 
     }
 
     request (action, data, new_url = false, success_callback = 'success', error_callback = 'error') {
 
+        this.loading();
+
         let url = new URL(this.options.ajax_url, this.options.base_url);
         url.searchParams.set('action', action);
         if (this.options.nonce) url.searchParams.set('nonce', this.options.nonce);
-        
-        const http = new XMLHttpRequest();
-        http.open('POST', url.href, true);
-        http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-        http.send(new URLSearchParams(data).toString());
 
-        document.dispatchEvent(new CustomEvent('Digitalis/Query/Request', {detail: {action: action, data: data, url: url, http: http}}));
-        
+        const http = new XMLHttpRequest();
+
+        let args = {action: action, data: data, url: url, http: http};
+        document.dispatchEvent(new CustomEvent('Digitalis/Query/Request', {detail: args}));
+
+        args.http.open('POST', args.url.href, true);
+        args.http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        args.http.send(new URLSearchParams(args.data).toString());
+
         http.onreadystatechange = function() {
 
             if (http.readyState == XMLHttpRequest.DONE) {
