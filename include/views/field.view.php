@@ -108,6 +108,56 @@ class Field extends View {
 
     }
 
+    protected static function generate_option_attributes ($p) {
+
+        if ($p['option_atts']) foreach ($p['option_atts'] as &$atts) {
+
+            $atts['html'] = '';
+        
+            if ($atts) foreach ($atts as $att_name => $att_value) {
+            
+                if ($att_name == 'html') continue;
+
+                $atts['html'] .= " {$att_name}='{$att_value}'";
+            
+            }
+        
+        }
+
+        return $p['option_atts'];
+    
+    }
+
+    protected static function checked ($value, $current, $strict = false, $attribute = 'checked') {
+
+        if (!$current) return '';
+
+        if (is_array($current)) {
+
+            return in_array($value, $current, $strict) ? [$attribute => $attribute] : '';
+
+        } else {
+
+            if ($strict) {
+
+                return $value === $current ? [$attribute => $attribute] : '';
+
+            } else {
+
+                return $value == $current ? [$attribute => $attribute] : '';
+
+            }
+
+        }
+
+    }
+
+    protected static function selected ($value, $current, $strict = false) {
+
+        return static::checked($value, $current, $strict, 'selected');
+
+    }
+
     public static function params ($p) {
 
         $key = $p['key'];

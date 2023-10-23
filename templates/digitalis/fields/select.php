@@ -1,13 +1,13 @@
 <select id='<?= $id ?>' name='<?= $key ?>' <?= $attributes ?>>
-<?php if ($options) foreach ($options as $option_key => $option): ?>
-    <?php if (is_array($option)): ?>
-        <optgroup label='<?= $option_key ?>'>
-        <?php if ($option) foreach ($option as $sub_option_key => $sub_option): ?>
-            <option value='<?= $sub_option_key ?>' <?= selected($value, $sub_option_key, false) ?>><?= $sub_option ?></option>
+<?php if ($options) foreach ($options as $option => $option_label): ?>
+    <?php if (is_array($option_label)): ?>
+        <optgroup label='<?= $option ?>'>
+        <?php if ($option_label) foreach ($option_label as $sub_option => $sub_option_label): ?>
+            <option value='<?= $sub_option ?>'<?= $option_atts[$sub_option]['html'] ?? '' ?>><?= $sub_option_label ?></option>
         <?php endforeach; ?>
         </optgroup>
     <?php else: ?>
-    <option value='<?= $option_key ?>' <?= selected($value, $option_key, false) ?>><?= $option ?></option>
+        <option value='<?= $option ?>'<?= $option_atts[$option]['html'] ?? '' ?>><?= $option_label ?></option>
     <?php endif; ?>
 <?php endforeach; ?>
 </select>
