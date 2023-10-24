@@ -239,10 +239,14 @@ abstract class Post_Type extends Singleton {
         //$wp_query->query_vars = wp_parse_args(static::get_query_vars(), $wp_query->query_vars);
         //merge_query(static::get_query_vars(), $wp_query);
 
-        $query = new Digitalis_Query($wp_query->query_vars);
+        /* $query = new Digitalis_Query($wp_query->query_vars);
         //$query->merge(static::get_query_vars());
         $query->merge($this->query_vars());
-        $wp_query->query_vars = $query->get_query();
+        $wp_query->query_vars = $query->get_query(); */
+
+        $qv = new Query_Vars($wp_query->query_vars);
+        $qv->merge($this->query_vars());
+        $wp_query->query_vars = $qv->to_array();
 
     }
 
