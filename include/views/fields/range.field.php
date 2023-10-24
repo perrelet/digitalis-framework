@@ -27,7 +27,7 @@ class Range extends Field {
         if ($p['show_value']) {
 
             $p['classes'][] = "has-output";
-            $p['attributes']['oninput'] = "{$p['key']}_output.value=`{$p['value_prefix']}`+this.value+`{$p['value_suffix']}`";
+            $p['attributes']['oninput'] = "this.parentElement.parentElement.querySelector(`[name=\"{$p['key']}_output\"]`).value=`{$p['value_prefix']}`+this.value+`{$p['value_suffix']}`";
 
         }
 
