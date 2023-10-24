@@ -45,7 +45,7 @@ class Checkbox_Group extends Field {
 
             if ($option == $p['select_all_key']) {
 
-                $p['option_atts'][$option]['onchange'] = "this.parentElement.parentElement.querySelectorAll(`[name=` + this.name + `]`).forEach((f) => f.checked = this.checked)";
+                $p['option_atts'][$option]['onchange'] = "this.parentElement.parentElement.querySelectorAll(`[name=` + this.name + `]`).forEach((f) => { if (f.checked != this.checked) { f.checked = this.checked; f.dispatchEvent(new Event(`change`)); }})";
 
             }
 
