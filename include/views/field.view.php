@@ -130,8 +130,6 @@ class Field extends View {
 
     protected static function checked ($value, $current, $strict = false, $attribute = 'checked') {
 
-        if (!$current) return '';
-
         if (is_array($current)) {
 
             return in_array($value, $current, $strict) ? [$attribute => $attribute] : '';
