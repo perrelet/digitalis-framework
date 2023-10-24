@@ -18,8 +18,6 @@ class Radio extends Field {
         
         $p = parent::params($p);
 
-        if($p['value']) $p['value'] = explode(',', $p['value']);
-
         $p['option_atts'] = static::get_option_attributes($p);
         $p['option_atts'] = static::generate_option_attributes($p);
 
