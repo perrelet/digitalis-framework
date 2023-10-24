@@ -56,10 +56,22 @@ export class Digitalis_Query {
 
     add_event_listeners () {
 
-        let field_array = [...this.elements.form.elements];
-        field_array.forEach(field => field.addEventListener('change', this.on_filter_change));
+        if (this.options.auto_submit) {
 
-        document.querySelectorAll(`${this.options.selectors.form} .datepicker-input`).forEach(field => field.addEventListener('changeDate', this.on_filter_change));
+            let field_array = [...this.elements.form.elements];
+            field_array.forEach(field => field.addEventListener('change', this.submit));
+
+            document.querySelectorAll(`${this.options.selectors.form} .datepicker-input`).forEach(field => field.addEventListener('changeDate', this.submit));
+
+        }
+
+        this.elements.form.addEventListener('submit', (e) => {
+
+            e.preventDefault();
+            this.submit();
+
+        });
+
 
         window.addEventListener("popstate", (event) => {
 
@@ -118,7 +130,7 @@ export class Digitalis_Query {
 
     }
 
-    on_filter_change = (event) => {
+    submit = (event) => {
 
         this.request_posts({
             paged: 1,
