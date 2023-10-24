@@ -182,6 +182,17 @@
 
         }
 
+        &.row-submit {
+
+            button[type='submit'],
+            input[type='submit'] {
+
+                @include field_button();
+
+            }
+
+        }
+
         &.row-button {
 
             button {

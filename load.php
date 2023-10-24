@@ -61,6 +61,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/button.field.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/submit.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox-group.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox-buttons.field.php';
