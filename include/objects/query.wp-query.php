@@ -6,11 +6,13 @@ use WP_Query;
 
 class Digitalis_Query extends WP_Query {
 
+    protected $query_vars_obj;
+
     // Defer calling $this->query($query) in constructor
 
     public function __construct ($query = []) {
 
-        $this->query = $query;
+        $this->query_vars_obj = new Query_Vars($query);
 
     }
 
@@ -20,35 +22,57 @@ class Digitalis_Query extends WP_Query {
 
         if ($query) $this->merge($query);
 
-        return parent::query($this->query);
+        return parent::query($this->get_query_vars());
         
     }
 
     // Extended:
 
-    public function get_query () {
+    public function get_query_vars_obj () {
+    
+        return $this->query_vars_obj;
+    
+    }
 
-        return $this->query;
+    public function get_query_vars () {
+
+        return $this->query_vars_obj->get_vars();
 
     }
 
     public function set_query ($query) {
 
-        $this->query = $query;
+        $this->query_vars_obj->set_vars($query);
 
         return $this;
 
     }
 
-    public function get_var ($key, $default = '') {
+    public function get_var ($key, $default = null) {
 
-        return isset($this->query[$key]) ? $this->query[$key] : $default;
+        return $this->query_vars_obj->get_var($key, $default);
 
     }
 
     public function set_var ($key, $value) {
 
-        $this->query[$key] = $value;
+        $this->query_vars_obj->set_var($key, $value);
+
+        return $this;
+
+    }
+
+    public function add_meta_query ($meta_query) {
+
+        $this->query_vars_obj->add_meta_query($meta_query);
+
+        return $this;
+
+    }
+
+    public function add_tax_query ($tax_query) {
+
+        $this->query_vars_obj->add_tax_query($tax_query);
 
         return $this;
 
@@ -56,51 +80,7 @@ class Digitalis_Query extends WP_Query {
 
     public function overwrite ($query) {
         
-        if ($query) foreach ($query as $key => $value) {
-
-            $this->set_var($key, $value);
-
-        }
-
-        return $this;
-        
-    }
-
-    public function merge_var ($key, $value) {
-        
-        if (isset($this->query[$key]) && ($existing_value = $this->query[$key])) {
-
-            switch ($key) {
-
-                case 'post_type':
-                case 'post_status':
-
-                    if (($value == 'any') || ($existing_value == 'any')) {
-
-                        $value = 'any';
-                        break;
-
-                    }
-
-                    if (!is_array($value)) $value = [$value];
-                    if (!is_array($existing_value)) $existing_value = [$existing_value];
-
-                    // no break;
-
-                case 'tax_query':
-                case 'meta_query':
-
-                    // no break;
-
-                default:
-
-                    if (is_array($value) && is_array($existing_value)) $value = array_unique(array_merge($existing_value, $value), SORT_REGULAR);
-                
-            }
-
-        }
-
-        if ($value) $this->query[$key] = $value;
+        $this->query_vars_obj->overwrite($query);
 
         return $this;
         
@@ -108,16 +88,18 @@ class Digitalis_Query extends WP_Query {
 
     public function merge ($query) {
 
-        if ($query) foreach ($query as $key => $value) {
-
-            if (!$value) continue;
-
-            $this->merge_var($key, $value);
-
-        }
+        $this->query_vars_obj->merge($query);
 
         return $this;
 
+    }
+
+    public function merge_var ($key, $value) {
+
+        $this->query_vars_obj->merge_var($key, $value);
+
+        return $this;
+        
     }
 
 }
