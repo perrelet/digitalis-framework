@@ -185,9 +185,13 @@ export class Digitalis_Query {
 
         let url = new URL(new_url ? new_url : window.location.href);
         if (!data.hasOwnProperty('paged') && url.searchParams.has('paged')) url.searchParams.delete('paged');
-        for (const [key, value] of Object.entries(data)) url.searchParams.set(key, value);
 
-        this.request(this.options.action, data, url.href);
+        let args = {action: this.options.action, data: data, url: url};
+        document.dispatchEvent(new CustomEvent('Digitalis/Query/Request_Posts', {detail: args}));
+
+        for (const [key, value] of Object.entries(data)) args.url.searchParams.set(key, value);
+
+        this.request(this.options.action, args.data, args.url.href);
 
     }
 
