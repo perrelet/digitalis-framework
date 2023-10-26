@@ -228,9 +228,11 @@ abstract class Post_Type extends Singleton {
 
     public function main_query_wrap ($query) {
 
-        if (!is_archive() || !$this->is_main_query($query)) return;
+        if ($this->is_main_query($query) && (is_archive() || is_search() || $query->is_posts_page)) {
 
-        $this->main_query($query);
+            $this->main_query($query);
+
+        }
 
     }
 
@@ -277,10 +279,9 @@ abstract class Post_Type extends Singleton {
         //$wp_query->query_vars = wp_parse_args(static::get_admin_query_vars(), $wp_query->query_vars);
         //merge_query(static::get_admin_query_vars(), $wp_query);
 
-        $query = new Digitalis_Query($wp_query->query_vars);
-        //$query->merge(static::get_admin_query_vars());
-        $query->merge($this->admin_query_vars());
-        $wp_query->query_vars = $query->get_query();
+        $qv = new Query_Vars($wp_query->query_vars);
+        $qv->merge($this->admin_query_vars());
+        $wp_query->query_vars = $qv->to_array();
 
     }
 
@@ -291,7 +292,12 @@ abstract class Post_Type extends Singleton {
         global $wp, $wp_query;
         $wp->parse_request();
         $wp_query->query_vars = $wp->query_vars;
-        //$wp_query->set('post_type', $this->slug);
+        $wp_query->set('post_type', $this->slug);
+
+        /* $qv = new Query_Vars($wp_query->query_vars);
+        $qv->merge($this->query_vars());
+        $qv->set_var('post_type', $this->slug);
+        $wp_query->query($qv->to_array()); */ // We want to defer setting the query args to the derived ajax_query method (let the merge happen in Post::Query)
 
         return $this->ajax_query();
 
@@ -514,7 +520,7 @@ abstract class Post_Type extends Singleton {
 
     protected function is_main_query ($query) {
 
-        return (!is_admin() && $query->is_main_query() && ($query->get('post_type') == $this->slug));
+        return ((!is_admin() || wp_doing_ajax()) && $query->is_main_query() && Digitalis_Query::compare_post_type($query, $this->slug));
 
     }
 
