@@ -17,6 +17,7 @@ class Field extends View {
         'id'            => null,
         'type'          => 'text',
         'default'       => '',
+        'value'         => false,
         'classes'       => [],
         'styles'        => [],
         'row_classes'   => [],
@@ -25,8 +26,6 @@ class Field extends View {
         'label'         => false,
         'placeholder'   => false,
         'attributes'    => [],
-        //'nice-select'   => false,
-        //'date-picker'   => false,
         'wrap'          => true,
         'width'         => 1,
     ];
@@ -162,7 +161,7 @@ class Field extends View {
 
         if (is_null($p['id'])) $p['id'] = $key . '-field';
 
-        $p['value'] = isset($_REQUEST[$key]) ? $_REQUEST[$key] : $p['default'];
+        $p['value'] = $p['value'] ? $p['value'] : ($_REQUEST[$key] ?? $p['default']);
 
         $p['classes']       = static::generate_classes(static::get_field_classes($p));
         $p['row_classes']   = static::generate_classes(static::get_row_classes($p));
