@@ -49,52 +49,23 @@ abstract class Post extends Model {
 
         global $wp_query;
 
-        $instances      = [];
-        $posts          = [];
-        $this_post_type = false;
+        $instances = [];
+        $posts     = [];
 
-        if ($wp_query && ($queried_post_type = $wp_query->get('post_type'))) {
+        if (!$skip_main && !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query)) {
 
-            if (is_array($queried_post_type)) {
-
-                if (in_array('any', $queried_post_type) || in_array(static::$post_type, $queried_post_type)) $this_post_type = true;
-
-            } else {
-
-                if (($queried_post_type == 'any') || ($queried_post_type == static::$post_type)) $this_post_type = true;
-
-            }
-
-        } elseif ((static::$post_type == 'post') && $wp_query) {
-
-            $this_post_type = $wp_query->is_posts_page;
-
-        }
-
-        if (!$skip_main && $wp_query && $wp_query->is_main_query() && $this_post_type) {
+            // Use the existing global wp_query.
 
             $query = $wp_query;
             $posts = $wp_query->posts;
 
         } else {
 
-            /* if (!$skip_main && $wp_query->query_vars) $args = wp_parse_args($args, $wp_query->query_vars);
-            $args = static::get_query_vars($args);
-            $args['post_type'] = static::$post_type;
-            $posts = (new WP_Query($args))->posts; */
-
-            //if (!$skip_main && $this_post_type && $wp_query->query_vars) $args = merge_query_vars($args, $wp_query->query_vars); // ?
-            /* $args = merge_query_vars([
-                'post_type' => static::$post_type,
-            ], $args);
-            $args = merge_query_vars($args, is_admin() ? static::get_admin_query_vars() : static::get_query_vars());
-            $posts = (new WP_Query($args))->posts; */
-
-            //
+            // Build a fresh wp_query.
 
             $query = new Digitalis_Query();
 
-            if (!$skip_main && $wp_query) $query->merge($wp_query->query_vars);
+            if (!$skip_main && $wp_query && $wp_query->is_main_query()) $query->merge($wp_query->query_vars);
 
             $query->set_var('post_type', static::$post_type);
             $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars() : static::get_query_vars());
@@ -104,6 +75,12 @@ abstract class Post extends Model {
         }
 
         return static::get_instances($posts);
+
+    }
+
+    protected static function query_is_post_type ($wp_query) {
+
+        return Digitalis_Query::compare_post_type($wp_query, static::$post_type);
 
     }
 
