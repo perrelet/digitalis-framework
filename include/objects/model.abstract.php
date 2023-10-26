@@ -78,7 +78,7 @@ class Model {
 
         $instances = [];
 
-        if ($ids) foreach ($ids as $id) $instances[] = static::get_instance($id);
+        if ($ids) foreach ($ids as $id) if ($instance = static::get_instance($id)) $instances[] = $instance;
 
         return $instances;
 
