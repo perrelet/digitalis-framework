@@ -102,4 +102,36 @@ class Digitalis_Query extends WP_Query {
         
     }
 
+    public function is_post_type ($post_type) {
+
+        return static::compare_post_type($this, $post_type);
+
+    }
+
+    // Static Utils
+
+    public static function compare_post_type ($wp_query, $post_type) {
+
+        if ($wp_query && ($queried_post_type = $wp_query->get('post_type'))) {
+
+            if (is_array($queried_post_type)) {
+
+                if (in_array('any', $queried_post_type) || in_array($post_type, $queried_post_type)) return true;
+
+            } else {
+
+                if (($queried_post_type == 'any') || ($queried_post_type == $post_type)) return true;
+
+            }
+
+        } elseif (($post_type == 'post') && $wp_query) {
+
+            return $wp_query->is_posts_page;
+
+        }
+
+        return false;
+
+    }
+
 }
