@@ -58,6 +58,12 @@ class User extends Model {
 
     //
 
+    public function get_role () {
+    
+        return ($roles = $this->get_roles()) ? $roles[0] : false;
+    
+    }
+
     public function get_roles () {
 
         return ($wp_user = $this->get_wp_user()) ? $wp_user->roles : [];
