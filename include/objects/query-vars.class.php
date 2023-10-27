@@ -49,6 +49,18 @@ class Query_Vars {
 
     }
 
+    public function get_meta_query () {
+
+        return $this->query['meta_query'];
+
+    }
+
+    public function get_tax_query () {
+
+        return $this->query['tax_query'];
+
+    }
+
     public function add_meta_query ($meta_query) {
 
         $this->query['meta_query'][] = $meta_query;
@@ -64,6 +76,35 @@ class Query_Vars {
         return $this;
 
     }
+
+    public function &find_meta_query ($value, $compare = '=', $key = 'key') {
+
+        return $this->find($this->query['meta_query'], $value, $key, $compare);
+
+    }
+
+    public function &find_tax_query ($value, $compare = '=', $key = 'taxonomy') {
+
+        return $this->find($this->query['tax_query'], $value, $key, $compare);
+
+    }
+
+    public function &find (&$var, $value, $compare = '=', $key = 'key') {
+
+        if ($var && is_array($var)) foreach ($var as &$block) {
+
+            if (!is_array($block)) continue;
+
+            if (!isset($block[$key])) if ($found = $this->find($block, $value, $compare, $key)) return $found;
+
+            if ($this->compare($value, $block[$key], $compare)) return $block;
+
+        }
+
+        return false;
+
+    }
+
 
     public function overwrite ($query) {
         
@@ -124,6 +165,32 @@ class Query_Vars {
         if ($value) $this->query[$key] = $value;
 
         return $this;
+
+    }
+
+    //
+
+    protected function compare ($v1, $v2, $operator = '=') {
+
+        $operator = strtoupper($operator);
+
+        switch ($operator) {
+
+            case '=':    return $v1 == $v2;
+            case '!=':   return $v1 != $v2;
+            case '==':   return $v1 === $v2;
+            case '!==':  return $v1 !== $v2;
+            case '<':    return $v1 < $v2;
+            case '<=':   return $v1 <= $v2;
+            case '>':    return $v1 > $v2;
+            case '>=':   return $v1 >= $v2;
+            case 'IN':   return is_array($v2) ? in_array($v1, $v2) : $v1 == $v2;
+            case '!IN':  return !$this->compare($v1, $v2, 'IN');
+            case 'IN=':  return is_array($v2) ? in_array($v1, $v2, true) : $v1 == $v2;
+            case '!IN=': return !$this->compare($v1, $v2, 'IN=');
+            default:     return false;
+
+        }
 
     }
 
