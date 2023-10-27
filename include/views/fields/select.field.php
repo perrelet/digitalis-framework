@@ -19,8 +19,6 @@ class Select extends Field {
         $p['option_atts'] = static::get_option_attributes($p);
         $p['option_atts'] = static::generate_option_attributes($p);
 
-        jprint($p['option_atts']);
-
         return $p;
 
     }
