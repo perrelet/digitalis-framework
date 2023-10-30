@@ -48,13 +48,20 @@ if ((typeof ACF_AJAX !== 'function')) {
     
         validate_form () {
     
+            this.$form.addClass('validating lock');
+
             this.reset();
     
             acf.validateForm({
     
                 form:     this.$form,
                 reset:    true,
-                success:  ($form) => this.submit_form(),
+                success:  ($form) => {
+
+                    this.$form.removeClass('validating');
+                    this.submit_form();
+
+                },
                 failure:  () => this.message(this.options.invalid_message, 'error'),
                 loading:  () => {},
                 complete: () => {},
@@ -64,6 +71,8 @@ if ((typeof ACF_AJAX !== 'function')) {
         }
     
         submit_form () {
+
+            this.$form.addClass('submitting lock');
     
             let $file_inputs = jQuery('input[type="file"]:not([disabled])', this.$form) // Fix for Safari Webkit – empty file inputs kill the browser https://stackoverflow.com/a/49827426/586823
             $file_inputs.each(function(i, input) {
@@ -88,6 +97,7 @@ if ((typeof ACF_AJAX !== 'function')) {
     
             }).done(response => {
     
+                this.$form.removeClass('submitting lock');
                 acf.unlockForm(this.$form);
                 this.success(response);
     
@@ -106,6 +116,7 @@ if ((typeof ACF_AJAX !== 'function')) {
         reset () {
     
             this.$messages.empty();
+            this.$form.removeClass('validating submitting lock');
     
         }
     
