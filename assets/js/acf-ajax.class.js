@@ -3,9 +3,11 @@ if ((typeof ACF_AJAX !== 'function')) {
     window.ACF_AJAX = class {
 
         static default_options = {
-            form_selector:   '.acf-form',
-            invalid_message: 'Please fix invalid entries and resubmit the form',
-            success_message: 'Submission Successful!',
+            form_selector:    '.acf-form',
+            invalid_message:  'Please fix invalid entries and resubmit the form',
+            success_message:  'Submission Successful!',
+            url:              window.location.href,
+            return_data_type: 'html',
         };
     
         $form = null;
@@ -48,9 +50,8 @@ if ((typeof ACF_AJAX !== 'function')) {
     
         validate_form () {
     
-            this.$form.addClass('validating lock');
-
             this.reset();
+            this.$form.addClass('validating loading');
     
             acf.validateForm({
     
@@ -72,7 +73,7 @@ if ((typeof ACF_AJAX !== 'function')) {
     
         submit_form () {
 
-            this.$form.addClass('submitting lock');
+            this.$form.addClass('submitting loading');
     
             let $file_inputs = jQuery('input[type="file"]:not([disabled])', this.$form) // Fix for Safari Webkit – empty file inputs kill the browser https://stackoverflow.com/a/49827426/586823
             $file_inputs.each(function(i, input) {
@@ -88,35 +89,40 @@ if ((typeof ACF_AJAX !== 'function')) {
     
             jQuery.ajax({
     
-                url:         window.location.href,
+                url:         this.options.url,
                 method:      'post',
                 data:        formData,
                 cache:       false,
                 processData: false,
-                contentType: false
+                contentType: false,
+                dataType:    this.options.return_data_type
     
             }).done(response => {
-    
-                this.$form.removeClass('submitting lock');
+
+                this.$form.removeClass('submitting loading');
                 acf.unlockForm(this.$form);
-                this.success(response);
+                this.message(this.options.success_message, 'success');
+
+                let args = {options: this.options, response: response};
+                document.dispatchEvent(new CustomEvent('Digitalis/ACF_AJAX/Success', {detail: args}));
     
+            }).fail((jqXHR, text_status, error) => {
+
+                this.$form.removeClass('submitting loading');
+                this.$form.addClass('error');
+                this.message(error, 'error');
+
+                let args = {xhr: jqXHR, text_status: text_status, error: error};
+                document.dispatchEvent(new CustomEvent('Digitalis/ACF_AJAX/Error', {detail: args}));
+
             });
-    
-        }
-    
-        success (response) {
-    
-            // console.log(response);
-    
-            this.message(this.options.success_message, 'success');
     
         }
     
         reset () {
     
             this.$messages.empty();
-            this.$form.removeClass('validating submitting lock');
+            this.$form.removeClass('validating submitting loading error');
     
         }
     
