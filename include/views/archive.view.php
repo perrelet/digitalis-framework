@@ -14,6 +14,7 @@ abstract class Archive extends View {
         'classes'       => [],
         'query_vars'    => [],
         'posts_only'    => false,
+        'items'         => false,
         'no_posts'      => 'No posts found.',
         'pagination'    => true,
         'loader'        => 'sliding-dots.gif',
@@ -130,7 +131,7 @@ abstract class Archive extends View {
 
         $query;
 
-        if (static::$items = static::get_items($p['query_vars'], $query)) {
+        if (static::$items = ($p['items'] ? $p['items'] : static::get_items($p['query_vars'], $query))) {
 
             static::render_items(static::$items);
 
