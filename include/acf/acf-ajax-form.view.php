@@ -5,11 +5,13 @@ namespace Digitalis;
 class ACF_AJAX_Form extends View {
 
     protected static $defaults = [
-        'id'               => 'acf_form',
-        'acf_form'         => [],
-        'acf_ajax_options' => [],
-        'featured_image'   => false,
-        'dynamically_load' => true,
+        'id'                  => 'acf_form',
+        'acf_form'            => [],
+        'acf_ajax_options'    => [],
+        'featured_image'      => false,        // Requires \Digitalis\ACF_Featured_Image_Group
+        'dynamically_load'    => true,
+        'extra_fields_before' => [],
+        'extra_fields_after'  => [],
     ];
 
     protected static function condition ($params) {
@@ -21,24 +23,20 @@ class ACF_AJAX_Form extends View {
     public static function params ($p) {
 
         $p['acf_form'] = wp_parse_args($p['acf_form'], [
-            'id' => $p['id'],
+            'id'                 => $p['id'],
+            'html_before_fields' => '',
+            'html_after_fields'  => '',
         ]);
 
-        if ($p['featured_image']) {
+        if ($p['featured_image'] && acf_get_field_group('post-featured-image')) {
 
             if (!isset($p['acf_form']['field_groups'])) $p['acf_form']['field_groups'] = [];
             $p['acf_form']['field_groups'] = array_merge(['post-featured-image'], $p['acf_form']['field_groups']);
 
         }
 
-        /* $p['acf_form']['fields'] = [
-            [
-                'label'         => 'Image',
-                'type'          => 'image',
-                'name'          => '_thumbnail_id',
-                'key'           => '_thumbnail_id',
-            ]
-        ]; */
+        if ($p['extra_fields_before']) $p['acf_form']['html_before_fields'] .= static::get_fields_html($p['extra_fields_before']);
+        if ($p['extra_fields_after'])  $p['acf_form']['html_after_fields']  .= static::get_fields_html($p['extra_fields_after']);
 
         $p['acf_ajax_options'] = wp_parse_args($p['acf_ajax_options'], [
             'form_selector' => '#' . $p['id'],
@@ -62,6 +60,17 @@ class ACF_AJAX_Form extends View {
 
         echo "<script>new ACF_AJAX(" . json_encode($p['acf_ajax_options']) . ");</script>";
 
+    }
+
+    protected static function get_fields_html ($fields) {
+    
+        ob_start(); 
+        acf_render_fields($fields);
+        $content = ob_get_contents();
+        ob_end_clean();
+
+        return $content;
+    
     }
 
 }
