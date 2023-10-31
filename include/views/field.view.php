@@ -6,10 +6,6 @@ class Field extends View {
 
     protected static $template = 'input';
 
-    protected static $definition = [
-        'type' => 'text',
-    ];
-
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
