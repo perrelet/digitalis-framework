@@ -7,14 +7,15 @@ define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/has-instances.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/singleton.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
@@ -48,6 +49,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.integration.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
@@ -55,6 +57,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.ph
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
