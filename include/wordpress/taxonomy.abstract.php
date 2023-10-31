@@ -17,7 +17,7 @@ abstract class Taxonomy extends Singleton {
 
         if ($flush) flush_rewrite_rules();
 
-        add_action('init', [$this, 'register']);
+        add_action('init', [$this, 'register'], 0);
 
         if (method_exists($this, 'columns'))    add_filter("manage_edit-{$this->slug}_columns",     [$this, 'columns']);
         if (method_exists($this, 'column'))     add_filter("manage_{$this->slug}_custom_column",    [$this, 'column'], 10, 3);
@@ -113,6 +113,12 @@ abstract class Taxonomy extends Singleton {
             'items_list_navigation'         => __( "{$this->plural} list navigation",       $this->text_domain ),
         ]);
 
+    }
+
+    public function get_taxonomy () {
+    
+        return $this->taxonomy;
+    
     }
 
     //
