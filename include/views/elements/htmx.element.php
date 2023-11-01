@@ -1,8 +1,10 @@
 <?php
 
-namespace Digitalis;
+namespace Digitalis\Element;
 
-class HTMX_Element extends Element {
+use Digitalis\Element;
+
+class HTMX extends Element {
 
     protected static $template = 'element';
 
