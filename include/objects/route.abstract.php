@@ -58,7 +58,7 @@ abstract class Route extends Singleton {
             'args'                  => $this->get_params(),
             'methods'               => ['GET', 'POST'],
             'callback'              => [$this, 'callback'],
-            'permission_callback'   => [$this, 'permission'],
+            'permission_callback'   => [$this, 'permission_wrap'],
         ]);
         
     }
@@ -69,7 +69,17 @@ abstract class Route extends Singleton {
 
         register_rest_route($this->namespace, $this->route, $this->rest_args);
         if ($this->namespace_prefix) register_rest_route($this->namespace_prefix . $this->namespace, $this->route, $this->rest_args);
-        
+
+    }
+
+    static $permission = null;
+
+    public function permission_wrap (WP_REST_Request $request) {
+    
+        if (is_null(static::$permission)) static::$permission = $this->permission($request);
+
+        return static::$permission;
+    
     }
 
     public function permission (WP_REST_Request $request) {
