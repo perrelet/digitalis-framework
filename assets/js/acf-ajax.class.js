@@ -63,7 +63,12 @@ if ((typeof ACF_AJAX !== 'function')) {
                     this.submit_form();
 
                 },
-                failure:  () => this.message(this.options.invalid_message, 'error'),
+                failure:  () => {
+
+                    this.$form.removeClass('validating loading');
+                    this.message(this.options.invalid_message, 'error')
+
+                },
                 loading:  () => {},
                 complete: () => {},
     
