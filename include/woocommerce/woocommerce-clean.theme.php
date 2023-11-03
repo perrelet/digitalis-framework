@@ -14,11 +14,11 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     protected $page_icons = [
         'dashboard'         => 'profile-circle',
-        'orders'            => '3d-select-solid',
+        'orders'            => 'cube',
         'downloads'         => 'download',
         'edit-address'      => 'home-alt-slim-horiz',
-        'payment-methods'   => 'card-security',
-        'edit-account'      => 'key-alt',
+        'payment-methods'   => 'card-shield',
+        'edit-account'      => 'key',
         'customer-logout'   => 'log-out',
     ];
 
@@ -124,7 +124,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
     public function before_account_navigation_loop () {
         
         echo "<div class='nav-controls'>";
-        echo "<i data-action='collapse-menu' class='control iconoir-cancel'></i>";
+        echo "<i data-action='collapse-menu' class='control iconoir-xmark'></i>";
         echo "<i data-action='expand-menu' class='control iconoir-fast-arrow-right'></i>";
         echo "</div>";
         
