@@ -240,6 +240,12 @@ class User extends Model {
 
     }
 
+    public function can_access_dashboard () {
+    
+        return $this->can('edit_posts');
+    
+    }
+
     public function get_admin_color () {
         
         return get_the_author_meta('admin_color', $this->id);
