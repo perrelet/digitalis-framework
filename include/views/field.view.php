@@ -157,6 +157,8 @@ class Field extends View {
 
         if (is_null($p['id'])) $p['id'] = $key . '-field';
 
+        if ($p['type'] == 'hidden') $p['wrap'] = false;
+
         $p['value'] = is_null($p['value']) ? ($_REQUEST[$key] ?? $p['default']) : $p['value'];
 
         $p['classes']       = static::generate_classes(static::get_field_classes($p));
