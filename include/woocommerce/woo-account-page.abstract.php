@@ -2,12 +2,13 @@
 
 namespace Digitalis;
 
-abstract class Woo_Account_Page {
+abstract class Woo_Account_Page extends Singleton {
 
     protected $slug = 'account_page';
     protected $title = 'Account Page';
     protected $endpoint = null;
     protected $icon = null;
+    protected $view = false;
 
     protected $active = true;
     protected $hidden = false;
@@ -111,7 +112,9 @@ abstract class Woo_Account_Page {
 
     // OVERRIDE
 
+    protected function render_before() {}
     protected function render() {}
+    protected function render_after() {}
 
     // INTERNAL
 
@@ -133,6 +136,12 @@ abstract class Woo_Account_Page {
 
         return $this->endpoint;
 
+    }
+
+    public function get_url ($value = '', $permalink = '') {
+    
+        return wc_get_endpoint_url($this->get_endpoint(), $value, $permalink);
+    
     }
 
     public function get_title () {
@@ -344,7 +353,16 @@ abstract class Woo_Account_Page {
 
         remove_action('woocommerce_account_content', 'woocommerce_account_content');
 
-        if ($this->can_access()) $this->render();
+        if ($this->can_access()) {
+
+            $this->render_before();
+
+            $call = $this->view . '::render';
+            is_callable($call) ? call_user_func($call) : $this->render();
+
+            $this->render_after();
+
+        }
 
     }
 
