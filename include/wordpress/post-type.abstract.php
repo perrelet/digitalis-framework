@@ -40,7 +40,7 @@ abstract class Post_Type extends Singleton {
         add_action('restrict_manage_posts',     [$this, 'render_filters']);
         add_action('pre_get_posts',             [$this, 'admin_controller']);
 
-        if (method_exists($this, 'after_insert'))   add_action('wp_after_insert_post',  [$this, 'after_insert_wrap'], 10, 4);
+        if (method_exists($this, 'after_insert')) add_action('wp_after_insert_post',  [$this, 'after_insert_wrap'], 10, 4);
 
         // Front
 
@@ -500,7 +500,19 @@ abstract class Post_Type extends Singleton {
 
         if ($post->post_type != $this->slug) return;
 
-        $this->after_insert($post_id, $post, $update, $post_before);
+        if (isset($_POST['_acf_form'])) {
+
+            add_action('acf/submit_form', function () use (&$post_id, &$post, &$update, &$post_before) {
+
+                $this->after_insert($post_id, $post, $update, $post_before);
+
+            }, 20);
+
+        } else {
+
+            $this->after_insert($post_id, $post, $update, $post_before);
+
+        }
 
     }
 
