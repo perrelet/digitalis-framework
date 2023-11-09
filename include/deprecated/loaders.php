@@ -113,3 +113,118 @@ trait Can_Load {
     }
 
 }
+
+trait Has_Components {
+
+    protected $components = [];
+
+    public function get_component_namespace() { return __NAMESPACE__; }
+
+    public function load_components ($path) {
+
+        foreach (glob($path . '/*.component.php') as $component_path) {
+            include $component_path;
+        }
+
+    }
+    
+    public function component ($class_name, $params = [], $render = true) {
+
+        $class_name = $this->get_component_namespace() . '\\' . $class_name;
+
+        if (!class_exists($class_name)) return;
+
+        $component = new $class_name($params);
+        $component->init();
+
+        if ($render) $component->render();
+
+        $key = $class_name . "-" . $component->get_instance();
+        $this->components[$key] = $component;
+
+        return $component;
+
+    }
+
+    public function get_component ($class_name, $instance = 1) {
+
+        $class_name = $this->get_component_namespace() . '\\' . $class_name;
+        $key = $class_name . "-" . $instance;
+
+        return isset($this->components[$key]) ? $this->components[$key] : null;
+
+    }
+
+}
+
+trait Has_Integrations {
+
+    use Can_Load;
+
+    public function load_integrations ($path) {
+
+        $this->autoload('integration', $path, 'integration.php', 'get_instance');
+
+    }
+
+    public function get_integration ($class_name) {
+
+        return $this->get_object('integration', $class_name);
+
+    }
+
+    public function get_integrations () {
+
+        return $this->get_object_group('integration');
+
+    }
+
+}
+
+trait Has_Post_Types {
+
+    use Can_Load;
+
+    public function load_post_types ($path) {
+
+        $this->autoload('post-type', $path, 'post-type.php', 'get_instance');
+
+    }
+
+    public function get_post_type ($class_name) {
+
+        return $this->get_object('post-type', $class_name);
+
+    }
+
+    public function get_post_types () {
+
+        return $this->get_object_group('post-type');
+
+    }
+
+}
+
+trait Has_Taxonomies {
+
+    use Can_Load;
+
+    public function load_taxonomies ($path) {
+
+        $this->autoload('taxonomy', $path, 'taxonomy.php', 'get_instance');
+
+    }
+
+    public function get_taxonomy ($class_name) {
+
+        return $this->get_object('taxonomy', $class_name);
+
+    }
+
+    public function get_taxonomies () {
+
+        return $this->get_object_group('taxonomy');
+
+    }
+
+}
