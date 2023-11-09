@@ -37,7 +37,7 @@ abstract class Singleton {
         
     }
 
-    //public function run () {} // Depreciated
+    //public function run () {} // Deprecated
     public function init () {} // Override me :)
 
 }
