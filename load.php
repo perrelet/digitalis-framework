@@ -46,7 +46,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.integration.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';

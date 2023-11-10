@@ -2,9 +2,9 @@
 
 namespace Digitalis\ACF;
 
-use Digitalis\Integration;
+use Digitalis\Feature;
 
-abstract class Bidirectional_Relationship extends Integration {
+abstract class Bidirectional_Relationship extends Feature {
 
     protected $key_1 = 'field_1';
     protected $key_2 = 'field_2';
@@ -19,7 +19,7 @@ abstract class Bidirectional_Relationship extends Integration {
 
     protected $log = false;
 
-    public function __construct () {
+    public function run () {
 
         add_filter("acf/validate_value/name={$this->key_1}", [$this, 'validate'], 10, 4);
         add_filter("acf/validate_value/name={$this->key_2}", [$this, 'validate'], 10, 4);
