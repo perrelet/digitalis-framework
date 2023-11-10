@@ -27,12 +27,19 @@ abstract class App extends Singleton {
         $this->autoload($this->path . 'utils', false);
         $this->autoload($this->path . 'post-types');
         $this->autoload($this->path . 'taxonomies');
+        $this->autoload($this->path . 'features', false);
         $this->autoload($this->path . 'integrations');
         $this->autoload($this->path . 'models', false);
         $this->autoload($this->path . 'views', false);
         $this->autoload($this->path . 'acf-blocks', true);
         $this->autoload($this->path . 'shortcodes', true);
-        $this->autoload($this->path . 'features', true);
+
+        if (defined('WC_PLUGIN_FILE')) {
+
+            if (defined('WC_PLUGIN_FILE')) $this->autoload($this->path . 'woocommerce/account-pages');
+            if (defined('WC_PLUGIN_FILE')) $this->autoload($this->path . 'woocommerce/product-types'); // product-type has an activation hoook... better soln?
+
+        }
     
     }
 
