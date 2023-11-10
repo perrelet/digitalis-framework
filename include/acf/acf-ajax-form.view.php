@@ -8,7 +8,7 @@ class ACF_AJAX_Form extends View {
         'id'                  => 'acf_form',
         'acf_form'            => [],
         'acf_ajax_options'    => [],
-        'featured_image'      => false,        // Requires \Digitalis\ACF_Featured_Image_Group
+        'featured_image'      => false,        // Requires \Digitalis\ACF\Featured_Image_Group::load();
         'dynamically_load'    => true,
         'extra_fields_before' => [],
         'extra_fields_after'  => [],
