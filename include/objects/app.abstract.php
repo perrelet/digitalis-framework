@@ -33,6 +33,7 @@ abstract class App extends Singleton {
         $this->autoload($this->path . 'views', false);
         $this->autoload($this->path . 'acf-blocks', true);
         $this->autoload($this->path . 'shortcodes', true);
+        $this->autoload($this->path . 'routes');
 
         if (defined('WC_PLUGIN_FILE')) {
 
