@@ -29,18 +29,23 @@ abstract class Post_Type extends Singleton {
         if ($this->register) add_action('init', [$this, 'register']);
         add_action('template_redirect', [$this, 'instantiate_model']);
 
-        // Admin
+        // Admin Table
+        // **Deprecated**
+        // Use the \Digitalis\Posts_Table feature instead.
 
         add_action('pre_get_posts', [$this, 'admin_query_wrap']);
 
-        if (method_exists($this, 'columns'))        add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns']);
-        if (method_exists($this, 'column'))         add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
+        if (method_exists($this, 'columns')) add_filter("manage_{$this->slug}_posts_columns",       [$this, 'columns']);
+        if (method_exists($this, 'column'))  add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
 
-        if (!in_array('publish_month', $this->get_filters())) add_filter('disable_months_dropdown',   [$this, 'disable_months_dropdown'], 10, 2);
-        add_action('restrict_manage_posts',     [$this, 'render_filters']);
-        add_action('pre_get_posts',             [$this, 'admin_controller']);
+        if (!in_array('publish_month', $this->get_filters())) add_filter('disable_months_dropdown', [$this, 'disable_months_dropdown'], 10, 2);
+        add_action('restrict_manage_posts', [$this, 'render_filters']);
+        add_action('pre_get_posts',         [$this, 'admin_controller']);
 
-        if (method_exists($this, 'after_insert')) add_action('wp_after_insert_post',  [$this, 'after_insert_wrap'], 10, 4);
+        // CRUD
+
+        if (method_exists($this, 'after_insert')) add_action('wp_after_insert_post', [$this, 'after_insert_wrap'], 10, 4);
+        if (method_exists($this, 'after_delete')) add_action('after_delete_post',    [$this, 'after_delete_wrap'], 10, 2);
 
         // Front
 
@@ -50,8 +55,8 @@ abstract class Post_Type extends Singleton {
         if (method_exists($this, 'ajax_query')) {
             
             $action = "query_" . $this->slug;
-            add_action("wp_ajax_{$action}",         [$this, 'ajax_query_wrap']);
-            add_action("wp_ajax_nopriv_{$action}",  [$this, 'ajax_query_wrap']);
+            add_action("wp_ajax_{$action}",        [$this, 'ajax_query_wrap']);
+            add_action("wp_ajax_nopriv_{$action}", [$this, 'ajax_query_wrap']);
 
         }
 
@@ -514,6 +519,14 @@ abstract class Post_Type extends Singleton {
 
         }
 
+    }
+
+    public function after_delete_wrap ($post_id, $post) {
+    
+        if ($post->post_type != $this->slug) return;
+
+        $this->after_delete($post_id, $post);
+    
     }
 
     //
