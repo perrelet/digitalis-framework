@@ -27,7 +27,7 @@ abstract class App extends Singleton {
         $this->autoload($this->path . 'utils', false);
         $this->autoload($this->path . 'post-types');
         $this->autoload($this->path . 'taxonomies');
-        $this->autoload($this->path . 'features', false);
+        $this->autoload($this->path . 'features', 'load');
         $this->autoload($this->path . 'integrations');
         $this->autoload($this->path . 'models', false);
         $this->autoload($this->path . 'views', false);
