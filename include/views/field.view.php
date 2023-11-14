@@ -22,10 +22,19 @@ class Field extends View {
         'label'         => false,
         'placeholder'   => false,
         'attributes'    => [],
+        'once_atts'     => [],
         'wrap'          => true,
         'width'         => 1,
     ];
-    protected static $merge = ['classes', 'styles', 'row_classes', 'row_styles', 'attributes'];
+
+    protected static $merge = [
+        'classes',
+        'styles',
+        'row_classes',
+        'row_styles',
+        'attributes',
+        'once_atts'
+    ];
 
     public static function generate_classes ($classes) {
 
@@ -41,65 +50,69 @@ class Field extends View {
 
     }
 
-    public static function get_field_classes ($p) {
+    public static function get_field_classes (&$p) {
 
-        $classes = [
-            "digitalis-field",
-            "field",
-            "field-{$p['type']}",
-        ];
+        if ($p['classes'] && !is_array($p['classes'])) $p['classes'] = [$p['classes']];
 
-        if ($p['classes']) $classes = array_merge($classes, $p['classes']);
-
-        return $classes;
+        $p['classes'][] = 'digitalis-field';
+        $p['classes'][] = 'field';
+        $p['classes'][] = "field-{$p['type']}";
 
     }
 
-    public static function get_row_classes ($p) {
+    public static function get_row_classes (&$p) {
 
-        $classes = [
-            "row",
-            "field-row",
-            "row-{$p['type']}",
-            "row-{$p['key']}",
-            "row-" . strtolower(str_replace(['_', '\\'], '-', str_replace('Digitalis\\Field\\', '', static::class))),
-        ];
+        if ($p['row_classes'] && !is_array($p['row_classes'])) $p['row_classes'] = [$p['row_classes']];
 
-        if ($p['row_classes']) array_merge($classes, $p['row_classes']);
-
-        return $classes;
+        $p['row_classes'][] = 'row';
+        $p['row_classes'][] = 'field-row';
+        $p['row_classes'][] = "row-{$p['type']}";
+        $p['row_classes'][] = "row-{$p['key']}";
+        $p['row_classes'][] = "row-" . strtolower(str_replace(['_', '\\'], '-', str_replace('Digitalis\\Field\\', '', static::class)));
 
     }
 
-    public static function get_field_styles ($p) {
+    public static function get_field_styles (&$p) {
 
-        $styles = [];
-        if ($p['styles']) array_merge($styles, $p['styles']);
-        return $styles;
+        // ..
 
     }
 
-    public static function get_row_styles ($p) {
+    public static function get_row_styles (&$p) {
 
-        $styles = [];
-
-        if ($p['width'] != 1) $styles['flex'] = $p['width'];
-        if ($p['row_styles']) array_merge($styles, $p['row_styles']);
-
-        return $styles;
+        if ($p['width'] != 1) $p['row_styles']['flex'] = $p['width'];
 
     }
 
-    public static function generate_attributes ($p) {
+    public static function generate_attributes ($attributes) {
 
-        $p['attributes']['class'] = $p['classes'];
-        $p['attributes']['style'] = $p['styles'];
+        $html = '';
+        if ($attributes) foreach ($attributes as $att_name => $att_value) $html .= " {$att_name}='{$att_value}'";
+        return $html;
 
-        if ($p['placeholder']) $p['attributes']['placeholder'] = $p['placeholder'];
+    }
 
-        $attributes = '';
-        if ($p['attributes']) foreach ($p['attributes'] as $att_name => $att_value) $attributes .= " {$att_name}='{$att_value}'";
-        return $attributes;
+    public static function get_attributes (&$p) {
+
+        $p['attributes']['class']         = $p['classes'];
+        $p['attributes']['style']         = $p['styles'];
+        $p['attributes']['data-field-id'] = $p['id'];
+
+        if ($p['placeholder']) $attributes['placeholder'] = $p['placeholder'];
+
+    }
+
+    public static function get_once_attributes (&$p) {
+
+        if (isset($p['condition'])) {
+
+            $p['once_atts']['data-field-condition'] = json_encode($p['condition']);
+
+            wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
+                'in_footer' => true,
+            ]);
+
+        }
 
     }
 
@@ -161,41 +174,35 @@ class Field extends View {
 
         $p['value'] = is_null($p['value']) ? ($_REQUEST[$key] ?? $p['default']) : $p['value'];
 
-        $p['classes']       = static::generate_classes(static::get_field_classes($p));
-        $p['row_classes']   = static::generate_classes(static::get_row_classes($p));
-        $p['styles']        = static::generate_styles(static::get_field_styles($p));
-        $p['row_styles']    = static::generate_styles(static::get_row_styles($p));
-        $p['attributes']    = static::generate_attributes($p);
+        static::get_field_classes($p);
+        static::get_row_classes($p);
+        static::get_field_styles($p);
+        static::get_row_styles($p);
+
+        $p['classes']     = static::generate_classes($p['classes']);
+        $p['row_classes'] = static::generate_classes($p['row_classes']);
+        $p['styles']      = static::generate_styles($p['styles']);
+        $p['row_styles']  = static::generate_styles($p['row_styles']);
+
+        static::get_attributes($p);
+        static::get_once_attributes($p);
+
+        $p['attributes']  = static::generate_attributes($p['attributes']);
+        $p['once_atts']   = static::generate_attributes($p['once_atts']);
 
         return $p;
 
     }
 
-    /* protected static function before_first ($p) {
-
-        echo '<link href="https://cdn.jsdelivr.net/npm/nice-select2@2.1.0/dist/css/nice-select2.min.css" rel="stylesheet">';
-        echo '<link href="https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.1/dist/css/datepicker.min.css" rel="stylesheet">';
-
-        wp_enqueue_script('nice-select2', 'https://cdn.jsdelivr.net/npm/nice-select2@2.1.0/dist/js/nice-select2.min.js', [], false, true);
-        wp_enqueue_script('vanillajs-datepicker', 'https://cdn.jsdelivr.net/npm/vanillajs-datepicker@1.3.1/dist/js/datepicker-full.min.js', [], false, true);
-
-        wp_enqueue_script('eventropy-query-module', EVENTROPY_URI . 'assets/js/eventropy-query.js', [], EVENTROPY_VERSION, true);
-        wp_localize_script('eventropy-query-module', 'query_params', [
-            'ajax_url'          => admin_url('admin-ajax.php'),
-            'event_list_id'     => $p['event_list_id'],
-        ]);
-
-    }  */
-
     protected static function before ($p) {
 
         if (!$p['wrap']) return;
 
-        echo "<div class='{$p['row_classes']}' style='{$p['row_styles']}'>";
+        echo "<div id='{$p['id']}-row' class='{$p['row_classes']}' style='{$p['row_styles']}'>";
 
             if ($p['label']) echo "<label for='{$p['id']}'>{$p['label']}</label>";
 
-                echo "<div class='field-wrap'>";
+                echo "<div id='{$p['id']}-wrap' class='field-wrap'>";
 
     }            
 

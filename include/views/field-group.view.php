@@ -23,32 +23,42 @@ class Field_Group extends View {
         'attributes',
     ];
 
-    public static function get_classes ($p) {
-
-        $classes = [
-            "digitalis-field-group",
-            "field-group",
-        ];
-
-        if ($p['classes']) $classes = array_merge($classes, $p['classes']);
-
-        return $classes;
-
-    }
-
     public static function generate_classes ($classes) {
 
         return implode(' ', $classes);
 
     }
 
-    public static function generate_attributes ($p) {
+    public static function get_classes (&$p) {
+
+        if ($p['classes'] && !is_array($p['classes'])) $p['classes'] = [$p['classes']];
+
+        $p['classes'][] = 'digitalis-field-group';
+        $p['classes'][] = 'field-group';
+
+    }
+
+    public static function generate_attributes ($attributes) {
+
+        $html = '';
+        if ($attributes) foreach ($attributes as $att_name => $att_value) $html .= " {$att_name}='{$att_value}'";
+        return $html;
+
+    }
+
+    public static function get_attributes (&$p) {
 
         $p['attributes']['class'] = $p['classes'];
 
-        $attributes = '';
-        if ($p['attributes']) foreach ($p['attributes'] as $att_name => $att_value) $attributes .= " {$att_name}='{$att_value}'";
-        return $attributes;
+        if (isset($p['condition'])) {
+
+            $p['attributes']['data-field-condition'] = json_encode($p['condition']);
+
+            wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
+                'in_footer' => true,
+            ]);
+
+        }
 
     }
 
@@ -80,8 +90,11 @@ class Field_Group extends View {
 
         }
 
-        $p['classes']    = static::generate_classes(static::get_classes($p));
-        $p['attributes'] = static::generate_attributes($p);
+        static::get_classes($p);
+        $p['classes'] = static::generate_classes($p['classes']);
+
+        static::get_attributes($p);
+        $p['attributes']  = static::generate_attributes($p['attributes']);
 
         return $p;
 
