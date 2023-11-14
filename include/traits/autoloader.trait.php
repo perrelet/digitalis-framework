@@ -123,6 +123,7 @@ trait Autoloader {
     protected function extract_class_name ($file) {
 
         // https://stackoverflow.com/questions/7153000/get-class-name-from-file
+        // fix: $class = $tokens[$i+2][1]; -> if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1]; to avoid 'Uninitialized string offset 1' when using 'static::class'
 
         $fp = fopen($file, 'r');
         $class = $namespace = $buffer = '';
@@ -149,7 +150,7 @@ trait Autoloader {
                 if ($tokens[$i][0] === T_CLASS) {
                     for ($j=$i+1;$j<count($tokens);$j++) {
                         if ($tokens[$j] === '{') {
-                            $class = $tokens[$i+2][1];
+                            if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];
                         }
                     }
                 }
