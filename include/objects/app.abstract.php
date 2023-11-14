@@ -46,7 +46,8 @@ abstract class App extends Singleton {
 
     public function load_admin () {
     
-        
+        $this->autoload($this->path . 'admin', 'get_instance', false);
+        $this->autoload($this->path . 'admin/features', 'load');
     
     }
 
