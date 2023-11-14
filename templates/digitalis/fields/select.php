@@ -1,4 +1,4 @@
-<select id='<?= $id ?>' name='<?= $key ?>' <?= $attributes ?>>
+<select id='<?= $id ?>' name='<?= $key ?>' <?= $once_atts ?> <?= $attributes ?>>
 <?php if ($options) foreach ($options as $option => $option_label): ?>
     <?php if (is_array($option_label)): ?>
         <optgroup label='<?= $option ?>'>
