@@ -2,6 +2,8 @@
 
 namespace Digitalis;
 
+use ReflectionClass;
+
 trait Autoloader {
 
     public function autoload ($path, $instantiate = 'get_instance', $recursive = true, $ext = 'php', $objs = []) {
@@ -33,15 +35,24 @@ trait Autoloader {
     public function load_class ($path, $instantiate = true) {
     
         if (!is_file($path)) return false;
-        if (strpos(basename($path), '.abstract.') !== false) $instantiate = false;
 
         include $path;
 
-        if ($instantiate === false)                                                           return false;
-        if (!$class_name = $this->extract_class_name($path))                                  return false;
-        if (!apply_filters('Digitalis/Instantiate/' . ltrim($class_name, '\\'), true, $path)) return false;
+        if (!$class_name = $this->extract_class_name($path)) return false;
+        if (!class_exists($class_name))                      return false;
 
-        if ($instantiate === true) {
+        $reflection = new ReflectionClass($class_name);
+
+        if ($reflection->isAbstract())                       $instantiate = false;
+        if (strpos(basename($path), '.abstract.') !== false) $instantiate = false;
+
+        $instantiate = apply_filters('Digitalis/Instantiate/' . ltrim($class_name, '\\'), $instantiate, $path);
+
+        if ($instantiate === false) {
+
+            return false;
+
+        } elseif ($instantiate === true) {
 
             return new $class_name();
 
