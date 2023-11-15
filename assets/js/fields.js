@@ -50,7 +50,15 @@ class Digitalis_Fields {
 
     check_field (el, v1, v2, operator) {
 
-        el.style.display = this.compare(v1, v2, operator) ? `flex` : `none`
+        if (this.compare(v1, v2, operator)) {
+
+            el.removeAttribute('data-field-inactive');
+
+        } else {
+
+            el.setAttribute('data-field-inactive', 'true');
+
+        }
 
     }
 
