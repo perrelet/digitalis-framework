@@ -46,7 +46,7 @@ trait Autoloader {
         if ($reflection->isAbstract())                       $instantiate = false;
         if (strpos(basename($path), '.abstract.') !== false) $instantiate = false;
 
-        $instantiate = apply_filters('Digitalis/Instantiate/' . ltrim($class_name, '\\'), $instantiate, $path);
+        $instantiate = apply_filters('Digitalis/Instantiate/' . str_replace('\\', '/', ltrim($class_name, '\\')), $instantiate, $path);
 
         if ($instantiate === false) {
 
