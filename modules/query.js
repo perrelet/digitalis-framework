@@ -165,14 +165,19 @@ export class Digitalis_Query {
 
     request_posts (data = {}, new_url = false) {
 
-        const form_data = new FormData(this.elements.form);
+        const form = document.createElement("form");
+        this.elements.form.querySelectorAll('.field-row').forEach(row => {
+            if (!row.hasAttribute('data-field-inactive')) form.appendChild(row.cloneNode(true));
+        });
+
+        const form_data = new FormData(form);
         const entries = Object.fromEntries(Array.from(form_data.keys(), key => {
             let val = form_data.getAll(key)
             if (val.length > 1) val = val.filter(v => v !== '0'); // remove dummy checkbox values
             return [key, val.length > 1 ? val : val.pop()]
         }));
         data = Object.assign(entries, data);
-        this.state.form = Object.fromEntries(form_data);
+        this.state.form = entries;
 
         if (this.elements.controls) {
 
