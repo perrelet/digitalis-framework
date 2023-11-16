@@ -86,9 +86,13 @@ trait Has_WP_Post {
 
     }
 
-    public function get_excerpt () {
+    public function get_excerpt ($force_trim = false) {
 
-        return get_the_excerpt($this->wp_post);
+        $excerpt = get_the_excerpt($this->wp_post);
+
+        if ($force_trim) $excerpt = wp_trim_words($excerpt, apply_filters('excerpt_length', (int) _x('55', 'excerpt_length')), apply_filters('excerpt_more', ' ' . '[&hellip;]'));
+
+        return $excerpt;
 
     }
 
