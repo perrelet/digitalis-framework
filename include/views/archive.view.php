@@ -13,6 +13,7 @@ abstract class Archive extends View {
         'id'            => 'digitalis-archive',
         'classes'       => [],
         'query_vars'    => [],
+        'skip_main'     => false,
         'posts_only'    => false,
         'items'         => false,
         'no_posts'      => 'No posts found.',
@@ -58,7 +59,7 @@ abstract class Archive extends View {
 
     }
 
-    protected static function get_items ($query_vars, &$query) {
+    protected static function get_items ($query_vars, &$query, $skip_main) {
 
         // ..
 
@@ -131,7 +132,7 @@ abstract class Archive extends View {
 
         $query;
 
-        if (static::$items = ($p['items'] ? $p['items'] : static::get_items($p['query_vars'], $query))) {
+        if (static::$items = ($p['items'] ? $p['items'] : static::get_items($p['query_vars'], $query, $p['skip_main']))) {
 
             static::render_items(static::$items);
 
