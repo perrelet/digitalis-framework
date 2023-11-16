@@ -88,7 +88,7 @@ abstract class Post_Type extends Singleton {
 
         global $wp_query;
 
-        if ($this->model_class && $wp_query && $wp_query->is_single && $this->is_main_query($wp_query)) {
+        if ($this->model_class && $wp_query && $wp_query->is_singular && $this->is_main_query($wp_query)) {
 
             $call = "{$this->model_class}::get_instance";
 
@@ -233,7 +233,7 @@ abstract class Post_Type extends Singleton {
 
     public function main_query_wrap ($query) {
 
-        if ($this->is_main_query($query) && (is_archive() || is_search() || $query->is_posts_page)) {
+        if ($this->is_main_query($query) && Digitalis_Query::is_multiple($query)) {
 
             $this->main_query($query);
 
@@ -242,7 +242,7 @@ abstract class Post_Type extends Singleton {
     }
 
     public function main_query ($wp_query) {
-
+        
         //$wp_query->query_vars = wp_parse_args(static::get_query_vars(), $wp_query->query_vars);
         //merge_query(static::get_query_vars(), $wp_query);
 
