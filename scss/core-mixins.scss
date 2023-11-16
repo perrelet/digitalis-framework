@@ -199,11 +199,34 @@ $digitalis-stagger-iterations: 12 !default;
 
 // XYZ
 
-@mixin explode {
-    margin-top: $sec-py * -1.5;
-    margin-bottom: $sec-py * -1.5;
+@mixin explode ($scale: 1.5) {
+
+    margin-top:    -1 * $sec-py * $scale;
+    margin-bottom: -1 * $sec-py * $scale;
     position: relative;
     z-index: 1; 
+
+}
+
+@mixin expand-section ($width: 100, $padding: $sec-py) {
+
+    position:       relative;
+    width:          #{1vw * $width};
+    left:           50%;
+    right:          50%;
+    margin-left:    #{-0.5vw * $width};
+    margin-right:   #{-0.5vw * $width};
+    padding-top: 0;
+    padding-bottom: 0;
+
+    > .inner,
+    > .ct-section-inner-wrap {
+ 
+        padding-top:    $padding;
+        padding-bottom: $padding;
+
+    }
+
 }
 
 // ANIMATION STAGGERING
