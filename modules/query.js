@@ -165,17 +165,20 @@ export class Digitalis_Query {
 
     request_posts (data = {}, new_url = false) {
 
-        const form = document.createElement("form");
-        this.elements.form.querySelectorAll('.field-row').forEach(row => {
-            if (!row.hasAttribute('data-field-inactive')) form.appendChild(row.cloneNode(true));
+        let url = new URL(new_url ? new_url : window.location.href);
+
+        const form_data = new FormData(this.elements.form);
+        const filtered = Array.from(form_data.keys()).filter(key => {
+            url.searchParams.delete(key);
+            return !document.getElementById(`${key}-field`).closest(`[data-field-inactive]`);
         });
 
-        const form_data = new FormData(form);
-        const entries = Object.fromEntries(Array.from(form_data.keys(), key => {
+        const entries = Object.fromEntries(Array.from(filtered, key => {
             let val = form_data.getAll(key)
             if (val.length > 1) val = val.filter(v => v !== '0'); // remove dummy checkbox values
-            return [key, val.length > 1 ? val : val.pop()]
+            return [key, val.length > 1 ? val : val.pop()];
         }));
+        
         data = Object.assign(entries, data);
         this.state.form = entries;
 
@@ -188,7 +191,6 @@ export class Digitalis_Query {
 
         // console.log(data);
 
-        let url = new URL(new_url ? new_url : window.location.href);
         if (!data.hasOwnProperty('paged') && url.searchParams.has('paged')) url.searchParams.delete('paged');
 
         let args = {action: this.options.action, data: data, url: url};
