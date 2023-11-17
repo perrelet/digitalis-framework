@@ -40,7 +40,7 @@ class Model {
 
     public static function get_instance ($data = null) {
 
-        $id = static::extract_id($data);
+        $id  = static::extract_id($data);
         $uid = static::extract_uid($id, $data);
 
         if (is_null($uid) || is_null($id)) return null;
@@ -53,8 +53,8 @@ class Model {
             
             if (static::validate($data) && static::validate_id($id)) {
 
-                self::$instances[$class_name][$uid] = new $class_name($id);
-                self::$instances[$class_name][$uid]->init($data);
+                self::$instances[$class_name][$uid] = new $class_name($id, $uid, $data);
+                self::$instances[$class_name][$uid]->init();
 
             } else {
 
@@ -101,18 +101,34 @@ class Model {
     //
 
     protected $id;
+    protected $uid;
+    protected $data;
 
-    public function __construct ($id) {
+    public function __construct ($id, $uid, $data) {
 
-        $this->id = $id;
+        $this->id   = $id;
+        $this->uid  = $uid;
+        $this->data = $data;
 
     }
 
-    public function init ($data = null) {}  // Override me.
+    public function init () {}  // Override me.
 
     public function get_id () {
 
         return $this->id;
+
+    }
+
+    public function get_uid () {
+
+        return $this->uid;
+
+    }
+
+    public function get_data () {
+
+        return $this->data;
 
     }
 
