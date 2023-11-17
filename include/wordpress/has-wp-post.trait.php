@@ -165,7 +165,7 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return update_post_meta($this->wp_post->ID, $key, $value, $prev_value);
+        return $this->is_new() ? false : update_post_meta($this->wp_post->ID, $key, $value, $prev_value);
 
     }
 
@@ -297,7 +297,7 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     public function update_field ($selector, $value) {
 
-        return update_field($selector, $value, $this->wp_post->ID);
+        return $this->is_new() ? false : update_field($selector, $value, $this->wp_post->ID);
         
     }
 
