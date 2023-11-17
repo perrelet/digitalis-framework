@@ -36,7 +36,7 @@ trait Autoloader {
     
         if (!is_file($path)) return false;
 
-        include $path;
+        include_once $path;
 
         if (!$class_name = $this->extract_class_name($path)) return false;
         if (!class_exists($class_name))                      return false;
