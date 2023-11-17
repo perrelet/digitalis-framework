@@ -49,18 +49,18 @@ class Order_Item extends Model {
     protected $item;
     protected $siblings;
 
-    public function init ($item = null) {
+    public function init () {
 
         if ($item instanceof WC_Order_Item) {
 
-            $this->item = $item;
+            $this->item = $this->data;
 
         } else {
 
             // https://github.com/woocommerce/woocommerce/issues/35548
             // https://github.com/woocommerce/woocommerce/issues/30603
 
-            $this->item = new WC_Order_Item_Product($item);
+            $this->item = new WC_Order_Item_Product($this->data);
 
         }
 
