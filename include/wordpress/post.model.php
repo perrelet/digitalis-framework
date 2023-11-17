@@ -2,6 +2,7 @@
 
 namespace Digitalis;
 
+use \stdClass;
 use \WP_Post;
 use \WP_Query;
 
@@ -14,22 +15,33 @@ abstract class Post extends Model {
 
     public function is_post () { return true; }
 
-    public static function extract_id ($id = null) {
+    public static function extract_id ($data = null) {
 
         global $post;
 
-        if (is_null($id) && $post)     return $post->ID;
-        if ($id instanceof WP_Post)    return $id->ID;
+        if (is_null($data) && $post)   return $post->ID;
+        if ($data instanceof WP_Post)  return $data->ID;
+        if ($data instanceof stdClass) return 'new';
 
-        return parent::extract_id($id);
+        return parent::extract_id($data);
+
+    }
+
+    public static function extract_uid ($id, $data = null) {
+
+        if ($id == 'new') return random_int(10000000, PHP_INT_MAX);
+
+        return parent::extract_uid($id, $data);
 
     }
 
     public static function validate_id ($id) {
 
-        return (!static::$post_type || (get_post_type($id) == static::$post_type));
+        return (!static::$post_type || (get_post_type($id) == static::$post_type) || ($id == 'new'));
 
-    } 
+    }
+
+    //
 
     public static function get_query_vars () {
 
@@ -87,11 +99,21 @@ abstract class Post extends Model {
 
     //
 
-    public function __construct ($post_id) {
+    public function __construct ($post_id, $uid, $data) {
 
-        $this->set_post($post_id);
+        parent::__construct($post_id, $uid, $data);
 
-        parent::__construct($post_id);
+        if ($post_id == 'new') {
+
+            if ($data instanceof stdClass) $data->ID = $this->uid;
+
+            $this->set_post($post_id, $data);
+
+        } else {
+
+            $this->set_post($post_id);
+
+        }
 
     }
 

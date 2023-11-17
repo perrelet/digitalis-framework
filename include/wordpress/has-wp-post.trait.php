@@ -2,9 +2,10 @@
 
 namespace Digitalis;
 
+use \stdClass;
 use \WP_Post;
 
-trait Has_WP_Post {
+trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (when would we ever need this elsewhere?)
 
     protected $id;
     protected $post_id;
@@ -12,19 +13,37 @@ trait Has_WP_Post {
 
     protected function is_post () { return true; } // Override as required
 
-    public function set_post ($post_id) {
+    public function set_post ($post, $data = null) {
 
-        if ($post_id instanceof WP_Post) $post_id = $post_id->ID;
+        $post_id = false;
 
-        $this->post_id = $post_id;
-        if ($this->is_post()) $this->id = $post_id;
-        $this->wp_post = WP_Post::get_instance($post_id);
+        if (is_int($post))                { $post_id = $post;       }
+        elseif (is_string($post))         { $post_id = (int) $post; }
+        elseif ($post instanceof WP_Post) { $post_id = $post->ID;   }
+
+        if ($post_id) {
+
+            $this->post_id = $post_id;
+            $this->wp_post = WP_Post::get_instance($post_id);
+
+            if ($this->is_post()) $this->id = $post_id;
+
+        } elseif ($post == 'new' && ($data instanceof stdClass)) {
+
+            $this->post_id = $post;
+            $this->wp_post = new WP_Post($data);
+
+            wp_cache_set($data->ID, $this->wp_post, 'posts');
+
+            if ($this->is_post()) $this->id = $post_id;
+
+        }
 
     }
 
     public function get_id() {
 
-        return $this->post_id;
+        return $this->wp_post->ID; // Pass the id directly from the wp_post instance to handle new posts. ($this->wp_post->ID = random integer, $this->post_id = 'new')
 
     }
 
@@ -34,7 +53,13 @@ trait Has_WP_Post {
 
     }
 
-    //
+    public function is_new () {
+    
+        return ($this->post_id == 'new');
+    
+    }
+
+    // Access Methods
 
     public function get_slug () {
         
@@ -104,44 +129,50 @@ trait Has_WP_Post {
 
     public function has_image () {
         
-        return has_post_thumbnail($this->post_id);
+        return has_post_thumbnail($this->wp_post->ID);
         
     }
 
     public function get_image ($size = 'post-thumbnail', $attr = '') {
 
-        return get_the_post_thumbnail($this->post_id, $size, $attr);
+        return get_the_post_thumbnail($this->wp_post->ID, $size, $attr);
 
     }
 
     public function get_image_url ($size = 'post-thumbnail') {
 
-        return get_the_post_thumbnail_url($this->post_id, $size);
+        return get_the_post_thumbnail_url($this->wp_post->ID, $size);
 
     }
 
     public function get_image_id () {
         
-        return get_post_thumbnail_id($this->post_id);
+        return get_post_thumbnail_id($this->wp_post->ID);
         
     }
 
     public function get_attachments ($post_mime_type) {
 
-        return get_attached_media($post_mime_type, $this->post_id);
+        return get_attached_media($post_mime_type, $this->wp_post->ID);
 
     }
 
     public function get_meta ($key = '', $single = false) {
 
-        return get_post_meta($this->post_id, $key, $single);
+        return get_post_meta($this->wp_post->ID, $key, $single);
 
     }
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return update_post_meta($this->post_id, $key, $value, $prev_value);
+        return update_post_meta($this->wp_post->ID, $key, $value, $prev_value);
 
+    }
+
+    public function update_metas ($data) {
+    
+        if ($data) foreach ($data as $key => $value) $this->update_meta($key, $value);
+    
     }
 
     public function get_permalink ($leavename = false) {
@@ -176,6 +207,8 @@ trait Has_WP_Post {
 
     public function get_title () {
 
+        //if (isset($_GET[9495037918493])) dprint($this->wp_post);
+
         return get_the_title($this->wp_post);
 
     }
@@ -206,19 +239,19 @@ trait Has_WP_Post {
 
     public function get_terms ($taxonomy) {
 
-        return get_the_terms($this->post_id, $taxonomy);
+        return get_the_terms($this->wp_post->ID, $taxonomy);
 
     }
 
     public function has_term ($term = '', $taxonomy = '') {
         
-        return has_term($term, $taxonomy, $this->post_id);
+        return has_term($term, $taxonomy, $this->wp_post->ID);
         
     }
 
     public function is_sticky () {
 
-        return is_sticky($this->post_id);
+        return is_sticky($this->wp_post->ID);
 
     }
 
@@ -248,11 +281,11 @@ trait Has_WP_Post {
         
     }
 
-    // ACF
+    // ACF Methods
 
     public function get_field ($selector, $format_value = true) {
 
-        return get_field($selector, $this->post_id, $format_value);
+        return get_field($selector, $this->wp_post->ID, $format_value);
 
     }
 
@@ -264,8 +297,16 @@ trait Has_WP_Post {
 
     public function update_field ($selector, $value) {
 
-        return update_field($selector, $value, $this->post_id);
+        return update_field($selector, $value, $this->wp_post->ID);
         
     }
+
+    public function update_fields ($data) {
+    
+        if ($data) foreach ($data as $selector => $value) $this->update_field($selector, $value);
+    
+    }
+
+    // CRUD Methods
 
 }
