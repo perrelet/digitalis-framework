@@ -1,6 +1,6 @@
 ## Breaking Changes
 
-|Commit|Class|Description|Change|
+|Commit&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|Class|Description|Change|
 |---|---|---|---|
 |[17-11-2023](/../../commit/7d148430bf9f9306aa9471e6b65a8767ac452e7f)|`Digitalis\Model`|New method signature|`public function __construct ($id, $uid, $data)`|
 |[17-11-2023](/../../commit/7d148430bf9f9306aa9471e6b65a8767ac452e7f)|`Digitalis\Model`|New method signature|`Digitalis\Model` | New method signature | `public function init ()`|
