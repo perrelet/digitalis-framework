@@ -9,11 +9,11 @@ class Order_Item extends Model {
 
     protected static $product_type = null;
 
-    public static function extract_id ($id = null) {
+    public static function extract_id ($data = null) {
 
-        if ($id instanceof WC_Order_Item) return $id->get_id();
+        if ($data instanceof WC_Order_Item) return $data->get_id();
 
-        return parent::extract_id($id);
+        return parent::extract_id($data);
 
     }
 
@@ -51,7 +51,9 @@ class Order_Item extends Model {
 
     public function init () {
 
-        if ($item instanceof WC_Order_Item) {
+        parent::init();
+
+        if ($this->data instanceof WC_Order_Item) {
 
             $this->item = $this->data;
 

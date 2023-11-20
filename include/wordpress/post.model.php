@@ -2,9 +2,9 @@
 
 namespace Digitalis;
 
-use \stdClass;
-use \WP_Post;
-use \WP_Query;
+use stdClass;
+use WP_Post;
+use WP_Query;
 
 abstract class Post extends Model {
 
@@ -14,6 +14,12 @@ abstract class Post extends Model {
     protected static $post_type_class = false;      // Override me - Used when querying the model. With this we can get the main query args from the CPT.
 
     public function is_post () { return true; }
+
+    public static function process_data (&$data) {
+
+        if (is_array($data)) $data = (object) $data;
+
+    }
 
     public static function extract_id ($data = null) {
 
@@ -29,7 +35,7 @@ abstract class Post extends Model {
 
     public static function extract_uid ($id, $data = null) {
 
-        if ($id == 'new') return random_int(10000000, PHP_INT_MAX);
+        if ($id == 'new') return random_int(1000000000, PHP_INT_MAX);
 
         return parent::extract_uid($id, $data);
 
@@ -37,7 +43,10 @@ abstract class Post extends Model {
 
     public static function validate_id ($id) {
 
-        return (!static::$post_type || (get_post_type($id) == static::$post_type) || ($id == 'new'));
+        if ($id == 'new')                                      return true;
+        if (get_post_type($id) != static::$post_type)          return false;
+
+        return (is_int($id) && ($id > 0));
 
     }
 
@@ -99,19 +108,23 @@ abstract class Post extends Model {
 
     //
 
-    public function __construct ($post_id, $uid, $data) {
+    public function init () {
 
-        parent::__construct($post_id, $uid, $data);
+        parent::init();
 
-        if ($post_id == 'new') {
+        if ($this->id == 'new') {
 
-            if ($data instanceof stdClass) $data->ID = $this->uid;
+            if (!$this->data) $this->data = new stdClass();
 
-            $this->set_post($post_id, $data);
+            $this->data->ID           = $this->uid;
+            $this->data->post_type    = static::$post_type;
+            if (!property_exists($this->data, 'post_content')) $this->data->post_content = '';
+
+            $this->set_post('new', $this->data);
 
         } else {
 
-            $this->set_post($post_id);
+            $this->set_post($this->id);
 
         }
 
