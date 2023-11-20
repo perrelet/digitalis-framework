@@ -170,7 +170,8 @@ export class Digitalis_Query {
         const form_data = new FormData(this.elements.form);
         const filtered = Array.from(form_data.keys()).filter(key => {
             url.searchParams.delete(key);
-            return !document.getElementById(`${key}-field`).closest(`[data-field-inactive]`);
+            const field = this.elements.form.querySelector(`[name='${key}']`);
+            return !field.closest(`[data-field-inactive]`);
         });
 
         const entries = Object.fromEntries(Array.from(filtered, key => {
