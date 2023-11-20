@@ -13,7 +13,7 @@ abstract class Singleton {
 
     public static function get_class_name () {
 
-        return apply_filters('Digitalis/Class/' . static::class, static::class);
+        return apply_filters('Digitalis/Class/' . str_replace('\\', '/', ltrim(static::class, '\\')), static::class);
 
     }
 
