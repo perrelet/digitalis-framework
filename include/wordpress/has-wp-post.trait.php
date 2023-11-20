@@ -207,8 +207,6 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     public function get_title () {
 
-        //if (isset($_GET[9495037918493])) dprint($this->wp_post);
-
         return get_the_title($this->wp_post);
 
     }
@@ -308,5 +306,40 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
     }
 
     // CRUD Methods
+
+    public function save ($post_array = [], $fire_after_hooks = true) {
+
+        $post_array = wp_parse_args($post_array, get_object_vars($this->wp_post));
+
+        if ($this->is_new() && isset($post_array['ID'])) unset($post_array['ID']);
+
+        //dprint("post_array");
+        //dprint($post_array);
+
+        $tax_input = $post_array['tax_input'] ?? []; // We need to process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
+        $post_array['tax_input'] = '';
+
+        $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
+
+        if ($post_id && !is_wp_error($post_id)) {
+
+            if ($tax_input) foreach ($tax_input as $taxonomy => $terms) wp_set_post_terms($post_id, $terms, $taxonomy, $post_array['append_terms'] ?? false);
+
+            $this->post_id     = $post_id;
+            $this->wp_post->ID = $post_id;
+
+            if ($this->is_post()) $this->id = $post_id;
+
+        } 
+
+        return $post_id;
+
+    }
+
+    public function delete ($force_delete = false) {
+    
+        wp_delete_post($this->wp_post->ID, $force_delete);
+    
+    }
 
 }
