@@ -136,6 +136,8 @@ class Digitalis_Query extends WP_Query {
 
     public static function is_multiple ($wp_query = null) {
 
+        if (wp_doing_ajax() && (substr($_REQUEST['action'] ?? null, 0, 5) == 'query')) return true;
+
         if (is_null($wp_query)) global $wp_query;
     
         return $wp_query && ($wp_query->is_archive() || $wp_query->is_search() || $wp_query->is_posts_page);
