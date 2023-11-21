@@ -563,4 +563,11 @@ abstract class Post_Type extends Singleton {
 
     }
 
+    protected function is_admin_edit () {
+
+        global $pagenow, $post_type;
+        return (is_admin() && ($post_type == $this->slug) && ($pagenow == 'post.php'));
+
+    }
+
 }
