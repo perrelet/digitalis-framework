@@ -107,6 +107,18 @@ abstract class Admin_Table extends Feature {
 
                         break;
 
+                    case 'field':
+
+                        $filter = wp_parse_args($filter, [
+                            'field' => Input::class,
+                            'key'   => $name,
+                            'wrap'  => false,
+                        ]);
+                        $this->_filters[] = $filter;
+
+                        break;
+
+
                 }
 
             }
@@ -224,6 +236,10 @@ abstract class Admin_Table extends Feature {
                     $this->render_acf_filter($filter);
                     break;
 
+                case 'field':
+                    
+                    $this->render_field_filter($filter);
+                    break;
             }
 
         }
@@ -275,6 +291,13 @@ abstract class Admin_Table extends Feature {
     
     }
 
+    public function render_field_filter ($filter) {
+    
+        $call = $filter['field'] . "::render";
+        if (is_callable($call)) call_user_func($call, $filter);
+    
+    }
+
     public function before_render_filters () {}
 
     public function after_render_filters () {}
@@ -285,10 +308,8 @@ abstract class Admin_Table extends Feature {
 
         $filters = $this->get_filters();
 
-        $qv = new \Digitalis\Query_Vars([
-            'meta_query' => $query->meta_query ? $query->meta_query : [],
-            //'tax_query'  => $query->meta_query ? $query->meta_query : [],
-        ]);
+        $qv = new \Digitalis\Query_Vars();
+        $qv->merge($query->query_vars);
 
         if ($filters) foreach ($filters as $name => $filter) {
 
