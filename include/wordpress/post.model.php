@@ -28,8 +28,9 @@ abstract class Post extends Model {
         if (is_null($data) && $post)   return $post->ID;
         if ($data instanceof WP_Post)  return $data->ID;
         if ($data instanceof stdClass) return 'new';
+        if ($data == 'new')            return 'new';
 
-        return parent::extract_id($data);
+        return (int) parent::extract_id($data);
 
     }
 
@@ -114,7 +115,7 @@ abstract class Post extends Model {
 
         if ($this->id == 'new') {
 
-            if (!$this->data) $this->data = new stdClass();
+            if (!is_object($this->data)) $this->data = new stdClass();
 
             $this->data->ID           = $this->uid;
             $this->data->post_type    = static::$post_type;
