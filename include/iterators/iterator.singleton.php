@@ -70,6 +70,12 @@ abstract class Iterator extends Singleton {
 
     }
 
+    public function cron_condition () {
+    
+        return $this->cron;
+    
+    }
+
     //
 
     public function init () {
@@ -77,7 +83,7 @@ abstract class Iterator extends Singleton {
         add_action('admin_menu', [$this, 'add_admin_page'], 99);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
 
-        if ($this->cron) {
+        if ($this->cron_condition()) {
 
             $cron_action_start = $this->get_option_key() . '_start';
             $cron_action_loop  = $this->get_option_key() . '_loop';
@@ -374,6 +380,7 @@ abstract class Iterator extends Singleton {
         if (is_null($this->store)) {
 
             $this->store = get_option($this->get_option_key(), $this->default_store);
+            $this->pre_get_store($this->store);
 
         }
 
@@ -389,9 +396,14 @@ abstract class Iterator extends Singleton {
         $this->store['log']    = array_merge($this->store['log'], $this->log);
         $this->store['errors'] = array_merge($this->store['errors'], $this->errors);
 
+        $this->pre_update_store($store);
+
         update_option($this->get_option_key(), $this->store, false);
 
     }
+
+    public function pre_get_store (&$store) {}
+    public function pre_update_store (&$store) {}
 
     public function get_index () {
     
