@@ -9,6 +9,7 @@ define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/inherit-props.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/has-instances.trait.php';
