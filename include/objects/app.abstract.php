@@ -11,6 +11,9 @@ abstract class App extends Singleton {
     protected $path;
     protected $url;
 
+    protected $autoload       = [];
+    protected $admin_autoload = [];
+
     public function __construct () {
 
         $reflector = new ReflectionClass(static::class);
@@ -22,32 +25,63 @@ abstract class App extends Singleton {
 
     }
 
+    protected function filter_autoloads (&$autoloads) {
+
+        // ...
+
+    }
+
+    protected function filter_admin_autoloads (&$autoloads) {
+
+        // ...
+
+    }
+
+    protected function &get_autoloads () {
+
+        $autoloads = wp_parse_args($this->autoload, [
+            'utils'                     => false,
+            'post-types'                => 'get_instance',
+            'taxonomies'                => 'get_instance',
+            'features'                  => 'load',
+            'integrations'              => 'get_instance',
+            'models'                    => false,
+            'views'                     => false,
+            'acf-blocks'                => true,
+            'shortcodes'                => true,
+            'routes'                    => function () { return ['get_instance']; }, // ['get_instance'], // 'get_instance',
+            'woocommerce/account-pages' => 'get_instance',
+            'woocommerce/product-types' => 'get_instance',
+        ]);
+
+        $this->filter_autoloads($autoloads);
+
+        return $autoloads;
+
+    }
+
+    protected function get_admin_autoloads () {
+
+        $autoloads =  wp_parse_args($this->admin_autoload, [
+            'admin/features' => 'load',
+        ]);
+
+        $this->filter_admin_autoloads($autoloads);
+
+        return $autoloads;
+
+    }
+
     public function load () {
-    
-        $this->autoload($this->path . 'utils', false);
-        $this->autoload($this->path . 'post-types');
-        $this->autoload($this->path . 'taxonomies');
-        $this->autoload($this->path . 'features', 'load');
-        $this->autoload($this->path . 'integrations');
-        $this->autoload($this->path . 'models', false);
-        $this->autoload($this->path . 'views', false);
-        $this->autoload($this->path . 'acf-blocks', true);
-        $this->autoload($this->path . 'shortcodes', true);
-        $this->autoload($this->path . 'routes');
 
-        if (defined('WC_PLUGIN_FILE')) {
-
-            if (defined('WC_PLUGIN_FILE')) $this->autoload($this->path . 'woocommerce/account-pages');
-            if (defined('WC_PLUGIN_FILE')) $this->autoload($this->path . 'woocommerce/product-types'); // product-type has an activation hoook... better soln?
-
-        }
+        $this->autoload($this->get_autoloads());
     
     }
 
     public function load_admin () {
-    
+
         $this->autoload($this->path . 'admin', 'get_instance', false);
-        $this->autoload($this->path . 'admin/features', 'load');
+        $this->autoload($this->get_admin_autoloads());
     
     }
 
