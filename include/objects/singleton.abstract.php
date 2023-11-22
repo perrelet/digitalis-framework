@@ -2,14 +2,15 @@
 
 namespace Digitalis;
 
+use Exception;
+
 abstract class Singleton {
 
     private static $instances = [];
 
-    protected function __construct() { }
-    protected function __clone() { }
-
-    public function __wakeup(){ throw new \Exception("You may not dream me into existence."); }
+    protected function __construct() {}
+    public function __clone()        { throw new Exception("One for all and all for one."); }
+    public function __wakeup()       { throw new Exception("You may not dream me into existence."); }
 
     public static function get_class_name () {
 
@@ -22,9 +23,10 @@ abstract class Singleton {
         $class_name = static::get_class_name();
 
         if (!isset(self::$instances[$class_name])) {
+
             self::$instances[$class_name] = new static();
-            //self::$instances[$class_name]->run();
             self::$instances[$class_name]->init();
+
         }
 
         return self::$instances[$class_name];
@@ -37,7 +39,6 @@ abstract class Singleton {
         
     }
 
-    //public function run () {} // Deprecated
     public function init () {} // Override me :)
 
 }
