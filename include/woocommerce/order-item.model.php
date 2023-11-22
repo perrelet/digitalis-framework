@@ -49,9 +49,9 @@ class Order_Item extends Model {
     protected $item;
     protected $siblings;
 
-    public function init () {
+    public function __construct ($data = null, $uid = null, $id = null) {
 
-        parent::init();
+        parent::__construct($data, $uid, $id);
 
         if ($this->data instanceof WC_Order_Item) {
 

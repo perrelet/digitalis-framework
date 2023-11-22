@@ -58,9 +58,7 @@ class Model {
             
             if (static::validate($data) && static::validate_id($id)) {
 
-                $model = new $class_name($data, true);
-                $model->id  = $id;
-                $model->uid = $uid;
+                $model = new $class_name($data, $uid, $uid);
                 $model->init();
 
                 self::$instances[$class_name][$uid] = $model;
@@ -113,25 +111,19 @@ class Model {
     protected $id;
     protected $uid;
 
-    public function __construct ($data = null, $factory_instance = false) {
+    public function __construct ($data = null, $uid = null, $id = null) {
 
-        if ($factory_instance) {
-
-            $this->data = $data;
-
-        } else {
+        if (is_null($uid)) {
 
             static::process_data($data);
-            $this->data = $data;
-            $this->id   = static::extract_id($this->data);
-            $this->uid  = static::extract_uid($this->id, $this->data);
-
-            if (!static::validate($this->data))  throw new Exception("Invalid \$data was provided for the instantiation of a '" . static::class . "' model:\n" . print_r($this->data, true));
-            if (!static::validate_id($this->id)) throw new Exception("An invalid \$id ('{$this->id}') was provided for the instantiation of a '" . static::class . "' model.");
-
-            $this->init();
+            $id  = static::extract_id($data);
+            $uid = static::extract_uid($id, $data);
 
         }
+
+        $this->data = $data;
+        $this->uid  = $uid;
+        $this->id   = $id;
 
     }
 
