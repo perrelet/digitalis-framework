@@ -10,9 +10,9 @@ class User_Taxonomy extends Taxonomy {
     protected $singular     = 'User Tag';
     protected $plural       = 'User Tags';
 
-    public function __construct ($flush = false) {
+    public function __construct () {
 
-        parent::__construct($flush);
+        parent::__construct();
 
         add_action('admin_menu',                            [$this, 'taxonomy_page']);
         add_filter("manage_edit-{$this->slug}_columns",     [$this, 'taxonomy_columns']);

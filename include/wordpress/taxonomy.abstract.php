@@ -13,9 +13,9 @@ abstract class Taxonomy extends Singleton {
 
     protected $taxonomy;
 
-    public function __construct ($flush = false) {
+    public function __construct () {
 
-        if ($flush) flush_rewrite_rules();
+        // if ($flush) flush_rewrite_rules();
 
         add_action('init', [$this, 'register'], 0);
 
@@ -30,12 +30,11 @@ abstract class Taxonomy extends Singleton {
 
     public function register () {
 
-        $args               = $this->get_args($this->get_default_args());
+        $args            = $this->get_args($this->get_default_args());
+        $args['rewrite'] = $this->get_rewrite($this->get_default_rewrite());
+        $args['labels']  = $this->get_labels($this->get_default_labels());
 
-        $args['rewrite']    = $this->get_rewrite($this->get_default_rewrite());
-        $args['labels']     = $this->get_labels($this->get_default_labels());
-
-        $args = apply_filters("Digitalis/Taxonomy/" . static::class . "/Args", $args);
+        $args = apply_filters("Digitalis/Taxonomy/" . str_replace('\\', '/', ltrim(static::class, '\\')) . "/Args", $args);
 
         $this->taxonomy = register_taxonomy(
             $this->slug,
@@ -89,8 +88,7 @@ abstract class Taxonomy extends Singleton {
 
     protected function get_default_labels () {
 
-        return apply_filters("Digitalis/Taxonomy/" . static::class . "/Labels",
-        [
+        return [
             'name'                          => __( $this->singular,                         $this->text_domain ),
             'singular_name'                 => __( $this->singular,                         $this->text_domain ),
             'menu_name'                     => __( $this->plural,                           $this->text_domain ),
@@ -111,7 +109,7 @@ abstract class Taxonomy extends Singleton {
             'no_terms'                      => __( "No {$this->plural}",                    $this->text_domain ),
             'items_list'                    => __( "List of {$this->plural}",               $this->text_domain ),
             'items_list_navigation'         => __( "{$this->plural} list navigation",       $this->text_domain ),
-        ]);
+        ];
 
     }
 
