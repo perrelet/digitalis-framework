@@ -2,11 +2,25 @@
 
 namespace Digitalis;
 
+use Closure;
 use ReflectionClass;
 
 trait Autoloader {
 
-    public function autoload ($path, $instantiate = 'get_instance', $recursive = true, $ext = 'php', $objs = []) {
+    public function autoload ($path, $instantiate = 'get_instance', $recursive = true, $ext = 'php', &$objs = []) {
+
+        if (is_array($path)) return $this->autoload_multiple($path, $objs);
+
+        if ($instantiate instanceof Closure) $instantiate = $instantiate();
+
+        if (is_array($instantiate)) {
+
+            if (isset($instantiate[3])) $objs        = $instantiate[3];
+            if (isset($instantiate[2])) $ext         = $instantiate[2];
+            if (isset($instantiate[1])) $recursive   = $instantiate[1];
+            if (isset($instantiate[0])) $instantiate = $instantiate[0];
+
+        }
 
         if (!is_dir($path = realpath($path))) return $objs;
 
@@ -30,6 +44,28 @@ trait Autoloader {
 
         return $objs;
     
+    }
+
+    public function autoload_multiple ($autoloads, &$objs = []) {
+    
+        if ($autoloads) foreach ($autoloads as $directory => $instantiation) {
+
+            if (is_null($instantiation)) $instantiation = 'get_instance';
+
+            if (explode('/', $directory)[0] == 'woocommerce') {
+
+                if (defined('WC_PLUGIN_FILE')) $objs = array_merge($objs, $this->autoload($this->path . $directory, $instantiation));
+
+            } else {
+
+                $objs = array_merge($objs, $this->autoload($this->path . $directory, $instantiation));
+
+            }
+
+        }
+
+        return $objs;
+
     }
 
     public function load_class ($path, $instantiate = true) {
