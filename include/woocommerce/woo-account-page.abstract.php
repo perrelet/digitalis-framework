@@ -69,21 +69,14 @@ abstract class Woo_Account_Page extends Singleton {
 
     //
 
-    public function __construct () {
+    public static function static_init () {
 
-        self::$pages[$this->slug] = $this;
-
-        if (is_null($this->endpoint)) $this->endpoint = $this->slug;
-
-        add_action('init', [$this, 'init']);
-        add_action('init', [$this, 'add_endpoints']);
-        add_action('parse_request', [$this, 'maybe_add_permission_notice']);
-        add_filter('woocommerce_get_query_vars', [$this, 'get_query_vars']);
-        add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
+        add_filter('woocommerce_get_query_vars',     [static::class, 'get_query_vars_static']);
+        add_filter('woocommerce_account_menu_items', [static::class, 'account_menu_items_static']);
 
     }
 
-    public function init () {
+    public function __construct () {
 
         if (!self::$static_init) {
             
@@ -92,21 +85,19 @@ abstract class Woo_Account_Page extends Singleton {
 
         }
 
-        if ($parent = $this->get_parent_page()) {
+        self::$pages[$this->slug] = $this;
+        if (is_null($this->endpoint)) $this->endpoint = $this->slug;
 
-            $parent->add_child($this);
-
-        }
+        if ($parent = $this->get_parent_page()) $parent->add_child($this);
 
         $position = ($parent) ? ($parent->get_position() + $this->position * 0.01) : $this->position;
         self::$page_positions[$this->slug] = $position;
 
-    }
-
-    public static function static_init () {
-
-        add_filter('woocommerce_get_query_vars', [__CLASS__, 'get_query_vars_static']);
-        add_filter('woocommerce_account_menu_items', [__CLASS__, 'account_menu_items_static']);
+        add_action('init',                        [$this, 'init']);
+        add_action('init',                        [$this, 'add_endpoints']);
+        add_action('parse_request',               [$this, 'maybe_add_permission_notice']);
+        add_filter('woocommerce_get_query_vars',  [$this, 'get_query_vars']);
+        add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
 
     }
 
