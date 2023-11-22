@@ -11,7 +11,7 @@ abstract class Product_Type extends Integration {
     
     protected $text_domain = 'default';
 
-    public function __construct() {
+    public function run () {
 
         Task_Handler::get_instance()->add_task("install_product_{$this->slug}", [$this, 'install_product']);
 
@@ -26,11 +26,7 @@ abstract class Product_Type extends Integration {
 
         add_action( "woocommerce_{$this->slug}_add_to_cart", function() { do_action('woocommerce_simple_add_to_cart'); });
 
-        $this->init();
-
     }
-
-    public function init () {}
 
     public function install_product () {
 
