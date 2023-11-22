@@ -8,7 +8,7 @@ class Builder_Manager extends Singleton {
 
     protected $builders = null;
 
-    public function init () {
+    public function __construct () {
         
         if (did_action('plugins_loaded')) {
             $this->load_builders();

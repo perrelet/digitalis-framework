@@ -28,7 +28,7 @@ abstract class Cron_Scheduler extends Singleton {
     // 
     // }
 
-    public function init () {
+    public function __construct () {
     
         add_filter('cron_schedules', [$this, 'schedules']);
 

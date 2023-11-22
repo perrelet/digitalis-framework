@@ -22,7 +22,7 @@ abstract class Post_Type extends Singleton {
     protected $post_type;
     protected $removed_supports = [];
 
-    public function init () {
+    public function __construct () {
 
         //if ($flush) flush_rewrite_rules();
         
