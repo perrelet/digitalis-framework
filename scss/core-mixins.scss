@@ -11,6 +11,18 @@ $digitalis-stagger-iterations: 12 !default;
     flex-direction: row;
     width: 100%;
 
+    > *:first-child {
+
+        margin-right: $digitalis-column-padding;
+
+    }
+
+    > *:last-child {
+
+        margin-left: $digitalis-column-padding;
+
+    }
+
     > *:first-child,
     > *:last-child {
 
@@ -19,12 +31,12 @@ $digitalis-stagger-iterations: 12 !default;
         > *:first-child { margin-top: 0; }
 		> *:last-child { margin-bottom: 0; }
     
-        &:first-child {
+        /* &:first-child {
             margin-right: $digitalis-column-padding;
         }
         &:last-child {
             margin-left: $digitalis-column-padding;
-        }
+        } */
 
     }
 
