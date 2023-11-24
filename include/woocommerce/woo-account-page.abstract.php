@@ -12,6 +12,7 @@ abstract class Woo_Account_Page extends Singleton {
 
     protected $active = true;
     protected $hidden = false;
+    protected $render = true;
     protected $capability = false;
     protected $position = 0;
     protected $parent = false;
@@ -72,7 +73,7 @@ abstract class Woo_Account_Page extends Singleton {
     public static function static_init () {
 
         add_filter('woocommerce_get_query_vars',     [static::class, 'get_query_vars_static']);
-        add_filter('woocommerce_account_menu_items', [static::class, 'account_menu_items_static']);
+        add_filter('woocommerce_account_menu_items', [static::class, 'account_menu_items_static'], PHP_INT_MAX - 1);
 
     }
 
@@ -91,13 +92,14 @@ abstract class Woo_Account_Page extends Singleton {
         if ($parent = $this->get_parent_page()) $parent->add_child($this);
 
         $position = ($parent) ? ($parent->get_position() + $this->position * 0.01) : $this->position;
+
         self::$page_positions[$this->slug] = $position;
 
         add_action('init',                        [$this, 'init']);
         add_action('init',                        [$this, 'add_endpoints']);
         add_action('parse_request',               [$this, 'maybe_add_permission_notice']);
         add_filter('woocommerce_get_query_vars',  [$this, 'get_query_vars']);
-        add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
+        if ($this->render) add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
 
     }
 
@@ -298,10 +300,8 @@ abstract class Woo_Account_Page extends Singleton {
 
         }
 
-        self::$page_positions = array_merge(self::$page_positions, $positions);
+        self::$page_positions = wp_parse_args(self::$page_positions, $positions);
         asort(self::$page_positions, SORT_NUMERIC);
-
-        //dprint(self::$page_positions);
 
         $items = [];
 
@@ -312,6 +312,7 @@ abstract class Woo_Account_Page extends Singleton {
                 $visible = true;
 
                 if ($page->is_hidden() || !$page->is_active() || !$page->can_access()) $visible = false;
+
                 if ($visible && ($parent = $page->get_parent_page()) && $parent->get_collapsable() && !$page->is_open()) $visible = false;
 
                 if ($visible) $items[$page->get_endpoint()] = $page->get_title();
