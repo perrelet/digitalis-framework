@@ -75,6 +75,8 @@ abstract class Post_Type extends Singleton {
 
         if ($this->removed_supports) $args['supports'] = array_diff($args['supports'], $this->removed_supports);
 
+        $this->filter_args($args);
+
         $args = apply_filters("Digitalis/Post_Type/" . static::class . "/Args", $args);
 
         $this->post_type = register_post_type(
@@ -113,7 +115,13 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    protected function get_args ($args) {           // You may wish to override this...
+    protected function filter_args (&$args) {
+    
+        // ...
+    
+    }
+
+    protected function get_args ($args) {
 
         return $args;
 
