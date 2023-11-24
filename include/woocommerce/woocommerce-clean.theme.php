@@ -13,13 +13,16 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
     protected $template_overrides = [];
 
     protected $page_icons = [
-        'dashboard'         => 'profile-circle',
-        'orders'            => 'cube',
-        'downloads'         => 'download',
-        'edit-address'      => 'home-alt-slim-horiz',
-        'payment-methods'   => 'card-shield',
-        'edit-account'      => 'key',
-        'customer-logout'   => 'log-out',
+        'dashboard'                  => 'profile-circle',
+        'orders'                     => 'cube',
+        'downloads'                  => 'download',
+        'edit-address'               => 'home-alt-slim-horiz',
+        'payment-methods'            => 'card-shield',
+        'edit-account'               => 'key',
+        'customer-logout'            => 'log-out',
+        'subscriptions'              => 'clock-rotate-right',
+        'subaccounts'                => 'community',
+        'user-switching-switch-back' => 'long-arrow-up-left',
     ];
 
     protected $default_page_icon = 'circle';
