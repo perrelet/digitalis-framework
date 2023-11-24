@@ -29,7 +29,7 @@ abstract class Bidirectional_Relationship extends Feature {
 
     }
 
-    public function sync_condition ($values, $updated_post_id, $field) {
+    public function sync_condition ($values, $updated_selector, $field) {
 
         return true;
 
@@ -37,109 +37,125 @@ abstract class Bidirectional_Relationship extends Feature {
 
     public function validate ($valid, $values, $field, $input_name) {
 
+        if (($_REQUEST['action'] ?? false) != 'acf/validate_save_post') return $valid;
         if ($valid !== true) return $valid;
 
         $field_name     = $field['name'];
-        $sync_field_key = ($field_name == $this->key_1) ? $this->key_2 : $this->key_1;
-        $limit          = ($field_name == $this->key_1) ? $this->limit_2 : $this->limit_1;
+        $sync_field_key = ($field_name == $this->key_1) ? $this->key_2       : $this->key_1;
+        $sync_post_type = ($field_name == $this->key_1) ? $this->post_type_2 : $this->post_type_1;
+        $limit          = ($field_name == $this->key_1) ? $this->limit_2     : $this->limit_1;
 
-        if (!$limit)                                                                    return true;
-        if (!$this->check_global_flag('validating', $field_name))                       return true;
-        if (!isset($_REQUEST['post_id']) || (!$updated_post_id = $_REQUEST['post_id'])) return true;
-        if (!$this->sync_condition($values, $updated_post_id, $field))                  return true;
-        if (!$this->validate_post_type($field_name, $updated_post_id))                  return true;
+        $this_post_type = ($field_name == $this->key_1) ? $this->post_type_1 : $this->post_type_2;
 
-        $old_values = get_field($field['name'], $updated_post_id, false);
-        if (empty($values))         $values = [];
-		if (empty($old_values))     $old_values = [];
-        if (!is_array($values))     $values = [$values];
-        if (!is_array($old_values)) $values = [$old_values];
+        if (!$limit)                                                                     return true;
+        if (!$this->check_global_flag('validating'))                                     return true;
+        if (!$updated_id = $this->get_request_id())                                      return true;
+        if (!$updated_selector = $this->get_selector($updated_id, $this_post_type))      return true;
+        if (!$this->sync_condition($values, $updated_selector, $field))                  return true;
+        if (!$this->validate_post_type($field_name, $updated_selector))                  return true;
 
-        if ($adding = array_diff($values, $old_values)) foreach ($adding as $post_id) {
+        if ($values) foreach ($values as $id) {
 
-			$sync_ids = get_field($sync_field_key, $post_id, false);
-			if (empty($sync_ids)) $sync_ids = [];
+            $selector = $this->get_selector($id, $sync_post_type);
 
-			if (!in_array($updated_post_id, $sync_ids) && $limit && (count($sync_ids) >= $limit)) {
+            $sync_ids = get_field($sync_field_key, $selector, false);
+            if (empty($sync_ids)) $sync_ids = [];
 
-                return "Unable to update this field because '" . get_the_title($post_id) . "' cannot be related to more than {$limit} items.";
+            if (!in_array($updated_id, $sync_ids) && $limit && (count($sync_ids) >= $limit)) {
+
+                $title = $this->get_object_title($selector);
+                return "Unable to update this field because '{$title}' cannot be related to more than {$limit} items.";
 
             }
 
 		}
 
-        $this->release_global_flag('validating', $field_name);
+        $this->release_global_flag('validating');
 
         return true;
 
     }
 
-    public function sync ($values, $updated_post_id, $field) {
+    public function sync ($values, $updated_selector, $field) {
 
         $field_name     = $field['name'];
         $sync_field_key = ($field_name == $this->key_1) ? $this->key_2 : $this->key_1;
+        $sync_post_type = ($field_name == $this->key_1) ? $this->post_type_2 : $this->post_type_1;
+        $updated_id     = $this->extract_id($updated_selector);
 
-        if (!$this->check_global_flag('updating', $field_name))         return $values;
-        if (!$this->sync_condition($values, $updated_post_id, $field))  return $values;
-        if (!$this->validate_post_type($field_name, $updated_post_id))  return $values;
+        if (!$this->check_global_flag('updating'))                      return $values;
+        if (!$this->sync_condition($values, $updated_selector, $field)) return $values;
+        if (!$this->validate_post_type($field_name, $updated_selector)) return $values;
 
-        $old_values = get_field($field['name'], $updated_post_id, false);
+        $old_values = get_field($field['name'], $updated_selector, false);
+        
         if (empty($values))         $values = [];
 		if (empty($old_values))     $old_values = [];
         if (!is_array($values))     $values = [$values];
         if (!is_array($old_values)) $values = [$old_values];
 
-        $added = array_diff($values, $old_values);
+        $added   = array_diff($values, $old_values);
 		$removed = array_diff($old_values, $values);
 
-        if ($added) foreach ($added as $post_id) {
+        if ($this->log) { 
+            
+            error_log("--- Bidirectional_Relationship : " . static::class . " ---");
+            error_log("> Updated: {$updated_selector}.{$field_name} (#{$updated_id} '" . $this->get_object_title($updated_selector) . "')");
+            error_log("> Fields:  ({$field_name} -> {$sync_field_key})");
+            error_log("> Added:   " . ($added   ? implode(', ', $added)   : '-'));
+            error_log("> Removed: " . ($removed ? implode(', ', $removed) : '-'));
 
-            if (!$this->allow_self && ($post_id == $updated_post_id)) {
+        }
 
-                if (($self_key = array_search($post_id, $values)) !== false) unset($values[$self_key]);
+        if ($added) foreach ($added as $id) {
+
+            $selector = $this->get_selector($id, $sync_post_type);
+
+            if (!$this->allow_self && ($selector == $updated_selector)) {
+
+                if (($self_key = array_search($id, $values)) !== false) unset($values[$self_key]);
+                if ($this->log) error_log(">>> Skipping add {$updated_selector} to {$selector}.{$sync_field_key} (#{$id}): Cannot add to self.");
                 continue;
 
             }
 
-			$sync_ids = get_field($sync_field_key, $post_id, false);
-			if (empty($sync_ids)) $sync_ids = [];
+            $sync_ids = get_field($sync_field_key, $selector, false);
+            if (empty($sync_ids)) $sync_ids = [];
 
-            if (!in_array($updated_post_id, $sync_ids)) $sync_ids[] = $updated_post_id; // Add the current post to the post being added
+            if (!in_array($updated_id, $sync_ids)) $sync_ids[] = $updated_id; // Add the current post to the post being added
 
-			update_field($sync_field_key, $sync_ids, $post_id);
+            if ($this->log) error_log(">>> Adding '{$updated_id}' to {$selector}.{$sync_field_key} (#{$id} '" . $this->get_object_title($selector) . "').");
 
-		}
+            update_field($sync_field_key, $sync_ids, $selector);
 
-        if ($removed) foreach ($removed as $post_id) {
-
-			$sync_ids = get_field($sync_field_key, $post_id, false);
-			if (empty($sync_ids)) $sync_ids = [];
-
-			if (in_array($updated_post_id, $sync_ids)) unset($sync_ids[array_search($updated_post_id, $sync_ids)]); // Remove the current post from the post being added
-
-			update_field($sync_field_key, $sync_ids, $post_id);
-
-		}
-
-        if ($this->log) {
-
-            error_log("--- Bidirectional_Relationship : " . static::class . " ---");
-            error_log("Syncing: " . get_post_type($updated_post_id) . " (" . get_the_title($updated_post_id) . " #{$updated_post_id}): {$field['name']} -> {$sync_field_key}");
-            if ($added) error_log("Values added to " . get_the_title($added[array_key_first($added)]) . ".{$sync_field_key} = " . implode(", ", $added));
-            if ($removed) error_log("Values removed from " . get_post_type($removed[array_key_first($removed)]) . ".{$sync_field_key} = " . implode(", ", $removed));
-            error_log("--- End ---");
-            
         }
 
-        $this->release_global_flag('updating', $field_name);
+        if ($removed) foreach ($removed as $id) {
+
+            $selector = $this->get_selector($id, $sync_post_type);
+
+            $sync_ids = get_field($sync_field_key, $selector, false);
+            if (empty($sync_ids)) $sync_ids = [];
+
+            if (in_array($updated_id, $sync_ids)) unset($sync_ids[array_search($updated_id, $sync_ids)]); // Remove the current post from the post being added
+
+            if ($this->log) error_log(">>> Removing '{$updated_id}' from {$selector}.{$sync_field_key} (#{$id} '" . $this->get_object_title($selector) . "').");
+
+            update_field($sync_field_key, $sync_ids, $selector);
+
+        }
+
+        if ($this->log) error_log("--- End ---");
+
+        $this->release_global_flag('updating');
 
 		return $values;
 
     }
 
-    public function check_global_flag ($action, $field_name) {
+    public function check_global_flag ($action) {
 
-        $global_flag = "{$action}_{$field_name}_" . static::class;
+        $global_flag = "{$action}_" . static::class;
         if (isset($GLOBALS[$global_flag]) && $GLOBALS[$global_flag]) return false;
         $GLOBALS[$global_flag] = true;
 
@@ -147,23 +163,76 @@ abstract class Bidirectional_Relationship extends Feature {
 
     }
 
-    public function release_global_flag ($action, $field_name) {
+    public function release_global_flag ($action) {
 
-        $global_flag = "{$action}_{$field_name}_" . static::class;
+        $global_flag = "{$action}_" . static::class;
         $GLOBALS[$global_flag] = false;
 
     }
 
-    public function validate_post_type ($field_name, $updated_post_id) {
+    public function validate_post_type ($field_name, $updated_selector) {
 
         if ($post_type = ($field_name == $this->key_1) ? $this->post_type_1 : $this->post_type_2) {
 
+            if ($post_type == 'user') return ($this->detect_type($updated_selector) == 'user');
+
             if (!is_array($post_type)) $post_type = [$post_type];
-            if (!in_array(get_post_type($updated_post_id), $post_type)) return false;
+            if (!in_array(get_post_type($updated_selector), $post_type)) return false;
 
         }
 
         return true;
+
+    }
+
+    public function get_object_title ($selector) {
+
+        $id = $this->extract_id($selector);
+
+        switch ($this->detect_type($selector)) {
+
+            case 'post':
+                return get_the_title($id);
+
+            case 'user':
+                return ($user = get_user_by('id', $id)) ? $user->user_nicename : 'Unknown User';
+
+        }
+
+        return 'Unknown Object';
+
+    
+    }
+
+    public function get_request_id () {
+
+        $id = false;
+
+        if (isset($_REQUEST['post_id'])) $id = $_REQUEST['post_id'];
+        if (isset($_REQUEST['user_id'])) $id = $_REQUEST['user_id'];
+
+        return $id;
+    
+    }
+
+    public function detect_type ($selector) {
+    
+        if (strpos($selector, 'user_') !== false) return 'user';
+        return 'post';
+    
+    }
+
+    public function extract_id ($selector) {
+    
+        return str_replace('user_', '', $selector);
+    
+    }
+
+    public function get_selector ($id, $post_type) {
+
+        if ($post_type == 'user') return "user_{$id}";
+        
+        return $id;
 
     }
 
