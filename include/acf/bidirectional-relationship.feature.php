@@ -174,9 +174,9 @@ abstract class Bidirectional_Relationship extends Feature {
 
         if ($post_type = ($field_name == $this->key_1) ? $this->post_type_1 : $this->post_type_2) {
 
-            if ($post_type == 'user') return ($this->detect_type($updated_selector) == 'user');
-
             if (!is_array($post_type)) $post_type = [$post_type];
+
+            if (in_array('user', $post_type))                            return ($this->detect_type($updated_selector) == 'user');
             if (!in_array(get_post_type($updated_selector), $post_type)) return false;
 
         }
