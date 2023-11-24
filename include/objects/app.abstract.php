@@ -42,7 +42,9 @@ abstract class App extends Singleton {
         $autoloads = wp_parse_args($this->autoload, [
             'utils'                     => false,
             'post-types'                => 'get_instance',
+            'post-statuses'             => 'get_instance',
             'taxonomies'                => 'get_instance',
+            'user-roles'                => 'get_instance',
             'features'                  => 'load',
             'integrations'              => 'get_instance',
             'models'                    => false,
