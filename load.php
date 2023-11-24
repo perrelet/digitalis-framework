@@ -44,8 +44,10 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/posts-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/users-table.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-taxonomy.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-role.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
@@ -55,6 +57,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-status.post-status.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
