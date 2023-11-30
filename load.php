@@ -55,14 +55,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-status.post-status.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
-
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
@@ -94,6 +86,19 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/utils/utility.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
+
+add_action('woocommerce_loaded', function () {
+
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-status.post-status.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order.abstract.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstract.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
+
+});
 
 add_filter('sassy-variables', function ($variables) {
 
