@@ -15,6 +15,8 @@ use WP_Error;
 
 abstract class Route extends Singleton {
 
+    use Dependency_Injection;
+
     /**
      * @link /wp-json/{$namespace}/{$route}       JSON Response.
      * @link /wp-json/html/{$namespace}/{$route}  HTML Response.
@@ -120,7 +122,33 @@ abstract class Route extends Singleton {
 
         } else {
 
-            return $this->callback($request);
+            $request_params = $request->get_params();
+            $values         = [];
+
+            if ($params = $this->get_params()) foreach ($params as $key => $param) {
+            
+                if ((!$class = ($param['class'] ?? false))) continue;
+                if (!isset($request_params[$key]))          continue;
+
+                if ($value = static::value_inject($class, $request_params[$key])) {
+
+                    $values[$class] = $value;
+
+                } else {
+
+                    return new \WP_Error(
+                        "missing_resource",
+                        "Unable to locate a '{$class}' with '$key' = " . print_r($request->get_params()[$key], true) . ".",
+                        [
+                            'status' => 404,
+                        ]
+                    );
+
+                }
+            
+            }
+
+            return static::inject([$this, 'callback'], [$request], $values);
 
         }
 
