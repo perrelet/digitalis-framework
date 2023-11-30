@@ -98,7 +98,7 @@ class Field extends View {
         $p['attributes']['style']         = $p['styles'];
         $p['attributes']['data-field-id'] = $p['id'];
 
-        if ($p['placeholder']) $attributes['placeholder'] = $p['placeholder'];
+        if ($p['placeholder']) $p['attributes']['placeholder'] = $p['placeholder'];
 
     }
 
