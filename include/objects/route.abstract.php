@@ -5,14 +5,33 @@ namespace Digitalis;
 use WP_REST_Request;
 use WP_Error;
 
+/**
+ * They found themselves standing on the very edge of the Wild Wood. 
+ * Rocks and brambles and tree-roots behind them, confusedly heaped and tangled; in front, a great space of quiet fields, hemmed by lines of hedges black on the snow, and, far ahead, a glint of the familiar old river, while the wintry sun hung red and low on the horizon.
+ * @api
+ * @author Digitalis Web Build Co. <jamie@digitalis.ca>
+ * @copyright 2023 Digitalis Web Build Co.
+ */
+
 abstract class Route extends Singleton {
 
-    protected $namespace        = 'digitalis/v1';
-    protected $route            = 'route';
-    protected $wp_query         = false;
-    protected $namespace_prefix = 'html/';
+    /**
+     * @link /wp-json/{$namespace}/{$route}       JSON Response.
+     * @link /wp-json/html/{$namespace}/{$route}  HTML Response.
+     * @var string       $namespace               The namespace and version.
+     * @var string       $route                   The endpoint for this route.
+     * @var bool         $wp_query                Whether to set `$wp_query->query_vars = $wp->query_vars;` and emulate a normal WordPress query.
+     * @var bool|string  $html_prefix             Prefixed route for accessing endpoint without JSON processing. See https://htmx.org/essays/how-did-rest-come-to-mean-the-opposite-of-rest/. Set `false` this feature off.
+     * @var bool|string  $view                    The view class to render at the endpoint (view args are inherited from `WP_REST_Request`). Set `false` to turn off and use the `callback` method.
+     * @var array        $rest_args               Args passed when calling `register_rest_route`.
+     */
 
-    protected $rest_args = [];
+    protected $namespace   = 'digitalis/v1';
+    protected $route       = 'route';
+    protected $wp_query    = false;
+    protected $html_prefix = 'html/';
+    protected $view        = false; /* View::class */
+    protected $rest_args   = [];
 
     protected static $instances = 0;
 
@@ -57,7 +76,7 @@ abstract class Route extends Singleton {
         return wp_parse_args($this->rest_args, [
             'args'                  => $this->get_params(),
             'methods'               => ['GET', 'POST'],
-            'callback'              => [$this, 'callback'],
+            'callback'              => [$this, 'callback_wrap'],
             'permission_callback'   => [$this, 'permission_wrap'],
         ]);
         
@@ -68,7 +87,7 @@ abstract class Route extends Singleton {
         $this->rest_args = $this->get_rest_args();
 
         register_rest_route($this->namespace, $this->route, $this->rest_args);
-        if ($this->namespace_prefix) register_rest_route($this->namespace_prefix . $this->namespace, $this->route, $this->rest_args);
+        if ($this->html_prefix) register_rest_route($this->html_prefix . $this->namespace, $this->route, $this->rest_args);
 
     }
 
@@ -88,6 +107,31 @@ abstract class Route extends Singleton {
         
     }
 
+    public function callback_wrap (WP_REST_Request $request) {
+
+        if ($this->view) {
+
+            if (!is_subclass_of($this->view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$this->view}' provided."));
+
+            $params = [];
+            if ($this->rest_args['args']) foreach ($this->rest_args['args'] as $key => $arg) $params[$key] = $request->get_param($key);
+    
+            return $this->respond($this->render_view($params));
+
+        } else {
+
+            return $this->callback($request);
+
+        }
+
+    }
+
+    public function render_view ($params) {
+    
+        return call_user_func("{$this->view}::render", $params, false);
+    
+    }
+
     public function callback (WP_REST_Request $request) {
 
         return $this->respond("Hello Route");
@@ -102,7 +146,7 @@ abstract class Route extends Singleton {
 
     public function rest_pre_serve_request ($served, $result, $request, $wp_rest_server) {
 
-        if (substr($request->get_route(), 0, strlen($this->namespace_prefix) + 1) == '/' . $this->namespace_prefix) {
+        if (substr($request->get_route(), 0, strlen($this->html_prefix) + 1) == '/' . $this->html_prefix) {
             
             $embed = isset($_GET['_embed']) ? rest_parse_embed_param($_GET['_embed']) : false;
             $result = $wp_rest_server->response_to_data($result, $embed);
@@ -123,7 +167,7 @@ abstract class Route extends Singleton {
 
         $self = static::inst();
 
-        $url = $html ? "{$self->namespace_prefix}{$self->namespace}/{$self->route}" : "{$self->namespace}/{$self->route}";
+        $url = $html ? "{$self->html_prefix}{$self->namespace}/{$self->route}" : "{$self->namespace}/{$self->route}";
         $url = get_rest_url(null, $url);
         if ($query_params) $url = add_query_arg($query_params, $url);
         if ($nonce) $url = static::nonce_url($url);
@@ -156,7 +200,7 @@ abstract class Route extends Singleton {
     protected function is_this_route (WP_REST_Request $request) {
 
         if (ltrim($request->get_route(), "/") == "{$this->namespace}/{$this->route}") return true;
-        if (ltrim($request->get_route(), "/") == "{$this->namespace_prefix}{$this->namespace}/{$this->route}") return true;
+        if (ltrim($request->get_route(), "/") == "{$this->html_prefix}{$this->namespace}/{$this->route}") return true;
 
         return false;
 
