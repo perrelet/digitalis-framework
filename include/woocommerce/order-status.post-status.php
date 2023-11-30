@@ -5,18 +5,36 @@ namespace Digitalis;
 abstract class Order_Status extends Post_Status {
 
     protected $slug       = 'wc-order-status';
-    protected $post_types = 'shop_order';
 
     protected $singular   = 'Order Status';
     protected $plural     = 'Order Statuses';
 
-    protected $position   = 'wc-refunded';
-    protected $before     = false;
+    protected $position   = 0;
+    protected $before     = true;
 
     protected function filter_args (&$args) {
 
         // ...
     
+    }
+
+    public function __construct () {
+
+        if (substr($this->slug, 0, 2) != 'wc') $this->slug = 'wc-' . $this->slug;
+
+        $this->get_args();
+
+        if ($this->register)  add_action('woocommerce_register_shop_order_post_statuses', [$this, 'register_order_status']);
+        if ($this->add_to_ui) $this->add_to_ui();
+    
+    }
+
+    public function register_order_status ($order_statuses) {
+
+        $order_statuses[$this->slug] = $this->args;
+
+        return $order_statuses;
+
     }
 
     protected $wc_order_statuses = null;
@@ -35,8 +53,6 @@ abstract class Order_Status extends Post_Status {
                     [$this->slug => $this->args['label']] +
                     array_slice($order_statuses, $this->position, count($order_statuses) - 1, true)
                 ;
-
-                // jprint($this->wc_order_statuses);
 
             }
 
