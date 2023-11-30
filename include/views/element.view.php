@@ -6,7 +6,7 @@ class Element extends View {
 
     protected static $template = 'element';
 
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/";
+    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/elements/";
 
     protected static $defaults = [
         'id'            => null,
