@@ -8,6 +8,7 @@ define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/dependency-injection.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
