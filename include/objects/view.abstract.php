@@ -4,6 +4,8 @@ namespace Digitalis;
 
 abstract class View {
 
+    use Dependency_Injection;
+
     protected static $defaults = [];                                        // Default args. Inherited by all derivative classes. 
     protected static $merge = [];                                           // Selected args will be merged (rather than overridden) by derivative classes.
     protected static $params = [];                                          // Calculated args are cached here.
@@ -46,19 +48,7 @@ abstract class View {
 
     protected static function inject_dependencies (&$p, $defaults) {
     
-        if ($p) foreach ($p as $key => &$value) {
-        
-            if (!isset($defaults[$key]))  continue;
-
-            $class = $defaults[$key];
-
-            if (is_array($class))         continue;
-            if (!class_exists($class))    continue;
-            if ($value instanceof $class) continue;
-
-            $value = call_user_func([$class, 'get_instance'], $value);
-        
-        }
+        return static::array_inject($p, $defaults);
     
     }
 
