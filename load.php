@@ -8,6 +8,7 @@ define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
@@ -15,8 +16,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/inherit-props.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/factory.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/singleton.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';

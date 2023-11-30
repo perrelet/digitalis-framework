@@ -4,7 +4,7 @@ namespace Digitalis;
 
 use Exception;
 
-abstract class Singleton {
+abstract class Singleton extends Creational {
 
     private static $instances = [];
 
@@ -18,7 +18,7 @@ abstract class Singleton {
 
     }
 
-    public static function get_instance () {
+    public static function get_instance (...$args) {
 
         $class_name = static::get_class_name();
 
@@ -30,12 +30,6 @@ abstract class Singleton {
         }
 
         return self::$instances[$class_name];
-        
-    }
-
-    public static function inst () {
-        
-        return self::get_instance();
         
     }
 
