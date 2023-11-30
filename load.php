@@ -65,6 +65,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
