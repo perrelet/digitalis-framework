@@ -66,6 +66,7 @@ abstract class App extends Singleton {
 
         $autoloads =  wp_parse_args($this->admin_autoload, [
             'admin/features' => 'load',
+            'admin/pages'    => 'get_instance',
         ]);
 
         $this->filter_admin_autoloads($autoloads);
