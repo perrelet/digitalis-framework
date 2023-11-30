@@ -7,6 +7,7 @@ define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
