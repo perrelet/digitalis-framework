@@ -44,6 +44,24 @@ abstract class View {
         
     }
 
+    protected static function inject_dependencies (&$p, $defaults) {
+    
+        if ($p) foreach ($p as $key => &$value) {
+        
+            if (!isset($defaults[$key]))  continue;
+
+            $class = $defaults[$key];
+
+            if (is_array($class))         continue;
+            if (!class_exists($class))    continue;
+            if ($value instanceof $class) continue;
+
+            $value = call_user_func([$class, 'get_instance'], $value);
+        
+        }
+    
+    }
+
     public static function compute_params ($params = []) {
         
         $defaults = static::get_defaults();
@@ -64,6 +82,8 @@ abstract class View {
         }
 
         //
+
+        static::inject_dependencies(static::$params, $defaults);
 
         static::$params = static::params(static::$params);
         
