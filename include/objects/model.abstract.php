@@ -4,7 +4,7 @@ namespace Digitalis;
 
 use Exception;
 
-class Model {
+class Model extends Factory {
 
     protected static $instances = [];
 

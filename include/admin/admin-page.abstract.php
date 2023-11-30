@@ -2,9 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Admin_Page {
-
-    use Factory;
+abstract class Admin_Page extends Factory {
 
     protected $slug       = 'admin-menu-page';
     protected $title      = 'Page Title';
