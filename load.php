@@ -40,6 +40,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/post-iterator.iterator.php
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/user-iterator.iterator.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/updater.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-page.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-sub-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/posts-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/users-table.abstract.php';
@@ -62,6 +64,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/hidden.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/button.field.php';
