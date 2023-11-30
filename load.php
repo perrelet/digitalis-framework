@@ -70,7 +70,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
-
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/hidden.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/button.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/submit.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox.field.php';
