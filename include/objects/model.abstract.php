@@ -24,7 +24,7 @@ class Model extends Factory {
 
     }
 
-    public static function validate ($data) {
+    public static function validate ($data, $uid, $id) {
 
         return true;
 
@@ -56,9 +56,9 @@ class Model extends Factory {
         
         if (!isset(self::$instances[$class_name][$uid])) {
             
-            if (static::validate($data) && static::validate_id($id)) {
+            if (static::validate($data, $uid, $id) && static::validate_id($id)) {
 
-                $model = new $class_name($data, $uid, $uid);
+                $model = new $class_name($data, $uid, $id);
                 $model->init();
 
                 self::$instances[$class_name][$uid] = $model;
