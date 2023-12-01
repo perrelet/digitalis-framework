@@ -126,9 +126,11 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     public function before_account_navigation_loop () {
         
+        $onclick = "const nav = this.closest(`nav`); nav.classList.toggle(`collapse`); woo_clean.save();";
+
         echo "<div class='nav-controls'>";
-        echo "<i data-action='collapse-menu' class='control iconoir-xmark'></i>";
-        echo "<i data-action='expand-menu' class='control iconoir-fast-arrow-right'></i>";
+        echo "<i data-action='collapse-menu' class='control iconoir-xmark' onclick='{$onclick}'></i>";
+        echo "<i data-action='expand-menu' class='control iconoir-fast-arrow-right' onclick='{$onclick}'></i>";
         echo "</div>";
         
     }
