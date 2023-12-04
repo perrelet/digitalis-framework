@@ -12,12 +12,12 @@ class User extends Model {
     protected $id;
     protected $wp_user;
 
-    public static function extract_id ($id = null) {
+    public static function extract_id ($data = null) {
 
-        if (is_null($id))              return get_current_user_id();
-        if ($id instanceof WP_User)    return $id->ID;
+        if (is_null($data))           return get_current_user_id();
+        if ($data instanceof WP_User) return $data->ID;
 
-        return $id;
+        return $data;
 
     }
 
