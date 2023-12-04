@@ -2,17 +2,11 @@
 
 namespace Digitalis;
 
-abstract class Feature {
+abstract class Feature extends Factory {
 
-    public static function load ($options = []) {
+    public static function load () {
     
-        return new static($options);
-    
-    }
-
-    public static function get_instance ($options = []) {
-    
-        return static::load($options);
+        return call_user_func_array([static::class, 'get_instance'], func_get_args());
     
     }
 
