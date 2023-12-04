@@ -34,7 +34,8 @@ $type-ratios: (
 
         // Output heading styles Assign to element and create utility class
         h#{$level},
-        .h#{$level} {
+        .h#{$level},
+        .force-h#{$level}:not(#dummy) {
 
             // Fallback for browsers that don't support min / max
             font-size: $level-size;
