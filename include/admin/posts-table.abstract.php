@@ -4,6 +4,8 @@ namespace Digitalis;
 
 abstract class Posts_Table extends Admin_Table {
 
+    use Dependency_Injection;
+
     protected $post_type = 'post';
 
     public function run () {
@@ -74,7 +76,9 @@ abstract class Posts_Table extends Admin_Table {
 
         $call = [$this, "column_" . str_replace('-', '_', $column)];
 
-        if (is_callable($call)) call_user_func($call, $post_id);
+        /* if (is_callable($call)) call_user_func($call, $post_id); */
+
+        static::inject($call, [$post_id]);
 
     }
 
