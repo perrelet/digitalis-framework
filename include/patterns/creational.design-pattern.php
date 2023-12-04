@@ -12,4 +12,10 @@ class Creational extends Design_Pattern {
     
     }
 
+    protected function fill ($vars) {
+
+        if ($vars) foreach ($vars as $key => $value) $this->$key = $value;
+
+    }
+
 }
