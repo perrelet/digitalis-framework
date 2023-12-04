@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Woo_Account_Page extends Singleton {
+abstract class Woo_Account_Page extends Factory {
 
     protected $slug = 'account_page';
     protected $title = 'Account Page';
@@ -77,7 +77,9 @@ abstract class Woo_Account_Page extends Singleton {
 
     }
 
-    public function __construct () {
+    public function __construct ($fill = []) {
+
+        $this->fill($fill);
 
         if (!self::$static_init) {
             
@@ -95,7 +97,6 @@ abstract class Woo_Account_Page extends Singleton {
 
         self::$page_positions[$this->slug] = $position;
 
-        add_action('init',                        [$this, 'init']);
         add_action('init',                        [$this, 'add_endpoints']);
         add_action('parse_request',               [$this, 'maybe_add_permission_notice']);
         add_filter('woocommerce_get_query_vars',  [$this, 'get_query_vars']);
