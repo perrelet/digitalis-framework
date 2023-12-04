@@ -45,7 +45,7 @@ abstract class App extends Singleton {
             'post-statuses'             => 'get_instance',
             'taxonomies'                => 'get_instance',
             'user-roles'                => 'get_instance',
-            'features'                  => 'load',
+            'features'                  => 'get_instance',
             'integrations'              => 'get_instance',
             'models'                    => false,
             'views'                     => false,
@@ -65,8 +65,9 @@ abstract class App extends Singleton {
     protected function get_admin_autoloads () {
 
         $autoloads =  wp_parse_args($this->admin_autoload, [
-            'admin/features' => 'load',
+            'admin/features' => 'get_instance',
             'admin/pages'    => 'get_instance',
+            'admin/tables'   => 'get_instance',
         ]);
 
         $this->filter_admin_autoloads($autoloads);
