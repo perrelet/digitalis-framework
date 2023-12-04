@@ -97,7 +97,8 @@ abstract class Route extends Singleton {
 
     public function permission_wrap (WP_REST_Request $request) {
     
-        if (is_null(static::$permission)) static::$permission = $this->permission($request);
+        //if (is_null(static::$permission)) static::$permission = $this->permission($request);
+        if (is_null(static::$permission)) static::$permission = $this->request_inject($request, 'permission');
 
         return static::$permission;
     
@@ -122,7 +123,9 @@ abstract class Route extends Singleton {
 
         } else {
 
-            $request_params = $request->get_params();
+            return $this->request_inject($request, 'callback');
+
+            /* $request_params = $request->get_params();
             $values         = [];
 
             if ($params = $this->get_params()) foreach ($params as $key => $param) {
@@ -148,7 +151,7 @@ abstract class Route extends Singleton {
             
             }
 
-            return static::inject([$this, 'callback'], [$request], $values);
+            return static::inject([$this, 'callback'], [$request], $values); */
 
         }
 
@@ -190,6 +193,38 @@ abstract class Route extends Singleton {
     }
 
     //
+
+    protected function request_inject (WP_REST_Request $request, $method) {
+    
+        $request_params = $request->get_params();
+        $values         = [];
+
+        if ($params = $this->get_params()) foreach ($params as $key => $param) {
+        
+            if ((!$class = ($param['class'] ?? false))) continue;
+            if (!isset($request_params[$key]))          continue;
+
+            if ($value = static::value_inject($class, $request_params[$key])) {
+
+                $values[$class] = $value;
+
+            } else {
+
+                return new \WP_Error(
+                    "missing_resource",
+                    "Unable to locate a '{$class}' with '$key' = " . print_r($request->get_params()[$key], true) . ".",
+                    [
+                        'status' => 404,
+                    ]
+                );
+
+            }
+        
+        }
+
+        return static::inject([$this, $method], [$request], $values);
+    
+    }
 
     public static function get_url ($query_params = [], $html = true, $nonce = true) {
 
