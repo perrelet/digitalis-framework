@@ -1,6 +1,6 @@
 @if not mixin-exists(generate-shades) {
 
-    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1, $label_style: 'count') {
+    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1, $label_style: 'count', $saturate: 0) {
 
         $lightness: lightness($base-color);
         $shades: ceil($lightness * $n / 100);
@@ -8,16 +8,18 @@
         $tints: $n - $shades;
 
         $l: $white_point * (100% - $lightness) / $tints; 
+        $s: 100% * $saturate / $tints; 
 
         @if ($tints > 0) {
 
             // Calculate Tints
 
             @for $i from $tints through 0 {
-
-                //--tint-#{$i}-lightness: #{$lightness + ($l * $i)};
                 
                 $tint: max(min($l * $i, 100%), -100%);
+                $sat:  max(min($s * $i, 100%), -100%);
+
+                //--tint-#{$i}-sat: #{$sat};
 
                 @if ($label_style == 'split') {
                     @if ($i == 0) {
@@ -29,7 +31,7 @@
                     $name: --c-#{$base-name}-#{$tints - $i + 1};
                 } 
 
-                #{$name}: #{adjust-color($base-color, $lightness: $tint)};
+                #{$name}: #{adjust-color($base-color, $lightness: $tint, $saturation: $sat)};
 
             }
 
@@ -39,18 +41,23 @@
 
             // Calculate Shades
 
-            $l:  (1 - $black_point) * (-1 * $lightness) / $shades; 
+            $l: (1 - $black_point) * (-1 * $lightness) / $shades; 
+            $s: 100% * $saturate / $shades;
 
             @for $i from 1 through $shades {
 
                 $shade: max(min($l * $i, 100%), -100%);
+                $sat:   max(min($s * $i, 100%), -100%);
+
+                //--shade-#{$i}-sat: #{$sat};
+
                 @if ($label_style == 'split') {
                     $name: --c-#{$base-name}--#{$i};
                 } @else if ($label_style == 'count') {
                     $name: --c-#{$base-name}-#{$tints + $i + 1};
                 }
         
-                #{$name}: #{adjust-color($base-color, $lightness: $shade)};
+                #{$name}: #{adjust-color($base-color, $lightness: $shade, $saturation: $sat)};
             
             }
 
