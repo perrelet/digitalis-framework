@@ -10,8 +10,9 @@ abstract class Post_Type extends Singleton {
 
     protected $text_domain  = 'default';
     protected $singular     = 'Post Type';
-    protected $plural       = 'Post Types';
-
+    protected $plural       = null;
+    
+    protected $position     = 5;
     protected $model_class  = false;
     protected $register     = true;
 
@@ -145,13 +146,19 @@ abstract class Post_Type extends Singleton {
 
     }
 
+    protected function plural () {
+    
+        return $this->plural ? $this->plural : $this->singular . 's';
+    
+    }
+
     protected function get_default_args () {
 
         return [
-            'description'           => __($this->plural, $this->text_domain),
+            'description'           => __($this->plural(), $this->text_domain),
             'public'                => true,
             'publicly_queryable'    => true,
-            'menu_position'         => 5,
+            'menu_position'         => $this->position,
             'show_ui'               => true,
             'show_in_menu'          => true,
             'menu_icon'             => $this->icon,
@@ -195,20 +202,20 @@ abstract class Post_Type extends Singleton {
 
         return apply_filters("Digitalis/Post_Type/" . static::class . "/Labels",
         [
-            'name'               => __( $this->plural,                          $this->text_domain ),
+            'name'               => __( $this->plural(),                        $this->text_domain ),
             'singular_name'      => __( $this->singular,                        $this->text_domain ),
-            'menu_name'          => __( $this->plural,                          $this->text_domain ),
+            'menu_name'          => __( $this->plural(),                        $this->text_domain ),
             'name_admin_bar'     => __( $this->singular,                        $this->text_domain ),
             'add_new'            => __( "Add New {$this->singular}",            $this->text_domain ),
             'add_new_item'       => __( "Add New {$this->singular}",            $this->text_domain ),
             'edit_item'          => __( "Edit {$this->singular}",               $this->text_domain ),
             'new_item'           => __( "New {$this->singular}",                $this->text_domain ),
             'view_item'          => __( "View {$this->singular}",               $this->text_domain ),
-            'search_items'       => __( "Search {$this->plural}",               $this->text_domain ),
-            'not_found'          => __( "No {$this->plural} found",             $this->text_domain ),
-            'not_found_in_trash' => __( "No {$this->plural} found in trash",    $this->text_domain ),
-            'all_items'          => __( $this->plural,                          $this->text_domain ),
-            'archive_title'      => __( $this->plural,                          $this->text_domain ),
+            'search_items'       => __( "Search {$this->plural()}",             $this->text_domain ),
+            'not_found'          => __( "No {$this->plural()} found",           $this->text_domain ),
+            'not_found_in_trash' => __( "No {$this->plural()} found in trash",  $this->text_domain ),
+            'all_items'          => __( $this->plural(),                        $this->text_domain ),
+            'archive_title'      => __( $this->plural(),                        $this->text_domain ),
         ]);
 
     }
