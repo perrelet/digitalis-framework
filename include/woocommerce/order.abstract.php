@@ -24,6 +24,15 @@ class Order extends Model {
 
     }
 
+    public static function query ($args = []) {
+    
+        $query = new WC_Order_Query($args);
+        $wc_orders = $query->get_orders();
+
+        return static::get_instances($wc_orders);
+    
+    }
+
     public function __construct ($data = null, $uid = null, $id = null) {
 
         parent::__construct($data, $uid, $id);
