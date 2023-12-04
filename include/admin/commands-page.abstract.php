@@ -138,10 +138,8 @@ abstract class Commands_Page extends Admin_Sub_Page {
         Table::render([
             'rows'    => $rows,
             'classes' => ['commands-table'],
-            'headers'       => [
-                'first_row' => false,
-                'first_col' => true,
-            ],
+            'first_row' => false,
+            'first_col' => true,
         ]);
 
         ?><style>
