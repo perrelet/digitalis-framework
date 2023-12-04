@@ -20,6 +20,8 @@ class Order extends Model {
 
         if (!($data instanceof WC_Order)) return (bool) wc_get_order($id);
 
+        return parent::validate($data, $uid, $id);
+
     }
 
     public function __construct ($data = null, $uid = null, $id = null) {
