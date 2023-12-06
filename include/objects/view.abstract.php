@@ -8,6 +8,7 @@ abstract class View {
 
     protected static $defaults = [];                                        // Default args. Inherited by all derivative classes. 
     protected static $merge = [];                                           // Selected args will be merged (rather than overridden) by derivative classes.
+    protected static $skip_inject = [];                                     // 
     protected static $params = [];                                          // Calculated args are cached here.
     protected static $template = null;                                      // The name of the template file to load (.php extension not required). If null provided view will render via the static::view($p) method.
     protected static $template_path = __DIR__ . "/../../templates/";        // Absolute path to the template directory.
@@ -47,6 +48,8 @@ abstract class View {
     }
 
     protected static function inject_dependencies (&$p, $defaults) {
+
+        if (static::$skip_inject) foreach (static::$skip_inject as $skip) if (isset($defaults[$skip])) unset($defaults[$skip]);
     
         return static::array_inject($p, $defaults);
     
