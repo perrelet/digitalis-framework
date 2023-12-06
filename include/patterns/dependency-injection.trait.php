@@ -86,6 +86,8 @@ trait Dependency_Injection {
         if ($value instanceof $class)               return;
         if (!method_exists($class, 'get_instance')) return;
 
+        if ($class === $value) $value = null;
+
         $value = call_user_func([$class, 'get_instance'], $value);
 
         return $value;
