@@ -21,11 +21,16 @@ abstract class Archive extends View {
         'loader'        => 'sliding-dots.gif',
         'loader_type'   => 'image',
         'controls'      => [],
+        'post_class'    => null,
     ];
 
     protected static $merge = [
         'classes',
         'query_vars',
+    ];
+
+    protected static $skip_inject = [
+        'post_class',
     ];
 
     protected static $items = [];
@@ -61,13 +66,17 @@ abstract class Archive extends View {
 
     protected static function get_items ($query_vars, &$query, $skip_main) {
 
-        // ..
+        if (static::$params['post_class'] && ($call = [static::$params['post_class'], 'query']) && is_callable($call)) {
+
+            return call_user_func_array($call, [$query_vars, &$query, $skip_main]);
+
+        }
 
     }
 
     protected static function render_item ($item) {
 
-        // ..
+        //
     
     }
 
@@ -136,10 +145,16 @@ abstract class Archive extends View {
 
             static::render_items(static::$items);
 
-            if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) echo paginate_links([
-                'current'   => max(1, $query->get('paged')),
-                'total'     => $query->max_num_pages,
-            ]);
+            if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) {
+
+                $paginate_links = paginate_links([
+                    'current'   => max(1, $query->get('paged')),
+                    'total'     => $query->max_num_pages,
+                ]);
+
+                if ($paginate_links) echo "<div class='pagination-wrap'>{$paginate_links}</div>";
+
+            }
 
         } else {
 
