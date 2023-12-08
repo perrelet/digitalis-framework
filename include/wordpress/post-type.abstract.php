@@ -267,7 +267,7 @@ abstract class Post_Type extends Singleton {
         $wp_query->query_vars = $query->get_query(); */
 
         $qv = new Query_Vars($wp_query->query_vars);
-        $qv->merge($this->query_vars());
+        $qv->merge($this->query_vars(), true);
         $wp_query->query_vars = $qv->to_array();
 
     }
@@ -300,7 +300,7 @@ abstract class Post_Type extends Singleton {
         //merge_query(static::get_admin_query_vars(), $wp_query);
 
         $qv = new Query_Vars($wp_query->query_vars);
-        $qv->merge($this->admin_query_vars());
+        $qv->merge($this->admin_query_vars(), true);
         $wp_query->query_vars = $qv->to_array();
 
     }

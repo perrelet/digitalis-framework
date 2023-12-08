@@ -90,8 +90,8 @@ abstract class Post extends Model {
             if (!$skip_main && $wp_query && $wp_query->is_main_query() && Digitalis_Query::is_multiple($query)) $query->merge($wp_query->query_vars);
 
             $query->set_var('post_type', static::$post_type);
-            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars() : static::get_query_vars());
-            $query->merge($args);
+            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars() : static::get_query_vars(), true);
+            $query->merge($args, true);
 
             $posts = $query->query();
 
