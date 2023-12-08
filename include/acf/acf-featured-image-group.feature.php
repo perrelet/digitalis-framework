@@ -6,9 +6,19 @@ use Digitalis\Feature;
 
 class Featured_Image_Group extends Feature {
 
+    protected $field = [];
+
     public function run () {
 
         add_filter('acf/include_fields', function() {
+
+            $field = wp_parse_args($this->field, [
+                'label' => 'Image',
+                'type'  => 'image',
+                'name'  => '_thumbnail_id',
+                'key'   => '_thumbnail_id',
+            ]);
+
             acf_add_local_field_group([
                 'key'                   => 'post-featured-image',
                 'title'                 => '',
@@ -21,14 +31,7 @@ class Featured_Image_Group extends Feature {
                 'active'                => true,
                 'description'           => '',
                 'show_in_rest'          => 0,
-                'fields'                => [
-                    [
-                        'label'         => 'Image',
-                        'type'          => 'image',
-                        'name'          => '_thumbnail_id',
-                        'key'           => '_thumbnail_id',
-                    ]
-                ],
+                'fields'                => [$field],
             ]);
         });
         
