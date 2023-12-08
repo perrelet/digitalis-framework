@@ -10,9 +10,9 @@ abstract class Feature extends Factory {
     
     }
 
-    public function __construct ($options = []) {
+    public function __construct ($fill = []) {
 
-        if ($options) foreach ($options as $key => $value) if (property_exists($this, $key)) $this->$key = $value;
+        $this->fill($fill);
 
         $this->run();
 
