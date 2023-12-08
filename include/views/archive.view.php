@@ -18,6 +18,7 @@ abstract class Archive extends View {
         'items'         => false,
         'no_posts'      => 'No posts found.',
         'pagination'    => true,
+        'paginate_args' => [],
         'loader'        => 'sliding-dots.gif',
         'loader_type'   => 'image',
         'controls'      => [],
@@ -112,6 +113,12 @@ abstract class Archive extends View {
 
     }
 
+    public static function filter_page_links (&$page_links) {
+    
+        //
+    
+    }
+
     public static function view ($p = []) {
 
         $classes = static::generate_classes(static::get_classes($p));
@@ -147,12 +154,15 @@ abstract class Archive extends View {
 
             if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) {
 
-                $paginate_links = paginate_links([
+                $page_links = paginate_links(wp_parse_args($p['paginate_args'], [
                     'current'   => max(1, $query->get('paged')),
                     'total'     => $query->max_num_pages,
-                ]);
+                    'type'      => 'array',
+                ]));
 
-                if ($paginate_links) echo "<div class='pagination-wrap'>{$paginate_links}</div>";
+                static::filter_page_links($page_links);
+
+                if ($page_links) echo "<div class='pagination-wrap'>" . implode("\n", $page_links) . "</div>";
 
             }
 
