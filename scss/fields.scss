@@ -20,9 +20,11 @@
     cursor: pointer;
     user-select: none;
 
+    background: white;
+
     &:hover {
 
-        background-color: white;
+        background: #f8f8f8;
 
     }
 
@@ -345,6 +347,12 @@
                         margin-right: 0.25rem;
 
                     }
+
+                    /* &:hover {
+
+                        background-color: white;
+                
+                    } */
 
                 }
 
