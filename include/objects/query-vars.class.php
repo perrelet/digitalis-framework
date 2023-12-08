@@ -114,13 +114,11 @@ class Query_Vars {
         
     }
 
-    public function merge ($query) {
+    public function merge ($query, $merge_falsy = false) {
 
         if ($query) foreach ($query as $key => $value) {
 
-            if (!$value) continue;
-
-            $this->merge_var($key, $value);
+            if ($merge_falsy || $value) $this->merge_var($key, $value, $merge_falsy);
 
         }
 
@@ -128,7 +126,7 @@ class Query_Vars {
 
     }
 
-    public function merge_var ($key, $value) {
+    public function merge_var ($key, $value, $merge_falsy = false) {
         
         if ($existing_value = $this->query[$key] ?? null) {
 
@@ -162,7 +160,7 @@ class Query_Vars {
 
         }
 
-        if ($value) $this->query[$key] = $value;
+        if ($merge_falsy || $value) $this->query[$key] = $value; // What about falsey values??
 
         return $this;
 

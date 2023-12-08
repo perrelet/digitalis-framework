@@ -18,9 +18,9 @@ class Digitalis_Query extends WP_Query {
 
     // Called explicitly
 
-    public function query ($query = []) {
+    public function query ($query = [], $merge_falsy = false) {
 
-        if ($query) $this->merge($query);
+        if ($query) $this->merge($query, $merge_falsy);
 
         return parent::query($this->get_query_vars());
         
@@ -86,17 +86,17 @@ class Digitalis_Query extends WP_Query {
         
     }
 
-    public function merge ($query) {
+    public function merge ($query, $merge_falsy = false) {
 
-        $this->query_vars_obj->merge($query);
+        $this->query_vars_obj->merge($query, $merge_falsy);
 
         return $this;
 
     }
 
-    public function merge_var ($key, $value) {
+    public function merge_var ($key, $value, $merge_falsy = false) {
 
-        $this->query_vars_obj->merge_var($key, $value);
+        $this->query_vars_obj->merge_var($key, $value, $merge_falsy);
 
         return $this;
         
