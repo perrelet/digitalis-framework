@@ -12,15 +12,9 @@ abstract class Singleton extends Creational {
     public function __clone()        { throw new Exception("One for all and all for one."); }
     public function __wakeup()       { throw new Exception("You may not dream me into existence."); }
 
-    public static function get_class_name () {
-
-        return apply_filters('Digitalis/Class/' . str_replace('\\', '/', ltrim(static::class, '\\')), static::class);
-
-    }
-
     public static function get_instance (...$args) {
 
-        $class_name = static::get_class_name();
+        $class_name = Call::get_class_name(static::class);
 
         if (!isset(self::$instances[$class_name])) {
 
