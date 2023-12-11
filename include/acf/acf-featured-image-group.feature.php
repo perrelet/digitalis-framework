@@ -10,7 +10,7 @@ class Featured_Image_Group extends Feature {
 
     public function run () {
 
-        add_filter('acf/include_fields', function() {
+        add_action('acf/include_fields', function() {
 
             $field = wp_parse_args($this->field, [
                 'label' => 'Image',
