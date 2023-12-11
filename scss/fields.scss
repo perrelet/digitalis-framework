@@ -106,6 +106,14 @@
 
 }
 
+// FIELD VISIBILITY
+
+[data-field-inactive] {
+
+    display: none !important;
+
+}
+
 // FIELDS
 
 .field-group {
@@ -345,6 +353,13 @@
                     .icon {
 
                         margin-right: 0.25rem;
+
+                        &.after {
+
+                            margin-right: 0rem;
+                            margin-left: 0.25rem;
+
+                        }
 
                     }
 
