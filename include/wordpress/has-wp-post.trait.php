@@ -360,7 +360,7 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     public function delete ($force_delete = false) {
     
-        wp_delete_post($this->wp_post->ID, $force_delete);
+        return wp_delete_post($this->wp_post->ID, $force_delete);
     
     }
 
