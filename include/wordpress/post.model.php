@@ -53,14 +53,29 @@ abstract class Post extends Model {
 
     //
 
-    public static function get_query_vars () {
+    public static function get_query_var ($key = 'posts_per_page', $default = '', $args = [], $query_key = null, $query = null) {
+
+        if (isset($args[$key])) return $args[$key];
+
+        if (!($query instanceof WP_Query)) {
+
+            global $wp_query;
+            $query = $wp_query;
+
+        }
+
+        return $query->get($query_key ? $query_key : $key, $default);
+
+    }
+
+    public static function get_query_vars ($args = []) {
 
         $call = static::$post_type_class . "::get_query_vars";
         return is_callable($call) ? call_user_func($call) : [];
 
     }
 
-    public static function get_admin_query_vars () {
+    public static function get_admin_query_vars ($args = []) {
 
         $call = static::$post_type_class . "::get_admin_query_vars";
         return is_callable($call) ? call_user_func($call) : [];
@@ -90,7 +105,7 @@ abstract class Post extends Model {
             if (!$skip_main && $wp_query && $wp_query->is_main_query() && Digitalis_Query::is_multiple($query)) $query->merge($wp_query->query_vars);
 
             $query->set_var('post_type', static::$post_type);
-            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars() : static::get_query_vars(), true);
+            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
             $query->merge($args, true);
 
             $posts = $query->query();
