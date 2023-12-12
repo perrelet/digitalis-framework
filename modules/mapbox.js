@@ -145,18 +145,23 @@ export class Digitalis_Mapbox {
 
             if (!this.select_location_pin(!this.state.location.selected)) return;
 
-            this.set_location(e.lngLat.lng, e.lngLat.lat);
+            if (!this.state.location.selected) {
+
+                this.set_location(e.lngLat.lng, e.lngLat.lat);
+                document.dispatchEvent(new CustomEvent('Digitalis/Query/Control/Submit', {detail: {}}));
+
+            }
 
         });
 
-        this.map.on('click', (e) => {
+        /* this.map.on('click', (e) => {
 
             if (!this.state.location.selected)    return;
             if (!this.select_location_pin(false)) return;
 
             this.set_location(e.lngLat.lng, e.lngLat.lat);
 
-        });
+        }); */
 
         this.map.on('mousemove', (e) => {
                         
