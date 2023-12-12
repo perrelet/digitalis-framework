@@ -72,6 +72,11 @@ export class Digitalis_Query {
 
         });
 
+        document.addEventListener('Digitalis/Query/Control/Submit', (e) => {
+
+            this.submit();
+
+        });
 
         window.addEventListener("popstate", (event) => {
 
