@@ -34,6 +34,12 @@ class Digitalis_Query extends WP_Query {
     
     }
 
+    public function to_array () {
+
+        return $this->get_query_vars();
+
+    }
+
     public function get_query_vars () {
 
         return $this->query_vars_obj->get_vars();
