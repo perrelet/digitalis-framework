@@ -98,7 +98,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-ajax-form.view.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
 
-add_action('woocommerce_loaded', function () {
+add_action('plugins_loaded', function () {
+//add_action('woocommerce_loaded', function () {
 
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
@@ -109,7 +110,7 @@ add_action('woocommerce_loaded', function () {
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
 
-});
+}, 0);
 
 add_filter('sassy-variables', function ($variables) {
 
