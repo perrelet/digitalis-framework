@@ -39,7 +39,7 @@ abstract class App extends Singleton {
 
     protected function &get_autoloads () {
 
-        $autoloads = wp_parse_args($this->autoload, [
+        $autoloads = [
             'utils'                     => false,
             'post-types'                => 'get_instance',
             'post-statuses'             => 'get_instance',
@@ -51,10 +51,16 @@ abstract class App extends Singleton {
             'views'                     => false,
             'acf-blocks'                => true,
             'shortcodes'                => true,
-            'routes'                    => function () { return ['get_instance']; }, // ['get_instance'], // 'get_instance',
+            'routes'                    => 'get_instance',
+        ];
+
+        if (defined('WC_PLUGIN_FILE')) $autoloads = array_merge($autoloads, [
+            'woocommerce/models'        => false,
             'woocommerce/account-pages' => 'get_instance',
             'woocommerce/product-types' => 'get_instance',
         ]);
+
+        $autoloads = wp_parse_args($this->autoload, $autoloads);
 
         $this->filter_autoloads($autoloads);
 
