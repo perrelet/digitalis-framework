@@ -172,7 +172,7 @@ class Field extends View {
 
         if ($p['type'] == 'hidden') $p['wrap'] = false;
 
-        $p['value'] = is_null($p['value']) ? ($_REQUEST[$key] ?? get_query_var($key, $p['default'])) : $p['value'];
+        $p['value'] = is_null($p['value']) ? sanitize_text_field($_REQUEST[$key] ?? get_query_var($key, $p['default'])) : $p['value'];
 
         static::get_field_classes($p);
         static::get_row_classes($p);
