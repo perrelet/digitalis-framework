@@ -168,7 +168,7 @@ abstract class Archive extends View {
 
         } else {
 
-            static::render_no_posts($p);
+            if ($p['no_posts'] !== false) static::render_no_posts($p);
 
         }
 
