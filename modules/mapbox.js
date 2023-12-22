@@ -175,6 +175,13 @@ export class Digitalis_Mapbox {
 
     place_location_pin (lng, lat) {
 
+        if (!this.map.getSource('location')) {
+
+            setTimeout(() => this.place_location_pin(lng, lat), 250);
+            return;
+
+        }
+
         this.data.location.features[0].geometry.coordinates[0] = lng;
         this.data.location.features[0].geometry.coordinates[1] = lat;
         this.map.getSource('location').setData(this.data.location);   //
