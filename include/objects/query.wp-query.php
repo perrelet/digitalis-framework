@@ -140,7 +140,7 @@ class Digitalis_Query extends WP_Query {
     
             } elseif (($post_type == 'post') && $wp_query) {
     
-                return $wp_query->is_posts_page;
+                return $wp_query->is_posts_page || $wp_query->is_author;
     
             }
     
