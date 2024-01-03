@@ -12,6 +12,8 @@ abstract class Order_Status extends Post_Status {
     protected $position   = 0;
     protected $before     = true;
 
+    protected $allow_edit = true;
+
     protected function filter_args (&$args) {
 
         // ...
@@ -24,8 +26,9 @@ abstract class Order_Status extends Post_Status {
 
         $this->get_args();
 
-        if ($this->register)  add_action('woocommerce_register_shop_order_post_statuses', [$this, 'register_order_status']);
-        if ($this->add_to_ui) $this->add_to_ui();
+        if ($this->register)   add_action('woocommerce_register_shop_order_post_statuses', [$this, 'register_order_status']);
+        if ($this->add_to_ui)  $this->add_to_ui();
+        if ($this->allow_edit) add_filter('wc_order_is_editable', [$this, 'wc_order_is_editable'], 9999, 2);
     
     }
 
@@ -59,6 +62,14 @@ abstract class Order_Status extends Post_Status {
             return $this->wc_order_statuses;
 
         });
+    
+    }
+
+    public function wc_order_is_editable ($allow_edit, $order) {
+    
+        if ($order->get_status() == str_replace('wc-', '', $this->slug)) return true;
+
+        return $allow_edit;
     
     }
 
