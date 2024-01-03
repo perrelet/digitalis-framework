@@ -3,6 +3,7 @@
 namespace Digitalis;
 
 use WC_Order;
+use WC_Order_Query;
 
 class Order extends Model {
 
