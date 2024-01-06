@@ -52,7 +52,7 @@ class Order extends Model {
 
     public function __call ($name, $args) {
     
-        return call_user_func_array([$this->wc_order, $name], $args);
+        return call_user_func_array([$this->get_wc_order(), $name], $args);
     
     }
 
