@@ -68,6 +68,12 @@ class Order_Item extends Model {
 
     }
 
+    public function __call ($name, $args) {
+    
+        return call_user_func_array([$this->get_item(), $name], $args);
+    
+    }
+
     public function get_item () {
 
         return $this->item;
@@ -80,13 +86,7 @@ class Order_Item extends Model {
 
     }
 
-    public function get_name () {
-
-        return $this->item->get_name();
-
-    }
-
-    public function get_group_id () {
+    public function get_group_id () { // !!! Eventropy
 
         return $this->get_item()->get_meta('_group', true);
 
@@ -98,27 +98,9 @@ class Order_Item extends Model {
 
     }
 
-    public function get_order_id () {
-
-        return $this->item->get_order_id();
-
-    }
-
-    public function get_order () {
-
-        return $this->item->get_order();
-
-    }
-
     public function get_order_status () {
 
         return $this->get_order() ? $this->get_order()->get_status() : null;
-
-    }
-
-    public function get_product_id () {
-
-        return $this->item->get_product_id();
 
     }
 
@@ -155,7 +137,7 @@ class Order_Item extends Model {
 
     //
 
-    public function get_siblings ($product_type = false) {
+    public function get_siblings ($product_type = false) { // !!! Eventropy
 
         if (!$group_id = $this->get_group_id()) return [];
 
