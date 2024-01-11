@@ -85,7 +85,7 @@ class Query_Vars {
 
     public function &find_tax_query ($value, $compare = '=', $key = 'taxonomy') {
 
-        return $this->find($this->query['tax_query'], $value, $key, $compare);
+        return $this->find($this->query['tax_query'], $value, $compare, $key);
 
     }
 
@@ -95,9 +95,15 @@ class Query_Vars {
 
             if (!is_array($block)) continue;
 
-            if (!isset($block[$key])) if ($found = $this->find($block, $value, $compare, $key)) return $found;
+            if (isset($block[$key])) {
 
-            if ($this->compare($value, $block[$key], $compare)) return $block;
+                if ($this->compare($value, $block[$key], $compare)) return $block;
+
+            } else {
+
+                if ($found = $this->find($block, $value, $compare, $key)) return $found;
+
+            }
 
         }
 
