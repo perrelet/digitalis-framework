@@ -1,6 +1,6 @@
 // !DEFAULTS
 
-$digitalis-column-padding: $col-px;
+$digitalis-column-padding: $col-px !default;
 $digitalis-stagger-iterations: 12 !default;
 
 // COLUMNS
@@ -73,8 +73,12 @@ $digitalis-stagger-iterations: 12 !default;
 
     > * {
     
-        width: 100%;
-        /*max-width: 520px; */
+        &:first-child,
+        &:last-child {
+
+            width: 100%;
+
+        }
 
         &:first-child {
             margin-right: 0;

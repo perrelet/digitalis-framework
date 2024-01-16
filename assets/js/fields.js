@@ -23,8 +23,10 @@ class Digitalis_Fields {
                 deltas.forEach(change_field => {
 
                     form.appendChild(change_field.cloneNode(true));
+
+                    const on_event = change_field.classList.contains(`field-nice-select`) ? `change` : `input`;
                     
-                    change_field.addEventListener(`input`, function (e) {
+                    change_field.addEventListener(on_event, function (e) {
                         
                         this.check_field(row, change_field.value, value, operator);
                     
