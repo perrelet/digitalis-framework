@@ -37,6 +37,12 @@ abstract class Woo_Account_Page extends Factory {
 
     }
 
+    public static function get_current_page () {
+    
+        return static::get_page(static::get_current_endpoint());
+    
+    }
+
     public static function remove_page ($slug) {
 
         self::$removed_pages[$slug] = $slug;
@@ -132,7 +138,9 @@ abstract class Woo_Account_Page extends Factory {
 
     }
 
-    public function get_url ($value = '', $permalink = '') {
+    public function get_url ($value = '', $permalink = null) {
+
+        if (is_null($permalink)) $permalink = wc_get_page_permalink('myaccount');
     
         return wc_get_endpoint_url($this->get_endpoint(), $value, $permalink);
     
