@@ -259,6 +259,12 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
     
     }
 
+    public function remove_terms ($terms, $taxonomy = 'post_tag') {
+    
+        return wp_remove_object_terms($this->wp_post->ID, $terms, $taxonomy);
+    
+    }
+
     public function is_sticky () {
 
         return is_sticky($this->wp_post->ID);
