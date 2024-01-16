@@ -36,7 +36,7 @@ abstract class Product_Type extends Integration {
     
     public function load_product () {
 
-        include $this->class_path;
+        if ($this->class_path) include $this->class_path;
 
     }
 
