@@ -2,51 +2,56 @@ class Digitalis_Fields {
 
     constructor () {
 
-        let fields = {};
-
         document.querySelectorAll(`[data-field-condition]`).forEach(field => {
 
             const condition = JSON.parse(field.getAttribute('data-field-condition'));
+            if (!condition || !condition.length) return;
 
-            const id         = field.getAttribute('data-field-id') + '-row';
-            const row        = document.getElementById(id);
-
-            const delta_name = condition[0];
-            const operator   = condition[1];
-            const value      = condition[2];
-
-            const deltas = document.querySelectorAll(`[name='${delta_name}']`);
-            const form   = document.createElement("form");
-
-            if (deltas) {
-
-                deltas.forEach(change_field => {
-
-                    form.appendChild(change_field.cloneNode(true));
-
-                    const on_event = change_field.classList.contains(`field-nice-select`) ? `change` : `input`;
-                    
-                    change_field.addEventListener(on_event, function (e) {
-                        
-                        this.check_field(row, change_field.value, value, operator);
-                    
-                    }.bind(this));
-                
-                });
-    
-                const form_data = new FormData(form);
-                const entries = Object.fromEntries(Array.from(form_data.keys(), key => {
-                    let val = form_data.getAll(key)
-                    if (val.length > 1) val = val.filter(v => v !== '0'); // remove dummy checkbox values
-                    return [key, val.length > 1 ? val : val.pop()]
-                }));
-    
-                const v1 = entries.hasOwnProperty(deltas[0].name) ? entries[deltas[0].name] : null;
-                if (v1 != null) this.check_field(row, v1, value, operator);
-
-            }
+            this.set_condition(field, condition);
 
         });
+
+    }
+
+    set_condition (field, condition) {
+
+        const id         = field.getAttribute('data-field-id') + '-row';
+        const row        = document.getElementById(id);
+
+        const delta_name = condition[0];
+        const operator   = condition[1];
+        const value      = condition[2];
+
+        const deltas = document.querySelectorAll(`[name='${delta_name}']`);
+        const form   = document.createElement("form");
+
+        if (deltas) {
+
+            deltas.forEach(change_field => {
+
+                form.appendChild(change_field.cloneNode(true));
+
+                const on_event = change_field.classList.contains(`field-nice-select`) ? `change` : `input`;
+                
+                change_field.addEventListener(on_event, function (e) {
+                    
+                    this.check_field(row, change_field.value, value, operator);
+                
+                }.bind(this));
+            
+            });
+
+            const form_data = new FormData(form);
+            const entries = Object.fromEntries(Array.from(form_data.keys(), key => {
+                let val = form_data.getAll(key)
+                if (val.length > 1) val = val.filter(v => v !== '0'); // remove dummy checkbox values
+                return [key, val.length > 1 ? val : val.pop()]
+            }));
+
+            const v1 = entries.hasOwnProperty(deltas[0].name) ? entries[deltas[0].name] : null;
+            if (v1 != null) this.check_field(row, v1, value, operator);
+
+        }
 
     }
 
