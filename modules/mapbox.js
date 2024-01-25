@@ -44,9 +44,10 @@ export class Digitalis_Mapbox {
 
         if (this.options.location) document.addEventListener('Eventropy/Location/Updated', (e) => {
 
-            if (e.detail.src == 'input') return;
-
             this.place_location_pin(e.detail.lng, e.detail.lat);
+            //this.calc_bounds();
+
+            setTimeout(() => this.calc_bounds(), 1000); // We delay to ensure the coords have been updated - https://github.com/mapbox/mapbox-gl-js/issues/4904
 
         });
 
@@ -148,6 +149,8 @@ export class Digitalis_Mapbox {
             if (!this.state.location.selected) {
 
                 this.set_location(e.lngLat.lng, e.lngLat.lat);
+                this.calc_bounds();
+
                 document.dispatchEvent(new CustomEvent('Digitalis/Query/Control/Submit', {detail: {}}));
 
             }
@@ -211,7 +214,8 @@ export class Digitalis_Mapbox {
     set_location (longitude, latitude) {
 
         this.place_location_pin(longitude, latitude);
-        eventropy_location.set_location(latitude, longitude, 'input');
+        eventropy_location.set_location(latitude, longitude, 'input', false);
+        this.calc_bounds();
 
     }
 
