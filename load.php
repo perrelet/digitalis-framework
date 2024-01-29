@@ -52,6 +52,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-sub-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/commands-page.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-table.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/admin/screen-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/posts-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/users-table.abstract.php';
 
