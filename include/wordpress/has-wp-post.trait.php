@@ -337,7 +337,16 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
         $tax_input = $post_array['tax_input'] ?? []; // We need to process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         $post_array['tax_input'] = '';
 
-        $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
+        if ($this->post_id == 'new') {
+
+            $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
+
+        } else {
+
+            $post_array['ID'] = $this->get_id();
+            $post_id = wp_update_post($post_array, true, $fire_after_hooks);
+
+        }
 
         if ($post_id && !is_wp_error($post_id)) {
 
