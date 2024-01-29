@@ -2,30 +2,17 @@
 
 namespace Digitalis;
 
-abstract class Users_Table extends Admin_Table {
+abstract class Users_Table extends Screen_Table {
 
     public function run () {
-    
-        add_filter('manage_users_columns',        [$this, 'columns']);
-        add_filter('manage_users_custom_column',  [$this, 'column'], 10, 3);
+
+        $this->screen = 'users';
+
+        parent::run();
 
         add_action('manage_users_extra_tablenav', [$this, 'render_filters']);
         add_action('pre_get_users',               [$this, 'filter_query']);
     
-    }
-
-    public function columns ($columns) {
-
-        return $columns;
-
-    }
-
-    public function column ($output, $column, $user_id) {
-
-        $call = [$this, "column_" . str_replace('-', '_', $column)];
-
-        return is_callable($call) ? call_user_func($call, $output, $user_id) : $output;
-
     }
 
     public function default_tax_args ($filter, $taxonomy) {
