@@ -1,3 +1,10 @@
+$field-active:        #585858         !default;
+$field-active-hover:  #333333         !default;
+$field-passive:       white           !default;
+$field-passive-hover: var(--c-earth-9)  !default;
+$field-border-width:  1px               !default;
+$field-border-color:  var(--c-earth-8)  !default;
+
 // FIELD MIXINS
 
 @mixin field_button () {
@@ -16,15 +23,15 @@
     font-size: 0.8em;
     font-weight: unset;
     transition: 0.25s;
-    box-shadow: 0px 0px 0px 1px #e5e5e5 inset;
+    box-shadow: 0px 0px 0px #{$field-border-width} #{$field-border-color} inset;
     cursor: pointer;
     user-select: none;
 
-    background: white;
+    background: $field-passive;
 
     &:hover {
 
-        background: #f8f8f8;
+        background: $field-passive-hover;
 
     }
 
@@ -74,7 +81,7 @@
 
 }
 
-@mixin field_range ($track-color: #ccc, $track-fill-color: #7f7f7f, $thumb-color: #585858, $thumb-color-hover: #3f3f3f, $thumb-diameter: 1rem, $track-height: 0.25rem, $track-width: 100%) {
+@mixin field_range ($track-color: #ccc, $track-fill-color: #7f7f7f, $thumb-color: $field-active, $thumb-color-hover: #3f3f3f, $thumb-diameter: 1rem, $track-height: 0.25rem, $track-width: 100%) {
 
     --range: calc(var(--max) - var(--min));
     --ratio: calc((var(--val) - var(--min)) / var(--range));
@@ -227,7 +234,7 @@
 
                 &:hover + .field-wrap > .checkmark {
 
-                    background-color: white;
+                    background-color: $field-passive;
 
                 }
 
@@ -269,7 +276,7 @@
                     
                     height: 1.25rem;
                     width: 1.25rem;
-                    box-shadow: 0px 0px 0px 2px #585858 inset;
+                    box-shadow: 0px 0px 0px 2px #{$field-active} inset;
                     border-radius: 0.25rem;
 
                     &:after {
@@ -285,7 +292,7 @@
                         margin: auto;
                         width: 30%;
                         height: 60%;
-                        border: solid #585858;
+                        border: solid #{$field-active};
                         border-width: 0 3px 3px 0;
                         transition: 0.25s;
                         transform: scale(0) rotate(45deg);
@@ -336,11 +343,23 @@
                     position: absolute;
                     width: 0;
 
+                    + label {
+
+                        background: $field-passive;
+
+                    }
+
                     &:checked + label {
 
                         box-shadow: 0px 0px 10px rgba(0,0,0,0.25) inset, 0px 0px 2px rgba(0,0,0,0.25) inset;
-                        background: #585858;
+                        background: $field-active;
                         color: white;
+
+                        &:hover {
+
+                            background: $field-active-hover;
+
+                        }
 
                     }
 
@@ -420,6 +439,17 @@
                     text-align: center;
                     
                 }
+
+            }
+
+        }
+
+        &.row-select-nice {
+
+            div.field-nice-select {
+
+                padding: 0 0.5rem;
+                font-size: 0.9em;
 
             }
 
