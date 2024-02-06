@@ -337,6 +337,12 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     // CRUD Methods
 
+    public function reload () {
+    
+        $this->wp_post = get_post($this->get_id());
+    
+    }
+
     public function save ($post_array = [], $fire_after_hooks = true) {
 
         $post_array = wp_parse_args($post_array, get_object_vars($this->wp_post));
