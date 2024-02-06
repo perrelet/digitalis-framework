@@ -14,6 +14,8 @@ export class Digitalis_Query {
         action:                 'digitalis_query',
         nonce:                  false,
         cache_initial_posts:    true,
+        autoscroll:             true,
+        scroll_offset:          0,
 
         page_query_param:       'paged',
         page_url_param:         'page',
@@ -169,6 +171,11 @@ export class Digitalis_Query {
     }
 
     request_posts (data = {}, new_url = false) {
+
+        if (this.options.autoscroll) window.scrollTo({
+            top: this.elements.posts.getBoundingClientRect().top + document.documentElement.scrollTop - this.options.scroll_offset,
+            behavior: 'smooth',
+        });
 
         let url = new URL(new_url ? new_url : window.location.href);
 
