@@ -20,40 +20,44 @@
 
             this.observer = new IntersectionObserver(function(entries, observer) { 
                 
-                entries.forEach( entry => {
+                entries.forEach(entry => {
 
-                    if(entry.isIntersecting) this.start(entry.target);
+                    if(!entry.isIntersecting) return;
+                    
+                    const delay = entry.target.getAttribute('data-delay') ? entry.target.getAttribute('data-delay') : 0;
+                    setTimeout(() => this.start(entry.target), delay);
 
                 });
                   
             }.bind(this), observer_options);
 
-            this.counters.forEach(section => {
+            this.counters.forEach(counter => {
 
-                this.observer.observe(section); 
+                this.observer.observe(counter);
 
             });
 
         },
 
-        start: function (number) {
+        start: function (counter) {
 
-            if (number.getAttribute('data-started')) return;
+            if (counter.getAttribute('data-started')) return;
 
-            number.setAttribute('data-started', true);
+            counter.setAttribute('data-started', true);
 
-            let start   = !number.getAttribute('data-start')    ? 0     : parseFloat(number.getAttribute('data-start'));
-            let fps     = !number.getAttribute('data-fps')      ? 50    : parseFloat(number.getAttribute('data-fps'));
-            let step    = !number.getAttribute('data-step')     ? 1     : parseFloat(number.getAttribute('data-step'));
-            let prefix  = !number.getAttribute('data-prefix')   ? ""    : number.getAttribute('data-prefix');
-            let suffix  = !number.getAttribute('data-suffix')   ? ""    : number.getAttribute('data-suffix');
+            const start   = counter.getAttribute('data-start')   ? parseFloat(counter.getAttribute('data-start'))  : 0 ;
+            const fps     = counter.getAttribute('data-fps')     ? parseFloat(counter.getAttribute('data-fps'))    : 50;
+            const step    = counter.getAttribute('data-step')    ? parseFloat(counter.getAttribute('data-step'))   : 1 ;
+            const prefix  = counter.getAttribute('data-prefix')  ? counter.getAttribute('data-prefix')             : "";
+            const suffix  = counter.getAttribute('data-suffix')  ? counter.getAttribute('data-suffix')             : "";
+            
+            const end     = counter.getAttribute('data-end')     ? counter.getAttribute('data-end')                : counter.innerText;
 
-            let end = number.innerText;
             let value = start;
 
-            number.innerText = start;
+            counter.innerText = start;
 
-            let interval = setInterval(function() {
+            const interval = setInterval(function() {
 
                 value += step;
 
@@ -62,7 +66,7 @@
                     value = end;
                 }
 
-                number.innerText = prefix + value + suffix;
+                counter.innerText = prefix + value + suffix;
 
             }, 1000 / fps);
 
