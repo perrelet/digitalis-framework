@@ -368,7 +368,7 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
             }
 
-            if ($post_array['field_input']) foreach ($post_array['field_input'] as $selector => $value) {
+            if ($post_array['field_input'] ?? []) foreach ($post_array['field_input'] as $selector => $value) {
             
                 update_field($selector, $value, $post_id);
             
