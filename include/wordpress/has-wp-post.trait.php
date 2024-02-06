@@ -217,9 +217,15 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     }
 
-    public function get_type_object () {
+    public function get_post_type_object () {
 
         return get_post_type_object($this->get_type());
+
+    }
+
+    public function get_type_object () {
+
+        return $this->get_post_type_object();
 
     }
 
@@ -233,6 +239,12 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
         return $this->get_permalink($leavename);
 
+    }
+
+    public function get_archive_url () {
+    
+        return get_post_type_archive_link($this->get_type());
+    
     }
 
     public function get_terms ($taxonomy) {
