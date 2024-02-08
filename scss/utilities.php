@@ -14,7 +14,7 @@ return [
     'hide-gt-page', 'hide-gt-tablet', 'hide-gt-phone-landscape', 'hide-gt-phone-portrait',
     'hide-logged-in', 'hide-logged-out',
 
-    'top-section', 'center-section', 'bottom-section', 'stretch-section', 'relative-section', 'merge', 'screen-height', 'explode',
+    'top-section', 'center-section', 'bottom-section', 'stretch-section', 'relative-section', 'merge', 'screen-height', 'preserve-3d', 'explode',
     'cols-2', 'cols-center', 'cols-stretch', 'cols-2-page', 'phone-landscape', 'swap', 'remove-first', 'remove-last',
 
     'cover-pseudo', 'cover-before', 'cover-after', 'cover-both',

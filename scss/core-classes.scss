@@ -51,6 +51,18 @@
 
 }
 
+.ct-section.preserve-3d {
+
+    transform-style: preserve-3d;
+
+    > .ct-section-inner-wrap {
+
+        transform-style: preserve-3d;
+    
+    }
+
+}
+
 // COLUMNS
 
 div.cols-center,
