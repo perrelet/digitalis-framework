@@ -15,10 +15,10 @@ abstract class Query_Filters extends Field_Group {
         'module_version'    => DIGITALIS_FRAMEWORK_VERSION,
         'module_url'        => DIGITALIS_FRAMEWORK_URI . 'modules/query.js',
         'action'            => 'query_[post_type]',
-        'auto_submit'       => true,
         'js_params_object'  => 'query_params',
         'classes'           => ['digitalis-filters'],
         'fields'            => [],
+        'defaults'          => [],
         'tag'               => 'form',
         'attributes'        => [],
         'js_params'         => [],
@@ -41,6 +41,24 @@ abstract class Query_Filters extends Field_Group {
         
     }
 
+    public static function get_fields ($fields) {
+
+        if (static::$params['defaults']) foreach (static::$params['defaults'] as $key => $default) {
+        
+            if ($fields) foreach ($fields as &$field) {
+            
+                if (($field['key'] ?? '') != $key) continue;
+
+                $field['default'] = $default;
+            
+            }
+        
+        }
+        
+        return $fields;
+        
+    }
+
     protected static function before_first ($p) {
 
         if (!$p['module_url']) return;
@@ -50,7 +68,6 @@ abstract class Query_Filters extends Field_Group {
             'action'            => $p['action'],
             'archive_id'        => $p['archive_id'],
             'selectors'         => $p['selectors'],
-            'auto_submit'       => $p['auto_submit'],
         ]);
 
         $handle = static::class . '-query-module';
