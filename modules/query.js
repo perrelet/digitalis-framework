@@ -14,6 +14,8 @@ export class Digitalis_Query {
         action:                 'digitalis_query',
         nonce:                  false,
         cache_initial_posts:    true,
+        auto_submit:            true,
+        auto_submit_break:      false,
         autoscroll:             true,
         scroll_offset:          0,
 
@@ -58,14 +60,10 @@ export class Digitalis_Query {
 
     add_event_listeners () {
 
-        if (this.options.auto_submit) {
+        let field_array = [...this.elements.form.elements];
+        field_array.forEach(field => field.addEventListener('change', this.auto_submit));
 
-            let field_array = [...this.elements.form.elements];
-            field_array.forEach(field => field.addEventListener('change', this.submit));
-
-            document.querySelectorAll(`${this.options.selectors.form} .datepicker-input`).forEach(field => field.addEventListener('changeDate', this.submit));
-
-        }
+        document.querySelectorAll(`${this.options.selectors.form} .datepicker-input`).forEach(field => field.addEventListener('changeDate', this.auto_submit));
 
         this.elements.form.addEventListener('submit', (e) => {
 
@@ -137,7 +135,20 @@ export class Digitalis_Query {
 
     }
 
-    submit = (event) => {
+    auto_submit = () => {
+
+        let args = {
+            auto_submit: this.options.auto_submit_break ? (this.options.auto_submit_break <= window.innerWidth) : this.options.auto_submit,
+            query:       this,
+        };
+
+        document.dispatchEvent(new CustomEvent('Digitalis/Query/Auto_Submit', {detail: args}));
+
+        if (args.auto_submit) this.submit();
+
+    }
+
+    submit = () => {
 
         this.request_posts({
             paged: 1,
@@ -172,10 +183,14 @@ export class Digitalis_Query {
 
     request_posts (data = {}, new_url = false) {
 
-        if (this.options.autoscroll) window.scrollTo({
-            top: this.elements.posts.getBoundingClientRect().top + document.documentElement.scrollTop - this.options.scroll_offset,
-            behavior: 'smooth',
-        });
+        if (this.options.autoscroll) {
+            setTimeout(() => {
+                window.scrollTo({
+                    top: this.elements.posts.getBoundingClientRect().top + document.documentElement.scrollTop - this.options.scroll_offset,
+                    behavior: 'smooth',
+                });
+            }, 250); 
+        }
 
         let url = new URL(new_url ? new_url : window.location.href);
 
