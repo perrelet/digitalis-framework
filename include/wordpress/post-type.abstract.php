@@ -512,6 +512,20 @@ abstract class Post_Type extends Singleton {
 
         if ($post->post_type != $this->slug) return;
 
+        if ($update) {
+
+            $before = (array) $post_before;
+            $after  = (array) $post;
+    
+            unset($before['post_modified']);
+            unset($before['post_modified_gmt']);
+            unset($after['post_modified']);
+            unset($after['post_modified_gmt']);
+
+            if (!array_diff_assoc($before , $after)) return; // For some reason 'wp_after_insert_post' is being called twice.
+
+        }
+
         if (isset($_POST['_acf_form'])) {
 
             add_action('acf/submit_form', function () use (&$post_id, &$post, &$update, &$post_before) {
