@@ -175,12 +175,7 @@ $field-border-color:  var(--c-earth-8)  !default;
                 font-family: inherit;
                 border: 0;
                 background-color: transparent;
-
-                &:not(.field-nice-select):not(.field-button) {
-
-                    padding:0.5rem
-
-                }
+                padding: 0.5rem;
 
                 &:focus {
 
@@ -203,6 +198,8 @@ $field-border-color:  var(--c-earth-8)  !default;
 
             button[type='submit'],
             input[type='submit'] {
+
+                color: #595959;
 
                 @include field_button();
 
@@ -446,10 +443,14 @@ $field-border-color:  var(--c-earth-8)  !default;
 
         &.row-select-nice {
 
-            div.field-nice-select {
+            .field-wrap {
 
-                padding: 0 0.5rem;
-                font-size: 0.9em;
+                div.field-nice-select {
+
+                    padding: 0 0.5rem;
+                    font-size: 0.9em;
+    
+                }
 
             }
 
