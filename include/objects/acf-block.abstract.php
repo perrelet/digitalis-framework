@@ -21,6 +21,7 @@ abstract class ACF_Block {
         'enqueue_assets'  => false,
     ];
 
+    protected $defaults = [];
     protected $fields   = [];
 
     public function __construct () {
@@ -103,13 +104,13 @@ abstract class ACF_Block {
 
     public function render ($block, $content = '', $is_preview = false, $post_id = 0, $wp_block = false, $context = false) {
 
-        $params = [
+        $params = wp_parse_args([
             'block'      => $block,
             'content'    => $content,
             'is_preview' => $is_preview,
             'wp_block'   => $wp_block,
             'context'    => $context,
-        ];
+        ], $this->defaults);
 
         if ($this->fields) foreach ($this->fields as $key => $field) {
 
