@@ -6,32 +6,57 @@ abstract class Screen_Table extends Admin_Table {
 
     use Dependency_Injection;
 
-    protected $screen = 'screen';
-    protected $columns;
+    protected $slug     = '';
     protected $priority = 10;
+
+    protected $columns;
+    protected $sortable;
 
     public function run () {
 
-        if (!is_array($this->screen)) $this->screen = [$this->screen];
+        if (!is_array($this->slug)) $this->slug = [$this->slug];
 
-        foreach ($this->screen as $screen) {
+        foreach ($this->slug as $slug) {
 
-            add_filter($this->get_columns_hook($screen), [$this, 'columns_wrap'], $this->priority);
-            add_filter($this->get_column_hook($screen),  [$this, 'column'],       $this->priority, 3);
+            $columns_hook  = $this->get_columns_hook($slug);
+            $column_hook   = $this->get_column_hook($slug);
+            $sortable_hook = $this->get_sortable_hook($slug);
+
+            if ($columns_hook)  add_filter($columns_hook,  [$this, 'columns_wrap'], $this->priority);
+            if ($column_hook)   add_filter($column_hook,   [$this, 'column'],       $this->priority, 3);
+            if ($sortable_hook) add_filter($sortable_hook, [$this, 'sortable_wrap'], $this->priority);
 
         }
     
     }
-
-    protected function get_columns_hook ($screen) {
     
-        return "manage_{$screen}_columns";
+    public function columns (&$columns) {
+
+        // ...
+
+    }
+
+    public function sortable (&$columns) {
+
+        // ...
+
+    }
+
+    protected function get_columns_hook ($slug) {
+    
+        return "manage_{$slug}_columns";
     
     }
 
-    protected function get_column_hook ($screen) {
+    protected function get_column_hook ($slug) {
     
-        return "manage_{$screen}_custom_column";
+        return "manage_{$slug}_custom_column";
+    
+    }
+
+    protected function get_sortable_hook ($slug) {
+    
+        return "manage_{$slug}_sortable_columns";
     
     }
 
@@ -44,10 +69,13 @@ abstract class Screen_Table extends Admin_Table {
         
     }
 
-    public function columns (&$columns) {
+    public function sortable_wrap ($columns) {
 
-        // ...
+        $this->sortable = &$columns;
+        $this->sortable($this->sortable);
 
+        return $columns;
+        
     }
 
     protected function remove_column ($key) {

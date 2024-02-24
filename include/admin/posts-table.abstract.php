@@ -2,16 +2,19 @@
 
 namespace Digitalis;
 
-abstract class Posts_Table extends Admin_Table {
+abstract class Posts_Table extends Screen_Table {
 
     use Dependency_Injection;
 
     protected $post_type = 'post';
 
     public function run () {
-    
-        add_filter("manage_{$this->post_type}_posts_columns",       [$this, 'columns_wrap']);
-        add_action("manage_{$this->post_type}_posts_custom_column", [$this, 'column'], 10, 2);
+
+        $this->slug = $this->post_type;
+
+        parent::run();
+
+        add_action("manage_{$this->post_type}_posts_custom_column", [$this, 'post_column'], $this->priority, 2);
 
         //if (!in_array('publish_month', $this->get_filters())) add_filter('disable_months_dropdown', [$this, 'disable_months_dropdown'], 10, 2);
         add_action('restrict_manage_posts', [$this, 'render_filters_wrap']);
@@ -19,64 +22,28 @@ abstract class Posts_Table extends Admin_Table {
     
     }
 
-    protected $columns;
-
-    public function columns_wrap ($columns) {
-
-        $this->columns = &$columns;
-        $this->columns($this->columns);
-
-        return $columns;
-        
-    }
-
-    public function columns (&$columns) {
-
-        // ...
-
-    }
-
-    protected function remove_column ($key) {
+    protected function get_columns_hook ($slug) {
     
-        if (isset($this->columns[$key])) unset($this->columns[$key]);
+        return "manage_edit-{$slug}_columns";
     
     }
 
-    protected function insert_column ($entry, $position = 0, $after = true) {
-
-        if (!is_int($position)) $position = array_search($position, array_keys($this->columns));
-
-        if ($position === false) return;
-        if (!is_array($entry))   return;
-        if ($after) $position++;
-
-        $this->columns =
-            array_slice($this->columns, 0, $position, true) +
-            $entry +
-            array_slice($this->columns, $position, count($this->columns) - 1, true)
-        ;
+    protected function get_column_hook ($slug) {
+    
+        // "manage_edit-{$post_type}_custom_column" doesn't exist. Use "manage_{$post_type}_posts_custom_column" instead.
+        return false; 
     
     }
 
-    protected function append_column ($entry, $label = null) {
-
-        if (!is_array($entry)) $entry = [$entry => $label];
-        $this->columns += $entry;
-
+    protected function get_sortable_hook ($slug) {
+    
+        return "manage_edit-{$slug}_sortable_columns";
+    
     }
 
-    protected function prepend_column ($entry, $label) {
-
-        if (!is_array($entry)) $entry = [$entry => $label];
-        $this->insert_column($entry, 1, false);
-
-    }
-
-    public function column ($column, $post_id) {
+    public function post_column ($column, $post_id) {
 
         $call = [$this, "column_" . str_replace('-', '_', $column)];
-
-        /* if (is_callable($call)) call_user_func($call, $post_id); */
 
         static::inject($call, [$post_id]);
 
@@ -100,9 +67,30 @@ abstract class Posts_Table extends Admin_Table {
 
         if (!$this->is_main_admin_query($query)) return;
 
+        $this->sort_columns($query);
         $this->filter_query($query);
 
     }
+
+    public function sort_columns ($query) {
+    
+        if (!$order_by = $query->get('orderby')) return;
+
+        $call = [$this, "sort_column_" . $order_by];
+        if (is_callable($call)) {
+            
+            $qv = new Query_Vars();
+            $qv->merge($query->query_vars);
+
+            call_user_func($call, $qv);
+
+            $query->query_vars = $qv->to_array();
+        
+        }
+    
+    }
+
+    //
 
     protected function is_main_admin_query ($query) {
 

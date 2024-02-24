@@ -8,15 +8,21 @@ abstract class Taxonomy_Table extends Screen_Table {
 
     public function run () {
 
-        $this->screen = $this->taxonomy;
+        $this->slug = $this->taxonomy;
 
         parent::run();
 
     }
 
-    protected function get_columns_hook ($screen) {
+    protected function get_columns_hook ($slug) {
     
-        return "manage_edit-{$screen}_columns";
+        return "manage_edit-{$slug}_columns";
+    
+    }
+
+    protected function get_sortable_hook ($slug) {
+    
+        return "manage_edit-{$slug}_sortable_columns";
     
     }
 

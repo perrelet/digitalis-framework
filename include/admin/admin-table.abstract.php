@@ -2,6 +2,8 @@
 
 namespace Digitalis;
 
+use Digitalis\Field\Input;
+
 abstract class Admin_Table extends Feature {
 
     protected $filters = []; // name => type (taxonomy | acf) || name => [type => $type, args => [ ... ], ...] || 'months_dropdown'
@@ -109,11 +111,12 @@ abstract class Admin_Table extends Feature {
 
                     case 'field':
 
-                        $filter = wp_parse_args($filter, [
+                        $filter['args'] = wp_parse_args($filter['args'] ?? [], [
                             'field' => Input::class,
                             'key'   => $name,
                             'wrap'  => false,
                         ]);
+
                         $this->_filters[] = $filter;
 
                         break;
@@ -292,9 +295,12 @@ abstract class Admin_Table extends Feature {
     }
 
     public function render_field_filter ($filter) {
+
+        $field_class = $filter['args']['field'];
     
-        $call = $filter['field'] . "::render";
-        if (is_callable($call)) call_user_func($call, $filter);
+        $call = $field_class . "::render";
+
+        if (is_callable($call)) call_user_func($call, $filter['args']);
     
     }
 
@@ -308,7 +314,7 @@ abstract class Admin_Table extends Feature {
 
         $filters = $this->get_filters();
 
-        $qv = new \Digitalis\Query_Vars();
+        $qv = new Query_Vars();
         $qv->merge($query->query_vars);
 
         if ($filters) foreach ($filters as $name => $filter) {
@@ -343,13 +349,17 @@ abstract class Admin_Table extends Feature {
 
                     break;
 
+                case 'field':
+
+                    if ($filter['query_callback'] && is_callable($filter['query_callback'])) call_user_func($filter['query_callback'], $qv);
+
+                    break;
+
             }
-
-
 
         }
 
-        $query->query_vars['meta_query'] = $qv->get_var('meta_query');
+        $query->query_vars = $qv->to_array();
 
     }
 

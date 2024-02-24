@@ -6,7 +6,7 @@ abstract class Users_Table extends Screen_Table {
 
     public function run () {
 
-        $this->screen = 'users';
+        $this->slug = 'users';
 
         parent::run();
 
@@ -85,13 +85,17 @@ abstract class Users_Table extends Screen_Table {
 
                     break;
 
+                case 'field':
+
+                    if ($filter['query_callback'] && is_callable($filter['query_callback'])) call_user_func($filter['query_callback'], $qv);
+
+                    break;
+
             }
-
-
 
         }
 
-        $query->query_vars['meta_query'] = $qv->get_var('meta_query');
+        $query->query_vars = $qv->to_array();
 
     }
 
