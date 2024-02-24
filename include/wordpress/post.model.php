@@ -6,11 +6,11 @@ use stdClass;
 use WP_Post;
 use WP_Query;
 
-abstract class Post extends Model {
+class Post extends Model {
 
     use Has_WP_Post;
 
-    protected static $post_type = 'post';           // Override me.
+    protected static $post_type       = false;      // Override me. Leave false to allow any generic post type.
     protected static $post_type_class = false;      // Override me - Used when querying the model. With this we can get the main query args from the CPT.
 
     public function is_post () { return true; }
@@ -44,8 +44,8 @@ abstract class Post extends Model {
 
     public static function validate_id ($id) {
 
-        if ($id == 'new')                                      return true;
-        if (get_post_type($id) != static::$post_type)          return false;
+        if ($id == 'new')                                                     return true;
+        if (static::$post_type && (get_post_type($id) != static::$post_type)) return false;
 
         return (is_int($id) && ($id > 0));
 
