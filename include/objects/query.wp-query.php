@@ -68,6 +68,14 @@ class Digitalis_Query extends WP_Query {
 
     }
 
+    public function unset_var ($key) {
+
+        $this->query_vars_obj->unset_var($key);
+
+        return $this;
+
+    }
+
     public function add_meta_query ($meta_query) {
 
         $this->query_vars_obj->add_meta_query($meta_query);

@@ -35,6 +35,10 @@ class Query_Vars {
     
     }
 
+    public function get ($key, $default = null) { return $this->get_var($key, $default); }
+    public function set ($key, $value)          { return $this->set_var($key, $value);   }
+    public function unset ($key)                { return $this->unset_var($key);         }
+
     public function get_var ($key, $default = null) {
 
         return isset($this->query[$key]) ? $this->query[$key] : $default;
@@ -47,6 +51,14 @@ class Query_Vars {
 
         return $this;
 
+    }
+
+    public function unset_var ($key) {
+
+        unset($this->query[$key]);
+    
+        return $this;
+    
     }
 
     public function get_meta_query () {
