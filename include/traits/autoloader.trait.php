@@ -52,15 +52,7 @@ trait Autoloader {
 
             if (is_null($instantiation)) $instantiation = 'get_instance';
 
-            if (explode('/', $directory)[0] == 'woocommerce') {
-
-                if (defined('WC_PLUGIN_FILE')) $objs = array_merge($objs, $this->autoload($this->path . $directory, $instantiation));
-
-            } else {
-
-                $objs = array_merge($objs, $this->autoload($this->path . $directory, $instantiation));
-
-            }
+            $objs = array_merge($objs, $this->autoload($this->path . $directory, $instantiation));
 
         }
 
