@@ -512,7 +512,8 @@ abstract class Post_Type extends Singleton {
 
         if ($post->post_type != $this->slug) return;
 
-        if ($update) {
+        // Turning this off as it doesn't honor acf updates
+        /* if ($update) {
 
             $before = (array) $post_before;
             $after  = (array) $post;
@@ -524,7 +525,7 @@ abstract class Post_Type extends Singleton {
 
             if (!array_diff_assoc($before , $after)) return; // For some reason 'wp_after_insert_post' is being called twice.
 
-        }
+        } */
 
         if (isset($_POST['_acf_form'])) {
 
