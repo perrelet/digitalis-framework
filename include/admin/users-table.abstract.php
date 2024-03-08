@@ -50,9 +50,8 @@ abstract class Users_Table extends Screen_Table {
 
         $filters = $this->get_filters();
 
-        $qv = new \Digitalis\Query_Vars([
-            'meta_query' => $query->meta_query ? $query->meta_query : [],
-        ]);
+        $qv = new \Digitalis\Query_Vars();
+        $qv->merge($query->query_vars, true);
 
         if ($filters) foreach ($filters as $name => $filter) {
 
