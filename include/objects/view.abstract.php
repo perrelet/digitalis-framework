@@ -84,8 +84,8 @@ abstract class View {
 
     public static function render ($params = [], $print = true) {
 
-        if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
-        $params['index'] = ++self::$indexes[static::class];
+        if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 1;
+        $params['index'] = self::$indexes[static::class];
 
         if (method_exists(static::class, 'footer') && !has_action('wp_print_footer_scripts', [static::class, 'footer'])) add_action('wp_print_footer_scripts', [static::class, 'footer']);
 
@@ -93,6 +93,8 @@ abstract class View {
 
         if (!static::permission(static::$params)) return;
         if (!static::condition(static::$params))  return;
+
+        self::$indexes[static::class]++;
 
         //
 
