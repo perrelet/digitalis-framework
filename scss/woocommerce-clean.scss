@@ -83,7 +83,10 @@ $woo-input-radio-width: 24px;
 
     span.line {
 
-        display: block;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: calc(var(--woo-spacing) / 4);
 
         &:not(:last-child) {
 
