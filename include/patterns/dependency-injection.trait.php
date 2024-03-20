@@ -39,7 +39,10 @@ trait Dependency_Injection {
             if (!class_exists($class))                  continue; 
             if (!method_exists($class, 'get_instance')) continue;
 
-            $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance']);
+            // TESTING:::
+
+            //$args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance']);
+            $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null);
 
         }
 
@@ -57,7 +60,8 @@ trait Dependency_Injection {
 
         $reflection  = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
-        $args        = static::method_inject($constructor, $args, $values);
+        
+        if ($constructor) $args = static::method_inject($constructor, $args, $values);
 
         return $reflection->newInstanceArgs($args);
 
