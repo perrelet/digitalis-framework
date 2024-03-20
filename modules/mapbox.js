@@ -265,7 +265,17 @@ export class Digitalis_Mapbox {
 
     }
 
-    set_data (source_id, collection) {
+    set_data (data) {
+
+        for (const [source_id, collection] of Object.entries(data)) {
+
+            this.set_source_data(source_id, collection);
+            
+        }
+
+    }
+
+    set_source_data (source_id, collection) {
 
         const source = this.map.getSource(source_id);
 
