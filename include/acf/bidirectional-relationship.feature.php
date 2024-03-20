@@ -89,10 +89,10 @@ abstract class Bidirectional_Relationship extends Feature {
 
         $old_values = get_field($field['name'], $updated_selector, false);
         
-        if (empty($values))         $values = [];
+        if (empty($values))         $values     = [];
 		if (empty($old_values))     $old_values = [];
-        if (!is_array($values))     $values = [$values];
-        if (!is_array($old_values)) $values = [$old_values];
+        if (!is_array($values))     $values     = [$values];
+        if (!is_array($old_values)) $old_values = [$old_values];
 
         $added   = array_diff($values, $old_values);
 		$removed = array_diff($old_values, $values);
