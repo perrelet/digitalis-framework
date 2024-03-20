@@ -11,6 +11,8 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
     protected $post_id;
     protected $wp_post;
 
+    protected $content;
+
     protected function is_post () { return true; } // Override as required
 
     public function set_post ($post, $data = null) {
@@ -87,9 +89,14 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     public function get_content ($apply_filters = true, $more_link_text = null, $strip_teaser = false) {
 
-        $content = get_the_content($more_link_text, $strip_teaser, $this->wp_post);
+        if (is_null($this->content)) {
 
-        return $apply_filters ? apply_filters('the_content', $content) : $content;
+            $this->content = get_the_content($more_link_text, $strip_teaser, $this->wp_post);
+            if ($apply_filters) $this->content = apply_filters('the_content', $this->content);
+
+        }
+
+        return $this->content;
 
     }
 
