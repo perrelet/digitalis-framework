@@ -146,7 +146,7 @@ abstract class Archive extends View {
 
         }
 
-        $query;
+        $query = null;
 
         if (static::$items = (is_null($p['items']) ? static::get_items($p['query_vars'], $query, $p['skip_main']) : $p['items'])) {
 
