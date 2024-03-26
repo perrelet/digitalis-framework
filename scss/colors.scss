@@ -1,11 +1,17 @@
 @if not mixin-exists(generate-shades) {
 
-    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1, $label_style: 'count', $saturate: 0) {
+    @mixin generate-shades ($base-color: #7F7F7F, $base-name: grey, $n: 8, $black_point: 0, $white_point: 1, $label_style: 'count', $saturate: 0, $shades: false, $tints: false) {
 
         $lightness: lightness($base-color);
-        $shades: ceil($lightness * $n / 100);
-        $shades: $shades / ($shades * 0 + 1);
-        $tints: $n - $shades;
+
+        @if (not $shades) {
+            $shades: ceil($lightness * $n / 100);
+            $shades: $shades / ($shades * 0 + 1);
+        }
+
+        @if (not $tints) {
+            $tints: $n - $shades;
+        }
 
         $l: $white_point * (100% - $lightness) / $tints; 
         $s: 100% * $saturate / $tints; 
