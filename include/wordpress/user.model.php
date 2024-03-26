@@ -252,4 +252,16 @@ class User extends Model {
         
     }
 
+    // CRUD
+
+    public function save ($user_data = []) {
+
+        $user_data['ID'] = $this->get_id();
+
+        return wp_update_user($user_data);
+
+        //TODO: wp_insert_user
+
+    }
+
 }
