@@ -71,6 +71,17 @@ $woo-input-radio-width: 24px;
 
 }
 
+@mixin woo-field-label {
+
+    margin-top: 0;
+    margin-bottom: 0;
+    //line-height: 1.4;
+    font-weight: var(--woo-field-label-font-weight);
+    font-size: var(--woo-field-label-font-size);
+    color: var(--woo-field-label-color);
+
+}
+
 @mixin woo-label-radio {
 
     flex-grow: 1;
@@ -141,10 +152,16 @@ $woo-input-radio-width: 24px;
     --woo-border-color: #eee;
     --woo-border-radius: 0.5rem;
 
-    --woo-field-background: #f7f7f8;
-    --woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset;
-    --woo-field-label-color: #909090;
+    --woo-field-bg: transparent;
     --woo-field-color: #111;
+    --woo-field-row-bg: #f7f7f8;
+    --woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset;
+    --woo-field-label-font-size: 0.8em;
+    --woo-field-label-font-weight: 600;
+    --woo-field-label-color: #909090;
+    --woo-field-description-size: 0.8em;
+    --woo-field-description-weight: 600;
+    --woo-field-description-color: #a5a5a5;
     --woo-required-color: var(--wc-red);
 
     --woo-block-padding: calc(var(--woo-spacing) * 2);
@@ -418,7 +435,7 @@ body {
 
             .form-row {
 
-                background-color: var(--woo-field-background);
+                background-color: var(--woo-field-row-bg);
                 border-radius: var(--woo-border-radius);
                 padding: calc(var(--woo-spacing) / 2) calc(3 * var(--woo-spacing) / 4);
                 margin-bottom: var(--woo-spacing);
@@ -437,11 +454,7 @@ body {
 
                 > label {
 
-                    font-size: 0.8em;
-                    margin-bottom: 0;
-                    line-height: 1.4;
-                    font-weight: 600;
-                    color: var(--woo-field-label-color);
+                    @include woo-field-label();
 
                 }
 
@@ -483,15 +496,27 @@ body {
                         }
 
                     }
-            
+
+                    &.woocommerce-input-wrapper-checkbox {
+
+                        > label {
+
+                            @include woo-field-label;
+
+                        }
+
+                    }
+
                     .normal-description {
-            
+
                         display: flex;
                         order: -1;
                         margin-bottom: 0.5em;
                         margin-top: 0.25em;
-                        font-size: 0.9em;
-            
+                        font-size: var(--woo-field-description-size);
+                        font-weight: var(--woo-field-description-weight);
+                        color: var(--woo-field-description-color);
+
                     }
 
                 }
@@ -509,7 +534,7 @@ body {
             textarea {
 
                 border: 0;
-                background-color: transparent;
+                background-color: var(--woo-field-bg);
                 padding: 0.25em 0;
                 /* font-family: var(--woo-font-family; */
                 font-size: 1em;
@@ -561,7 +586,7 @@ body {
 
                 margin-bottom: var(--woo-spacing);
                 border-radius: var(--woo-border-radius);
-                border: calc(var(--woo-spacing) / 4) solid var(--woo-field-background);
+                border: calc(var(--woo-spacing) / 4) solid var(--woo-field-row-bg);
                 padding: 0 var(--woo-spacing);
 
                 legend {
@@ -593,7 +618,7 @@ body {
 
             span.select2 {
 
-                .select2-selection--single {
+                .select2-selection {
 
                     border: 0;
                     background-color: transparent;
@@ -601,6 +626,7 @@ body {
                     font-size: 1em;
                     padding: 0.5em 0;
                     height: auto;
+                    box-shadow: none;
 
                     .select2-selection__rendered {
 
@@ -762,7 +788,7 @@ body {
                         div.payment_box {
 
                             border-radius: var(--woo-border-radius);
-                            background-color: var(--woo-field-background);
+                            background-color: var(--woo-field-row-bg);
                             padding: var(--woo-spacing);
 
                             > *:first-child { margin-top: 0; }
@@ -771,7 +797,7 @@ body {
 
                             &:before {
 
-                                border-bottom-color: var(--woo-field-background);
+                                border-bottom-color: var(--woo-field-row-bg);
 
                             }
 
@@ -1483,13 +1509,13 @@ body {
     
                         div.payment_box {
         
-                            background-color: var(--woo-field-background);
+                            background-color: var(--woo-field-row-bg);
                             border-radius: var(--woo-border-radius);
                             margin-bottom: 0;;
             
                             &:before {
             
-                                border-bottom-color: var(--woo-field-background);
+                                border-bottom-color: var(--woo-field-row-bg);
             
                             }
             
@@ -1583,7 +1609,7 @@ body {
                             min-width: 160px;
                             margin-right: var(--woo-spacing);
                             border: 1px solid transparent;
-                            background: var(--woo-field-background);
+                            background: var(--woo-field-row-bg);
                             @include woo-coupon-field();
 
                             &:focus {
@@ -1814,7 +1840,7 @@ body {
                 .checkout-order-review-wrap {
     
                     position: relative;
-                    background-color: var(--woo-field-background);
+                    background-color: var(--woo-field-row-bg);
                     padding: var(--woo-block-padding);
                     border-left: 1px solid var(--woo-border-color);
                     border-radius: 0 var(--woo-border-radius) var(--woo-border-radius) 0;
@@ -1883,7 +1909,7 @@ body {
                 #payment {
     
                     padding: var(--woo-block-padding);
-                    background-color: var(--woo-field-background);
+                    background-color: var(--woo-field-row-bg);
     
                     .wc_payment_methods,
                     .form-row {
