@@ -10,8 +10,11 @@ class Post extends Model {
 
     use Has_WP_Post;
 
-    protected static $post_type       = false;      // Override me. Leave false to allow any generic post type.
-    protected static $post_type_class = false;      // Override me - Used when querying the model. With this we can get the main query args from the CPT.
+    protected static $post_type       = false;       // Validate by post_type. Leave false to allow any generic post type.
+    protected static $term            = false;       // Validate by taxonomy term. Leave false to allow any term.
+    protected static $taxonomy        = 'category';  // Taxonomy to validate term against.
+
+    protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
 
     public function is_post () { return true; }
 
@@ -44,8 +47,9 @@ class Post extends Model {
 
     public static function validate_id ($id) {
 
-        if ($id == 'new')                                                     return true;
-        if (static::$post_type && (get_post_type($id) != static::$post_type)) return false;
+        if ($id == 'new')                                                        return true;
+        if (static::$post_type && (get_post_type($id) != static::$post_type))    return false;
+        if (static::$term && (!has_term(static::$term, static::$taxonomy, $id))) return false;
 
         return (is_int($id) && ($id > 0));
 
