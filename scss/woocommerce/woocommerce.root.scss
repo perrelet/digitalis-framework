@@ -1,0 +1,277 @@
+:root {
+
+    --woo-page-background: #fbfbfb;
+
+    --woo-header-margin-bottom: 0.5em;
+    --woo-spacing: 1rem;
+
+    --woo-border-color: #eee;
+    --woo-border-radius: 0.5rem;
+
+    --woo-field-bg: transparent;
+    --woo-field-color: #111;
+    --woo-field-row-bg: #f7f7f8;
+    --woo-field-focus-box-shadow: 0px 0px 0px 2px #646464 inset;
+    --woo-field-label-font-size: 0.8em;
+    --woo-field-label-font-weight: 600;
+    --woo-field-label-color: #909090;
+    --woo-field-description-size: 0.8em;
+    --woo-field-description-weight: 600;
+    --woo-field-description-color: #a5a5a5;
+    --woo-field-radio-size: 24px;
+
+    --woo-required-color: var(--wc-red);
+
+    --woo-thumbnail-width: 64px;
+
+    --woo-block-padding: calc(var(--woo-spacing) * 2);
+    --woo-block-margin: calc(var(--woo-spacing) * 2);
+    --woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07);
+    --woo-block-border: none;
+    --woo-block-background: white;
+
+    --woo-table-padding: 0;
+
+    --woo-nested-block-shadow: none;
+    --woo-nested-block-border: 1px solid var(--woo-border-color);
+
+    --woo-field-coupon-text-transform: uppercase;
+    --woo-field-coupon-letter-spacing: 1px;
+
+}
+
+@media only screen and (max-width: 420px) {
+
+    :root {
+
+        --woo-block-padding: var(--woo-spacing);
+        --woo-block-margin: var(--woo-spacing);
+
+    }
+
+}
+
+// MIXINS
+
+// UTILS
+
+@if not mixin-exists(woo-caps) { @mixin woo-caps {
+
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.75em;
+    font-weight: normal;
+
+}}
+
+// BLOCKS
+
+@if not mixin-exists(woo-block) { @mixin woo-block {
+    
+    box-shadow: var(--woo-block-shadow);
+    border-radius: var(--woo-border-radius);
+    border: var(--woo-block-border);
+    background: var(--woo-block-background);
+    padding: var(--woo-block-padding);
+
+    @include p-pad();
+
+}}
+
+@if not mixin-exists(woo-nested-block) { @mixin woo-nested-block {
+
+    box-shadow: var(--woo-nested-block-shadow);
+    border: var(--woo-nested-block-border);
+
+}}
+
+@if not mixin-exists(woo-unblock) { @mixin woo-unblock {
+}}
+
+// LINKS
+
+@if not mixin-exists(woo-link) { @mixin woo-link {
+
+    text-decoration: none;
+
+    &:hover {
+
+        text-decoration: underline;
+
+    }
+
+}}
+
+// BUTTONS
+
+@if not mixin-exists(woo-button) { @mixin woo-button {
+
+}}
+
+@if not mixin-exists(woo-button-disabled) { @mixin woo-button-disabled {
+
+    opacity: 0.5;
+
+}}
+
+// TABLES
+
+@if not mixin-exists(woo-table-block) { @mixin woo-table-block {
+
+    border-spacing: 0;
+    border-radius: var(--woo-border-radius);
+    border: var(--woo-block-border);
+    background: var(--woo-block-background);
+    box-shadow: var(--woo-block-shadow);
+    padding: var(--woo-table-padding);
+
+}}
+
+@if not mixin-exists(woo-table-cell) { @mixin woo-table-cell {
+
+    border: 0;
+    font-size: 0.9em;
+
+}}
+
+@if not mixin-exists(woo-table-heading) { @mixin woo-table-heading {
+
+    @include woo-caps;
+
+    border: 0;
+    font-size: 0.5em;
+    text-align: left;
+
+}}
+
+// IMAGES
+
+@if not mixin-exists(woo-thumbnail) { @mixin woo-thumbnail {
+
+    min-width: var(--woo-thumbnail-width);
+    min-height: var(--woo-thumbnail-width);
+
+}}
+
+// PRICE
+
+@if not mixin-exists(woo-price) { @mixin woo-price {
+
+    font-weight: 600;
+
+}}
+
+// FIELDS
+
+@if not mixin-exists(woo-field-focus) { @mixin woo-field-focus {
+
+    box-shadow: var(--woo-field-focus-box-shadow);
+
+}}
+
+@if not mixin-exists(woo-field-unfocus) { @mixin woo-field-unfocus {
+
+    box-shadow: initial;
+
+}}
+
+@if not mixin-exists(woo-field-radio) { @mixin woo-field-radio {
+
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    outline: none;
+    cursor: pointer;
+
+    background: white;
+    display: block;
+    width: var(--woo-field-radio-size) !important; // .woocommerce-SavedPaymentMethods-tokenInput style='width: auto;' 
+    height: var(--woo-field-radio-size);
+    border: 0;
+    border-radius: 100%;
+
+    &:hover {
+
+        box-shadow: 0px 0px 0px 2px var(--woo-field-color);
+        
+    }
+
+    &:checked {
+
+        background-color: var(--woo-field-color);
+        box-shadow: 0px 0px 0px 6px inset white, 0px 0px 0px 2px var(--woo-field-color);
+
+        &:hover {
+
+            box-shadow: 0px 0px 0px 8px inset white, 0px 0px 0px 2px var(--woo-field-color);
+
+        }
+
+    }
+
+}}
+
+@if not mixin-exists(woo-field-label) { @mixin woo-field-label {
+
+    margin-top: 0;
+    margin-bottom: 0;
+    //line-height: 1.4;
+    font-weight: var(--woo-field-label-font-weight);
+    font-size: var(--woo-field-label-font-size);
+    color: var(--woo-field-label-color);
+
+}}
+
+@if not mixin-exists(woo-field-description) { @mixin woo-field-description {
+
+    font-size: var(--woo-field-description-size);
+    font-weight: var(--woo-field-description-weight);
+    color: var(--woo-field-description-color);
+}}
+
+@if not mixin-exists(woo-label-radio) { @mixin woo-label-radio {
+
+    flex-grow: 1;
+    display: block;
+    width: calc(100% - #{var(--woo-field-radio-size)});
+    padding-left: var(--woo-spacing);
+    line-height: initial;
+    color: initial;
+    font-size: 0.9em;
+
+    span.line {
+
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: calc(var(--woo-spacing) / 4);
+
+        &:not(:last-child) {
+
+            margin-bottom: calc(var(--woo-spacing) / 4);
+
+        }
+
+    }
+
+}}
+
+@if not mixin-exists(woo-field-coupon) { @mixin woo-field-coupon {
+
+    text-transform: var(--woo-field-coupon-text-transform);
+    letter-spacing: var(--woo-field-coupon-letter-spacing);
+
+}}
+
+@if not mixin-exists(woo-field-row-reset) { @mixin woo-field-row-reset {
+
+    background-color: initial;
+    border-radius: initial;
+    padding: 0;
+    margin-bottom: 0;
+
+}}
+
+// MIXIN CLASSES
+
+.woo-block { @include woo-block(); }
