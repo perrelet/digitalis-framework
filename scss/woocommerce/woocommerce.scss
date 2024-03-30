@@ -166,7 +166,9 @@
         
     }
 
-    .button {
+    input.button,
+    button.button,
+    a.button {
 
         @include woo-button;
 
