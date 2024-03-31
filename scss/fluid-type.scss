@@ -32,39 +32,39 @@ $type-ratios: (
         $level-size: $level-size * $type-size-ratio;
         $type-styles: map-merge($type-styles, (#{"h"}$level: $level-size));
 
-        // Output heading styles Assign to element and create utility class
-        h#{$level},
-        .h#{$level},
-        .force-h#{$level}:not(#dummy) {
+        // Recommendation courtesy of this brilliant work: @link https://kittygiraudel.com/2020/05/18/using-calc-to-figure-out-optimal-line-height/
+        line-height: calc(2px + 2ex + 2px);
 
-            // Fallback for browsers that don't support min / max
-            font-size: $level-size;
+        // Limit in place based on testing -> smaller ratios are prematurely or unnecessarily reduced
 
-            // Recommendation courtesy of this brilliant work: @link https://kittygiraudel.com/2020/05/18/using-calc-to-figure-out-optimal-line-height/
-            line-height: calc(2px + 2ex + 2px);
+        @if ($type-size-ratio > 1.2) {
 
-            // Limit in place based on testing -> smaller ratios are prematurely or unnecessarily reduced
+            // Remove unit for calculations
+            $level-unitless: $level-size / ($level-size * 0 + 1);
 
-            @if ($type-size-ratio > 1.2) {
-                // Fluid type styles
+            // Set minimum size to a percentage less than $level-size. Reduction is greater for large font sizes (> 4rem) to help prevent overflow due to font-size on mobile devices
+            $fluid-reduction: if($level-size > 4, $reduction_1, 0.33);
+            $fluid-min: $level-unitless - ($fluid-reduction * $level-unitless);
 
-                // Remove unit for calculations
-                $level-unitless: $level-size / ($level-size * 0 + 1);
+            // Prevent dropping lower than 1rem (body font-size)
+            $fluid-min: if($fluid-min > $type-base-size, $fluid-min, 1);
 
-                // Set minimum size to a percentage less than $level-size. Reduction is greater for large font sizes (> 4rem) to help prevent overflow due to font-size on mobile devices
-                $fluid-reduction: if($level-size > 4, $reduction_1, 0.33);
-                $fluid-min: $level-unitless - ($fluid-reduction * $level-unitless);
+            // Adjust max modifier slightly per level to prevent "same" size or lower levels appaering larger than higher levels 4vw was selected by testing from $type-ratios map, YMMV 🙃
+            $fluid-scaler: ($level-unitless - $fluid-min) + $screen;
 
-                // Prevent dropping lower than 1rem (body font-size)
-                $fluid-min: if($fluid-min > $type-base-size, $fluid-min, 1);
-
-                // Adjust max modifier slightly per level to prevent "same" size or lower levels appaering larger than higher levels 4vw was selected by testing from $type-ratios map, YMMV 🙃
-                $fluid-scaler: ($level-unitless - $fluid-min) + $screen;
-
-                font-size: clamp(#{$fluid-min}rem, #{$fluid-scaler} #{'+ 1rem'}, #{$level-size});
-
-            }
         }
+
+        $font-size: clamp(#{$fluid-min}rem, #{$fluid-scaler} #{'+ 1rem'}, #{$level-size});
+
+        --h#{$level}-font-size: #{$font-size};
+
+        h#{$level} {
+
+            font-size: $level-size; // Fallback for browsers that don't support min / max
+            font-size: var(--h#{$level}-font-size);
+
+        }
+
     }
 }
 
