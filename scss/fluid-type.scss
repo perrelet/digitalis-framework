@@ -32,9 +32,6 @@ $type-ratios: (
         $level-size: $level-size * $type-size-ratio;
         $type-styles: map-merge($type-styles, (#{"h"}$level: $level-size));
 
-        // Recommendation courtesy of this brilliant work: @link https://kittygiraudel.com/2020/05/18/using-calc-to-figure-out-optimal-line-height/
-        line-height: calc(2px + 2ex + 2px);
-
         // Limit in place based on testing -> smaller ratios are prematurely or unnecessarily reduced
 
         @if ($type-size-ratio > 1.2) {
@@ -60,6 +57,7 @@ $type-ratios: (
 
         h#{$level} {
 
+            line-height: calc(2px + 2ex + 2px); // Recommendation courtesy of this brilliant work: @link https://kittygiraudel.com/2020/05/18/using-calc-to-figure-out-optimal-line-height/
             font-size: $level-size; // Fallback for browsers that don't support min / max
             font-size: var(--h#{$level}-font-size);
 
