@@ -59,7 +59,8 @@ abstract class Bidirectional_Relationship extends Feature {
             $selector = $this->get_selector($id, $sync_post_type);
 
             $sync_ids = get_field($sync_field_key, $selector, false);
-            if (empty($sync_ids)) $sync_ids = [];
+            if (empty($sync_ids))     $sync_ids = [];
+            if (!is_array($sync_ids)) $sync_ids = [$sync_ids];
 
             if (!in_array($updated_id, $sync_ids) && $limit && (count($sync_ids) >= $limit)) {
 
@@ -120,7 +121,8 @@ abstract class Bidirectional_Relationship extends Feature {
             }
 
             $sync_ids = get_field($sync_field_key, $selector, false);
-            if (empty($sync_ids)) $sync_ids = [];
+            if (empty($sync_ids))     $sync_ids = [];
+            if (!is_array($sync_ids)) $sync_ids = [$sync_ids];
 
             if (!in_array($updated_id, $sync_ids)) $sync_ids[] = $updated_id; // Add the current post to the post being added
 
@@ -135,7 +137,8 @@ abstract class Bidirectional_Relationship extends Feature {
             $selector = $this->get_selector($id, $sync_post_type);
 
             $sync_ids = get_field($sync_field_key, $selector, false);
-            if (empty($sync_ids)) $sync_ids = [];
+            if (empty($sync_ids))     $sync_ids = [];
+            if (!is_array($sync_ids)) $sync_ids = [$sync_ids];
 
             if (in_array($updated_id, $sync_ids)) unset($sync_ids[array_search($updated_id, $sync_ids)]); // Remove the current post from the post being added
 
