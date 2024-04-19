@@ -162,7 +162,8 @@ trait Autoloader {
     protected function extract_class_name ($file) {
 
         // https://stackoverflow.com/questions/7153000/get-class-name-from-file
-        // fix: $class = $tokens[$i+2][1]; -> if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1]; to avoid 'Uninitialized string offset 1' when using 'static::class'
+        // fix: $class = $tokens[$i+2][1];         ---> if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];                      Avoids 'Uninitialized string offset 1' when using 'static::class'
+        // fix: if ($tokens[$j][0] === T_STRING) { ---> if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NAME_QUALIFIED) {    Handle files with sub-namespaces (T_NAME_QUALIFIED PHP 8.0.0+)
 
         $fp = fopen($file, 'r');
         $class = $namespace = $buffer = '';
@@ -178,7 +179,7 @@ trait Autoloader {
             for (;$i<count($tokens);$i++) {
                 if ($tokens[$i][0] === T_NAMESPACE) {
                     for ($j=$i+1;$j<count($tokens); $j++) {
-                        if ($tokens[$j][0] === T_STRING) {
+                        if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NAME_QUALIFIED) {
                             $namespace .= '\\'.$tokens[$j][1];
                         } else if ($tokens[$j] === '{' || $tokens[$j] === ';') {
                             break;
