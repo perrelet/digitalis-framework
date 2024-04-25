@@ -196,13 +196,11 @@ class Field extends View {
 
     protected static function before ($p) {
 
-        if (!$p['wrap']) return;
-
-        echo "<div id='{$p['id']}-row' class='{$p['row_classes']}' style='{$p['row_styles']}'>";
+        if ($p['wrap']) echo "<div id='{$p['id']}-row' class='{$p['row_classes']}' style='{$p['row_styles']}'>";
 
             if ($p['label']) echo "<label for='{$p['id']}'>{$p['label']}</label>";
 
-                echo "<div id='{$p['id']}-wrap' class='field-wrap'>";
+                if ($p['wrap']) echo "<div id='{$p['id']}-wrap' class='field-wrap'>";
 
     }            
 
