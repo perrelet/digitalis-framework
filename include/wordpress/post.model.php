@@ -10,9 +10,10 @@ class Post extends Model {
 
     use Has_WP_Post;
 
-    protected static $post_type       = false;       // Validate by post_type. Leave false to allow any generic post type.
-    protected static $term            = false;       // Validate by taxonomy term. Leave false to allow any term.
-    protected static $taxonomy        = 'category';  // Taxonomy to validate term against.
+    protected static $post_type       = false;       // string           - Validate by post_type. Leave false to allow any generic post type.
+    protected static $post_status     = false;       // string|int|array - Validate by post_status. Leave false to allow any status.
+    protected static $term            = false;       // string|int|array - Validate by taxonomy term. Leave false to allow any term.
+    protected static $taxonomy        = 'category';  // string           - Taxonomy to validate term against.
 
     protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
 
@@ -50,6 +51,13 @@ class Post extends Model {
         if ($id == 'new')                                                        return true;
         if (static::$post_type && (get_post_type($id) != static::$post_type))    return false;
         if (static::$term && (!has_term(static::$term, static::$taxonomy, $id))) return false;
+
+        if (static::$post_status) {
+
+            if (!is_array(static::$post_status)) static::$post_status = [static::$post_status];
+            if (!in_array(get_post_status($id), static::$post_status)) return false;
+
+        }
 
         return (is_int($id) && ($id > 0));
 
