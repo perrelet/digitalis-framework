@@ -21,6 +21,14 @@ class User extends Model {
 
     }
 
+    public static function validate_id ($id) {
+
+        //if ($id == 'new') return true;
+
+        return (is_int($id) && ($id > 0));
+
+    }
+
     public static function get_user ($user_id = null) {
 
         return static::get_instance($user_id);
