@@ -71,7 +71,7 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     public function get_author_id () {
 
-        return $this->wp_post->post_author;
+        return (int) $this->wp_post->post_author;
 
     }
 
