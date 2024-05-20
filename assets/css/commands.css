@@ -1,0 +1,27 @@
+.commands-output pre {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+.commands-table td,
+.commands-table th {
+    padding: 0.5rem;
+}
+.commands-table th {
+    text-align: left;
+    vertical-align: top;
+}
+.commands-table form .field-row:not(:last-child) {
+    margin-bottom: 0.5rem;
+}
+.commands-table button[type='submit'] {
+    cursor: pointer;
+    padding: 0.25rem 1rem;
+    border: 0;
+    background: #606060;
+    border-radius: 4px;
+    color: white;
+}
+.commands-table button[type='submit']:hover {
+    background: #434343;
+}

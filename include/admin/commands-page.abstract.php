@@ -142,35 +142,7 @@ abstract class Commands_Page extends Admin_Sub_Page {
             'first_col' => true,
         ]);
 
-        ?><style>
-            .commands-output pre {
-                background: white;
-                border-radius: 0.5rem;
-                padding: 1rem;
-            }
-            .commands-table td,
-            .commands-table th {
-                padding: 0.5rem;
-            }
-            .commands-table th {
-                text-align: left;
-                vertical-align: top;
-            }
-            .commands-table form .field-row:not(:last-child) {
-                margin-bottom: 0.5rem;
-            }
-            .commands-table button[type='submit'] {
-                cursor: pointer;
-                padding: 0.25rem 1rem;
-                border: 0;
-                background: #606060;
-                border-radius: 4px;
-                color: white;
-            }
-            .commands-table button[type='submit']:hover {
-                background: #434343;
-            }
-        </style><?php
+        ?><style><?= file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/commands.css');?></style><?php
     
     }
 
