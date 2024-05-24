@@ -340,7 +340,7 @@
 
             border: 0;
             background-color: var(--woo-field-bg);
-            padding: 0.25em 0;
+            padding: var(--woo-field-padding);
             /* font-family: var(--woo-font-family; */
             font-size: 1em;
             line-height: 1;
@@ -485,6 +485,19 @@
 
                 @include woo-field-row-reset();
                 @include woo-field-unfocus();
+
+                .woocommerce-form-login__rememberme {
+
+                    display: flex;
+
+                    input[type=checkbox] {
+
+                        transform: scale(1.25);
+                        margin-right: 0.25rem;
+
+                    }
+
+                }
 
             }
 
