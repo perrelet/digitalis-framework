@@ -150,9 +150,17 @@ abstract class Commands_Page extends Admin_Sub_Page {
 
     public function clear_log () {
 
-        unlink(ini_get('error_log'));
+        if (($path = ini_get('error_log')) && file_exists($path)) {
 
-        return "Deleted: " . ini_get('error_log');
+            unlink($path);
+
+            return "Deleted: " . ini_get('error_log');
+
+        } else {
+
+            return "Error: Unable to locate the error log.";
+
+        }
 
     }
 
