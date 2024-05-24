@@ -38,7 +38,7 @@ class Select_Nice extends Select {
 
     public static function after_first ($p) {
 
-        echo "<script>let nice_selects = {};</script>";
+        echo "<script>nice_selects = typeof(nice_selects) == 'undefined' ? {} : nice_selects;</script>";
 
     }
 
