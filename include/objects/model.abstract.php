@@ -36,9 +36,13 @@ class Model extends Factory {
 
     }
 
-    public static function get_class_name () {
+    public static function get_class_name ($data, $uid, $id) {
 
-        return Call::get_class_name(static::class);
+        return Call::get_class_name(static::class, [
+            'id'   => $id,
+            'uid'  => $uid,
+            'data' => $data,
+        ]);
 
     }
 
@@ -50,7 +54,7 @@ class Model extends Factory {
 
         if (is_null($uid) || is_null($id)) return null;
 
-        $class_name = static::get_class_name();
+        $class_name = static::get_class_name($data, $uid, $id);
 
         if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
         
@@ -155,7 +159,7 @@ class Model extends Factory {
 
     public function is_first_instance () {
 
-        return $this->id == array_key_first(self::$instances[static::get_class_name()]);
+        return $this->id == array_key_first(self::$instances[static::get_class_name($this->data, $this->uid, $this->id)]);
 
     }
 

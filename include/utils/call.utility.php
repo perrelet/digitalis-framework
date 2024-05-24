@@ -4,9 +4,9 @@ namespace Digitalis;
 
 class Call extends Utility {
 
-    public static function get_class_name ($class_name) {
+    public static function get_class_name ($class_name, $data = null) {
     
-        return apply_filters('Digitalis/Class/' . str_replace('\\', '/', ltrim($class_name, '\\')), $class_name);
+        return apply_filters('Digitalis/Class/' . str_replace('\\', '/', ltrim($class_name, '\\')), $class_name, $data);
     
     }
 
