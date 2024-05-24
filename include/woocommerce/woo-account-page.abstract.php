@@ -216,7 +216,7 @@ abstract class Woo_Account_Page extends Factory {
 
     public function is_protected () {
 
-        return (bool) $this->capability;
+        return (bool) $this->get_capability();
 
     }
 
@@ -231,7 +231,7 @@ abstract class Woo_Account_Page extends Factory {
 
     public function get_user_permission ($user) {
 
-        return user_can($user, $this->capability);
+        return user_can($user, $this->get_capability());
 
     }
 
