@@ -14,6 +14,7 @@ class Element extends View {
         'classes'       => [],
         'styles'        => [],
         'attributes'    => [],
+        'href'          => null,
         'content'       => '',
     ];
 
@@ -44,6 +45,8 @@ class Element extends View {
 
         $p['attributes']['class'] = $p['classes'];
         $p['attributes']['style'] = $p['styles'];
+
+        if ($p['href']) $p['attributes']['href'] = $p['href'];
 
         return $p;
     
