@@ -73,6 +73,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/link.element.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
