@@ -4,6 +4,7 @@ namespace Digitalis;
 
 use \WC_Customer;
 use \WC_Order_Item_Product;
+use \WC_Order_Query;
 
 trait Is_Woo_Customer {
 
@@ -26,7 +27,8 @@ trait Is_Woo_Customer {
     public function get_orders ($args = []) {
 
         $args = wp_parse_args($args, [
-            'status'        => 'paid',
+            'status' => 'paid',
+            'limit'  => -1,
         ]);
 
         $args['customer_id'] = $this->id;
@@ -35,7 +37,7 @@ trait Is_Woo_Customer {
         if ($args['status'] == 'pending')           $args['status'] = wc_get_is_pending_statuses();
         if ($args['status'] == 'paid_and_pending')  $args['status'] = array_merge(wc_get_is_paid_statuses(), wc_get_is_pending_statuses());
 
-        return wc_get_orders($args);
+        return (new WC_Order_Query($args))->get_orders();
 
     }
 
