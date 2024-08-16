@@ -302,6 +302,18 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
         
     }
 
+    public function get_parent_id () {
+    
+        return ($parent = $this->get_post_parent()) ? $parent->ID : null;
+    
+    }
+
+    public function get_parent () {
+    
+        return ($parent_id = $this->get_parent_id()) ? static::get_instance($parent_id) : null;
+    
+    }
+
     // Password Protection
 
     public function is_password_protected () {
