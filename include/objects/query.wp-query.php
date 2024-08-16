@@ -128,7 +128,12 @@ class Digitalis_Query extends WP_Query {
 
         if (!($wp_query instanceof WP_Query)) return false;
 
-        if ($wp_query->is_tax() && ($taxonomy = get_taxonomy($wp_query->query_vars['taxonomy'] ?? false))) {
+        if (
+            ($wp_query->is_tax() || $wp_query->is_tag() || $wp_query->is_category()) &&
+            ($queried_object = $wp_query->get_queried_object()) &&
+            ($taxonomy = $queried_object->taxonomy ?? false) &&
+            ($taxonomy = get_taxonomy($taxonomy))
+        ) {
 
             return in_array($post_type, $taxonomy->object_type);
 
