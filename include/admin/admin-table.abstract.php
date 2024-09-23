@@ -109,6 +109,25 @@ abstract class Admin_Table extends Feature {
 
                         break;
 
+                    case 'meta':
+
+                        $filter = wp_parse_args($filter, [
+                            'compare' => '=',
+                        ]);
+
+                        if (!$filter['query_callback']) $filter['query_callback'] = [$this, 'query_callback_meta_compare'];
+
+                        $filter['args'] = wp_parse_args($filter['args'] ?? [], [
+                            'field' => Input::class,
+                            'key'   => $name,
+                            'wrap'  => false,
+                        ]);
+
+                        $this->prepare_meta_field($filter);
+                        $this->_filters[] = $filter;
+
+                        break;
+
                     case 'field':
 
                         $filter['args'] = wp_parse_args($filter['args'] ?? [], [
@@ -200,13 +219,18 @@ abstract class Admin_Table extends Feature {
 
         }
 
+    }
 
-    
+    public function prepare_meta_field (&$filter) {
+
+        $field          = &$filter['args'];
+        $field['value'] = $this->get_filter_value($field['key'], $filter);
+
     }
 
     public function get_filter_value ($key, $filter) {
     
-        return sanitize_text_field($_GET[$key] ?? $filter['null_value']);
+        return sanitize_text_field(urldecode($_GET[$key] ?? $filter['null_value']));
     
     }
 
@@ -237,6 +261,11 @@ abstract class Admin_Table extends Feature {
                 case 'acf':
 
                     $this->render_acf_filter($filter);
+                    break;
+
+                case 'meta':
+
+                    $this->render_meta_filter($filter);
                     break;
 
                 case 'field':
@@ -291,6 +320,16 @@ abstract class Admin_Table extends Feature {
     public function render_acf_filter ($filter) {
 
         acf_render_field($filter['field']);
+    
+    }
+
+    public function render_meta_filter ($filter) {
+
+        $field_class = $filter['args']['field'];
+    
+        $call = $field_class . "::render";
+
+        if (is_callable($call)) call_user_func($call, $filter['args'], $filter);
     
     }
 
@@ -349,6 +388,12 @@ abstract class Admin_Table extends Feature {
 
                     break;
 
+                case 'meta':
+
+                    if ($filter['query_callback'] && is_callable($filter['query_callback'])) call_user_func($filter['query_callback'], $qv, $filter);
+
+                    break;
+
                 case 'field':
 
                     if ($filter['query_callback'] && is_callable($filter['query_callback'])) call_user_func($filter['query_callback'], $qv);
@@ -361,6 +406,40 @@ abstract class Admin_Table extends Feature {
 
         $query->query_vars = $qv->to_array();
 
+    }
+
+    //
+
+    protected function query_callback_meta_compare ($qv, $filter) {
+    
+        if ($filter['args']['value'] != $filter['null_value']) {
+
+            $qv->add_meta_query([
+                'key'     => $filter['name'],
+                'value'   => $filter['args']['value'],
+                'compare' => $filter['compare'],
+            ]);
+
+        }
+
+        return $qv;
+    
+    }
+
+    protected function query_callback_meta_equal ($qv, $filter) {
+    
+        if ($filter['args']['value'] != $filter['null_value']) {
+
+            $qv->add_meta_query([
+                'key'     => $filter['name'],
+                'value'   => $filter['args']['value'],
+                'compare' => '=',
+            ]);
+
+        }
+
+        return $qv;
+    
     }
 
     /* public function filter_query ($query) {
