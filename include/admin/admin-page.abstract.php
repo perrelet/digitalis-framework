@@ -45,4 +45,10 @@ abstract class Admin_Page extends Factory {
     
     }
 
+    public function get_url ($blog_id = null) {
+    
+        return get_admin_url($blog_id, "?page={$this->slug}");
+    
+    }
+
 }
