@@ -52,8 +52,11 @@ abstract class Route extends Singleton {
 
         if ($this->is_this_route($request)) {
 
-            global $wp, $wp_query;
-            $wp_query->query_vars = $wp->query_vars;
+            global $wp;
+
+            $wp->query_posts();
+            $wp->handle_404();
+            $wp->register_globals();
 
         }
 
