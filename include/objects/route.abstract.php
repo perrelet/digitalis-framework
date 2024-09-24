@@ -28,12 +28,13 @@ abstract class Route extends Singleton {
      * @var array        $rest_args               Args passed when calling `register_rest_route`.
      */
 
-    protected $namespace   = 'digitalis/v1';
-    protected $route       = 'route';
-    protected $wp_query    = false;
-    protected $html_prefix = 'html/';
-    protected $view        = false; /* View::class */
-    protected $rest_args   = [];
+    protected $namespace     = 'digitalis/v1';
+    protected $route         = 'route';
+    protected $wp_query      = false;
+    protected $html_prefix   = 'html/';
+    protected $view          = false; /* View::class */
+    protected $require_nonce = false;
+    protected $rest_args     = [];
 
     protected static $instances = 0;
 
@@ -110,13 +111,50 @@ abstract class Route extends Singleton {
         
     }
 
+    protected function check_nonce (WP_REST_Request $request) {
+    
+        $nonce = $request->get_param('_wpnonce');
+        if (!$nonce) $nonce = $request->get_header('Nonce');
+
+        if (is_null($nonce)) return new WP_Error(
+            __NAMESPACE__ . '_rest_missing_nonce',
+            'Missing the `Nonce` header or `_wpnonce` parameter. This endpoint requires a valid nonce.',
+            401,
+        );
+
+        if (!wp_verify_nonce($nonce, 'wp_rest')) return new WP_Error(
+            __NAMESPACE__ . '_rest_invalid_nonce',
+            'Nonce is invalid.',
+            403,
+        );
+
+        return true;
+    
+    }
+
+    public function get_view () {
+    
+        return $this->view;
+    
+    }
+
     public function callback_wrap (WP_REST_Request $request) {
 
-        if ($this->view) {
+        if ($this->require_nonce) {
 
-            if (!is_subclass_of($this->view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$this->view}' provided."));
+            $nonce_check = $this->check_nonce($request);
+            if ($nonce_check instanceof WP_Error) return $nonce_check;
 
-            $params = [];
+        }
+
+        if ($view = $this->get_view()) {
+
+            if (!is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$view}' provided."));
+
+            $params = [
+                'view' => $view,
+            ];
+            
             if ($this->rest_args['args']) foreach ($this->rest_args['args'] as $key => $arg) $params[$key] = $request->get_param($key);
     
             return $this->respond($this->render_view($params));
@@ -159,7 +197,7 @@ abstract class Route extends Singleton {
 
     public function render_view ($params) {
     
-        return call_user_func("{$this->view}::render", $params, false);
+        return call_user_func("{$params['view']}::render", $params, false);
     
     }
 
