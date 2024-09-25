@@ -135,7 +135,7 @@ export class Digitalis_Query {
 
     add_control_event_listeners () {
 
-        [...this.elements.controls.elements].forEach(field => field.addEventListener('change', this.auto_submit));
+        if (this.elements.controls) [...this.elements.controls.elements].forEach(field => field.addEventListener('change', this.auto_submit));
 
     }
 
@@ -149,7 +149,7 @@ export class Digitalis_Query {
     auto_submit = (e) => {
 
         let auto_submit;
-        const is_control = [...this.elements.controls.elements].includes(e.target);
+        const is_control = this.elements.controls && [...this.elements.controls.elements].includes(e.target);
 
         if (is_control) {
             auto_submit = this.options.auto_submit_controls;
