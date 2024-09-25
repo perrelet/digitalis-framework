@@ -24,11 +24,7 @@ trait Autoloader {
 
         if (!is_dir($path = realpath($path))) return $objs;
 
-        $files    = glob($path . '/*.' . $ext);
-        $names    = $this->get_names($files);
-        $inherits = $this->get_inherits($names);
-        $inherits = $this->sort_inherits($inherits);
-        $names    = $this->rebuild_names($inherits, $ext);
+        $names = $this->get_file_names($path, $ext);
 
         if ($names) foreach ($names as $name) {
         
@@ -90,6 +86,18 @@ trait Autoloader {
             return is_callable($call) ? call_user_func($call) : false;
 
         }
+    
+    }
+
+    protected function get_file_names ($path, $ext = 'php') {
+    
+        $files    = glob($path . '/*.' . $ext);
+        $names    = $this->get_names($files);
+        $inherits = $this->get_inherits($names);
+        $inherits = $this->sort_inherits($inherits);
+        $names    = $this->rebuild_names($inherits, $ext);
+
+        return $names;
     
     }
 
