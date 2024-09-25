@@ -9,22 +9,24 @@ class Field extends View {
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
-        'key'           => 'field-key',
-        'id'            => null,
-        'type'          => 'text',
-        'default'       => '',
-        'value'         => null,
-        'classes'       => [],
-        'styles'        => [],
-        'row_classes'   => [],
-        'row_styles'    => [],
-        'options'       => [],
-        'label'         => false,
-        'placeholder'   => false,
-        'attributes'    => [],
-        'once_atts'     => [],
-        'wrap'          => true,
-        'width'         => 1,
+        'key'            => 'field-key',
+        'id'             => null,
+        'type'           => 'text',
+        'default'        => '',
+        'value'          => null,
+        'value_callback' => false,
+        'classes'        => [],
+        'styles'         => [],
+        'row_classes'    => [],
+        'row_styles'     => [],
+        'options'        => [],
+        'option_atts'    => [],
+        'label'          => false,
+        'placeholder'    => false,
+        'attributes'     => [],
+        'once_atts'      => [],
+        'wrap'           => true,
+        'width'          => 1,
     ];
 
     protected static $merge = [
@@ -172,7 +174,8 @@ class Field extends View {
 
         if ($p['type'] == 'hidden') $p['wrap'] = false;
 
-        $p['value'] = is_null($p['value']) ? sanitize_text_field($_REQUEST[$key] ?? get_query_var($key, $p['default'])) : $p['value'];
+        $p['value'] = static::get_value($p);
+        if ($p['value_callback']) $p['value'] = $p['value_callback']($p['value'], $p);
 
         static::get_field_classes($p);
         static::get_row_classes($p);
@@ -192,6 +195,12 @@ class Field extends View {
 
         return $p;
 
+    }
+
+    protected static function get_value ($p) {
+    
+        return is_null($p['value']) ? sanitize_text_field($_REQUEST[$p['key']] ?? get_query_var($p['key'], $p['default'])) : $p['value'];
+    
     }
 
     protected static function before ($p) {
