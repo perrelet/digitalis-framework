@@ -104,6 +104,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select-nice.field.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/archive.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/post-archive.archive.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/term-archive.archive.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/query-filters.view.php';
 
