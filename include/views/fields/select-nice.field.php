@@ -5,8 +5,10 @@ namespace Digitalis\Field;
 class Select_Nice extends Select {
 
     protected static $defaults = [
-        'nice-select'   => [],
-        'classes'       => ['field-nice-select'],
+        'nice-select'  => [],
+        'classes'      => ['field-nice-select'],
+        'load_scripts' => true,
+        'load_styles'  => true,
     ];
 
     public static function params ($p) {
@@ -27,22 +29,34 @@ class Select_Nice extends Select {
 
     }
 
-    public static function before_first ($p) {
+    public static function load_styles () {
+    
+        echo '<link href="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/css/nice-select2.min.css" rel="stylesheet">';
+    
+    }
 
-        echo '<link href="https://cdn.jsdelivr.net/npm/nice-select2@2.1.0/dist/css/nice-select2.min.css" rel="stylesheet">';
-        echo '<script src="https://cdn.jsdelivr.net/npm/nice-select2@2.1.0/dist/js/nice-select2.min.js"></script>';
+    public static function load_scripts () {
+    
+        echo '<script src="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/js/nice-select2.min.js"></script>';
+    
+    }
+
+    protected static function before_first ($p) {
+
+        if ($p['load_styles'])  static::load_styles();
+        if ($p['load_scripts']) static::load_scripts();
 
         parent::before_first($p);
 
     }
 
-    public static function after_first ($p) {
+    protected static function after_first ($p) {
 
         echo "<script>nice_selects = typeof(nice_selects) == 'undefined' ? {} : nice_selects;</script>";
 
     }
 
-    public static function after ($p) {
+    protected static function after ($p) {
 
         $json = json_encode($p['nice-select']);
         echo "<script>nice_selects.{$p['js_var']} = NiceSelect.bind(document.getElementById('{$p['id']}'), {$json});</script>";
