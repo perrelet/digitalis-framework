@@ -17,7 +17,7 @@ class User extends Model {
         if (is_null($data))           return get_current_user_id();
         if ($data instanceof WP_User) return $data->ID;
 
-        return $data;
+        return (int) parent::extract_id($data);
 
     }
 
