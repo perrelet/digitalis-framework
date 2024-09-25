@@ -65,6 +65,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-role.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/attachment.post.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
 
