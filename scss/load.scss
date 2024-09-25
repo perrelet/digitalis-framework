@@ -1,8 +1,20 @@
-@import 'include-media.scss';
-@import 'utilities.scss';
-@import 'oxygen.scss';
-@import 'core-classes.scss';
+$digitalis-load: () !default;
 
-@import 'colors.scss';
-@import 'fluid-type.scss';
-@import 'fx.scss';
+$digitalis-imports: (
+    'include-media': 0,
+    'utilities'    : 0,
+    'core-classes' : 0,
+    'colors'       : 0,
+    'fluid-type'   : 0,
+    'fx'           : 0,
+    'bricks'       : 0,
+    'oxygen'       : 0
+) !default;
+
+$digitalis-imports: map-merge($digitalis-imports, $digitalis-load);
+
+@each $file, $load in $digitalis-imports {
+
+    @if ($load) { @import '#{$file}'; }
+
+}

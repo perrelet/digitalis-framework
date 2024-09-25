@@ -7,7 +7,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
 // FIELD MIXINS
 
-@mixin field_button () {
+@mixin digitalis_field_button () {
 
     display: flex;
     flex-direction: row;
@@ -37,7 +37,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
 }
 
-@mixin field_range_track ($fill: 0, $track-color, $track-fill-color, $track-height, $track-width) {
+@mixin digitalis_digitalis_field_range_track ($fill: 0, $track-color, $track-fill-color, $track-height, $track-width) {
 
     box-sizing: border-box;
     border: none;
@@ -56,14 +56,14 @@ $field-border-color:  var(--c-earth-8)  !default;
     
 }
 
-@mixin field_range_fill ($track-fill-color, $track-height) {
+@mixin digitalis_digitalis_field_range_fill ($track-fill-color, $track-height) {
 
     height: $track-height;
     background: $track-fill-color;
 
 }
 
-@mixin field_range_thumb ($thumb-color, $thumb-color-hover, $thumb-diameter) {
+@mixin digitalis_digitalis_field_range_thumb ($thumb-color, $thumb-color-hover, $thumb-diameter) {
 
     box-sizing: border-box;
     border: none;
@@ -81,7 +81,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
 }
 
-@mixin field_range ($track-color: #ccc, $track-fill-color: #7f7f7f, $thumb-color: $field-active, $thumb-color-hover: #3f3f3f, $thumb-diameter: 1rem, $track-height: 0.25rem, $track-width: 100%) {
+@mixin digitalis_field_range ($track-color: #ccc, $track-fill-color: #7f7f7f, $thumb-color: $field-active, $thumb-color-hover: #3f3f3f, $thumb-diameter: 1rem, $track-height: 0.25rem, $track-width: 100%) {
 
     --range: calc(var(--max) - var(--min));
     --ratio: calc((var(--val) - var(--min)) / var(--range));
@@ -93,21 +93,21 @@ $field-border-color:  var(--c-earth-8)  !default;
     height: $thumb-diameter;
     background: transparent;
 
-    &::-webkit-slider-runnable-track    { @include field_range_track(1, $track-color: $track-color, $track-fill-color: $track-fill-color, $track-height: $track-height, $track-width: $track-width); }
-    &::-moz-range-track                 { @include field_range_track($track-color: $track-color, $track-fill-color: $track-fill-color, $track-height: $track-height, $track-width: $track-width); }
-    &::-ms-track                        { @include field_range_track($track-color: $track-color, $track-fill-color: $track-fill-color, $track-height: $track-height, $track-width: $track-width); }
+    &::-webkit-slider-runnable-track    { @include digitalis_digitalis_field_range_track(1, $track-color: $track-color, $track-fill-color: $track-fill-color, $track-height: $track-height, $track-width: $track-width); }
+    &::-moz-range-track                 { @include digitalis_digitalis_field_range_track($track-color: $track-color, $track-fill-color: $track-fill-color, $track-height: $track-height, $track-width: $track-width); }
+    &::-ms-track                        { @include digitalis_digitalis_field_range_track($track-color: $track-color, $track-fill-color: $track-fill-color, $track-height: $track-height, $track-width: $track-width); }
 
-    &::-moz-range-progress              { @include field_range_fill($track-fill-color: $track-fill-color, $track-height: $track-height); }
-    &::-ms-fill-lower                   { @include field_range_fill($track-fill-color: $track-fill-color, $track-height: $track-height); }
+    &::-moz-range-progress              { @include digitalis_digitalis_field_range_fill($track-fill-color: $track-fill-color, $track-height: $track-height); }
+    &::-ms-fill-lower                   { @include digitalis_digitalis_field_range_fill($track-fill-color: $track-fill-color, $track-height: $track-height); }
 
     &::-webkit-slider-thumb {
         margin-top: .5 * ($track-height - $thumb-diameter);
-        @include field_range_thumb($thumb-color: $thumb-color, $thumb-color-hover: $thumb-color-hover, $thumb-diameter: $thumb-diameter);
+        @include digitalis_digitalis_field_range_thumb($thumb-color: $thumb-color, $thumb-color-hover: $thumb-color-hover, $thumb-diameter: $thumb-diameter);
     }
-    &::-moz-range-thumb { @include field_range_thumb($thumb-color: $thumb-color, $thumb-color-hover: $thumb-color-hover, $thumb-diameter: $thumb-diameter); }
+    &::-moz-range-thumb { @include digitalis_digitalis_field_range_thumb($thumb-color: $thumb-color, $thumb-color-hover: $thumb-color-hover, $thumb-diameter: $thumb-diameter); }
     &::-ms-thumb {
         margin-top: 0;
-        @include field_range_thumb($thumb-color: $thumb-color, $thumb-color-hover: $thumb-color-hover, $thumb-diameter: $thumb-diameter);
+        @include digitalis_digitalis_field_range_thumb($thumb-color: $thumb-color, $thumb-color-hover: $thumb-color-hover, $thumb-diameter: $thumb-diameter);
     }
     &::-ms-tooltip { display: none; }
 
@@ -144,13 +144,13 @@ $field-border-color:  var(--c-earth-8)  !default;
         flex-direction: column;
         flex-grow: 1;
 
-        background: #f7f7f8;
+        background: var(--field-bg, #f7f7f8);
         border-radius: 0.5rem;
 
         &:focus-within,
         &:active {
 
-            box-shadow: 0px 0px 0px 2px #333;
+            box-shadow: 0px 0px 0px 2px var(--field-foc-bc, #333);
 
         }
 
@@ -201,7 +201,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
                 color: #595959;
 
-                @include field_button();
+                @include digitalis_field_button();
 
             }
 
@@ -211,7 +211,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
             button {
 
-                @include field_button();
+                @include digitalis_field_button();
 
             }
 
@@ -364,7 +364,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
                 label {
 
-                    @include field_button();
+                    @include digitalis_field_button();
 
                     .icon {
 
@@ -408,7 +408,7 @@ $field-border-color:  var(--c-earth-8)  !default;
 
                 }
 
-                @include field_range();
+                @include digitalis_field_range();
 
             }
 

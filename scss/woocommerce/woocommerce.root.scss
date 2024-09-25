@@ -31,6 +31,7 @@
     --woo-block-margin: calc(var(--woo-spacing) * 2);
     --woo-block-shadow: 0px 4.5px 3.6px rgba(0, 0, 0, 0.024), 0px 12.5px 10px rgba(0, 0, 0, 0.035), 0px 30.1px 24.1px rgba(0, 0, 0, 0.046), 0px 100px 80px rgba(0, 0, 0, 0.07);
     --woo-block-border: none;
+    --woo-block-border-radius: var(--woo-border-radius);
     --woo-block-background: white;
 
     --woo-table-padding: 0;
@@ -67,12 +68,23 @@
 
 }}
 
+@if not mixin-exists(p-pad) { @mixin p-pad () {
+
+	> p, > h1, > h2, > h3, > h4, > h5, > h6 {
+
+		&:first-child { margin-top: 0;    }
+		&:last-child  { margin-bottom: 0; }
+
+	}
+
+}}
+
 // BLOCKS
 
 @if not mixin-exists(woo-block) { @mixin woo-block {
     
     box-shadow: var(--woo-block-shadow);
-    border-radius: var(--woo-border-radius);
+    border-radius: var(--woo-block-border-radius);
     border: var(--woo-block-border);
     background: var(--woo-block-background);
     padding: var(--woo-block-padding);
@@ -89,6 +101,13 @@
 }}
 
 @if not mixin-exists(woo-unblock) { @mixin woo-unblock {
+
+    --woo-block-shadow: none;
+    --woo-block-border-radius: 0;
+    --woo-block-border: 0;
+    --woo-block-background: none;
+    --woo-block-padding: 0;
+
 }}
 
 // LINKS
