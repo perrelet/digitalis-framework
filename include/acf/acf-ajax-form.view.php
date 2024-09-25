@@ -10,7 +10,7 @@ class ACF_AJAX_Form extends View {
         'acf_ajax_options'    => [],
         'featured_image'      => false,        // Requires \Digitalis\ACF\Featured_Image_Group::load();
         'dynamically_load'    => true,
-        'extra_fields_before' => [],
+        'extra_fields_before' => [],           // Validation must be handled by `acf/validate_save_post`. Use `acf_add_validation_error` to throw errors.
         'extra_fields_after'  => [],
     ];
 
