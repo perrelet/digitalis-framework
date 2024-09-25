@@ -11,9 +11,9 @@ class Checkbox_Group extends Field {
     protected static $defaults = [
         'type'           => 'checkbox-group',
         'options'        => [],
+        'option_atts'    => [],
         'select_all'     => false,
         'select_all_key' => 'all',
-        'option_atts'    => [],
     ];
 
     public static function params ($p) {
@@ -28,13 +28,18 @@ class Checkbox_Group extends Field {
 
         }
 
-        if($p['value']) $p['value'] = explode(',', $p['value']);
-
         $p['option_atts'] = static::get_option_attributes($p);
         $p['option_atts'] = static::generate_option_attributes($p);
 
         return $p;
 
+    }
+
+    protected static function get_value ($p) {
+
+        $value = parent::get_value($p);
+        return $value ? explode(',', $value) : [];
+        
     }
 
     protected static function get_option_attributes ($p) {
