@@ -68,6 +68,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/attachment.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.utility.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
 
