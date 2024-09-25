@@ -86,6 +86,16 @@ abstract class App extends Singleton {
     public function load () {
 
         $this->autoload($this->get_autoloads());
+
+        add_action('init', function () {
+
+            if (!defined('BRICKS_VERSION')) return;
+
+            $path  = $this->path . 'bricks-elements';
+            $names = $this->get_file_names($path);
+            if ($names) foreach ($names as $name) \Bricks\Elements::register_element("{$path}/{$name}");
+        
+        }, 11);
     
     }
 
