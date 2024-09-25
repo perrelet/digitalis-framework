@@ -49,6 +49,7 @@ abstract class App extends Singleton {
             'integrations'              => 'get_instance',
             'models'                    => false,
             'views'                     => false,
+            'design-systems'            => false,
             'acf-blocks'                => true,
             'shortcodes'                => true,
             'routes'                    => 'get_instance',
