@@ -4,40 +4,54 @@ namespace Digitalis;
 
 class Builder_Manager extends Singleton {
 
-    use Can_Load;
+    use Autoloader;
 
     protected $builders = null;
 
     public function __construct () {
+
+        $this->load_builders();
         
-        if (did_action('plugins_loaded')) {
-            $this->load_builders();
-        } else {
-            add_action('plugins_loaded', [$this, 'load_builders']);
-        }
-        
+    }
+
+    public function __call ($method, $args) {
+
+        $args = array_merge([$method], $args);
+    
+        return call_user_func_array([$this, 'call_builders'], $args);
+    
     }
 
     public function load_builders () {
 
         $this->builders = [];
 
-        $builders = $this->autoload('builder', __DIR__, 'builder.php', 'get_instance');
+        $builders = $this->autoload(__DIR__, 'get_instance', true, 'builder.php');
 
         if ($builders) foreach ($builders as $builder) {
             
-            if ($builder->is_active()) $this->builders[] = $builder;
+            if ($builder->is_active()) $this->builders[$builder->get_slug()] = $builder;
             
         }
 
+        return $this->builders;
+
+    }
+
+    public function get_builder ($slug = null) {
+    
+        if (!$this->builders) return null;
+
+        $key = is_null($slug) ? array_key_first($this->builders) : $slug;
+
+        return $this->builders[$key] ?? null;
+    
     }
 
     public function get_builders () {
-        
-        if (is_null($this->builders)) throw new \Exception("You cannot get the builders before the 'plugins_loaded' action has been called.");
 
         return $this->builders;
-        
+
     }
 
     public function query_builders ($method) {
@@ -52,15 +66,27 @@ class Builder_Manager extends Singleton {
 
     }
 
-    public function loop_builders ($method, $data = null, $args = []) {
+    public function call_builders ($method, $data = null, $args = []) {
+
+        $result = [];
+
+        $args = wp_parse_args($args, [
+            'builders' => true,
+        ]);
 
         if ($builders = $this->get_builders()) foreach ($builders as $builder) {
 
-            call_user_func([$builder, $method], $data, $args);
+            if (is_array($args['builders']) && !in_array($builder->get_slug(), $args['builders'])) continue;
+
+            $result[$builder->get_slug()] = call_user_func([$builder, $method], $data, $args);
 
         }
 
+        return $result;
+
     }
+
+    // Builder States
 
     public function is_backend () {
 
@@ -80,31 +106,7 @@ class Builder_Manager extends Singleton {
         
     }
 
-    public function add_classes ($classes, $args = []) {
-
-        $this->loop_builders('add_classes', $classes, $args);
-
-    }
-
-    public function remove_classes ($classes, $args = []) {
-
-        $this->loop_builders('remove_classes', $classes, $args);
-
-    }
-
-    public function add_colors ($colors, $args = []) {
-
-        $this->loop_builders('add_colors', $colors, $args);
-
-    }
-
-    public function remove_colors ($colors, $args = []) {
-
-        $this->loop_builders('remove_colors', $colors, $args);
-
-    }
-
-    //
+    // Deprecated: Will be removed in a future version in favor of a utlity class system.
 
     public function get_utility_classes () {
 

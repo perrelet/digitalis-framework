@@ -6,37 +6,47 @@ class Oxygen extends Builder {
 
     protected $slug = 'oxygen';
     
-    public function condition () {
+    public function condition () : bool {
+
+        return is_plugin_active('oxygen/functions.php');
         
-        return defined("CT_VERSION");
+        // return defined("CT_VERSION");
     
     }
 
-    public function is_backend () {
+    public function is_backend () : bool {
 
         return defined("SHOW_CT_BUILDER");
 
     }
 
-    public function is_backend_content () {
+    public function is_backend_content () : bool {
 
         return $this->is_backend() && defined("OXYGEN_IFRAME");
 
     }
 
-    public function is_backend_ui () {
+    public function is_backend_ui () : bool {
 
         return $this->is_backend() && !defined("OXYGEN_IFRAME");
 
     }
 
+    // TODO: Implement the builder interface to its specifications
+
+    public function get_classes () : array {
+    
+        $classes = get_option('ct_components_classes', []);
+
+        return $classes;
+    
+    }
+
+    // TODO: Implement the builder interface to its specifications
+
     public function add_classes ($install_classes, $args = []) {
 
-        $args = wp_parse_args($args, [
-            'overwrite' => true,
-            'folder'    => 'digitalis',
-            'lock'      => true,
-        ]);
+        $args = $this->get_add_classes_args($args);
 
         $existing_classes = get_option('ct_components_classes', []);
         $existing_folders = get_option('ct_style_folders', []);
@@ -104,6 +114,12 @@ class Oxygen extends Builder {
     }
 
     //
+
+    public function get_colors () : array {
+    
+        // TODO
+    
+    }
 
     public function add_colors ($colors, $args = []) {
 
@@ -226,7 +242,3 @@ class Oxygen extends Builder {
     }
 
 }
-
-add_action('init', function () {
-    echo "hello";
-});

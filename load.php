@@ -39,6 +39,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder.interface.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder-manager.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder.integration.php';
 
@@ -122,6 +123,12 @@ add_action('plugins_loaded', function () {
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
 
 }, 0);
+
+add_action('init', function () {
+
+    if (defined('BRICKS_VERSION')) require DIGITALIS_FRAMEWORK_PATH . 'include/objects/bricks-element.abstract.php';
+
+}, 11);
 
 add_filter('sassy-variables', function ($variables) {
 
