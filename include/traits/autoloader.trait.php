@@ -148,6 +148,8 @@ trait Autoloader {
 
         $file_names = [];
         if ($inherits) foreach ($inherits as $child => $parent) {
+
+            if ($pos = strpos($ext, '.')) $ext = substr($ext, $pos + 1);
         
             $file_names[] = "{$child}.{$parent}.{$ext}";
         
