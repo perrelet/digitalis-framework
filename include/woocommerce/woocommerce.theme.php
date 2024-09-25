@@ -15,6 +15,8 @@ abstract class Woocommerce_Theme extends Theme {
 
     public function woocommerce_locate_template ($template, $template_name, $template_path) {
 
+        if (!$this->path) return $template;
+
         $template_directory = trailingslashit($this->path) . 'woocommerce/';
         $path = $template_directory . $template_name;
 
