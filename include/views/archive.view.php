@@ -2,27 +2,30 @@
 
 namespace Digitalis;
 
-use WP_Query;
-
-abstract class Archive extends View {
+abstract class Archive extends Element {
 
     protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
-    protected static $template = null;
+
+    protected static $template = 'archive';
+    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/elements/";
 
     protected static $defaults = [
         'id'            => 'digitalis-archive',
-        'classes'       => [],
+        'classes'       => ['digitalis-archive'],
         'query_vars'    => [],
         'skip_main'     => false,
-        'posts_only'    => false,
+        'items_only'    => false,
         'items'         => null,
-        'no_posts'      => 'No posts found.',
+        'no_items'      => 'No items found.',
         'pagination'    => true,
         'paginate_args' => [],
         'loader'        => 'sliding-dots.gif',
         'loader_type'   => 'image',
         'controls'      => [],
-        'post_class'    => null,
+        'item_model'    => null,
+        'child_classes' => [
+            'items' => 'items',
+        ],
     ];
 
     protected static $merge = [
@@ -31,7 +34,7 @@ abstract class Archive extends View {
     ];
 
     protected static $skip_inject = [
-        'post_class',
+        'item_model',
     ];
 
     protected static $items = [];
@@ -67,7 +70,7 @@ abstract class Archive extends View {
 
     protected static function get_items ($query_vars, &$query, $skip_main) {
 
-        if (static::$params['post_class'] && ($call = [static::$params['post_class'], 'query']) && is_callable($call)) {
+        if (static::$params['item_model'] && ($call = [static::$params['item_model'], 'query']) && is_callable($call)) {
 
             return call_user_func_array($call, [$query_vars, &$query, $skip_main]);
 
@@ -81,56 +84,56 @@ abstract class Archive extends View {
     
     }
 
+    protected static function before_items ($p) {}
+
+    protected static function after_items ($p) {}
+
     protected static function render_items ($items) {
         
         if ($items) foreach ($items as $item) static::render_item($item);
         
     }
 
-    protected static function render_no_posts ($p) {
+    protected static function render_no_items ($p) {
         
-        echo "<div class='no_posts'>{$p['no_posts']}</div>";
+        echo "<div class='no_items'>{$p['no_items']}</div>";
         
     }
 
-    //
-
-    public static function get_classes ($p) {
-
-        $classes = [
-            "digitalis-archive",
-        ];
-
-        if ($p['classes']) $classes = array_merge($classes, $p['classes']);
-
-        return $classes;
-
+    protected static function get_controls ($p) {
+    
+        return $p['controls'];
+    
     }
 
-    public static function generate_classes ($classes) {
-
-        return implode(' ', $classes);
-
-    }
-
-    public static function filter_page_links (&$page_links) {
+    protected static function get_page_links ($p, $query) {
     
         //
     
     }
 
-    public static function view ($p = []) {
+    public static function filter_page_links (&$page_links) {
 
-        $classes = static::generate_classes(static::get_classes($p));
+        //
 
-        if (!$p['posts_only']) {
+    }
 
-            echo "<div id='{$p['id']}' class='$classes'>";
+    protected static function render_pagination ($page_links) {
 
-            if ($p['controls']) {
+        if ($page_links) echo  "<div class='pagination-wrap'>" . implode("\n", $page_links) . "</div>";
+    
+    }
+
+    public static function get_content ($p = []) {
+
+        ob_start();
+
+        if (!$p['items_only']) {
+
+            if ($controls = static::get_controls($p)) {
 
                 Field_Group::render([
-                    'fields'    => $p['controls'],
+                    'fields'    => $controls,
                     'id'        => "{$p['id']}-controls",
                     'classes'   => [
                         'archive-controls',
@@ -141,8 +144,8 @@ abstract class Archive extends View {
     
             }
 
-            echo "<div class='digitalis-loader'>" . static::get_loader($p) . "</div>";
-            echo "<div class='posts'>";
+            echo  "<div class='digitalis-loader'>" . static::get_loader($p) . "</div>";
+            echo  "<div class='{$p['child_classes']['items']}'>";
 
         }
 
@@ -150,34 +153,38 @@ abstract class Archive extends View {
 
         if (static::$items = (is_null($p['items']) ? static::get_items($p['query_vars'], $query, $p['skip_main']) : $p['items'])) {
 
+            static::before_items($p);
             static::render_items(static::$items);
+            static::after_items($p);
 
-            if ($p['pagination'] && ($query instanceof WP_Query) && ($query->max_num_pages > 1)) {
+            if ($p['pagination']) {
 
-                $page_links = paginate_links(wp_parse_args($p['paginate_args'], [
-                    'current'   => max(1, $query->get('paged')),
-                    'total'     => $query->max_num_pages,
-                    'type'      => 'array',
-                ]));
-
+                $page_links = static::get_page_links($p, $query);
                 static::filter_page_links($page_links);
-
-                if ($page_links) echo "<div class='pagination-wrap'>" . implode("\n", $page_links) . "</div>";
+                static::render_pagination($page_links);
 
             }
 
         } else {
 
-            if ($p['no_posts'] !== false) static::render_no_posts($p);
+            if ($p['no_items'] !== false) {
+
+                static::render_no_items($p);
+
+            }
 
         }
 
-        if (!$p['posts_only']) {
+        if (!$p['items_only']) {
             
-            echo "</div>";
-            echo "</div>";
+            echo  "</div>";
 
         }
+
+        $content = ob_get_contents();
+        ob_end_clean();
+
+        return $content;
 
     }
 

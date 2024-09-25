@@ -7,24 +7,18 @@ abstract class Term_Archive extends Archive {
     protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
 
     protected static $defaults = [
-        'id'            => 'digitalis-term-archive',
-        'no_posts'      => 'No terms found.',
-        'pagination'    => false,
-        'query_vars'    => [],
+        'id'         => 'digitalis-term-archive',
+        'classes'    => ['digitalis-term-archive'],
+        'no_items'   => 'No terms found.',
+        'pagination' => false,
+        'query_vars' => [],
+        'item_model' => Term::class,
     ];
 
-    protected static function get_items ($query_vars, &$query, $skip_main) {
+    protected static function get_page_links ($p, $query) {
 
-        return get_terms($query_vars);
-
-    }
-
-    public static function get_classes ($p) {
-
-        $p['classes'] = parent::get_classes($p);
-        $p['classes'][] = 'digitalis-term-archive';
-        return $p['classes'];
-
+        // TODO: WP_Term_Query doesn't appear to easily support pagination.
+    
     }
 
 }

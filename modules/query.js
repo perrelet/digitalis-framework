@@ -4,7 +4,7 @@ export class Digitalis_Query {
 
         selectors: {
             archive:    '#archive',
-            posts:      '#archive .posts',
+            items:      '#archive .items',
             controls:   '#archive .archive-controls',
             form:       '#filters',
         },
@@ -13,15 +13,17 @@ export class Digitalis_Query {
         ajax_url:               '/wp-admin/admin-ajax.php',
         action:                 'digitalis_query',
         nonce:                  false,
-        cache_initial_posts:    true,
+        run_js:                 false,
+        cache_initial_items:    true,
         auto_submit:            true,
         auto_submit_break:      false,
+        auto_submit_controls:   true,
         autoscroll:             true,
         scroll_offset:          0,
-
+        dynamic_filters:        false,
+        dynamic_controls:       false,
         page_query_param:       'paged',
         page_url_param:         'page',
-        
     };
 
     elements = {};
@@ -43,14 +45,14 @@ export class Digitalis_Query {
         this.add_event_listeners();
         this.setup_pagination();
 
-        this.state.initial_posts = this.options.cache_initial_posts ? this.elements.posts.innerHTML : false;
+        this.state.initial_items = this.options.cache_initial_items ? this.elements.items.innerHTML : false;
 
     }
 
     find_elements () {
 
         this.elements.archive  = document.querySelector(this.options.selectors.archive);
-        this.elements.posts    = document.querySelector(this.options.selectors.posts);
+        this.elements.items    = document.querySelector(this.options.selectors.items);
         this.elements.controls = document.querySelector(this.options.selectors.controls);
         this.elements.form     = document.querySelector(this.options.selectors.form);
 
@@ -60,8 +62,9 @@ export class Digitalis_Query {
 
     add_event_listeners () {
 
-        let field_array = [...this.elements.form.elements];
-        field_array.forEach(field => field.addEventListener('change', this.auto_submit));
+        this.add_control_event_listeners();
+
+        [...this.elements.form.elements].forEach(field => field.addEventListener('change', this.auto_submit));
 
         document.querySelectorAll(`${this.options.selectors.form} .datepicker-input`).forEach(field => field.addEventListener('changeDate', this.auto_submit));
 
@@ -82,24 +85,24 @@ export class Digitalis_Query {
 
             if (event.state && event.state.hasOwnProperty('html')) {
 
-                this.update_posts(event.state.html);
+                this.update_items(event.state.html);
 
-            } else if (this.state.initial_posts) {
+            } else if (this.state.initial_items) {
 
-                this.update_posts(this.state.initial_posts);
+                this.update_items(this.state.initial_items);
 
             }
 
-            if (event.state && event.state.hasOwnProperty('js')) eval(event.state.js);
+            if (this.options.run_js && event.state && event.state.hasOwnProperty('js')) eval(event.state.js);
 
             //console.log(event.state.form);
 
             if (event.state && event.state.hasOwnProperty('form')) for (const field_name in event.state.form) {
 
                 let field_selector = `${this.options.selectors.form} [name='${field_name}']:not([type='hidden'])`;
-                let field = document.querySelector(field_selector);
+                let fields = document.querySelectorAll(field_selector);
 
-                if (field) {
+                fields.forEach(field => {
 
                     let value = event.state.form[field_name];
 
@@ -110,7 +113,9 @@ export class Digitalis_Query {
                             break;
 
                         case 'checkbox':
-                            field.checked = Boolean(parseInt(value));
+                            if (!Array.isArray(value)) value = [value];
+                            const checked = value.includes(field.value);
+                            if (field.checked != checked) field.checked = checked;
                             break;
 
                         default:
@@ -120,12 +125,18 @@ export class Digitalis_Query {
 
                     if (field.classList.contains('field-nice-select')) nice_selects[field.getAttribute('data-js-var')].update();
 
-                }
+                });
 
             }
 
         });
         
+    }
+
+    add_control_event_listeners () {
+
+        [...this.elements.controls.elements].forEach(field => field.addEventListener('change', this.auto_submit));
+
     }
 
     setup_pagination () {
@@ -135,10 +146,20 @@ export class Digitalis_Query {
 
     }
 
-    auto_submit = () => {
+    auto_submit = (e) => {
+
+        let auto_submit;
+        const is_control = [...this.elements.controls.elements].includes(e.target);
+
+        if (is_control) {
+            auto_submit = this.options.auto_submit_controls;
+        } else {
+            auto_submit = this.options.auto_submit_break ? (this.options.auto_submit_break <= window.innerWidth) : this.options.auto_submit;
+        }
 
         let args = {
-            auto_submit: this.options.auto_submit_break ? (this.options.auto_submit_break <= window.innerWidth) : this.options.auto_submit,
+            auto_submit: auto_submit,
+            is_control:  is_control,
             query:       this,
         };
 
@@ -150,7 +171,7 @@ export class Digitalis_Query {
 
     submit = () => {
 
-        this.request_posts({
+        this.request_items({
             paged: 1,
         });
 
@@ -165,7 +186,7 @@ export class Digitalis_Query {
         let data = {};
         if (page) data.paged = page;
 
-        this.request_posts(data);
+        this.request_items(data);
 
     }
 
@@ -181,12 +202,12 @@ export class Digitalis_Query {
 
     }
 
-    request_posts (data = {}, new_url = false) {
+    request_items (data = {}, new_url = false) {
 
         if (this.options.autoscroll) {
             setTimeout(() => {
                 window.scrollTo({
-                    top: this.elements.posts.getBoundingClientRect().top + document.documentElement.scrollTop - this.options.scroll_offset,
+                    top: this.elements.items.getBoundingClientRect().top + document.documentElement.scrollTop - this.options.scroll_offset,
                     behavior: 'smooth',
                 });
             }, 250); 
@@ -222,7 +243,7 @@ export class Digitalis_Query {
         if (!data.hasOwnProperty('paged') && url.searchParams.has('paged')) url.searchParams.delete('paged');
 
         let args = {action: this.options.action, data: data, url: url};
-        document.dispatchEvent(new CustomEvent('Digitalis/Query/Request_Posts', {detail: args}));
+        document.dispatchEvent(new CustomEvent('Digitalis/Query/Request_Items', {detail: args}));
 
         for (const [key, value] of Object.entries(data)) args.url.searchParams.set(key, value);
 
@@ -253,7 +274,22 @@ export class Digitalis_Query {
 
                 this.loaded();
 
-                let response = JSON.parse(http.responseText);
+                let response;
+
+                try {
+
+                    response = JSON.parse(http.responseText);
+
+                } catch (e) {
+
+                    response = {
+                        success: true,
+                        data: {
+                            html: http.responseText,
+                        }
+                    } // follows wp_send_json_success
+
+                }
 
                 document.dispatchEvent(new CustomEvent('Digitalis/Query/Response', {detail: {action: action, data: data, url: url, http: http, response: response, status: http.status}}));
 
@@ -261,7 +297,7 @@ export class Digitalis_Query {
 
                     case 200:
 
-                        if (response.success) {
+                        if (response.hasOwnProperty('success') && response.success) {
 
                             this[success_callback](response.data, http);
 
@@ -270,11 +306,9 @@ export class Digitalis_Query {
 
                             if (new_url) window.history.pushState(state, '', new_url);
 
-                            document.dispatchEvent(new CustomEvent('Digitalis/Query/Response/200', {detail: {action: action, data: data, url: url, http: http, response: response}}));
-
                         } else {
 
-                            this[error_callback](response.data, http);
+                            this[error_callback](response, http);
 
                         }
 
@@ -282,9 +316,11 @@ export class Digitalis_Query {
 
                     default:
 
-                        this[error_callback](response.data, http);
+                        this[error_callback](response, http);
 
                 }
+
+                document.dispatchEvent(new CustomEvent(`Digitalis/Query/Response/${http.status}`, {detail: {action: action, data: data, url: url, http: http, response: response}}));
 
             }
 
@@ -294,25 +330,32 @@ export class Digitalis_Query {
 
     success (data, http = null) {
 
-        if (data.hasOwnProperty('html')) this.update_posts(data.html);
-        if (data.hasOwnProperty('js'))   eval(data.js);
+        if (this.options.run_js && data.hasOwnProperty('js')) eval(data.js);
+        if (data.hasOwnProperty('html')) this.update_items(data.html);
 
     }
 
-    error (data, http = null) {
+    error (response, http = null) {
 
         if (http) {
-            console.error(`${http.status}:`, data);
+            console.error(`${http.status}:`, response);
         } else {
-            console.error(data);
+            console.error(response);
         }
 
     }
 
-    update_posts (html) {
+    update_items (html) {
 
-        this.elements.posts.innerHTML = html;
+        this.run_inner_html(this.elements.items, html);
+
+        document.dispatchEvent(new CustomEvent('Digitalis/Query/Update_Items', {detail: {items: this.elements.items}}));
+        if (htmx) htmx.process(this.elements.items);
+
+        this.find_elements();
         this.setup_pagination();
+
+        if (this.elements.items.querySelector(this.options.selectors.controls)) this.add_control_event_listeners();
 
     }
 
@@ -330,6 +373,27 @@ export class Digitalis_Query {
         for (let i = 0; i < (url_parts.length - 1); i++) if (url_parts[i] == this.options.page_url_param) return url_parts[i + 1];
 
         return false;
+
+    }
+
+    run_inner_html (element, html) {
+
+        element.innerHTML = html;
+
+        Array.from(element.querySelectorAll("script")).forEach(html_script => {
+
+            const script = document.createElement("script");
+            
+            Array.from(html_script.attributes).forEach(attr => {
+                script.setAttribute(attr.name, attr.value) 
+            });
+            
+            const scriptText = document.createTextNode(html_script.innerHTML);
+            script.appendChild(scriptText);
+            
+            html_script.parentNode.replaceChild(script, html_script);
+
+        });
 
     }
 
