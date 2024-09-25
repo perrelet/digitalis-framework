@@ -24,6 +24,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.abstract.php';
