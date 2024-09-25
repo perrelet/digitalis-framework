@@ -51,7 +51,7 @@ export class Digitalis_Mapbox {
 
         });
 
-        document.addEventListener('Digitalis/Query/Request_Posts', (e) => {
+        document.addEventListener('Digitalis/Query/Request_Items', (e) => {
 
             if (this.popup) this.popup.remove();
 
