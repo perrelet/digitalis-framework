@@ -6,10 +6,6 @@ use Digitalis\Element;
 
 class HTMX extends Element {
 
-    protected static $template = 'element';
-
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/";
-
     protected static $defaults = [
         'tag'           => 'a',
         'attributes'    => [
