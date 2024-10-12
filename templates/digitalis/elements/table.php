@@ -1,7 +1,7 @@
 <table <?= $attributes ?>>
     <?php if ($first_row): ?>
     <thead>
-        <tr>
+        <tr <?= $row_atts[0] ?? '' ?>>
             <?php if (($row = ($rows[0] ?? '')) && is_array($row)): ?>
                 <?php foreach ($row as $j => $header): ?>
                     <th scope='col' <?= $col_atts[$j] ?? '' ?>><?= $header ?></th>
@@ -16,7 +16,7 @@
         <?php if ($rows) foreach ($rows as $i => $row): ?>
             <?php if ($first_row && !$i) continue; ?>
             <?php if ($last_row  && ($i == count($rows) - 1)) continue; ?>
-            <tr>
+            <tr <?= $row_atts[$i] ?? '' ?>>
                 <?php if (is_array($row)): ?>
                     <?php foreach ($row as $j => $cell): ?>
                         <?php if (($first_col && !$j) || ($last_col && ($j == (count($row) - 1)))): ?>
@@ -33,7 +33,7 @@
     </tbody>
     <?php if ($last_row): ?>
     <tfoot>
-        <tr>
+        <tr <?= $row_atts[count($rows) - 1] ?? '' ?>>
             <?php if (($row = ($rows[count($rows) - 1] ?? '')) && is_array($row)): ?>
                 <?php foreach ($row as $j => $header): ?>
                     <th scope='col' <?= $col_atts[$j] ?? '' ?>><?= $header ?></th>
