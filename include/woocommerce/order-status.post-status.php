@@ -13,6 +13,8 @@ abstract class Order_Status extends Post_Status {
     protected $before     = true;
 
     protected $allow_edit = true;
+    protected $is_pending = false;
+    protected $is_paid    = false;
 
     protected function filter_args (&$args) {
 
@@ -29,6 +31,8 @@ abstract class Order_Status extends Post_Status {
         if ($this->register)   add_action('woocommerce_register_shop_order_post_statuses', [$this, 'register_order_status']);
         if ($this->add_to_ui)  $this->add_to_ui();
         if ($this->allow_edit) add_filter('wc_order_is_editable', [$this, 'wc_order_is_editable'], 9999, 2);
+        if ($this->is_pending) add_filter('woocommerce_order_is_pending_statuses', [$this, 'order_is_pending_statuses']);
+        if ($this->is_paid)    add_filter('woocommerce_order_is_paid_statuses',    [$this, 'order_is_paid_statuses']);
     
     }
 
@@ -70,6 +74,22 @@ abstract class Order_Status extends Post_Status {
         if ($order->get_status() == str_replace('wc-', '', $this->slug)) return true;
 
         return $allow_edit;
+    
+    }
+
+    public function order_is_pending_statuses ($statuses) {
+    
+        $statuses[] = str_replace('wc-', '', $this->slug);
+
+        return $statuses;
+    
+    }
+
+    public function order_is_paid_statuses ($statuses) {
+    
+        $statuses[] = str_replace('wc-', '', $this->slug);
+
+        return $statuses;
     
     }
 
