@@ -12,10 +12,12 @@ abstract class Table extends \Digitalis\Element {
         'first_col'      => false,
         'last_col'       => false,
         'last_row'       => false,
+        'data_labels'    => false,
         'row_classes'    => [],
         'row_atts'       => [],
         'col_classes'    => [],
         'col_atts'       => [],
+        'cell_atts'      => [],
         'attributes'     => [
             'role' => 'presentation',
         ],
@@ -45,9 +47,47 @@ abstract class Table extends \Digitalis\Element {
     
     }
 
+    public static function generate_cell_atts (&$p) {
+
+        if ($p['data_labels'] && $p['rows']) foreach ($p['rows'] as $i => $row) {
+
+            if ($row) foreach ($row as $j => $cell) {
+
+                if (!isset($p['cell_atts'][$i][$j])) $p['cell_atts'][$i][$j] = [];
+                if (isset($p['cell_atts'][$i][$j]['data-label'])) continue;
+
+                $p['cell_atts'][$i][$j]['data-label'] = trim(htmlspecialchars(strip_tags($cell)));
+            
+            }
+
+        }
+    
+        $atts = [];
+
+        if ($p["cell_atts"]) foreach ($p["cell_atts"] as $i => $row) {
+
+            if ($row) foreach ($row as $j => $cell_atts) {
+            
+                if (!isset($atts[$i]))     $atts[$i]     = [];
+                if (!isset($atts[$i][$j])) $atts[$i][$j] = '';
+
+                if ($cell_atts) foreach ($cell_atts as $att_name => $att_value) {
+
+                    $atts[$i][$j] .= " {$att_name}='{$att_value}'";
+    
+                }
+            
+            }
+
+        }
+        
+        $p["cell_atts"] = $atts;
+    
+    }
+
     public static function generate_shelf_classes (&$p, $shelf = 'col') {
     
-        if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as $col => &$classes) {
+        if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as &$classes) {
         
             if (!is_array($classes)) $classes = [$classes];
             $classes = implode(' ', $classes);
@@ -58,11 +98,11 @@ abstract class Table extends \Digitalis\Element {
 
     public static function gather_shelf_atts (&$p, $shelf = 'col') {
 
-        if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as $col => &$classes) {
+        if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as $i => &$classes) {
         
-            if (!isset($p["{$shelf}_atts"][$col])) $p["{$shelf}_atts"][$col] = [];
+            if (!isset($p["{$shelf}_atts"][$i])) $p["{$shelf}_atts"][$i] = [];
 
-            $p["{$shelf}_atts"][$col]['class'] = $classes;
+            $p["{$shelf}_atts"][$i]['class'] = $classes;
         
         }
     
@@ -72,13 +112,13 @@ abstract class Table extends \Digitalis\Element {
 
         $atts = [];
 
-        if ($p["{$shelf}_atts"]) foreach ($p["{$shelf}_atts"] as $col => $col_atts) {
+        if ($p["{$shelf}_atts"]) foreach ($p["{$shelf}_atts"] as $i => $shelf_atts) {
 
-            if (!isset($atts[$col])) $atts[$col] = '';
+            if (!isset($atts[$i])) $atts[$i] = '';
 
-            if ($col_atts) foreach ($col_atts as $att_name => $att_value) {
+            if ($shelf_atts) foreach ($shelf_atts as $att_name => $att_value) {
 
-                $atts[$col] .= " {$att_name}='{$att_value}'";
+                $atts[$i] .= " {$att_name}='{$att_value}'";
 
             }
 
@@ -92,6 +132,7 @@ abstract class Table extends \Digitalis\Element {
 
         static::generate_col_atts($p);
         static::generate_row_atts($p);
+        static::generate_cell_atts($p);
 
         $p = parent::params($p);
 

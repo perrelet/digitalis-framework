@@ -4,7 +4,7 @@
         <tr <?= $row_atts[0] ?? '' ?>>
             <?php if (($row = ($rows[0] ?? '')) && is_array($row)): ?>
                 <?php foreach ($row as $j => $header): ?>
-                    <th scope='col' <?= $col_atts[$j] ?? '' ?>><?= $header ?></th>
+                    <th scope='col' <?= $col_atts[$j] ?? '' ?><?= $cell_atts[0][$j] ?? '' ?>><?= $header ?></th>
                 <?php endforeach; ?>
             <?php else: ?>
                 <?= $row ?? '' ?>
@@ -20,9 +20,9 @@
                 <?php if (is_array($row)): ?>
                     <?php foreach ($row as $j => $cell): ?>
                         <?php if (($first_col && !$j) || ($last_col && ($j == (count($row) - 1)))): ?>
-                            <th scope='row' <?= $col_atts[$j] ?? '' ?>><?= $cell ?></th>
+                            <th scope='row' <?= $col_atts[$j] ?? '' ?><?= $cell_atts[$i][$j] ?? '' ?>><?= $cell ?></th>
                         <?php else: ?>
-                            <td <?= $col_atts[$j] ?? '' ?>><?= $cell ?></td>
+                            <td <?= $col_atts[$j] ?? '' ?><?= $cell_atts[$i][$j] ?? '' ?>><?= $cell ?></td>
                         <?php endif; ?>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -36,7 +36,7 @@
         <tr <?= $row_atts[count($rows) - 1] ?? '' ?>>
             <?php if (($row = ($rows[count($rows) - 1] ?? '')) && is_array($row)): ?>
                 <?php foreach ($row as $j => $header): ?>
-                    <th scope='col' <?= $col_atts[$j] ?? '' ?>><?= $header ?></th>
+                    <th scope='col' <?= $col_atts[$j] ?? '' ?><?= $cell_atts[count($rows) - 1][$j] ?? '' ?>><?= $header ?></th>
                 <?php endforeach; ?>
             <?php else: ?>
                 <?= $row ?? '' ?>
