@@ -170,6 +170,12 @@ trait Has_WP_Post { // Refactor: Consider merging directly into post.model.php (
 
     }
 
+    public function add_meta ($key, $value, $unique = false) {
+
+        return $this->is_new() ? false : add_post_meta($this->wp_post->ID, $key, $value, $unique);
+
+    }
+
     public function update_meta ($key, $value, $prev_value = '') {
 
         return $this->is_new() ? false : update_post_meta($this->wp_post->ID, $key, $value, $prev_value);
