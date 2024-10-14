@@ -165,7 +165,7 @@ class Post extends Model {
     protected $post_id;
     protected $wp_post;
 
-    public function set_post ($post, $data = null) {
+    protected function set_post ($post, $data = null) {
 
         $post_id = false;
 
