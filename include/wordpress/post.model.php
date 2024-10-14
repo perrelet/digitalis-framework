@@ -352,7 +352,7 @@ class Post extends Model {
 
     }
 
-    public function get_timestamp ($field = 'date') {
+    public function get_post_timestamp ($field = 'date') {
 
         return get_post_timestamp($this->wp_post, $field);
 
