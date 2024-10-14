@@ -219,10 +219,24 @@ class Post extends Model {
         
     }
 
+    public function set_slug ($slug) {
+        
+        $this->wp_post->post_name = $slug;
+        return $this;
+        
+    }
+
     public function get_guid () {
 
         return get_the_guid($this->wp_post);
 
+    }
+
+    public function set_guid ($guid) {
+        
+        $this->wp_post->guid = $guid;
+        return $this;
+        
     }
 
     public function get_classes ($class = '') {
@@ -235,6 +249,13 @@ class Post extends Model {
 
         return get_the_title($this->wp_post);
 
+    }
+
+    public function set_title ($title) {
+    
+        $this->wp_post->post_title = $title;
+        return $this;
+    
     }
 
     protected $content;
@@ -252,6 +273,13 @@ class Post extends Model {
 
     }
 
+    public function set_content ($content) {
+    
+        $this->wp_post->post_content = $content;
+        return $this;
+    
+    }
+
     public function get_excerpt ($force_trim = false) {
 
         $excerpt = get_the_excerpt($this->wp_post);
@@ -262,10 +290,24 @@ class Post extends Model {
 
     }
 
+    public function set_excerpt ($excerpt) {
+    
+        $this->wp_post->post_excerpt = $excerpt;
+        return $this;
+    
+    }
+
     public function get_status () {
 
         return get_post_status($this->wp_post);
 
+    }
+
+    public function set_status ($status) {
+    
+        $this->wp_post->post_status = $status;
+        return $this;
+    
     }
 
     public function is_sticky () {
@@ -358,6 +400,20 @@ class Post extends Model {
 
     }
 
+    public function set_date ($date) {
+    
+        $this->wp_post->post_date = $date;
+        return $this;
+    
+    }
+
+    public function set_date_gmt ($date) {
+    
+        $this->wp_post->post_date_gmt = $date;
+        return $this;
+    
+    }
+
     // Author
 
     public function get_author_id () {
@@ -366,10 +422,24 @@ class Post extends Model {
 
     }
 
+    public function set_author_id ($author_id) {
+    
+        $this->wp_post->post_author = (int) $author_id;
+        return $this;
+    
+    }
+
     public function get_author_model () {
 
         return User::get_instance($this->get_author_id());
 
+    }
+
+    public function set_author ($user) {
+    
+        if (($user instanceof User) && ($user_id = $user->get_id())) $this->set_author_id($user_id);
+        return $this;
+    
     }
 
     // Attachments
@@ -494,9 +564,23 @@ class Post extends Model {
     
     }
 
+    public function set_parent_id ($parent_id) {
+    
+        $this->wp_post->post_parent = (int) $parent_id;
+        return $this;
+    
+    }
+
     public function get_parent () {
     
         return ($parent_id = $this->get_parent_id()) ? static::get_instance($parent_id) : null;
+    
+    }
+
+    public function set_parent ($post) {
+    
+        if (($post instanceof Post) && ($post_id = $post->get_id())) $this->set_parent_id($post_id);
+        return $this;
     
     }
 
@@ -512,6 +596,13 @@ class Post extends Model {
         
         return get_the_password_form($this->wp_post);
         
+    }
+
+    public function set_password ($password) {
+    
+        $this->wp_post->post_password = $password;
+        return $this;
+    
     }
 
     // Meta
