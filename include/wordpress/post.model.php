@@ -258,18 +258,21 @@ class Post extends Model {
     
     }
 
-    protected $content;
+    protected $content_cache = [];
 
     public function get_content ($apply_filters = true, $more_link_text = null, $strip_teaser = false) {
 
-        if (is_null($this->content)) {
+        $key = serialize(array_values(func_get_args()));
 
-            $this->content = get_the_content($more_link_text, $strip_teaser, $this->wp_post);
-            if ($apply_filters) $this->content = apply_filters('the_content', $this->content);
+        if (!isset($this->content_cache[$key])) {
+
+            $content = get_the_content($more_link_text, $strip_teaser, $this->wp_post);
+            if ($apply_filters) $content = apply_filters('the_content', $content);
+            $this->content_cache[$key] = $content;
 
         }
 
-        return $this->content;
+        return $this->content_cache[$key];
 
     }
 
@@ -661,7 +664,8 @@ class Post extends Model {
 
     public function reload () {
     
-        $this->wp_post = get_post($this->get_id());
+        $this->wp_post       = get_post($this->get_id());
+        $this->content_cache = [];
     
     }
 
