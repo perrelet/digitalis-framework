@@ -374,10 +374,24 @@ class Post extends Model {
 
     // Attachments
 
-    public function get_attachments ($post_mime_type) {
+    public function get_attachments ($post_mime_type = '') {
 
         return get_attached_media($post_mime_type, $this->wp_post->ID);
 
+    }
+
+    public function get_attachment_models ($post_mime_type = '') {
+    
+        $models = [];
+
+        if ($attachments = $this->get_attachments($post_mime_type)) foreach ($attachments as $attachment) {
+        
+            if ($model = Attachment::get_instance($attachment)) $models[] = $model;
+        
+        }
+
+        return $models;
+    
     }
 
     public function has_image () {
