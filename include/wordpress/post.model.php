@@ -394,27 +394,51 @@ class Post extends Model {
     
     }
 
-    public function has_image () {
+    public function has_thumbnail () {
         
         return has_post_thumbnail($this->wp_post->ID);
         
     }
 
-    public function get_image ($size = 'post-thumbnail', $attr = '') {
+    public function has_image () {
+        
+        return $this->has_thumbnail();
+        
+    }
+
+    public function get_thumbnail ($size = 'post-thumbnail', $attr = '') {
 
         return get_the_post_thumbnail($this->wp_post->ID, $size, $attr);
 
     }
 
-    public function get_image_url ($size = 'post-thumbnail') {
+    public function get_image ($size = 'post-thumbnail', $attr = '') {
+
+        return $this->get_thumbnail($size, $attr);
+
+    }
+
+    public function get_thumbnail_url ($size = 'post-thumbnail') {
 
         return get_the_post_thumbnail_url($this->wp_post->ID, $size);
 
     }
 
-    public function get_image_id () {
+    public function get_image_url ($size = 'post-thumbnail') {
+
+        return $this->get_thumbnail_url($size);
+
+    }
+
+    public function get_thumbnail_id () {
         
         return get_post_thumbnail_id($this->wp_post->ID);
+        
+    }
+
+    public function get_image_id () {
+        
+        return $this->get_thumbnail_id();
         
     }
 
