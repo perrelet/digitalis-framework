@@ -95,17 +95,9 @@ class Model extends Factory {
 
     }
 
-    public static function get_all_instances ($class_name = null) {
+    public static function get_all_instances () {
 
-        if ($class_name) {
-
-            return isset(self::$instances[$class_name]) ? self::$instances[$class_name] : [];
-
-        } else {
-
-            return self::$instances;
-
-        }
+        return self::$instances[static::class] ?? [];
 
     }
 
