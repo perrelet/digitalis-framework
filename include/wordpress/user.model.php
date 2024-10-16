@@ -7,10 +7,7 @@ use \DateTime;
 
 class User extends Model {
 
-    protected static $users = [];
-
-    protected $id;
-    protected $wp_user;
+    protected static $role = false; // string|false|array - Validate by user role. Leave false to allow any role.
 
     public static function extract_id ($data = null) {
 
@@ -24,6 +21,14 @@ class User extends Model {
     public static function validate_id ($id) {
 
         //if ($id == 'new') return true;
+
+        if (static::$role) {
+
+            if (!is_array(static::$role))                         static::$role = [static::$role];
+            if (!$wp_user = get_user_by('id', $id))               return false;
+            if (!array_intersect(static::$role, $wp_user->roles)) return false;
+
+        }
 
         return (is_int($id) && ($id > 0));
 
@@ -63,6 +68,10 @@ class User extends Model {
         return static::get_by('slug', $slug);
 
     }
+
+    //
+
+    protected $wp_user;
 
     //
 
@@ -113,8 +122,6 @@ class User extends Model {
         return update_field($selector, $value, "user_{$this->get_id()}");
 
     }
-
-    // https://developer.wordpress.org/reference/classes/wp_user/
 
     public function get_wp_user () {
 
