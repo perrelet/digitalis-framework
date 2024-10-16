@@ -194,8 +194,18 @@ class User extends Model {
 
     public function get_edit_url () {
 
-        return get_edit_user_link($this->id);
+        // https://core.trac.wordpress.org/ticket/35859
 
+        $url = add_query_arg('user_id', $this->get_id(), self_admin_url('user-edit.php'));
+
+        return apply_filters('get_edit_user_link', $url, $this->get_id());
+
+    }
+
+    public function get_edit_or_profile_url () {
+    
+        return get_edit_user_link($this->id);
+    
     }
 
     public function get_avatar_url ($args = null) {
