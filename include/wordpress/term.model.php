@@ -34,6 +34,12 @@ class Term extends Model {
 
     }
 
+    public static function get_specificity () {
+    
+        return (int) ((bool) static::$taxonomy);
+    
+    }
+
     public static function get_by ($field, $value) {
 
         if (!$wp_term = get_term_by($field, $value, static::$taxonomy)) return;

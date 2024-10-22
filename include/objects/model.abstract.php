@@ -36,9 +36,42 @@ class Model extends Factory {
 
     }
 
-    public static function get_class_name ($data, $uid, $id) {
+    public static function get_specificity () {
+    
+        return 0;
+    
+    }
 
-        return Call::get_class_name(static::class, [
+    public static function get_auto_resolve () {
+    
+        return !static::get_specificity();
+    
+    }
+
+    public static function get_class_name ($data, $uid, $id, $auto_resolve = null) {
+
+        $class_name = static::class;
+
+        if (is_null($auto_resolve)) $auto_resolve = static::get_auto_resolve();
+
+        if ($auto_resolve) {
+
+            $specificity = static::get_specificity();
+
+            if (static::$class_map[static::class]) foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
+
+                if (($class_specificity >= $specificity) && $sub_class::validate_id($id)) {
+
+                    $class_name  = $sub_class;
+                    $specificity = $class_specificity;
+
+                }
+
+            }
+
+        }
+
+        return Call::get_class_name($class_name, [
             'id'   => $id,
             'uid'  => $uid,
             'data' => $data,
@@ -46,7 +79,7 @@ class Model extends Factory {
 
     }
 
-    public static function get_instance ($data = null) {
+    public static function get_instance ($data = null, $auto_resolve = null) {
 
         static::process_data($data);
         $id  = static::extract_id($data);
@@ -54,7 +87,7 @@ class Model extends Factory {
 
         if (is_null($uid) || is_null($id)) return null;
 
-        $class_name = static::get_class_name($data, $uid, $id);
+        $class_name = static::get_class_name($data, $uid, $id, $auto_resolve);
 
         if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
         
@@ -79,11 +112,11 @@ class Model extends Factory {
 
     }
 
-    public static function inst ($data = null) {
+    /* public static function inst ($data = null) {
         
         return self::get_instance($data);
         
-    }
+    } */
 
     public static function get_instances ($ids) {
 
@@ -99,6 +132,26 @@ class Model extends Factory {
 
         return self::$instances[static::class] ?? [];
 
+    }
+
+    //
+
+    protected static $class_map = [];
+
+    public static function hello () {
+
+        $specificity = static::get_specificity();
+        $parent      = static::class;
+
+        while ($parent = get_parent_class($parent)) {
+
+            if (!property_exists($parent, 'class_map')) break;
+            if (!isset(static::$class_map[$parent]))    static::$class_map[$parent] = [];
+            
+            static::$class_map[$parent][static::class] = $specificity;
+
+        }
+    
     }
 
     //

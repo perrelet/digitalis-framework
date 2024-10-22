@@ -8,10 +8,10 @@ use WP_Query;
 
 class Post extends Model {
 
-    protected static $post_type       = false;       // string           - Validate by post_type. Leave false to allow any generic post type.
-    protected static $post_status     = false;       // string|int|array - Validate by post_status. Leave false to allow any status.
-    protected static $term            = false;       // string|int|array - Validate by taxonomy term. Leave false to allow any term.
-    protected static $taxonomy        = 'category';  // string           - Taxonomy to validate term against.
+    protected static $post_type       = false;       // string            - Validate by post_type. Leave false to allow any generic post type.
+    protected static $post_status     = false;       // string|bool|array - Validate by post_status. Leave false to allow any status.
+    protected static $term            = false;       // string|bool|array - Validate by taxonomy term. Leave false to allow any term.
+    protected static $taxonomy        = 'category';  // string            - Taxonomy to validate term against.
 
     protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
 
@@ -57,6 +57,12 @@ class Post extends Model {
 
         return (is_int($id) && ($id > 0));
 
+    }
+
+    public static function get_specificity () {
+    
+        return (int) (((bool) static::$post_type) + ((bool) static::$post_status) * 10 + ((bool) static::$term) * 100);
+    
     }
 
     //

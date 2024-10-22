@@ -39,10 +39,7 @@ trait Dependency_Injection {
             if (!class_exists($class))                  continue; 
             if (!method_exists($class, 'get_instance')) continue;
 
-            // TESTING:::
-
-            //$args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance']);
-            $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null);
+            $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null /* , true */);
 
         }
 

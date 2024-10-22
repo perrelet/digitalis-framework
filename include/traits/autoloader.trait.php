@@ -65,6 +65,8 @@ trait Autoloader {
         if (!$class_name = $this->extract_class_name($path)) return false;
         if (!class_exists($class_name))                      return false;
 
+        if (method_exists($class_name, 'hello')) call_user_func([$class_name, 'hello']);
+
         $reflection = new ReflectionClass($class_name);
 
         if ($reflection->isAbstract())                       $instantiate = false;
