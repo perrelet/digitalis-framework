@@ -58,7 +58,7 @@ class Model extends Factory {
 
             $specificity = static::get_specificity();
 
-            if (static::$class_map[static::class]) foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
+            if (static::$class_map[static::class] ?? 0) foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
 
                 if (($class_specificity >= $specificity) && $sub_class::validate_id($id)) {
 
