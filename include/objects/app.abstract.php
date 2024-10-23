@@ -72,9 +72,10 @@ abstract class App extends Singleton {
     protected function get_admin_autoloads () {
 
         $autoloads =  wp_parse_args($this->admin_autoload, [
-            'admin/features' => 'get_instance',
-            'admin/pages'    => 'get_instance',
-            'admin/tables'   => 'get_instance',
+            'admin/features'  => 'get_instance',
+            'admin/pages'     => 'get_instance',
+            'admin/tables'    => 'get_instance',
+            'admin/metaboxes' => 'get_instance',
         ]);
 
         $this->filter_admin_autoloads($autoloads);
