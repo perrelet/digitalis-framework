@@ -171,11 +171,12 @@ trait Autoloader {
 
     //
 
-    protected function extract_class_name ($file) {
+    protected function extract_class_name ($file, $buffer_bytes = 512) {
 
         // https://stackoverflow.com/questions/7153000/get-class-name-from-file
         // fix: $class = $tokens[$i+2][1];         ---> if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];                      Avoids 'Uninitialized string offset 1' when using 'static::class'
         // fix: if ($tokens[$j][0] === T_STRING) { ---> if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NAME_QUALIFIED) {    Handle files with sub-namespaces (T_NAME_QUALIFIED PHP 8.0.0+)
+        // fix: add: if ($tokens[$j] === ';') break;                                                                                 Class declarations can't contain a semicolon. Bailing early speeds things up and prevents confusing lines containing '::class' with the class declaration. 
 
         $fp = fopen($file, 'r');
         $class = $namespace = $buffer = '';
@@ -183,8 +184,10 @@ trait Autoloader {
         while (!$class) {
             if (feof($fp)) break;
 
-            $buffer .= fread($fp, 512);
+            $buffer .= fread($fp, $buffer_bytes);
             $tokens = token_get_all($buffer);
+
+            // echo str_replace("php", "php-->", $buffer) . "\n";
 
             if (strpos($buffer, '{') === false) continue;
 
@@ -201,6 +204,7 @@ trait Autoloader {
 
                 if ($tokens[$i][0] === T_CLASS) {
                     for ($j=$i+1;$j<count($tokens);$j++) {
+                        if ($tokens[$j] === ';') break;
                         if ($tokens[$j] === '{') {
                             if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];
                         }
