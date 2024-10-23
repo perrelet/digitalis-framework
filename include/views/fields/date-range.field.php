@@ -13,6 +13,8 @@ class Date_Range extends Date_Picker {
         'value_end'     => null,
         'default_start' => '',
         'default_end'   => '',
+        'key_start'     => null,
+        'key_end'       => null,
         'seperator'     => '-',
     ];
 
@@ -20,8 +22,11 @@ class Date_Range extends Date_Picker {
 
         $p = parent::params($p);
 
-        $p['value_start'] = is_null($p['value_start']) ? ($_REQUEST[$p['key'] . '-start'] ?? $p['default_start']) : $p['value_start'];
-        $p['value_end']   = is_null($p['value_end'])   ? ($_REQUEST[$p['key'] . '-start'] ?? $p['default_end'])   : $p['value_end'];
+        if (!$p['key_start']) $p['key_start'] = $p['key'] . '-start';
+        if (!$p['key_end'])   $p['key_end']   = $p['key'] . '-end';
+
+        $p['value_start'] = is_null($p['value_start']) ? static::query_value($p['key_start'], $p['default_start']) : $p['value_start'];
+        $p['value_end']   = is_null($p['value_end'])   ? static::query_value($p['key_end'],   $p['default_end'])   : $p['value_end'];
 
         return $p;
 
