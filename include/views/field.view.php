@@ -198,8 +198,22 @@ class Field extends View {
     }
 
     protected static function get_value ($p) {
+        
+        return is_null($p['value']) ? static::query_value($p['key'], $p['default']) : $p['value'];
+
+    }
+
+    protected static function query_value ($request_key, $default = '', $query_var = null) {
+
+        if (is_null($query_var)) $query_var = $request_key;
+
+        return static::sanitize_value($_REQUEST[$request_key] ?? ($query_var ? get_query_var($query_var, $default) : $default));
     
-        return is_null($p['value']) ? sanitize_text_field($_REQUEST[$p['key']] ?? get_query_var($p['key'], $p['default'])) : $p['value'];
+    }
+
+    protected static function sanitize_value ($value) {
+    
+        return sanitize_text_field($value);
     
     }
 
