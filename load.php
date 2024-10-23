@@ -59,6 +59,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/posts-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/users-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/taxonomy-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/wc-orders.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
