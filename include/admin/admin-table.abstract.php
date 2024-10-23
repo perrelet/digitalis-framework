@@ -329,7 +329,7 @@ abstract class Admin_Table extends Feature {
     
         $call = $field_class . "::render";
 
-        if (is_callable($call)) call_user_func($call, $filter['args'], $filter);
+        if (is_callable($call)) call_user_func($call, $filter['args']);
     
     }
 

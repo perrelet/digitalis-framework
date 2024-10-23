@@ -34,10 +34,10 @@ class User extends Model {
 
     }
 
-    public static function get_user ($user_id = null) {
-
-        return static::get_instance($user_id);
-
+    public static function get_specificity () {
+    
+        return (int) ((bool) static::$role);
+    
     }
 
     public static function get_by ($field, $value) {
