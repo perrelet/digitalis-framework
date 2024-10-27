@@ -205,7 +205,7 @@ class Post extends Model {
 
     }
 
-    public function get_post () {
+    public function get_wp_post () {
 
         return $this->wp_post;
 
