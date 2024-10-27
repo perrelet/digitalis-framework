@@ -224,14 +224,15 @@ abstract class Woo_Account_Page extends Factory {
 
         if (!$this->is_protected()) return true; 
 
-        if (is_null($user)) $user = wp_get_current_user();
-        return $this->get_user_permission($user);
+        if (is_null($user)) $user = User::get_instance(null, true);
+
+        return $user ? $this->get_user_permission($user) : false;
 
     }
 
     public function get_user_permission ($user) {
 
-        return user_can($user, $this->get_capability());
+        return $user->can($this->get_capability());
 
     }
 
