@@ -438,9 +438,9 @@ class Post extends Model {
     
     }
 
-    public function get_author_model () {
+    public function get_author ($auto_resolve = true) {
 
-        return User::get_instance($this->get_author_id());
+        return User::get_instance($this->get_author_id(), $auto_resolve);
 
     }
 
