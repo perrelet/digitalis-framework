@@ -24,6 +24,19 @@ class Attachment extends Post {
     
     }
 
+    public function get_mime_type () {
+    
+        return get_post_mime_type($this->wp_post);
+    
+    }
+
+    public function set_mime_type ($mime_type) {
+    
+        $this->wp_post->post_mime_type = $mime_type;
+        return $this;
+    
+    }
+
     public function get_caption () {
     
         return wp_get_attachment_caption($this->wp_post->ID);
