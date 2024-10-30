@@ -20,23 +20,17 @@ class Element extends View {
 
     protected static $merge = ['classes', 'styles', 'attributes'];
 
-    public static function generate_classes ($p) {
-
+    public static function get_classes ($p) {
+    
         if (!is_array($p['classes'])) $p['classes'] = [$p['classes']];
-        $p['classes'] = implode(' ', $p['classes']);
-
-        return $p;
-
+        return $p['classes'];
+    
     }
 
-    public static function generate_styles ($p) {
-
-        $styles = '';
-        if ($p['styles']) foreach ($p['styles'] as $property => $value) $styles .= "{$property}: {$value};";
-        $p['styles'] = $styles;
-
-        return $p;
-
+    public static function get_styles ($p) {
+    
+        return $p['styles'];
+    
     }
 
     public static function get_attributes ($p) {
@@ -50,6 +44,24 @@ class Element extends View {
 
         return $p;
     
+    }
+
+    public static function generate_classes ($p) {
+
+        $p['classes'] = implode(' ', static::get_classes($p));
+
+        return $p;
+
+    }
+
+    public static function generate_styles ($p) {
+
+        $css = '';
+        if ($styles = static::get_styles($p)) foreach ($styles as $property => $value) $css .= "{$property}: {$value};";
+        $p['styles'] = $css;
+
+        return $p;
+
     }
 
     public static function generate_attributes ($p) {
