@@ -154,13 +154,11 @@ abstract class Route extends Singleton {
 
             if (!is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$view}' provided."));
 
-            $params = [
-                'view' => $view,
-            ];
+            $params = [];
             
             if ($this->rest_args['args']) foreach ($this->rest_args['args'] as $key => $arg) $params[$key] = $request->get_param($key);
-    
-            return $this->respond($this->render_view($params));
+
+            return $this->respond($this->render_view($view, $params));
 
         } else {
 
@@ -198,9 +196,9 @@ abstract class Route extends Singleton {
 
     }
 
-    public function render_view ($params) {
+    public function render_view ($view, $params) {
     
-        return call_user_func("{$params['view']}::render", $params, false);
+        return call_user_func("{$view}::render", $params, false);
     
     }
 
