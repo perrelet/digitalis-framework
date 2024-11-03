@@ -20,6 +20,17 @@ abstract class Logs_Page extends Admin_Sub_Page {
     protected $logs = [];
     protected $_logs;
 
+    protected function filter_logs (&$logs) {
+    
+        $logs[] = [
+            'slug'   => 'error',
+            'name'   => 'Error Log',
+            'path'   => ini_get('error_log'),
+            'theme' => ['basic', 'php'],
+        ];
+    
+    }
+
     public function get_logs () {
 
         if (is_null($this->_logs)) {
@@ -48,8 +59,11 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     'name'        => 'Log',
                     'slug'        => 'log',
                     'path'        => '',
+                    'theme'       => explode(',', ($_GET['theme'] ?? 'basic')),
                     'permissions' => [],
                 ]);
+
+                if (!is_array($log['theme'])) $log['theme'] = [$log['theme']];
 
                 $log['permissions'] = wp_parse_args($log['permissions'], $this->permissions);
 
@@ -67,13 +81,43 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     }
 
-    protected function filter_logs (&$logs) {
+    public function get_syntax_rules () {
     
-        $logs[] = [
-            'slug' => 'error',
-            'name' => 'Error Log',
-            'path' => ini_get('error_log'),
+        return [
+            'basic' => [
+                'single-quote'      => "\'.*?\'",                   // '...'
+                'double-quote'      => "&quot;.*?&quot;",           // "..."
+                'path'              => "\s\/[^ ]*",                 // /some/path
+                'square-brackets'   => "\[.*?\]",                   // [...]
+                //'brackets'        => "\(.*?\)",                   // (...)
+                'hash-integer'      => "#\d+",                      // #n
+            ],
+            'php' => [
+                'function'          => "\s[^ \/.]+\(.*?\)",         // function(...)
+                'static-method'     => "\b[^ ]*::[^ ]*\(.*?\)",     // class::method(...)
+                'method'            => "\b[^ ]*-&gt;[^ ]*\(.*?\)",  // class->method(...)
+                'error'             => [
+                    "PHP Parse error:",
+                    "PHP Fatal error:"
+                ],
+                'warning'           => ["PHP Warning:"],
+            ],
         ];
+    
+    }
+
+    public function get_log_syntax_rules ($log) {
+
+        $all_rules    = $this->get_syntax_rules();
+        $syntax_rules = [];
+
+        if ($log['theme']) foreach ($log['theme'] as $key) if (isset($all_rules[$key])) {
+
+            $syntax_rules = array_merge($syntax_rules, $all_rules[$key]);
+
+        }
+
+        return $syntax_rules;
     
     }
 
@@ -112,10 +156,11 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         }
 
-        $bytes    = 0;
-        $lines    = $this->get_lines($current['path'], $bytes_per_page, $page, $bytes);
-        $filesize = filesize($current['path']);
-        $more     = ($filesize > $bytes);
+        $bytes        = 0;
+        $lines        = $this->get_lines($current['path'], $bytes_per_page, $page, $bytes);
+        $filesize     = filesize($current['path']);
+        $more         = ($filesize > $bytes);
+        $syntax_rules = $this->get_log_syntax_rules($current);
 
         $pagination = $more ? paginate_links([
             'base'      => add_query_arg('paged', '%#%', remove_query_arg('clear-log')),
@@ -157,9 +202,9 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                     if ($lines) foreach ($lines as &$line) {
 
-                        $this->format_line($line);
+                        $this->format_line($line, $syntax_rules);
                     
-                        echo "<div class='line'>{$line}</div>";
+                        echo "<pre class='line'>{$line}</pre>";
                     
                     }
                     
@@ -249,46 +294,44 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $bytes = strlen($lines);
 
         $lines = explode("\n", $lines);
-        $lines = array_map("trim", $lines);
 
         return $lines; 
     
     }
 
-    protected function format_line (&$line) {
+    protected function format_line (&$line, $syntax_rules) {
 
         $line = htmlspecialchars($line);
 
-        $rules = [
-            'color: #d70000' => "#\d+",
-            'color: #b3b3b3' => "\[.*?\]",
-        ];
+        if ($syntax_rules) foreach ($syntax_rules as $class => $patterns) {
 
-        foreach ($rules as $style => $patterns) {
-
-            if (!is_array($patterns)) $patterns = [$patterns];
-
-            $this->match_pattern($patterns, $style, $line);
+            $this->match_pattern($patterns, $class, $line);
 
         }
     
     }
 
-    protected function match_pattern ($patterns, $style, &$line) {
+    protected function match_pattern ($patterns, $class, &$line) {
     
-        $pattern = implode("|", $patterns);
+        $pattern = is_array($patterns) ? implode("|", $patterns) : $patterns;
 
         $matches = null;
+        preg_match_all("/{$pattern}/", $line, $matches, PREG_OFFSET_CAPTURE);
 
-        if (preg_match_all("/{$pattern}/", $line, $matches, PREG_OFFSET_CAPTURE)) foreach ($matches as $match) {
+        $offset = 0;
+
+        if ($matches[0] ?? 0) foreach ($matches[0] as $match) {
+
+            $open  = "<span class='x-{$class}'>";
+            $close = "</span>";
 
             $line = 
-                substr($line, 0, $match[0][1]) .
-                "<span style='{$style}'>{$match[0][0]}</span>" .
-                substr($line, $match[0][1] + strlen($match[0][0]))
+                substr($line, 0, $match[1] + $offset) .
+                "{$open}{$match[0]}{$close}" .
+                substr($line, $match[1] + strlen($match[0]) + $offset)
             ;
 
-            //dprint(substr($line, $match[0][1], strlen($match[0][0])));
+            $offset += strlen($open) + strlen($close);
 
         }
     
@@ -297,6 +340,9 @@ abstract class Logs_Page extends Admin_Sub_Page {
     protected function css () {
     
         ?><style>
+
+            @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
             .digitalis-logs {
 
                 display: flex;
@@ -373,9 +419,11 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 .digitalis-log {
 
-                    background: #fcfcfc;
+                    background: #1d2327;
                     border-radius: 4px;
-                    font-family: monospace;
+                    font-family: "Roboto Mono", monospace;
+                    color: #f4f4f4;
+                    overflow: hidden;
 
                     .log-info {
 
@@ -383,6 +431,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
                         gap: 1rem;
                         justify-content: space-between;
                         padding: 0.5rem;
+                        background: #3b3b3b;
 
                         .goto {
 
@@ -419,24 +468,44 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     .lines {
 
                         padding: 0.5rem;
-                        border-bottom: 1px solid #e0e0e0;
-                        border-top: 1px solid #e0e0e0;
+                        border-bottom: 1px solid #5c5c5c;
+                        border-top: 1px solid #5c5c5c;
 
                         .line {
 
-                            line-height: 1em;
+                            line-height: 1.2;
+                            text-wrap: wrap;
+                            font-family: inherit;
 
                             &:not(:last-child) {
 
                                 margin-bottom: 0.25em;
+                                margin-top: 0;
 
                             }
 
+                            span:before {
+
+                                padding-right: 0.2em;
+                                font-size: 0.9em;
+
+                            }
+
+                            .x-single-quote    { color: #f7e6bd; }
+                            .x-double-quote    { color: #fff5ce; }
+                            .x-path            { color: #cacac0; font-style: italic; }
+                            .x-function        { color: #aad7ff; }
+                            .x-static-method   { color: #49dcf9; }
+                            .x-method          { color: #56ffd8; }
+                            .x-square-brackets { color: #c6a6ff; }
+                            .x-brackets        { color: #b9eff6; }
+                            .x-hash-integer    { color: #dcd8ac; }
+                            .x-error           { background: #fb7c7c; color: #1d2327; font-weight: bold; border-radius: 2px; padding: 0px 0.2em; }
+                            .x-error:before    { content: '❌' }
+                            .x-warning         { background: #daba54; color: #1d2327; font-weight: bold; border-radius: 2px; padding: 0px 0.2em; }
+                            .x-warning:before  { content: '⚠️' }
+
                         }
-
-                    }
-
-                }
 
                 .actions {
 
