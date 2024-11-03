@@ -78,7 +78,7 @@ abstract class Archive extends Element {
 
     }
 
-    protected static function render_item ($item) {
+    protected static function render_item ($item, $i) {
 
         //
     
@@ -90,7 +90,7 @@ abstract class Archive extends Element {
 
     protected static function render_items ($items) {
         
-        if ($items) foreach ($items as $item) static::render_item($item);
+        if ($items) foreach ($items as $i => $item) static::render_item($item, $i);
         
     }
 
