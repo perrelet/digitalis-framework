@@ -67,6 +67,37 @@ class Attachment extends Post {
 
     }
 
+    public function get_image_src ($size = 'medium', $icon = false) {
+
+        static $src;
+        if (is_null($src)) $src = [];
+
+        $key = implode(func_get_args(), ';');
+
+        if (!isset($src[$key])) $src[$key] = wp_get_attachment_image_src($this->wp_post->ID, $size, $icon);
+    
+        return $src[$key];
+    
+    }
+
+    public function get_image_width ($size = 'medium', $icon = false) {
+    
+        return ($src = $this->get_image_src($size, $icon)) ? $src[1] : null;
+    
+    }
+
+    public function get_image_height ($size = 'medium', $icon = false) {
+    
+        return ($src = $this->get_image_src($size, $icon)) ? $src[2] : null;
+    
+    }
+
+    public function get_image_is_resized ($size = 'medium', $icon = false) {
+    
+        return ($src = $this->get_image_src($size, $icon)) ? $src[3] : null;
+    
+    }
+
     public function get_image_srcset ($size = 'medium', $image_meta = null) {
     
         return wp_get_attachment_image_srcset($this->wp_post->ID, $size, $image_meta);
