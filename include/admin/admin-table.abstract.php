@@ -415,7 +415,7 @@ abstract class Admin_Table extends Feature {
         if ($filter['args']['value'] != $filter['null_value']) {
 
             $qv->add_meta_query([
-                'key'     => $filter['name'],
+                'key'     => $filter['args']['key'] ?? $filter['name'],
                 'value'   => $filter['args']['value'],
                 'compare' => $filter['compare'],
             ]);
