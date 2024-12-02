@@ -20,7 +20,7 @@ class Select_Nice extends Select {
  
         $p['nice-select'] = wp_parse_args($p['nice-select'], [
             'searchable'    => true,
-            'placeholder'   => 'select',
+            'placeholder'   => 'Select',
         ]);
 
         $p = parent::params($p);
