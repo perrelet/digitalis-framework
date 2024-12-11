@@ -18,7 +18,31 @@ class Attachment extends Post {
     
     }
 
-    public function get_url ($not_used = false) {
+    public function get_path ($unfiltered = false) {
+    
+        return get_attached_file($this->wp_post->ID, $unfiltered);
+    
+    }
+
+    public function get_file_name ($unfiltered = false) {
+    
+        return basename($this->get_path($unfiltered));
+    
+    }
+
+    public function get_file_extension ($unfiltered = false) {
+    
+        return pathinfo($this->get_file_name($unfiltered), PATHINFO_EXTENSION);
+    
+    }
+
+    public function get_permalink ($leavename = false) {
+    
+        return get_attachment_link($this->wp_post, $leavename);
+    
+    }
+
+    public function get_file_url ($not_used = false) {
     
         return wp_get_attachment_url($this->wp_post->ID);
     
