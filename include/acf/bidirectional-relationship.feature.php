@@ -16,6 +16,7 @@ abstract class Bidirectional_Relationship extends Feature {
     protected $limit_2 = false;
 
     protected $allow_self = false;
+    protected $force_add  = false;
 
     protected $log = false;
 
@@ -82,7 +83,7 @@ abstract class Bidirectional_Relationship extends Feature {
         $field_name     = $field['name'];
         $sync_field_key = ($field_name == $this->key_1) ? $this->key_2 : $this->key_1;
         $sync_post_type = ($field_name == $this->key_1) ? $this->post_type_2 : $this->post_type_1;
-        $updated_id     = $this->extract_id($updated_selector);
+        $updated_id     = $this->extract_obj_id($updated_selector);
 
         if (!$this->check_global_flag('updating'))                      return $values;
         if (!$this->sync_condition($values, $updated_selector, $field)) return $values;
@@ -95,7 +96,7 @@ abstract class Bidirectional_Relationship extends Feature {
         if (!is_array($values))     $values     = [$values];
         if (!is_array($old_values)) $old_values = [$old_values];
 
-        $added   = array_diff($values, $old_values);
+        $added   = $this->force_add ? $values : array_diff($values, $old_values);
 		$removed = array_diff($old_values, $values);
 
         if ($this->log) { 
@@ -190,7 +191,7 @@ abstract class Bidirectional_Relationship extends Feature {
 
     public function get_object_title ($selector) {
 
-        $id = $this->extract_id($selector);
+        $id = $this->extract_obj_id($selector);
 
         switch ($this->detect_type($selector)) {
 
@@ -225,7 +226,7 @@ abstract class Bidirectional_Relationship extends Feature {
     
     }
 
-    public function extract_id ($selector) {
+    public function extract_obj_id ($selector) {
     
         return str_replace('user_', '', $selector);
     
