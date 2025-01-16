@@ -2,7 +2,9 @@
 
 namespace Digitalis;
 
-abstract class Meta_Box extends Feature {
+class Meta_Box extends Feature {
+
+    protected static $cache_key = 'id';
 
     protected $id       = 'digitalis-metabox';
     protected $title    = 'Digitalis Metabox';
@@ -10,6 +12,7 @@ abstract class Meta_Box extends Feature {
     protected $context  = 'advanced';
     protected $priority = 'default';
     protected $view     = null;
+    protected $callback = null;
     protected $args     = [];
 
     public function run () {
@@ -42,13 +45,9 @@ abstract class Meta_Box extends Feature {
 
     public function render ($object, $args) {
     
-        if ($this->view) {
+        $callback = $this->view ? "{$this->view}::render" : $this->callback;
 
-            $call = $this->view . "::render";
-
-            if (is_callable($call)) call_user_func($call, $filter['args'], $filter);
-
-        }
+        if (is_callable($callback)) call_user_func($callback, $filter['args'], $filter);
     
     }
 
