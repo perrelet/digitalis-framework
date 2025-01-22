@@ -6,6 +6,11 @@ use \WP_User_Query;
 
 abstract class User_Iterator extends Iterator {
 
+    protected $labels = [
+        'single'    => 'user',
+        'plural'    => 'users',
+    ];
+
     public function get_default_query_vars () {
 
         return [

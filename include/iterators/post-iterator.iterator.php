@@ -9,6 +9,11 @@ abstract class Post_Iterator extends Iterator {
     protected $post_type   = 'post';
     protected $post_status = 'any';
 
+    protected $labels = [
+        'single'    => 'post',
+        'plural'    => 'posts',
+    ];
+
     public function get_query_vars ($vars) {
 
         return $vars;
