@@ -47,6 +47,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/builders/builder.integration.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/iterator.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/csv-iterator.iterator.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/post-iterator.iterator.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/product-iterator.post-iterator.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/user-iterator.iterator.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/updater.abstract.php';
