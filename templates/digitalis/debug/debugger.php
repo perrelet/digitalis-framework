@@ -10,6 +10,7 @@
     <header>
         <?php if ($closable): ?>
             <button onclick="this.closest(`digitalis-debugger`).toggle();"><span></span></button>
+            <button onclick="this.closest(`digitalis-debugger`).collapseToggle();"><span></span></button>
         <?php endif; ?>
         <button onclick="this.closest(`digitalis-debugger`).scrollTop();"><span></span></button>
         <button onclick="this.closest(`digitalis-debugger`).scrollPrev();"><span></span></button>
@@ -28,13 +29,11 @@
                 <?= $bt_html ?>
             </code>
         </div>
-        <?php foreach ($values as $i => $value): ?>
-            <div>
-                <?php if (isset($arg_names[$i])): ?>
-                    <label onclick="this.nextElementSibling.toggleAttribute(`open`);"><?= $arg_names[$i] ?></label>
-                <?php endif; ?>
-                <code open><?= $value ?></code>
-            </div>
-        <?php endforeach; ?>
+        <?php foreach ($values as $i => $value) {
+            Digitalis\Debug_Code_Block::render([
+                'label' => $arg_names[$i] ?? false,
+                'code'  => $value,
+            ]);
+        } ?>
     </main>
 </digitalis-debugger>
