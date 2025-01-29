@@ -97,9 +97,9 @@ class Term extends Model {
         $instances = static::get_instances($wp_terms);
 
         if ($args['hierarchy']) {
-            
+
             $hierarchy = [];
-            static::build_hierarchy($instances, $hierarchy);
+            static::build_hierarchy($instances, $hierarchy, $args['parent'] ?? ($args['child_of'] ?? 0));
             return $hierarchy;
 
         }
