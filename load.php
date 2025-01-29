@@ -75,7 +75,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.utility.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
+//require DIGITALIS_FRAMEWORK_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
+//require DIGITALIS_FRAMEWORK_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature.php';
