@@ -4,8 +4,8 @@ namespace Digitalis {
 
     class Debug extends View {
 
+        protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
         protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/debug/";
-
         protected static $defaults = [
             'arg_names' => [],
         ];
@@ -70,18 +70,23 @@ namespace Digitalis {
     
                 case 'debugger':
     
-                    static $debugger_assets;
+                    static $debugger_rendered;
 
-                    if (!$debugger_assets) {
+                    if (!$debugger_rendered) {
 
                         echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . 'assets/css/debugger.css') . "</style>";
                         echo "<script>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . 'assets/js/debugger.js') . "</script>";
 
+                    } else if ($p['append']) {
+
+                        return null;
+
                     }
 
-                    $debugger_assets = true;
-    
+                    $debugger_rendered = true;
+
                     return 'debugger';
+
     
             }
             
@@ -109,53 +114,60 @@ namespace Digitalis {
             $p['debug_line'] = $p['backtrace'][0]['line'] ?? 0;
             $p['debug_func'] = $p['backtrace'][0]['function'] ?? 0;
             $p['debug_file'] = basename($p['debug_path']);
-            $p['bt_html']    = '';
 
-            foreach ($p['backtrace'] as $i => &$frame) {
+            if ($p['view'] == 'debugger') {
 
-                if (isset($frame['file'])) $p['bt_html'] .= "<line trace-file data-line='" . ($i + 1) . "'>{$frame['file']}:" . ($frame['line'] ?? '??') . "</line>";
+                $p['bt_html']    = '';
 
-                if (isset($frame['class'])) {
-                    $p['bt_html'] .= "<line><span data-type='object'>{$frame['class']}</span>{$frame['type']}<span data-type='function'>{$frame['function']}(</span></line>";
-                } else {
-                    $p['bt_html'] .= "<line><span data-type='function'>{$frame['function']}(</span></line>";
-                }
-
-                if (isset($frame['args'])) foreach ($frame['args'] as $j => $arg) {
-
-                    $type = gettype($arg);
-
-                    if (is_scalar($arg)) {
-
-                        if (is_string($arg)) {
-                            $name = "\"{$arg}\"";
-                        } else {
-                            $name = $arg;
-                        }
-
-                        $p['bt_html'] .= "<line>  <span data-type='{$type}'>{$name}</span></line>";
-
+                foreach ($p['backtrace'] as $i => &$frame) {
+    
+                    if (isset($frame['file'])) $p['bt_html'] .= "<line trace-file data-line='" . ($i + 1) . "'>{$frame['file']}:" . ($frame['line'] ?? '??') . "</line>";
+    
+                    if (isset($frame['class'])) {
+                        $p['bt_html'] .= "<line><span data-type='object'>{$frame['class']}</span>{$frame['type']}<span data-type='function'>{$frame['function']}(</span></line>";
                     } else {
-
-                        $p['bt_html'] .= static::wrap_lines($arg, [
-                            'open'   => false,
-                            'indent' => 1,
-                            'expand' => 'print_r',
-                            'type'   => $type,
-                        ]);
-
+                        $p['bt_html'] .= "<line><span data-type='function'>{$frame['function']}(</span></line>";
                     }
-
+    
+                    if (isset($frame['args'])) foreach ($frame['args'] as $j => $arg) {
+    
+                        $type = gettype($arg);
+    
+                        if (is_scalar($arg)) {
+    
+                            if (is_string($arg)) {
+                                $name = "\"{$arg}\"";
+                            } else {
+                                $name = $arg;
+                            }
+    
+                            $p['bt_html'] .= "<line>  <span data-type='{$type}'>{$name}</span></line>";
+    
+                        } else {
+    
+                            $p['bt_html'] .= static::wrap_lines($arg, [
+                                'open'   => false,
+                                'indent' => 1,
+                                'expand' => 'print_r',
+                                'type'   => $type,
+                            ]);
+    
+                        }
+    
+                    }
+    
+                    $p['bt_html'] .= "<line><span data-type='function'>)</span>;</line>";
+                    $p['bt_html'] .= "<line> </line>";
+    
+                    continue;
+    
                 }
 
-                $p['bt_html'] .= "<line><span data-type='function'>)</span>;</line>";
-                $p['bt_html'] .= "<line> </line>";
-
-                continue;
+                
 
             }
 
-            if ($p['view'] == 'debugger') static::extract_arg_names($p);
+            static::extract_arg_names($p);
             
             if (!$p['title']) $p['title'] = $p['debug_file'] . "::" . $p['debug_line'];
         
@@ -190,18 +202,32 @@ namespace Digitalis {
         
             switch ($p['view']) {
 
+                case 'debugger':
+
+                    $html = '';
+
+                    foreach ($p['values'] as $i => $value) $html .= Debug_Code_Block::render([
+                        'label' => $p['arg_names'][$i] ?? false,
+                        'code'  => $value,
+                    ], false);
+
+                    $html = str_replace('`', '\`', $html);
+                    
+                    echo "<script>DigitalisDebugger.find().append(`{$html}`);</script>";
+
+                    break;
+
                 case 'js':
 
-                    if ($p['title']) echo static::console("> {$p['title']}", 'discreet');
-                    foreach ($p['values'] as $value) {
-            
-                        if (is_object($value)) {
-                            echo static::console($value, $value::class);
-                        } elseif (is_array($value)) {
-                            echo static::console($value, 'Array');
-                        } else {
-                            echo static::console($value);
-                        }
+                    if ($p['title']) echo static::console("> {$p['title']}", [
+                        'style' => 'label',
+                    ]);
+
+                    foreach ($p['values'] as $i => $value) {
+
+                        $options = [];
+                        if (isset($p['arg_names'][$i])) $options['label'] = $p['arg_names'][$i];
+                        echo static::console($value, $options);
 
                     }
                     break;
@@ -217,7 +243,7 @@ namespace Digitalis {
 
         //
 
-        protected static function get_type ($value) {
+        protected static function get_type ($value, $html = true) {
 
             $type = gettype($value);
             $name = $type;
@@ -237,7 +263,7 @@ namespace Digitalis {
 
             }
 
-            return "<span data-type='{$type}'>{$name}</span>";
+            return $html ? "<span data-type='{$type}'>{$name}</span>" : $name;
         
         }
 
@@ -286,7 +312,7 @@ namespace Digitalis {
                     if (!isset($p['values'][$i])) continue;
 
                     $value     = $p['values'][$i];
-                    $type      = static::get_type($value);
+                    $type      = static::get_type($value, $p['view'] == 'debugger');
                     $names[$i] = (($arg[0] ?? '') == '$') ? "{$arg} ({$type})" : $type;
 
                 }
@@ -344,27 +370,33 @@ namespace Digitalis {
         
         }
 
-        protected static function console ($value, $style = '') {
+        protected static function console ($value, $options = []) {
 
-            $style = str_replace("\\", "\\\\", $style);
-            if ($style == 'discreet') $style = 'color: #ccc; font-size: 0.8em;';
+            $options = wp_parse_args($options, [
+                'method' => 'debug',
+                'label'  => false,
+                'style'  => false,
+            ]);
+
+            $options['label'] = str_replace("\\", "\\\\", $options['label']);
+            $options['style'] = str_replace("\\", "\\\\", $options['style']);
+
+            if ($options['style'] == 'label') $options['style'] = 'color: #ccc; font-size: 0.8em;';
 
             if (is_scalar($value)) {
                 $value = str_replace("\\", "\\\\", $value);
-                $value = $style ? "'%c{$value}'" : "'{$value}'";
+                $value = $options['style'] ? "'%c{$value}'" : "'{$value}'";
             } else {
                 $value = json_encode($value);
             }
 
-            if ($style) {
+            $params = [];
+            if ($options['label']) $params[] = "`{$options['label']}`";
+            if ($value)            $params[] = $value;
+            if ($options['style']) $params[] = "`{$options['style']}`";
+            $params = implode(', ', $params);
 
-                return "<script>console.debug({$value}, '{$style}');</script>";
-
-            } else {
-
-                return "<script>console.debug({$value});</script>";
-
-            }
+            return "<script>console.{$options['method']}({$params});</script>";
         
         }
     
@@ -375,6 +407,7 @@ namespace Digitalis {
 
         public $view            = 'debugger';
         public $expand          = 'print_r';
+        public $append          = false;
         public $title           = null;
         public $open            = false;
         public $closable        = true;
@@ -394,14 +427,28 @@ namespace {
 
     if (!defined('DIGITALIS_GLOBAL_FUNCTIONS') || !DIGITALIS_GLOBAL_FUNCTIONS) {
 
-        if (!function_exists('dbg')) {
+        if (!function_exists('dump')) {
 
-            function dbg (...$values) {
+            function dump (...$values) {
     
                 Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
         
             }
 
+        }
+
+        if (!function_exists('damp')) {
+    
+            function damp (...$values) {
+
+                $values[] = new Digitalis\Debug_Options([
+                    'append' => true,
+                ]);
+    
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+        
+            }
+    
         }
 
         if (!function_exists('dd')) {
@@ -420,9 +467,9 @@ namespace {
     
         }
 
-        if (!function_exists('dump')) {
+        if (!function_exists('dprint')) {
 
-            function dump (...$values) {
+            function dprint (...$values) {
 
                 $values[] = new Digitalis\Debug_Options([
                     'view' => 'inline',
@@ -448,9 +495,9 @@ namespace {
 
         }
 
-        if (!function_exists('djs')) {
+        if (!function_exists('js_log')) {
 
-            function djs (...$values) {
+            function js_log (...$values) {
 
                 $values[] = new Digitalis\Debug_Options([
                     'view' => 'js',

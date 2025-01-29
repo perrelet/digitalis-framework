@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Noto+Sans+Mono:wght@100..900&display=swap');
 
-body:not(#dmy):has(digitalis-debugger[open]) {
+body:not(#dmy):has(digitalis-debugger[open]:not([collapse])) {
 
     overflow: hidden;
 
@@ -53,6 +53,8 @@ html:not(#dmy) digitalis-debugger {
     font-family: "Manrope", serif;
     box-shadow: 1px 0px 0px var(--bc);
 
+    transition: 0.2s;
+
     --ff-mono: "Noto Sans Mono", monospace;
 
     --icon-w: 1px;
@@ -61,6 +63,29 @@ html:not(#dmy) digitalis-debugger {
     &:not([open]) { display: none; }
 
     &:not([data-closable='1']) { width: 100dvw; }
+
+    &[collapse] {
+
+        main { display: none; }
+
+        header button {
+
+            &:not([onclick*="collapseToggle"],[onclick*="toggle"],[onclick*="reload"]) {
+
+                display: none;
+
+            } 
+
+            &[onclick*="collapseToggle"] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" stroke-width="1" height="58px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M19 21L5 21C3.89543 21 3 20.1046 3 19L3 5C3 3.89543 3.89543 3 5 3L19 3C20.1046 3 21 3.89543 21 5L21 19C21 20.1046 20.1046 21 19 21Z" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9.5 21V3" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.5 10L7.25 12L5.5 14" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: translate(0, 0) }
+    
+            }
+
+        }
+
+    }
 
     * {
 
@@ -157,6 +182,13 @@ html:not(#dmy) digitalis-debugger {
 
                 span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" viewBox="0 0 24 24" stroke-width="1" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M6 13L12 19L18 13" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 5L12 11L18 5" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
                 &:hover span, &:focus span { transform: translate(0, 0.1em) }
+
+            }
+
+            &[onclick*="collapseToggle"] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" stroke-width="1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M15 6L9 12L15 18" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>') }
+                &:hover span, &:focus span { transform: translate(-0.2em, 0) }
 
             }
             
