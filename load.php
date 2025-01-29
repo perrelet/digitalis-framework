@@ -110,6 +110,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/archive.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/post-archive.archive.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/term-archive.archive.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/query-filters.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/debug.view.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-ajax-form.view.php';
 

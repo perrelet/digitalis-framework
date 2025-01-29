@@ -1,0 +1,429 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Noto+Sans+Mono:wght@100..900&display=swap');
+
+body:not(#dmy):has(digitalis-debugger[open]) {
+
+    overflow: hidden;
+
+}
+
+html:not(#dmy) digitalis-debugger-chip {
+
+    all: initial;
+    display: block;
+    font-family: "Manrope", serif;
+    background: #9f9f9f;
+    color: white;
+    height: 1em;
+    line-height: 1;
+    padding: 0.2em 0.5em;
+    border-radius: 0.2em;
+    font-size: 14px;
+    cursor: pointer;
+
+    &:hover {
+
+        background: #666666;
+
+    }
+
+    &:focus {
+
+        box-shadow: 0px 0px 0px 2px #333 inset;
+
+    }
+
+}
+
+html:not(#dmy) digitalis-debugger {
+
+    --bc: #eee;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    display: flex;
+    flex-direction: row;
+    height: 100dvh;
+    max-width: 100dvw;
+
+    background: white;
+    font-size: 12px;
+    font-family: "Manrope", serif;
+    box-shadow: 1px 0px 0px var(--bc);
+
+    --ff-mono: "Noto Sans Mono", monospace;
+
+    --icon-w: 1px;
+    --icon-cross: background: linear-gradient(0deg, transparent calc(50% - var(--icon-w)), currentColor calc(50% - var(--icon-w)), currentColor calc(50% + var(--icon-w)), transparent 50%), linear-gradient(90deg, transparent calc(50% - var(--icon-w)), currentColor calc(50% - var(--icon-w)), currentColor calc(50% + var(--icon-w)), transparent 50%);
+
+    &:not([open]) { display: none; }
+
+    &:not([data-closable='1']) { width: 100dvw; }
+
+    * {
+
+        all: initial;
+        box-sizing: border-box;
+        outline: none;
+        font-family: inherit;
+
+    }
+
+    [data-type=object]   { color: #1f8ddb; }
+    [data-type=array]    { color: #ce6767; }
+    [data-type=string]   { color: #099700; }
+    [data-type=integer]  { color: #6b67ce; }
+    [data-type=double]   { color: #ce67c2; }
+    [data-type=function] { color: #7c7c7c; }
+
+    header {
+
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        border-right: 1px solid var(--bc);
+
+        button {
+
+            cursor: pointer;
+            transition: 0.2s;
+            padding: 1em;
+            border-bottom: 1px solid var(--bc);
+
+            span {
+
+                display: block;
+                top: 0.5em;
+                right: 0.5em;
+                width: 1.5em;
+                height: 1.5em;
+                transition: inherit;
+                pointer-events: none;
+                background-size: contain;
+
+            }
+
+            &:focus,
+            &:hover {
+
+                background-color: #f9f9f9;
+
+            }
+
+            &:active {
+
+                background-color: var(--bc);
+
+            }
+
+            &:focus {
+
+                box-shadow: 0px 0px 0px 2px var(--bc) inset;
+
+            }
+
+            &[onclick*=toggle] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" stroke-width="1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M6.75827 17.2426L12.0009 12M17.2435 6.75736L12.0009 12M12.0009 12L6.75827 6.75736M12.0009 12L17.2435 17.2426" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: rotate(90deg); }
+
+            }
+
+            &[onclick*="scrollTop"] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" viewBox="0 0 24 24" stroke-width="1" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M6 11L12 5L18 11" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 19L12 13L18 19" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: translate(0, -0.1em) }
+
+            }
+
+            &[onclick*="scrollPrev"] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" stroke-width="1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M6 15L12 9L18 15" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: translate(0, -0.1em) }
+
+            }
+
+            &[onclick*="scrollNext"] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" stroke-width="1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M6 9L12 15L18 9" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: translate(0, 0.1em) }
+
+            }
+
+            &[onclick*="scrollBottom"] {
+
+                span { background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" viewBox="0 0 24 24" stroke-width="1" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M6 13L12 19L18 13" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 5L12 11L18 5" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: translate(0, 0.1em) }
+
+            }
+            
+            &[onclick*=reload] {
+
+                span { transition: 0.2s; background-image: url('data:image/svg+xml,<%3Fxml version="1.0" encoding="UTF-8"%3F><svg width="58px" height="58px" stroke-width="1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="%23000000"><path d="M21.1679 8C19.6247 4.46819 16.1006 2 11.9999 2C6.81459 2 2.55104 5.94668 2.04932 11" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 8H21.4C21.7314 8 22 7.73137 22 7.4V3" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M2.88146 16C4.42458 19.5318 7.94874 22 12.0494 22C17.2347 22 21.4983 18.0533 22 13" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path><path d="M7.04932 16H2.64932C2.31795 16 2.04932 16.2686 2.04932 16.6V21" stroke="%23000000" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"></path></svg>'); }
+                &:hover span, &:focus span { transform: rotate(180deg); }
+
+            }
+
+            &:last-child {
+
+                margin-top: auto;
+                border-top: 1px solid var(--bc);
+
+            }
+    
+        }
+
+    }
+
+    main {
+
+        width: 100%;
+        overflow-x: hidden;
+        overflow-y: scroll;
+        box-sizing: border-box;
+        margin: 1em;
+        padding-right: 1em;
+        
+        &::-webkit-scrollbar { width: 10px; height: 10px; }
+        &::-webkit-scrollbar-track {background: #f1f1f1; border-radius: 5px; }
+        &::-webkit-scrollbar-thumb {background: #888; border-radius: 5px;}
+        &::-webkit-scrollbar-thumb:hover {background: #555;}
+
+        info {
+
+            * { display: block; }
+
+            display: block;
+            margin-bottom: 1em;
+
+            h1 {
+
+                display: inline-block;
+                font-size: 3em;
+                font-weight: bold;
+                margin-bottom: 0.25em;
+    
+            }
+
+        }
+
+        > div {
+
+            display: block;
+
+            font-family: var(--ff-mono);
+            font-size: 13px;
+            background: #fbfbfb;
+            border-radius: 5px;
+
+            overflow: hidden;
+
+            &:not(:last-child) {
+
+                margin-bottom: 2em;
+
+            }
+
+            span {
+
+                display: inline;
+                color: inherit;
+                font-size: inherit;
+                font-weight: inherit;
+                cursor: inherit;
+
+            }
+
+            > label {
+
+                display: block;
+
+                padding: 0.5em;
+                border-bottom: 1px solid var(--bc);
+
+                font-family: inherit;
+                font-weight: bold;
+                font-size: 12px;
+                color: #6a6a6a;
+
+                cursor: pointer;
+
+                &:hover {
+
+                    background-color: var(--bc);
+
+                }
+
+            }
+
+            > code {
+
+                display: block;
+                padding: 1em;
+                padding-left: 4em;
+
+                font-family: inherit;
+                font-size: inherit;
+                color: #00547d;
+
+                &:not([open]) { display: none; }
+
+                lines,
+                line {
+    
+                    display: block;
+                    position: relative;
+                    white-space: pre-wrap;
+                    overflow-wrap: break-word;
+                    color: inherit;
+                    font-size: inherit;
+                    font-weight: inherit;
+    
+                }
+    
+                lines {
+    
+                    display: none;
+                    &[open] { display: inherit; }
+    
+                }
+    
+                line {
+    
+                    &:before {
+    
+                        display: block;
+                        position: absolute;
+                        left: -2.5em;
+                        top: 0;
+                        bottom: 0;
+                        margin-top: auto;
+                        margin-bottom: auto;
+    
+                    }
+    
+                }
+    
+                line:has(+ lines) {
+    
+                    &:before {
+    
+                        content: '';
+                        width: 0.8em;
+                        height: 0.8em;
+                        background: linear-gradient(0deg, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent 50%), linear-gradient(90deg, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent 50%);
+                        opacity: 0.25;
+    
+                    }
+    
+                    &:hover {
+    
+                        cursor: pointer;
+                        color: #33ff1f;
+    
+                        &:before {
+    
+                            opacity: 1;
+    
+                        }
+    
+                    }
+    
+                }
+    
+                line:has(+ lines[open]) {
+    
+                    &:before {
+    
+                        background: linear-gradient(0deg, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent 50%);
+    
+                    }
+    
+                    &:hover {
+    
+                        color: #ea00a7;
+    
+                        + lines {
+    
+                            color: #ea00a7;
+    
+                            line:before {
+    
+                                opacity: 0.8;
+                                content: '';
+                                font-style: normal;
+                                background: linear-gradient(90deg, transparent calc(50% - 1px), currentColor calc(50% - 1px), currentColor calc(50% + 1px), transparent 50%);
+                                width: 0.8em;
+                                height: 0.8em;
+                                
+                            }
+    
+                        }
+    
+                    }
+    
+                }
+    
+                line:has(+ lines:not([open])) {
+    
+                    &:after {
+                        
+                        content: ' [\2022\2022\2022]';
+                        content: ' [' attr(data-abbr, '\2022\2022\2022') ']';
+    
+                    }
+    
+                }
+    
+                line:not(:has(+ lines)) {
+    
+                    &:before {
+    
+                        content: attr(data-line);
+                        opacity: .25;
+                        font-style: italic;
+    
+                    }
+    
+                }
+
+            } /* code */
+
+            &[backtrace] code {
+
+                line {
+
+                    /* > * { display: block; }
+                    * { white-space: pre-wrap; } */
+
+                    &[trace-file] {
+
+                        font-size: 12px;
+                        color: #595959;
+                        font-style: italic;
+                        font-weight: bold;
+                        margin-bottom: 0.5em;
+    
+                    }
+
+                    &[trace-call] {
+
+                        font-size: 14px;
+                        font-weight: bold;
+
+                    }
+
+                }
+
+            }
+
+        } /* div */
+
+    }
+
+
+
+}
