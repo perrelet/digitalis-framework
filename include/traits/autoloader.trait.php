@@ -7,34 +7,29 @@ use ReflectionClass;
 
 trait Autoloader {
 
-    public function autoload ($path, $instantiate = 'get_instance', $recursive = true, $ext = 'php', &$objs = []) {
+    protected $path;
 
-        if (is_array($path)) return $this->autoload_multiple($path, $objs);
+    public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $depth = 0) {
 
-        if ($instantiate instanceof Closure) $instantiate = $instantiate();
-
-        if (is_array($instantiate)) {
-
-            if (isset($instantiate[3])) $objs        = $instantiate[3];
-            if (isset($instantiate[2])) $ext         = $instantiate[2];
-            if (isset($instantiate[1])) $recursive   = $instantiate[1];
-            if (isset($instantiate[0])) $instantiate = $instantiate[0];
-
-        }
-
-        if (!is_dir($path = realpath($path))) return $objs;
-
-        $names = $this->get_file_names($path, $ext);
-
-        if ($names) foreach ($names as $name) {
+        if (is_null($path)) $path = $this->path;
         
-            if ($obj = $this->load_class($path . '/' . $name, $instantiate)) $objs[] = $obj;
+        if (is_array($path))                     return $this->autoload_multiple($path, $objs);
+        if (!is_dir($path = realpath($path)))    return $objs;
+        if ($depth && basename($path)[0] == '_') return $objs;
+
+        if ($names = $this->get_file_names($path, $ext)) foreach ($names as $name) {
+        
+            if ($obj = $this->load_class($path . '/' . $name)) $objs[] = $obj;
         
         }
+
+        $plugins = [];
+        if (!$depth) foreach (get_plugins() as $slug => $plugin) $plugins[dirname($slug)] = $slug;
 
         if ($recursive) foreach (glob($path . '/*', GLOB_ONLYDIR) as $dir) {
 
-            $this->autoload($dir, $instantiate, $recursive, $ext, $objs);
+            if (!$depth && ($plugin = $plugins[basename($dir)] ?? 0) && !is_plugin_active($plugin)) continue;
+            $this->autoload($dir, $recursive, $ext, $objs, $depth + 1);
 
         }
 
@@ -48,7 +43,7 @@ trait Autoloader {
 
             if (is_null($instantiation)) $instantiation = 'get_instance';
 
-            $objs = array_merge($objs, $this->autoload($this->path . $directory, $instantiation));
+            $objs = array_merge($objs, $this->autoload($this->path . $directory));
 
         }
 
@@ -56,7 +51,7 @@ trait Autoloader {
 
     }
 
-    public function load_class ($path, $instantiate = true) {
+    public function load_class ($path, $instantiate = null) {
     
         if (!is_file($path)) return false;
 
@@ -65,12 +60,21 @@ trait Autoloader {
         if (!$class_name = $this->extract_class_name($path)) return false;
         if (!class_exists($class_name))                      return false;
 
-        if (method_exists($class_name, 'hello')) call_user_func([$class_name, 'hello']);
+        if (method_exists($class_name, 'hello'))      call_user_func([$class_name, 'hello']);
+        if (method_exists($class_name, 'on_include')) call_user_func([$class_name, 'on_include']);
 
-        $reflection = new ReflectionClass($class_name);
+        if (is_null($instantiate)) {
 
-        if ($reflection->isAbstract())                       $instantiate = false;
-        if (strpos(basename($path), '.abstract.') !== false) $instantiate = false;
+            if ($instantiate = method_exists($class_name, 'auto_init') ? call_user_func([$class_name, 'auto_init']) : false) {
+    
+                $reflection = new ReflectionClass($class_name);
+    
+                if ($reflection->isAbstract())                       $instantiate = false;
+                if (strpos(basename($path), '.abstract.') !== false) $instantiate = false;
+    
+            }
+
+        } 
 
         $instantiate = apply_filters('Digitalis/Instantiate/' . str_replace('\\', '/', ltrim($class_name, '\\')), $instantiate, $path);
 
@@ -92,6 +96,8 @@ trait Autoloader {
     }
 
     protected function get_file_names ($path, $ext = 'php') {
+
+        $log = strpos($path, '/somm/public_html/wp-content/plugins/somm/eventropy/include/models') && isset($_GET['xaxa']);
     
         $files    = glob($path . '/*.' . $ext);
         $names    = $this->get_names($files);
@@ -139,7 +145,14 @@ trait Autoloader {
 
     protected function sort_inherits ($inherits, $sorted = []) {
 
-        if ($inherits) foreach ($inherits as $child => $parent) {
+        if ($priority = array_intersect($inherits, ['trait'])) foreach ($priority as $child => $parent) {
+
+            $sorted[$child] = $parent;
+            unset($inherits[$child]);
+
+        }
+
+        foreach ($inherits as $child => $parent) {
         
             if (!array_key_exists($parent, $inherits) || ($child == $parent)) {
 
