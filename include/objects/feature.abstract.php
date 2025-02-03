@@ -10,20 +10,14 @@ abstract class Feature extends Factory {
     
     }
 
-    public function __construct ($fill = []) {
-
-        $this->fill($fill);
-
-        $this->run();
-
-    }
-
-    public function run () {
+    protected static function construct_instance ($instance, $data = []) {
     
-        
+        parent::construct_instance($instance, $data);
+
+        $instance->run();
     
     }
 
-    
+    public function run () {}
 
 }

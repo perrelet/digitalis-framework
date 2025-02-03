@@ -13,9 +13,11 @@ use WP_Error;
  * @copyright 2023 Digitalis Web Build Co.
  */
 
-abstract class Route extends Singleton {
+class Route extends Factory {
 
     use Dependency_Injection;
+
+    protected static $cache_property = 'route';
 
     /**
      * @link /wp-json/{$namespace}/{$route}       JSON Response.
@@ -36,7 +38,7 @@ abstract class Route extends Singleton {
     protected $require_nonce = false;
     protected $rest_args     = [];
 
-    protected static $instances = 0;
+    protected static $index = 0;
 
     public function __construct () {
 
@@ -44,7 +46,7 @@ abstract class Route extends Singleton {
 
         if ($this->wp_query) add_filter('rest_request_before_callbacks', [$this, 'set_wp_query_vars'], 10, 3);
 
-        if (++static::$instances == 1) add_filter('rest_pre_serve_request', [$this, 'rest_pre_serve_request'], 10, 4);
+        if (++static::$index == 1) add_filter('rest_pre_serve_request', [$this, 'rest_pre_serve_request'], 10, 4);
 
     }
 

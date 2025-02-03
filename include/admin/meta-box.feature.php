@@ -4,7 +4,7 @@ namespace Digitalis;
 
 class Meta_Box extends Feature {
 
-    protected static $cache_key = 'id';
+    protected static $cache_property = 'id';
 
     protected $id       = 'digitalis-metabox';
     protected $title    = 'Digitalis Metabox';

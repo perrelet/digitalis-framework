@@ -5,14 +5,12 @@ namespace Digitalis;
 class Bricks extends Builder {
 
     protected $slug = 'bricks';
-    
-    public function condition () : bool {
 
+    public static function instance_condition () : bool {
+    
         $theme = wp_get_theme();
 
         return in_array('Bricks', [$theme->name, $theme->parent_theme]);
-        
-        // return defined("BRICKS_VERSION");
     
     }
 

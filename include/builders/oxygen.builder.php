@@ -5,12 +5,10 @@ namespace Digitalis;
 class Oxygen extends Builder {
 
     protected $slug = 'oxygen';
-    
-    public function condition () : bool {
 
+    public static function instance_condition () : bool {
+    
         return is_plugin_active('oxygen/functions.php');
-        
-        // return defined("CT_VERSION");
     
     }
 

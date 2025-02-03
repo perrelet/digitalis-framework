@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class ACF_Block {
+class ACF_Block extends Factory {
 
     protected $slug     = 'custom-block';
     protected $view     = View::class;

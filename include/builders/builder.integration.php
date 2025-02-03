@@ -6,10 +6,10 @@ abstract class Builder extends Integration implements Builder_Interface {
 
     protected $slug = 'builder';
 
-    public function condition () : bool {
-
+    public static function instance_condition () : bool {
+    
         return true;
-
+    
     }
 
     public function is_backend () : bool {

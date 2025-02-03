@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Woo_Account_Page extends Factory {
+class Woo_Account_Page extends Factory {
 
     protected $slug = 'account_page';
     protected $title = 'Account Page';
@@ -19,8 +19,6 @@ abstract class Woo_Account_Page extends Factory {
     protected $collapsable = true;
 
     protected $children = [];
-    
-    protected static $static_init = false;
 
     protected static $pages = [];
     protected static $removed_pages = [];
@@ -83,16 +81,9 @@ abstract class Woo_Account_Page extends Factory {
 
     }
 
-    public function __construct ($fill = []) {
+    public function __construct () {
 
-        $this->fill($fill);
-
-        if (!self::$static_init) {
-            
-            self::static_init();
-            self::$static_init = true;
-
-        }
+        if (!self::get_instance_count(self::class)) self::static_init();
 
         self::$pages[$this->slug] = $this;
         if (is_null($this->endpoint)) $this->endpoint = $this->slug;

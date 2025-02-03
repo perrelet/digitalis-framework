@@ -12,14 +12,14 @@ interface Builder_Interface {
      *
      * @return boolean
      */
-    public function condition ()          : bool;
+    public static function instance_condition () : bool;
 
     /**
      * Returns true when the builder is open.
      *
      * @return boolean
      */
-    public function is_backend ()         : bool;
+    public function is_backend () : bool;
 
     /**
      * Returns true when the builder is open and we are inside of the builder preview (normally an iframe).
@@ -33,7 +33,7 @@ interface Builder_Interface {
      *
      * @return boolean
      */
-    public function is_backend_ui ()      : bool;
+    public function is_backend_ui () : bool;
 
     /**
      * Return array of classes saved within the builder

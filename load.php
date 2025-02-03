@@ -27,14 +27,14 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
@@ -61,7 +61,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/posts-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/users-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/taxonomy-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/wc-orders.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
@@ -126,7 +126,7 @@ add_action('plugins_loaded', function () {
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-status.post-status.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order.abstract.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.abstract.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.factory.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
 
