@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Product_Type extends Integration {
+abstract class Product_Type extends Plugin_Integration {
 
     protected $slug;
     protected $name;
@@ -11,6 +11,8 @@ abstract class Product_Type extends Integration {
     protected $data_store = 'WC_Product_Data_Store_CPT';
     
     protected $text_domain = 'default';
+
+    protected static $plugin = 'woocommerce/woocommerce.php';
 
     public function run () {
 
