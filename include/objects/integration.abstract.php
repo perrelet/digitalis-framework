@@ -3,30 +3,15 @@
 namespace Digitalis;
 
 abstract class Integration extends Singleton {
-	
-	protected $loaded = false;
-	
-	public function __construct () {
-		
-		if (!$this->condition()) return false;
 
-		$this->loaded = true;
-		$this->run();
-		
-	}
+    protected static function construct_instance ($instance) {
+    
+        parent::construct_instance($instance);
 
-	public function condition () {
-        
-        return true;
+        $instance->run();
     
     }
     
-	public function run () {}
-	
-	public function is_active () {
-		
-		return $this->loaded;
-		
-	}
-	
+    public function run () {}
+
 }
