@@ -31,6 +31,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/plugin-integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
