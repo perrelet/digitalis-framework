@@ -23,12 +23,28 @@ trait Autoloader {
         
         }
 
-        $plugins = [];
-        if (!$depth) foreach (get_plugins() as $slug => $plugin) $plugins[dirname($slug)] = $slug;
-
         if ($recursive) foreach (glob($path . '/*', GLOB_ONLYDIR) as $dir) {
 
-            if (!$depth && ($plugin = $plugins[basename($dir)] ?? 0) && !is_plugin_active($plugin)) continue;
+            if(basename($dir)[0] == '~') {
+
+                $plugin_dir = substr(basename($dir), 1);
+                $active     = false;
+
+                foreach (get_plugins() as $plugin_name => $plugin) {
+
+                    if ((dirname($plugin_name) == $plugin_dir) && (is_plugin_active($plugin_name))) {
+
+                        $active = true;
+                        break;
+
+                    } 
+
+                }
+
+                if (!$active) continue;
+
+            }
+
             $this->autoload($dir, $recursive, $ext, $objs, $depth + 1);
 
         }
@@ -54,6 +70,10 @@ trait Autoloader {
     public function load_class ($path, $instantiate = null) {
     
         if (!is_file($path)) return false;
+
+		global $xxx;
+        if (!$xxx) $xxx = [];
+        $xxx[] = $path;
 
         include_once $path;
 
@@ -145,7 +165,7 @@ trait Autoloader {
 
     protected function sort_inherits ($inherits, $sorted = []) {
 
-        if ($priority = array_intersect($inherits, ['trait'])) foreach ($priority as $child => $parent) {
+        if ($priority = array_intersect($inherits, ['trait', 'interface'])) foreach ($priority as $child => $parent) {
 
             $sorted[$child] = $parent;
             unset($inherits[$child]);
