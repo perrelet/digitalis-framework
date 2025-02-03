@@ -26,7 +26,7 @@ namespace Digitalis {
 
         public static function print (...$args) {
 
-            $params = [
+            $p = [
                 'values' => [],
             ];
         
@@ -34,34 +34,42 @@ namespace Digitalis {
 
                 if ($arg instanceof Debug_Options) {
 
-                    $params = array_merge($params, (array) $arg);
+                    $p = array_merge($p, (array) $arg);
                     unset($args[$i]);
 
                 } else {
 
-                    $params['values'][$i] = $arg;
+                    $p['values'][$i] = $arg;
 
                 }
 
             }
 
-            static::render($params);
+            static::render($p);
+
+            
         
         }
 
-        public static function render ($params = [], $print = true) {
+        protected static function condition ($p) {
+
+            return current_user_can('administrator');
+
+        }
+
+        public static function render ($p = [], $print = true) {
 
             static::$defaults = array_merge(static::$defaults, (array) static::get_options());
             static::$defaults['values'] = [];
 
-            return parent::render($params, $print);
+            return parent::render($p, $print);
 
         }
-    
-        protected static function condition ($p) {
-        
-            return current_user_can('administrator');
-        
+
+        protected static function after ($p) {
+
+            if ($p['die']) die;
+
         }
     
         public static function get_template ($p) {
@@ -412,6 +420,7 @@ namespace Digitalis {
         public $open            = false;
         public $closable        = true;
         public $backtrace_limit = 40;
+        public $die             = null;
 
         public function __construct ($props = []) {
 
@@ -456,12 +465,12 @@ namespace {
             function dd (...$values) {
 
                 $values[] = new Digitalis\Debug_Options([
-                    'open'     => true,
-                    'closable' => false,
+                    'open'       => true,
+                    'closable'   => false,
+                    'die'        => true,
                 ]);
     
                 Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
-                die;
         
             }
     
