@@ -6,6 +6,8 @@ use Exception;
 
 abstract class Singleton extends Creational {
 
+    use Auto_Instantiate;
+
     private static $instances = [];
 
     protected function __construct() {}

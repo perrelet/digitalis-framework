@@ -2,11 +2,11 @@
 
 namespace Digitalis;
 
-abstract class Service extends Factory {
+trait Auto_Instantiate {
 
     public static function auto_init () {
         
-        return false;
+        return 'get_instance';
     
     }
 

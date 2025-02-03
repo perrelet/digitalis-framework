@@ -6,6 +6,7 @@ use ReflectionClass;
 
 abstract class Factory extends Creational {
 
+    use Auto_Instantiate, Dependency_Injection;
 
     protected static $instances = [];
     protected static $cache_property = null;

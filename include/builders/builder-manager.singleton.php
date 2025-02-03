@@ -26,11 +26,9 @@ class Builder_Manager extends Singleton {
 
         $this->builders = [];
 
-        $builders = $this->autoload(__DIR__, 'get_instance', true, 'builder.php');
+        if ($builders = $this->autoload(__DIR__, true, 'builder.php')) foreach ($builders as $builder) {
 
-        if ($builders) foreach ($builders as $builder) {
-            
-            if ($builder->is_active()) $this->builders[$builder->get_slug()] = $builder;
+            $this->builders[$builder->get_slug()] = $builder;
             
         }
 

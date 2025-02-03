@@ -6,6 +6,12 @@ use Exception;
 
 class Model extends Factory {
 
+    public static function auto_init () {
+        
+        return false;
+    
+    }
+
     protected static $instances = [];
 
     public static function process_data (&$data) {}
