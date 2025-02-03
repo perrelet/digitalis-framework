@@ -23,6 +23,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/inherit-props.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/log.service.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
