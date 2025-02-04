@@ -25,23 +25,25 @@ trait Autoloader {
 
         if ($recursive) foreach (glob($path . '/*', GLOB_ONLYDIR) as $dir) {
 
-            if(basename($dir)[0] == '~') {
+            if (basename($dir)[0] == '~') {
 
-                $plugin_dir = substr(basename($dir), 1);
-                $active     = false;
+                // Refactor with array_any (PHP 8 >= 8.4.0)
+
+                $plugin_dir    = substr(basename($dir), 1);
+                $plugin_active = false;
 
                 foreach (get_plugins() as $plugin_name => $plugin) {
 
-                    if ((dirname($plugin_name) == $plugin_dir) && (is_plugin_active($plugin_name))) {
+                    if ((dirname($plugin_name) == $plugin_dir) && is_plugin_active($plugin_name)) {
 
-                        $active = true;
+                        $plugin_active = true;
                         break;
 
-                    } 
+                    }
 
                 }
 
-                if (!$active) continue;
+                if (!$plugin_active) continue;
 
             }
 
@@ -70,10 +72,6 @@ trait Autoloader {
     public function load_class ($path, $instantiate = null) {
     
         if (!is_file($path)) return false;
-
-		global $xxx;
-        if (!$xxx) $xxx = [];
-        $xxx[] = $path;
 
         include_once $path;
 
