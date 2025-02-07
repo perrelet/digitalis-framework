@@ -203,6 +203,8 @@
 
             //console.log(response);
 
+            if (response.hasOwnProperty(`reload`)) window.location.reload();
+
             this.params.index = 0;
             this.time = 0;
 

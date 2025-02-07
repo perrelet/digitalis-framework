@@ -174,9 +174,10 @@ abstract class Iterator extends Singleton {
         ];
 
         $this->warm_up();
+
         $this->items = $this->get_items();
 
-        if ($this->index == 0) $this->log('Starting process.', true);
+        if ($this->index == 0) $this->on_start();
 
         if ($this->items) foreach ($this->items as $item) {
 
@@ -213,11 +214,11 @@ abstract class Iterator extends Singleton {
 
         }
 
-        $this->log("Batch complete - {$count} {$this->labels['plural']} processed (" . count($results['skipped']) . " skipped, "  . count($results['failed']) . " failed)", true);
+        $this->on_batch_complete($count, $results);
 
         if ($this->is_complete()) {
 
-            $this->log('Process complete 🚀', true);
+            $this->on_complete();
             $this->set_doing_cron(false);
 
         }
@@ -246,18 +247,40 @@ abstract class Iterator extends Singleton {
 
     }
 
+    public function on_start () {
+    
+        $this->log('Starting process.', true);
+    
+    }
+
+    protected function on_batch_complete ($count, $results) {
+    
+        $this->log("Batch complete - {$count} {$this->labels['plural']} processed (" . count($results['skipped']) . " skipped, "  . count($results['failed']) . " failed)", true);
+    
+    }
+
+    protected function on_complete () {
+
+        $this->log('Process complete 🚀', true);
+
+    }
+
     //
 
-    public function add_admin_page () {
+    public function get_menu_slug () {
+    
+        return $this->menu_slug ? $this->menu_slug : $this->get_option_key();
+    
+    }
 
-        $menu_slug = $this->menu_slug ? $this->menu_slug : $this->get_option_key();
+    public function add_admin_page () {
 
         add_submenu_page(
             $this->parent_menu_slug,
             $this->title,
             $this->title,
             $this->capability,
-            $menu_slug,
+            $this->get_menu_slug(),
             [$this, 'render_admin_page']
         );
 
@@ -265,21 +288,18 @@ abstract class Iterator extends Singleton {
 
     public function render_admin_page () {
 
+        $this->warm_up();
+
         echo "<div class='wrap'>";
-
             echo "<h1>{$this->title}</h1>";
-
-            $this->render_controller();
-
+            echo "<div class='digitalis-iterator-wrap'>";
+                $this->render_controller();
+            echo "</div>";
         echo "</div>";
 
     }
 
     public function render_controller () {
-
-        $this->warm_up();
-
-        $total = $this->get_total_items_wrap();
 
         wp_enqueue_script('digitalis-iterator', DIGITALIS_FRAMEWORK_URI . 'assets/js/iterator.js', [], DIGITALIS_FRAMEWORK_VERSION, true);
         wp_localize_script('digitalis-iterator', 'iterator_params', [
@@ -295,42 +315,9 @@ abstract class Iterator extends Singleton {
             'labels'        => $this->labels,
         ]);
 
-        ?>
-
-        <style><?= file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css');?></style>
-
-        <div class='digitalis-iterator iterator iterator-<?= $this->key; ?><?= $this->is_doing_cron() ? ' doing_cron running' : '' ?>'>
-            <?php if ($this->description) echo "<div class='iterator-panel description'>{$this->description}</div>"; ?>
-            <div class='iterator-panel controls'>
-                <button data-task='start'>Start</button>
-                <button data-task='stop'>Stop</button>
-                <button data-task='reset'>Reset</button>
-            </div>
-            <div class='iterator-panel progress'>
-                <div class='status-bar'>
-                    <div class='index-total'>Progress: <span class='index'><?= $this->index; ?></span> / <span class='total'><?= $total; ?></span></div>
-                    <div class="status"><?= $this->is_doing_cron() ? 'Running' : 'Ready' ?></div>
-                </div>
-                <div class='progress-track'>
-                    <div class='progress-bar' style='width: <?= $total ? (100 * $this->index / $total) : 0; ?>%;'></div>
-                </div>
-                <div class='status-bar'>
-                    <div class='percent'><?= $total ? floor(100 * $this->index / $total) : 0 ?>%</div>
-                    <div class='time'><?= $this->is_doing_cron() ? 'Cron Task' : '00:00:00' ?></div>
-                </div>
-            </div>
-
-            <div class='iterator-panel log-wrap'>
-                <label>Batch Log:</label>
-                <div class='iterator-log'>
-                    <?php if ($this->store['errors']) echo "<div class='log-error'>" . implode("</div><div class='log-error'>", array_reverse($this->store['errors'])) . "</div>"; ?>
-                    <?php if ($this->store['log']) echo "<div class='log-item'>" . implode("</div><div class='log-item'>", array_reverse($this->store['log'])) . "</div>"; ?>
-                </div>
-            </div>
-
-        </div>
-
-        <?php
+        Iterator_UI::render([
+            'iterator' => $this,
+        ]);
 
     }
 
@@ -396,7 +383,7 @@ abstract class Iterator extends Singleton {
         $this->store['log']    = array_merge($this->store['log'], $this->log);
         $this->store['errors'] = array_merge($this->store['errors'], $this->errors);
 
-        $this->pre_update_store($store);
+        $this->pre_update_store($this->store);
 
         update_option($this->get_option_key(), $this->store, false);
 
@@ -452,6 +439,11 @@ abstract class Iterator extends Singleton {
         $this->batch_size = $batch_size;
 
     }
+
+    //
+
+    public function get_key ()         { return $this->key;         }
+    public function get_description () { return $this->description; }
 
     //
 
