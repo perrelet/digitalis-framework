@@ -2,7 +2,7 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.2.5');
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.2.6');
 define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_LIBRARY_PATH',        plugin_dir_path( __FILE__ ) . 'include/features/');
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
@@ -83,7 +83,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 //require DIGITALIS_FRAMEWORK_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-featured-image-group.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
