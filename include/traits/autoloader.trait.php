@@ -114,8 +114,6 @@ trait Autoloader {
     }
 
     protected function get_file_names ($path, $ext = 'php') {
-
-        $log = strpos($path, '/somm/public_html/wp-content/plugins/somm/eventropy/include/models') && isset($_GET['xaxa']);
     
         $files    = glob($path . '/*.' . $ext);
         $names    = $this->get_names($files);
