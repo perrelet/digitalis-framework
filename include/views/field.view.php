@@ -170,7 +170,7 @@ class Field extends View {
 
         $key = $p['key'];
 
-        if (is_null($p['id'])) $p['id'] = $key . '-field';
+        if (is_null($p['id']) && $key) $p['id'] = $key . '-field';
 
         if ($p['type'] == 'hidden') $p['wrap'] = false;
 
@@ -219,11 +219,11 @@ class Field extends View {
 
     protected static function before ($p) {
 
-        if ($p['wrap']) echo "<div id='{$p['id']}-row' class='{$p['row_classes']}' style='{$p['row_styles']}'>";
+        if ($p['wrap']) echo "<div" . ($p['id'] ? " id='{$p['id']}-row'" : '') . " class='{$p['row_classes']}' style='{$p['row_styles']}'>";
 
             if ($p['label']) echo "<label for='{$p['id']}'>{$p['label']}</label>";
 
-                if ($p['wrap']) echo "<div id='{$p['id']}-wrap' class='field-wrap'>";
+                if ($p['wrap']) echo "<div" . ($p['id'] ? " id='{$p['id']}-wrap'" : '') . " class='field-wrap'>";
 
     }            
 
