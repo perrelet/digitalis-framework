@@ -104,9 +104,14 @@ trait Autoloader {
 
             return new $class_name();
 
+        } elseif (!is_scalar($instantiate)) {
+
+            $call = [$class_name, 'get_instance'];
+            return is_callable($call) ? call_user_func($call, $instantiate) : false;
+
         } else {
 
-            $call = $class_name . "::" . $instantiate;
+            $call = [$class_name, $instantiate];
             return is_callable($call) ? call_user_func($call) : false;
 
         }

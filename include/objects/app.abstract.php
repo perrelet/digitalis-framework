@@ -46,7 +46,7 @@ abstract class App extends Singleton {
 
     public function load_feature ($file, $instantiate = null) {
 
-        if ($instantiate) $instantiate = 'get_instance';
+        if (is_null($instantiate)) $instantiate = 'get_instance';
 
         return $this->load_class(DIGITALIS_LIBRARY_PATH . $file, $instantiate);
 
