@@ -132,7 +132,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $slug           = $_GET['log'] ?? null;
         $bytes_per_page = (int) ($_GET['bpp'] ?? $this->bytes_per_page);
         $page           = (int) ($_GET['paged'] ?? 1);
-        $clear          = $_GET['clear-log'] ?? null;
+        $clear          = $_POST['clear-log'] ?? null;
 
         $current = $slug ? ($logs[$slug] ?? $logs[array_key_first($logs)]) : $logs[array_key_first($logs)];
         if ($slug) foreach ($logs as $log) if ($log['slug'] == $slug) $current = $log;
@@ -143,7 +143,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 echo "<div class='notice notice-error'><p>🔒 You do no thave permission to clear this log file.</p></div>";
 
-            } elseif (!wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'clear-log')) {
+            } elseif (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'] ?? '')), 'clear-log')) {
                 
                 echo "<div class='notice notice-error'><p>❌ The link you followed has expired, please try again.</p></div>";
     
@@ -163,7 +163,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $syntax_rules = $this->get_log_syntax_rules($current);
 
         $pagination = $more ? paginate_links([
-            'base'      => add_query_arg('paged', '%#%', remove_query_arg('clear-log')),
+            'base'      => add_query_arg('paged', '%#%'),
             'current'   => $page,
             'total'     => floor($filesize / $bytes_per_page) + 1,
             'prev_text' => "&laquo;",
@@ -223,20 +223,18 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             if ($pagination) echo $pagination;
 
-            echo "<div class='actions'>";
+            echo "<form method='post' class='actions'>";
 
-                echo "<a class='refresh-log' href='" . add_query_arg('log', $current['slug'], remove_query_arg(['paged', 'clear-log'])) . "'>♻️ Refresh Log</a>";           
+                echo "<input type='hidden' name='nonce' value='" . wp_create_nonce('clear-log') . "'></input>";
+                echo "<button classs='button' onclick='location.reload(); return false;'>♻️ Refresh Log</button>";
                 
                 if (($current['permissions']['clear'] ?? 0) && current_user_can($current['permissions']['clear'])) {
 
-                    $url     = wp_nonce_url(add_query_arg('clear-log', 1, remove_query_arg(['paged'])), 'clear-log');
-                    $confirm = "Are you sure you want to empty this log file?";
-
-                    echo "<a class='clear-log' href='{$url}' onclick='return confirm(`{$confirm}`)'>🗑️ Clear Log</a>";
+                    echo "<button classs='button' type='submit' name='clear-log' value='1' onclick='return confirm(`Are you sure you want to empty this log file?`)'>🗑️ Clear Log</button>";
         
                 }
                 
-            echo "</div>";
+            echo "</form>";
 
         echo "</div>";
     
@@ -507,31 +505,34 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                         }
 
-                .actions {
+                    }
+
+                }
+
+                form.actions {
 
                     display: flex;
-                    gap: 1rem;
+                    gap: 0.5rem;
 
-                    a {
+                    button {
 
-                        font-weight: bold;
-                        text-decoration: none;
+                        background: white;
+                        border: 1px solid #ddd;
+                        padding: 0.5rem;
+                        border-radius: 0.25rem;
+                        cursor: pointer;
 
+                        &:focus,
                         &:hover {
 
-                            text-decoration: underline;
+                            background: #fbfbfb;
+                            border-color: #aaa;
 
                         }
 
-                        &.clear-log {
+                        &:active {
 
-                            color: #a70000;
-
-                        }
-
-                        &.refresh-log {
-
-                            color: #729700;
+                            background: #f6f6f6;
 
                         }
 
