@@ -24,7 +24,7 @@ namespace Digitalis {
         
         }
 
-        public static function print (...$args) {
+        public static function write (...$args) {
 
             $p = [
                 'values' => [],
@@ -47,8 +47,6 @@ namespace Digitalis {
 
             static::render($p);
 
-            
-        
         }
 
         protected static function condition ($p) {
@@ -277,7 +275,7 @@ namespace Digitalis {
 
         protected static function extract_arg_names (&$p) {
 
-            if ($p['debug_path'] && $p['debug_line'] && $p['debug_func'] && $file = file($p['debug_path'])) {
+            if ($p['debug_path'] && $p['debug_line'] && $p['debug_func'] && $file = @file($p['debug_path'])) {
 
                 $start = $p['debug_line'] - 1;
                 $end   = $start;
@@ -440,7 +438,7 @@ namespace {
 
             function dump (...$values) {
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
         
             }
 
@@ -454,7 +452,7 @@ namespace {
                     'append' => true,
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
         
             }
     
@@ -470,7 +468,7 @@ namespace {
                     'die'        => true,
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
         
             }
     
@@ -484,7 +482,7 @@ namespace {
                     'view' => 'inline',
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
         
             }
 
@@ -498,7 +496,7 @@ namespace {
                     'expand' => 'var_export',
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
         
             }
 
@@ -512,7 +510,7 @@ namespace {
                     'view' => 'js',
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'print', $values);
+                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
         
             }
 
