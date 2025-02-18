@@ -45,7 +45,7 @@ class Meta_Box extends Feature {
     
     }
 
-    public function render ($object, $args) {}
+    //public function render ($object, $args) {}
 
     public function render_wrap ($object, $args) {
 
