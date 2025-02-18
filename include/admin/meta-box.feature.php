@@ -4,6 +4,8 @@ namespace Digitalis;
 
 class Meta_Box extends Feature {
 
+    use Dependency_Injection;
+
     protected static $cache_property = 'id';
 
     protected $id       = 'digitalis-metabox';
@@ -28,7 +30,7 @@ class Meta_Box extends Feature {
         add_meta_box(
             $this->get_id(),
             $this->get_title(),
-            [$this, 'render'],
+            [$this, 'render_wrap'],
             $this->get_screen(),
             $this->get_context(),
             $this->get_priority(),
@@ -43,11 +45,20 @@ class Meta_Box extends Feature {
     
     }
 
-    public function render ($object, $args) {
-    
-        $callback = $this->view ? "{$this->view}::render" : $this->callback;
+    public function render ($object, $args) {}
 
-        if (is_callable($callback)) call_user_func($callback, $filter['args'], $filter);
+    public function render_wrap ($object, $args) {
+
+        if ($this->view) {
+
+            Call::static($this->view, 'render', $object, $args);
+
+        } else {
+
+            if (is_null($this->callback))     $this->callback = [$this, 'render'];
+            if (is_callable($this->callback)) static::inject($this->callback, [$object, $args]);
+
+        }
     
     }
 
