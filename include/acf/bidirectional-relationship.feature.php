@@ -2,9 +2,9 @@
 
 namespace Digitalis\ACF;
 
-use Digitalis\Feature;
+use Digitalis\Log;
 
-abstract class Bidirectional_Relationship extends Feature {
+abstract class Bidirectional_Relationship extends \Digitalis\Feature {
 
     protected $key_1 = 'field_1';
     protected $key_2 = 'field_2';
@@ -39,7 +39,10 @@ abstract class Bidirectional_Relationship extends Feature {
     public function validate ($valid, $values, $field, $input_name) {
 
         if (($_REQUEST['action'] ?? false) != 'acf/validate_save_post') return $valid;
-        if ($valid !== true) return $valid;
+        if ($valid !== true)                                            return $valid;
+
+        if (empty($values))     $values = [];
+        if (!is_array($values)) $values = [$values];
 
         $field_name     = $field['name'];
         $sync_field_key = ($field_name == $this->key_1) ? $this->key_2       : $this->key_1;
@@ -92,20 +95,20 @@ abstract class Bidirectional_Relationship extends Feature {
         $old_values = get_field($field['name'], $updated_selector, false);
         
         if (empty($values))         $values     = [];
-		if (empty($old_values))     $old_values = [];
+        if (empty($old_values))     $old_values = [];
         if (!is_array($values))     $values     = [$values];
         if (!is_array($old_values)) $old_values = [$old_values];
 
         $added   = $this->force_add ? $values : array_diff($values, $old_values);
-		$removed = array_diff($old_values, $values);
+        $removed = array_diff($old_values, $values);
 
         if ($this->log) { 
             
-            error_log("--- Bidirectional_Relationship : " . static::class . " ---");
-            error_log("> Updated: {$updated_selector}.{$field_name} (#{$updated_id} '" . $this->get_object_title($updated_selector) . "')");
-            error_log("> Fields:  ({$field_name} -> {$sync_field_key})");
-            error_log("> Added:   " . ($added   ? implode(', ', $added)   : '-'));
-            error_log("> Removed: " . ($removed ? implode(', ', $removed) : '-'));
+            $this->log("--- Bidirectional_Relationship : " . static::class . " ---");
+            $this->log("> Updated: {$updated_selector}.{$field_name} (#{$updated_id} '" . $this->get_object_title($updated_selector) . "')");
+            $this->log("> Fields:  ({$field_name} -> {$sync_field_key})");
+            $this->log("> Added:   " . ($added   ? implode(', ', $added)   : '-'));
+            $this->log("> Removed: " . ($removed ? implode(', ', $removed) : '-'));
 
         }
 
@@ -116,7 +119,7 @@ abstract class Bidirectional_Relationship extends Feature {
             if (!$this->allow_self && ($selector == $updated_selector)) {
 
                 if (($self_key = array_search($id, $values)) !== false) unset($values[$self_key]);
-                if ($this->log) error_log(">>> Skipping add {$updated_selector} to {$selector}.{$sync_field_key} (#{$id}): Cannot add to self.");
+                if ($this->log) $this->log(">>> Skipping add {$updated_selector} to {$selector}.{$sync_field_key} (#{$id}): Cannot add to self.");
                 continue;
 
             }
@@ -127,7 +130,7 @@ abstract class Bidirectional_Relationship extends Feature {
 
             if (!in_array($updated_id, $sync_ids)) $sync_ids[] = $updated_id; // Add the current post to the post being added
 
-            if ($this->log) error_log(">>> Adding '{$updated_id}' to {$selector}.{$sync_field_key} (#{$id} '" . $this->get_object_title($selector) . "').");
+            if ($this->log) $this->log(">>> Adding '{$updated_id}' to {$selector}.{$sync_field_key} (#{$id} '" . $this->get_object_title($selector) . "').");
 
             update_field($sync_field_key, $sync_ids, $selector);
 
@@ -143,13 +146,13 @@ abstract class Bidirectional_Relationship extends Feature {
 
             if (in_array($updated_id, $sync_ids)) unset($sync_ids[array_search($updated_id, $sync_ids)]); // Remove the current post from the post being added
 
-            if ($this->log) error_log(">>> Removing '{$updated_id}' from {$selector}.{$sync_field_key} (#{$id} '" . $this->get_object_title($selector) . "').");
+            if ($this->log) $this->log(">>> Removing '{$updated_id}' from {$selector}.{$sync_field_key} (#{$id} '" . $this->get_object_title($selector) . "').");
 
             update_field($sync_field_key, $sync_ids, $selector);
 
         }
 
-        if ($this->log) error_log("--- End ---");
+        if ($this->log) $this->log("--- End ---");
 
         $this->release_global_flag('updating');
 
@@ -238,6 +241,21 @@ abstract class Bidirectional_Relationship extends Feature {
         
         return $id;
 
+    }
+
+    protected function log ($msg) {
+    
+        if (is_string($this->log)) {
+
+            $log = class_exists($this->log) ? ($this->log)::get_instance() : Log::get_instance($this->log);
+            if ($log) $log->log($msg);
+
+        } else {
+
+            error_log($msg);
+
+        }
+    
     }
 
 }
