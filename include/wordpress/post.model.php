@@ -96,6 +96,19 @@ class Post extends Model {
 
     }
 
+    public static function get_by_slug ($slug) {
+    
+        $post_type = static::$post_type ? static::$post_type : get_post_types();
+
+        if (!$wp_post = get_page_by_path($slug, 'OBJECT', $post_type)) return;
+        if (!$post = static::get_instance($wp_post->ID))               return;
+
+        $post->set_post($post);
+
+        return $post;
+    
+    }
+
     public static function query ($args = [], &$query = null, $skip_main = false) {
 
         global $wp_query;
@@ -182,9 +195,8 @@ class Post extends Model {
         if ($post_id) {
 
             $this->post_id = $post_id;
-            $this->wp_post = WP_Post::get_instance($post_id);
-
-            $this->id = $post_id;
+            $this->wp_post = $post instanceof WP_Post ? $post : WP_Post::get_instance($post_id);
+            $this->id      = $post_id;
 
         } elseif ($post == 'new' && ($data instanceof stdClass)) {
 
