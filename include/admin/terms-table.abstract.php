@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Taxonomy_Table extends Screen_Table {
+abstract class Terms_Table extends Screen_Table {
 
     protected $taxonomy = 'taxonomy';
 
