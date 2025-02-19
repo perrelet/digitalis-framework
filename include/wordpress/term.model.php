@@ -5,26 +5,44 @@ namespace Digitalis;
 use stdClass;
 use WP_Term;
 use WP_Term_Query;
+use WP_Error;
 
 class Term extends Model {
 
     protected static $taxonomy = null;
 
+    protected $term_id;
     protected $wp_term;
     protected $children = [];
 
+    public static function process_data (&$data) {
+
+        if (is_array($data)) $data = (object) $data;
+
+    }
+
     public static function extract_id ($data = null) {
 
-        if (is_null($data))           return ($obj = get_queried_object()) ? ($obj->term_id ?? null ): null;
-        if ($data instanceof WP_Term) return $data->term_id;
+        if (is_null($data))            return ($obj = get_queried_object()) ? ($obj->term_id ?? null ): null;
+        if ($data instanceof WP_Term)  return $data->term_id;
+        if ($data instanceof stdClass) return 'new';
+        if ($data == 'new')            return 'new';
 
         return (int) parent::extract_id($data);
 
     }
 
+    public static function extract_uid ($id, $data = null) {
+
+        if ($id == 'new') return random_int(1000000000, PHP_INT_MAX);
+
+        return parent::extract_uid($id, $data);
+
+    }
+
     public static function validate_id ($id) {
 
-        //if ($id == 'new') return true;
+        if ($id == 'new') return true;
 
         if (!is_int($id) || ($id <= 0))                                   return false;
         if (!$wp_term = get_term($id, static::$taxonomy))                 return false;
@@ -43,7 +61,7 @@ class Term extends Model {
     public static function get_by ($field, $value) {
 
         if (!$wp_term = get_term_by($field, $value, static::$taxonomy)) return;
-        if (!$term    = static::get_instance($wp_term->ID))             return;
+        if (!$term    = static::get_instance($wp_term->term_id))        return;
 
         $term->set_wp_term($wp_term);
 
@@ -135,19 +153,63 @@ class Term extends Model {
 
     //
 
-    public function get_wp_term () {
+    public function __construct ($data = null, $uid = null, $id = null) {
 
-        if (is_null($this->wp_term)) $this->wp_term = get_term($this->id, static::$taxonomy);
+        parent::__construct($data, $uid, $id);
+
+        if ($this->id == 'new') {
+
+            if (!is_object($this->data)) $this->data = new stdClass();
+
+            $this->data->term_id  = $this->uid;
+            $this->data->taxonomy = static::$taxonomy;
+
+            $this->set_wp_term('new', $this->data);
+
+        } else {
+
+            $this->set_wp_term($this->id);
+
+        }
+
+    }
+
+    public function get_wp_term () {
 
         return $this->wp_term;
 
     }
 
-    public function set_wp_term ($wp_term) {
+    protected function set_wp_term ($term, $data = null) {
 
-        if (!($wp_term instanceof WP_Term)) return;
+        $term_id = false;
 
-        $this->wp_term = $wp_term;
+        if (is_int($term))                { $term_id = $term;          }
+        elseif (is_string($term))         { $term_id = (int) $term;    }
+        elseif ($term instanceof WP_Term) { $term_id = $term->term_id; }
+
+        if ($term_id) {
+
+            $this->term_id = $term_id;
+            $this->wp_term = $term instanceof WP_Term ? $term : WP_Term::get_instance($term_id, static::$taxonomy);
+            $this->id      = $term_id;
+
+        } elseif ($term == 'new' && ($data instanceof stdClass)) {
+
+            $this->term_id = $term;
+            $this->wp_term = new WP_Term($data);
+
+            wp_cache_set($data->term_id, $this->wp_term, 'terms');
+
+            $this->id = $term_id;
+
+        }
+
+    }
+
+    public function get_id() {
+
+        return $this->wp_term->term_id; // Pass the id directly from the wp_term instance to handle new terms. ($this->wp_term->ID = random integer, $this->term_id = 'new')
 
     }
 
@@ -161,31 +223,31 @@ class Term extends Model {
 
     public function get_meta ($key, $single = true) {
 
-        return get_term_meta($this->id, $key, $single);
+        return get_term_meta($this->wp_term->term_id, $key, $single);
 
      }
 
     public function add_meta ($key, $value, $unique = false) {
 
-        return add_term_meta($this->id, $key, $value, $unique);
+        return add_term_meta($this->wp_term->term_id, $key, $value, $unique);
 
     }
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return update_term_meta($this->id, $key, $value, $prev_value);
+        return update_term_meta($this->wp_term->term_id, $key, $value, $prev_value);
 
     }
 
     public function get_field ($selector, $format_value = true) {
 
-        return get_field($selector, "term_{$this->id}", $format_value);
+        return get_field($selector, "term_{$this->wp_term->term_id}", $format_value);
 
     }
 
     public function update_field ($selector, $value) {
 
-        return update_field($selector, $value, "term_{$this->id}");
+        return update_field($selector, $value, "term_{$this->wp_term->term_id}");
 
     }
 
@@ -260,13 +322,69 @@ class Term extends Model {
 
     public function get_url () {
 
-        return get_term_link($this->id);
+        return get_term_link($this->wp_term->term_id);
 
     }
 
     public function get_feed ($feed = '') {
     
-        return get_term_feed_link($this->id, '', $feed);
+        return get_term_feed_link($this->wp_term->term_id, '', $feed);
+    
+    }
+
+    // CRUD Methods
+
+    public function reload () {
+    
+        $this->wp_term = get_term($this->get_id(), static::$taxonomy);
+    
+    }
+
+    public function save ($term_array = []) {
+
+        $taxonomy = static::$taxonomy ? static::$taxonomy : ($term_array['taxonomy'] ?? false);
+        if (!$taxonomy) return;
+
+        $term_array = wp_parse_args($term_array, get_object_vars($this->wp_term));
+
+        if ($this->term_id == 'new') {
+
+            if (!$name = ($term_array['name'] ?? false)) return;
+            unset($term_array['name']);
+            $result = wp_insert_term($name, $taxonomy, $term_array);
+
+        } else {
+
+            $result = wp_update_term($this->get_id(), $taxonomy, $term_array);
+
+        }
+
+        $term_id = is_array($result) ? $result['term_id'] : $result;
+
+        if ($term_id && !is_wp_error($term_id)) {
+
+            if ($term_array['field_input'] ?? []) foreach ($term_array['field_input'] as $selector => $value) {
+            
+                update_field($selector, $value, "term_{$term_id}");
+            
+            }
+
+            $this->term_id          = $term_id;
+            $this->wp_term->term_id = $term_id;
+            $this->id               = $term_id;
+
+        }
+
+        return $term_id;
+
+    }
+
+    public function delete ($args = []) {
+
+        $taxonomy;
+        if (!$taxonomy = static::$taxonomy ? static::$taxonomy : ($args['taxonomy'] ?? false)) return;
+    
+        return wp_delete_term($this->wp_term->term_id, $taxonomy, $args);
     
     }
 
