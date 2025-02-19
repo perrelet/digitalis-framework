@@ -148,13 +148,25 @@ trait Autoloader {
         
             $parts = explode('.', $file_name);
 
-            if (count($parts) < 3) continue;
+            if (count($parts) == 1) continue;
 
-            if (count($parts) > 3) $parts = [
-                implode('.', array_slice($parts, 0, count($parts) - 2)),
-                $parts[count($parts) - 2],
-                $parts[count($parts) - 1],
-            ];
+            if (count($parts) == 2) {
+
+                $parts = [
+                    $parts[0],
+                    '',
+                    $parts[1],
+                ];
+
+            } elseif (count($parts) > 3) {
+
+                $parts = [
+                    implode('.', array_slice($parts, 0, count($parts) - 2)),
+                    $parts[count($parts) - 2],
+                    $parts[count($parts) - 1],
+                ];
+
+            }
 
             $inherits[$parts[0]] = $parts[1];
         
@@ -166,7 +178,7 @@ trait Autoloader {
 
     protected function sort_inherits ($inherits, $sorted = []) {
 
-        if ($priority = array_intersect($inherits, ['trait', 'interface'])) foreach ($priority as $child => $parent) {
+        if ($priority = array_intersect($inherits, ['', 'trait', 'interface'])) foreach ($priority as $child => $parent) {
 
             $sorted[$child] = $parent;
             unset($inherits[$child]);
@@ -194,9 +206,9 @@ trait Autoloader {
         if ($inherits) foreach ($inherits as $child => $parent) {
 
             if ($pos = strpos($ext, '.')) $ext = substr($ext, $pos + 1);
-        
-            $file_names[] = "{$child}.{$parent}.{$ext}";
-        
+
+            $file_names[] = $parent ? "{$child}.{$parent}.{$ext}" : "{$child}.{$ext}";
+            
         }
 
         return $file_names;
