@@ -225,7 +225,7 @@ export class Digitalis_Query {
         const entries = Object.fromEntries(Array.from(filtered, key => {
             let val = form_data.getAll(key)
             if (val.length > 1) val = val.filter(v => v !== '0'); // remove dummy checkbox values
-            return [key, val.length > 1 ? val : val.pop()];
+            return [key.replace(`[]`, ``), val.length > 1 ? val : val.pop()];
         }));
         
         data = Object.assign(entries, data);
@@ -237,8 +237,6 @@ export class Digitalis_Query {
             data = Object.assign(Object.fromEntries(controls_data), data);
 
         }
-
-        // console.log(data);
 
         if (!data.hasOwnProperty('paged') && url.searchParams.has('paged')) url.searchParams.delete('paged');
 

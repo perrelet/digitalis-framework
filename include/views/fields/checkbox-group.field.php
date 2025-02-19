@@ -38,7 +38,8 @@ class Checkbox_Group extends Field {
     protected static function get_value ($p) {
 
         $value = parent::get_value($p);
-        return $value ? explode(',', $value) : [];
+        if (!is_array($value)) $value = explode(',', $value);
+        return (array) $value;
         
     }
 
