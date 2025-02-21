@@ -92,8 +92,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/field-group.element.p
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/form.field-group.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/form.field-group.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/hidden.field.php';
