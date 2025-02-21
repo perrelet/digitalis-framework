@@ -1,0 +1,1 @@
+<textarea id='<?= $id ?>' name='<?= $key ?>' <?= $once_atts ?> <?= $attributes ?>><?= $value ?></textarea>
