@@ -21,9 +21,9 @@ class HTMX extends Element {
         '_'       => false,
     ];
 
-    public static function get_attributes ($p) {
+    public static function get_attributes ($p, $prefix = '') {
     
-        $p = parent::get_attributes($p);
+        $p = parent::get_attributes($p, $prefix);
 
         if ($p['url'])     $p['attributes']['hx-' . $p['method']] = $p['url'];
         if ($p['trigger']) $p['attributes']['hx-trigger']         = $p['trigger'];

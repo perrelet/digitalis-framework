@@ -18,60 +18,71 @@ class Element extends View {
         'content'       => '',
     ];
 
+    protected static $elements = [];
+
     protected static $merge = ['classes', 'styles', 'attributes'];
 
-    public static function get_classes ($p) {
+    public static function get_classes ($p, $prefix = '') {
     
-        if (!is_array($p['classes'])) $p['classes'] = [$p['classes']];
-        return $p['classes'];
-    
-    }
-
-    public static function get_styles ($p) {
-    
-        return $p['styles'];
+        return (array) ($p["{$prefix}classes"] ?? []);
     
     }
 
-    public static function get_attributes ($p) {
+    public static function get_styles ($p, $prefix = '') {
     
-        if ($p['id']) $p['attributes']['id'] = $p['id'];
+        return (array) ($p["{$prefix}styles"] ?? []);
+    
+    }
 
-        $p['attributes']['class'] = $p['classes'];
-        $p['attributes']['style'] = $p['styles'];
+    public static function get_attributes ($p, $prefix = '') {
+    
+        if ($p["{$prefix}id"]      ?? '') $p["{$prefix}attributes"]['id']    = $p["{$prefix}id"];
+        if ($p["{$prefix}classes"] ?? '') $p["{$prefix}attributes"]['class'] = $p["{$prefix}classes"];
+        if ($p["{$prefix}styles"]  ?? '') $p["{$prefix}attributes"]['style'] = $p["{$prefix}styles"];
 
-        if ($p['href']) $p['attributes']['href'] = $p['href'];
+        if (($href = ($p["{$prefix}href"] ?? '')) && (($p["{$prefix}tag"] ?? '') == 'a')) $p["{$prefix}attributes"]['href'] = $href;
 
         return $p;
     
     }
 
-    public static function generate_classes ($p) {
+    public static function generate_classes ($p, $prefix = '') {
 
-        $p['classes'] = implode(' ', static::get_classes($p));
+        $p["{$prefix}classes"] = implode(' ', static::get_classes($p, $prefix));
 
         return $p;
 
     }
 
-    public static function generate_styles ($p) {
+    public static function generate_styles ($p, $prefix = '') {
 
         $css = '';
-        if ($styles = static::get_styles($p)) foreach ($styles as $property => $value) $css .= "{$property}: {$value};";
-        $p['styles'] = $css;
+        foreach (static::get_styles($p, $prefix) as $property => $value) $css .= "{$property}: {$value};";
+        $p["{$prefix}styles"] = $css;
 
         return $p;
 
     }
 
-    public static function generate_attributes ($p) {
+    public static function generate_attributes ($p, $prefix = '') {
 
         $atts = '';
-        if ($p['attributes']) foreach ($p['attributes'] as $att_name => $att_value) $atts .= " {$att_name}='{$att_value}'";
-        $p['attributes'] = $atts;
+        foreach ($p["{$prefix}attributes"] ?? [] as $att_name => $att_value) $atts .= " {$att_name}='{$att_value}'";
+        $p["{$prefix}attributes"] = $atts;
 
         return $p;
 
+    }
+
+    public static function prepare_element ($p, $prefix = '') {
+    
+        $p = static::generate_classes($p, $prefix);
+        $p = static::generate_styles($p, $prefix);
+        $p = static::get_attributes($p, $prefix);
+        $p = static::generate_attributes($p, $prefix);
+
+        return $p;
+    
     }
 
     public static function get_content ($p) {
@@ -80,12 +91,44 @@ class Element extends View {
     
     }
 
+    public static function get_merge_keys () {
+
+        $merge_keys = parent::get_merge_keys();
+
+        foreach (static::$elements as $element) {
+
+            $merge_keys[] = "{$element}_classes";
+            $merge_keys[] = "{$element}_styles";
+            $merge_keys[] = "{$element}_attributes";
+
+        }
+
+        return $merge_keys;
+    
+    }
+
+    public static function get_defaults () {
+    
+        $defaults = parent::get_defaults();
+
+        foreach (static::$elements as $element) {
+
+            if (!isset($defaults["{$element}_classes"]))    $defaults["{$element}_classes"]    = [];
+            if (!isset($defaults["{$element}_styles"]))     $defaults["{$element}_styles"]     = [];
+            if (!isset($defaults["{$element}_attributes"])) $defaults["{$element}_attributes"] = [];
+            if (!isset($defaults["{$element}_content"]))    $defaults["{$element}_content"]    = '';
+
+        }
+
+        return $defaults;
+    
+    }
+
     public static function params ($p) {
 
-        $p = static::generate_classes($p);
-        $p = static::generate_styles($p);
-        $p = static::get_attributes($p);
-        $p = static::generate_attributes($p);
+        $p = static::prepare_element($p);
+
+        foreach (static::$elements as $element) $p = static::prepare_element($p, $element . '_');
         
         $p['content'] = static::get_content($p);
 
