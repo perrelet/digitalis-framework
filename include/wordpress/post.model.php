@@ -535,9 +535,17 @@ class Post extends Model {
 
     // Terms
 
-    public function get_terms ($taxonomy) {
+    public function get_terms ($tax_or_term) {
 
-        return get_the_terms($this->wp_post->ID, $taxonomy);
+        if (is_subclass_of($tax_or_term, Term::class)) {
+
+            return Call::static($tax_or_term, 'query_post', $this);
+
+        } else {
+
+            return get_the_terms($this->wp_post->ID, $tax_or_term);
+
+        }
 
     }
 
