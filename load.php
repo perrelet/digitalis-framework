@@ -88,6 +88,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/link.element.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/field-group.element.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/form.field-group.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field-group.view.php';
