@@ -19,6 +19,17 @@ abstract class View {
 
     public static function get_template ($params) { return static::$template; }
 
+    public static function get_merge_keys () {
+
+        $merge_keys = static::$merge;
+        $class      = static::class;
+
+        while ($class = get_parent_class($class)) $merge_keys = array_merge($class::$merge, $merge_keys);
+    
+        return static::$merge;
+    
+    }
+
     public static function get_defaults () {
         
         $defaults   = static::$defaults;
@@ -26,7 +37,7 @@ abstract class View {
 
         while ($class = get_parent_class($class)) {
 
-            if ($class::$merge) foreach ($class::$merge as $key) {
+            foreach (static::get_merge_keys() as $key) {
 
                 if (isset($class::$defaults[$key]) && is_array($class::$defaults[$key]) && $class::$defaults[$key]) {
 
@@ -63,7 +74,7 @@ abstract class View {
 
         //
 
-        if (static::$merge) foreach (static::$merge as $key) {
+        foreach (static::get_merge_keys() as $key) {
 
             if (isset($params[$key]) && is_array($params[$key])) {
 
@@ -150,5 +161,56 @@ abstract class View {
     protected static function after_first ($params) {}
 
     protected static function view ($params = []) {}
+
+    //
+
+    protected $instance_params;
+    protected $configuration;
+
+    public function __construct ($params = []) {
+    
+        $this->set_params($params);
+    
+    }
+
+    public function get_params () {
+    
+        return $this->instance_params;
+    
+    }
+
+    public function set_params ($params) {
+    
+        $this->instance_params = $params;
+        return $this;
+    
+    }
+
+    public function get_param ($key) {
+    
+        return $this->instance_params[$key] ?? null;
+    
+    }
+
+    public function set_param ($key, $value) {
+    
+        $this->instance_params[$key] = $value;
+        return $this;
+    
+    }
+
+    public function get_configuration () {
+    
+        return $this->configuration;
+    
+    }
+
+    public function print ($return = false) {
+    
+        $result = static::render($this->instance_params, !$return);
+        $this->configuration = static::$params;
+        return $result;
+    
+    }
 
 }
