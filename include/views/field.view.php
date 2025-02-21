@@ -27,6 +27,10 @@ class Field extends View {
         'once_atts'      => [],
         'wrap'           => true,
         'width'          => 1,
+        'required'       => null,
+        'disabled'       => null,
+        'readonly'       => null,
+        'form'           => null,
     ];
 
     protected static $merge = [
@@ -176,6 +180,11 @@ class Field extends View {
 
         $p['value'] = static::get_value($p);
         if ($p['value_callback']) $p['value'] = $p['value_callback']($p['value'], $p);
+        
+        if ($p['required']) $p['attributes']['required'] = 'true';
+        if ($p['disabled']) $p['attributes']['disabled'] = 'true';
+        if ($p['readonly']) $p['attributes']['readonly'] = 'true';
+        if ($p['form'])     $p['attributes']['form']     = $p['form'];
 
         static::get_field_classes($p);
         static::get_row_classes($p);
