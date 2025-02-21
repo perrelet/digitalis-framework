@@ -251,6 +251,12 @@ class Term extends Model {
 
     }
 
+    public function update_fields ($data) {
+    
+        if ($data) foreach ($data as $selector => $value) $this->update_field($selector, $value);
+    
+    }
+
     //
 
     public function get_slug () {
@@ -359,23 +365,17 @@ class Term extends Model {
 
         }
 
-        $term_id = is_array($result) ? $result['term_id'] : $result;
+        if (is_wp_error($result)) return $result;
 
-        if ($term_id && !is_wp_error($term_id)) {
+        $term_id = $result['term_id'];
 
-            if ($term_array['field_input'] ?? []) foreach ($term_array['field_input'] as $selector => $value) {
-            
-                update_field($selector, $value, "term_{$term_id}");
-            
-            }
+        $this->term_id          = $term_id;
+        $this->wp_term->term_id = $term_id;
+        $this->id               = $term_id;
 
-            $this->term_id          = $term_id;
-            $this->wp_term->term_id = $term_id;
-            $this->id               = $term_id;
+        if ($term_array['field_input'] ?? false) $this->update_fields($term_array['field_input']);
 
-        }
-
-        return $term_id;
+        return $this;
 
     }
 

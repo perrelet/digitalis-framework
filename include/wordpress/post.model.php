@@ -718,27 +718,21 @@ class Post extends Model {
 
         }
 
-        if ($post_id && !is_wp_error($post_id)) {
+        if (is_wp_error($post_id)) return $post_id;
 
-            if ($tax_input) foreach ($tax_input as $taxonomy => $terms) {
+        $this->post_id     = $post_id;
+        $this->wp_post->ID = $post_id;
+        $this->id          = $post_id;
 
-                wp_set_post_terms($post_id, $terms, $taxonomy, $post_array['append_terms'] ?? false);
+        if ($tax_input) foreach ($tax_input as $taxonomy => $terms) {
 
-            }
+            wp_set_post_terms($post_id, $terms, $taxonomy, $post_array['append_terms'] ?? false);
 
-            if ($post_array['field_input'] ?? []) foreach ($post_array['field_input'] as $selector => $value) {
-            
-                update_field($selector, $value, $post_id);
-            
-            }
+        }
 
-            $this->post_id     = $post_id;
-            $this->wp_post->ID = $post_id;
-            $this->id          = $post_id;
+        if ($post_array['field_input'] ?? false) $this->update_fields($post_array['field_input']);
 
-        } 
-
-        return $post_id;
+        return $this;
 
     }
 
