@@ -1,4 +1,4 @@
-<table <?= $attributes ?>>
+<table<?= $attributes ?>>
     <?php if ($first_row): ?>
     <thead>
         <tr <?= $row_atts[0] ?? '' ?>>
