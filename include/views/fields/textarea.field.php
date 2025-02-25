@@ -8,7 +8,6 @@ class Textarea extends \Digitalis\Field {
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
-        'type'       => false,
         'rows'       => null,
         'cols'       => null,
         'spellcheck' => null,
@@ -20,8 +19,16 @@ class Textarea extends \Digitalis\Field {
         if (!is_null($p['cols']))       $p['attributes']['cols']       = $p['cols'];
         if (!is_null($p['spellcheck'])) $p['attributes']['spellcheck'] = $p['spellcheck'] ? 'true' : 'false';
     
-        return parent::params($p);
+        $p = parent::params($p);
     
+        $p['element']->set_tag('textarea');
+        $p['element']->set_attribute($p['once_atts']);
+        $p['element']->set_content($p['value']);
+
+        if (isset($p['element']['value'])) unset($p['element']['value']);
+
+        return $p;
+
     }
 
 }

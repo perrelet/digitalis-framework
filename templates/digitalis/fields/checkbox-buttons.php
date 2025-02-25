@@ -1,5 +1,4 @@
 <?php $i = 0; if ($options) foreach ($options as $option => $option_label): ?>
-    <?php $option_id = "{$id}-{$option}"; ?>
-    <input type='checkbox' id='<?= $option_id ?>' value='<?= $option ?>' name='<?= $key ?>[]' <?= $i ? $once_atts : '' ?> <?= $attributes ?><?= $option_atts[$option]['html'] ?? '' ?>>
-    <label for='<?= $option_id ?>'><?= $option_label ?></label>
+    <input type='checkbox' id='<?= $id ?>-<?= $option ?>' <?= $i ? $once_atts : '' ?> <?= $attributes ?><?= $option_atts[$option] ?? '' ?>>
+    <label for='<?= $id ?>-<?= $option ?>'><?= $option_label ?></label>
 <?php $i++;   endforeach; ?>

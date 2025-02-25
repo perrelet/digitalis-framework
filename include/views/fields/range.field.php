@@ -2,9 +2,7 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
-
-class Range extends Field {
+class Range extends Input {
 
     protected static $defaults = [
         'type'          => 'range',

@@ -2,28 +2,28 @@
 
 namespace Digitalis;
 
-class Field extends View {
+class Field extends Component {
 
     protected static $template = 'input';
-
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
-        'key'            => null,
+        'name'           => null,
+        'key'            => null, // deprecated
         'id'             => null,
-        'type'           => 'text',
+        'label'          => false,
         'default'        => '',
         'value'          => null,
         'value_callback' => false,
-        'classes'        => [],
+        'classes'        => ['digitalis-field', 'field'],
         'styles'         => [],
-        'row_classes'    => [],
+        'attributes'     => [],
+        'row_classes'    => ['row', 'field-row'],
         'row_styles'     => [],
+        'row_attributes' => [],
         'options'        => [],
         'option_atts'    => [],
-        'label'          => false,
         'placeholder'    => false,
-        'attributes'     => [],
         'once_atts'      => [],
         'wrap'           => true,
         'width'          => 1,
@@ -34,85 +34,24 @@ class Field extends View {
     ];
 
     protected static $merge = [
-        'classes',
-        'styles',
-        'row_classes',
-        'row_styles',
-        'attributes',
         'once_atts'
     ];
 
-    public static function generate_classes ($classes) {
+    protected static $elements = ['row', 'label', 'wrapper'];
 
-        return implode(' ', $classes);
-
+    protected static function get_class_slug () {
+    
+        return strtolower(str_replace(['_', '\\'], '-', str_replace('Digitalis\\Field\\', '', static::class)));
+    
     }
 
-    public static function generate_styles ($css) {
+    public static function get_once_attributes ($p) {
 
-        $styles = '';
-        if ($css) foreach ($css as $property => $value) $styles .= "{$property}: {$value};";
-        return $styles;
-
-    }
-
-    public static function get_field_classes (&$p) {
-
-        if ($p['classes'] && !is_array($p['classes'])) $p['classes'] = [$p['classes']];
-
-        $p['classes'][] = 'digitalis-field';
-        $p['classes'][] = 'field';
-        $p['classes'][] = "field-{$p['type']}";
-
-    }
-
-    public static function get_row_classes (&$p) {
-
-        if ($p['row_classes'] && !is_array($p['row_classes'])) $p['row_classes'] = [$p['row_classes']];
-
-        $p['row_classes'][] = 'row';
-        $p['row_classes'][] = 'field-row';
-        $p['row_classes'][] = "row-{$p['type']}";
-        $p['row_classes'][] = "row-{$p['key']}";
-        $p['row_classes'][] = "row-" . strtolower(str_replace(['_', '\\'], '-', str_replace('Digitalis\\Field\\', '', static::class)));
-
-    }
-
-    public static function get_field_styles (&$p) {
-
-        // ..
-
-    }
-
-    public static function get_row_styles (&$p) {
-
-        if ($p['width'] != 1) $p['row_styles']['flex'] = $p['width'];
-
-    }
-
-    public static function generate_attributes ($attributes) {
-
-        $html = '';
-        if ($attributes) foreach ($attributes as $att_name => $att_value) $html .= " {$att_name}='{$att_value}'";
-        return $html;
-
-    }
-
-    public static function get_attributes (&$p) {
-
-        $p['attributes']['class']         = $p['classes'];
-        $p['attributes']['style']         = $p['styles'];
-        $p['attributes']['data-field-id'] = $p['id'];
-
-        if ($p['placeholder']) $p['attributes']['placeholder'] = $p['placeholder'];
-
-    }
-
-    public static function get_once_attributes (&$p) {
+        $attributes = new Attributes($p['once_atts']);
 
         if (isset($p['condition'])) {
 
-            $p['once_atts']['data-field-condition'] = json_encode($p['condition']);
+            $attributes['data-field-condition'] = json_encode($p['condition']);
 
             wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
                 'in_footer' => true,
@@ -120,26 +59,8 @@ class Field extends View {
 
         }
 
-    }
+        return $attributes;
 
-    protected static function generate_option_attributes ($p) {
-
-        if ($p['option_atts']) foreach ($p['option_atts'] as &$atts) {
-
-            $atts['html'] = '';
-        
-            if ($atts) foreach ($atts as $att_name => $att_value) {
-            
-                if ($att_name == 'html') continue;
-
-                $atts['html'] .= " {$att_name}='{$att_value}'";
-            
-            }
-        
-        }
-
-        return $p['option_atts'];
-    
     }
 
     protected static function checked ($value, $current, $strict = false, $attribute = 'checked') {
@@ -172,43 +93,57 @@ class Field extends View {
 
     public static function params ($p) {
 
-        $key = $p['key'];
+        $slug = static::get_class_slug();
 
-        if (is_null($p['id']) && $key) $p['id'] = $key . '-field';
+        if (!$p['id']) $p['id'] = ($p['name'] ?? "{$slug}-{$p['index']}") . '-field';
+        $p['attributes']['data-field-id'] = $p['id'];
 
-        if ($p['type'] == 'hidden') $p['wrap'] = false;
+        if ($p['key'])  $p['name'] = $p['key'];
+        if ($p['name']) $p['attributes']['name'] = $p['name'];
 
         $p['value'] = static::get_value($p);
         if ($p['value_callback']) $p['value'] = $p['value_callback']($p['value'], $p);
-        
-        if ($p['required']) $p['attributes']['required'] = 'true';
-        if ($p['disabled']) $p['attributes']['disabled'] = 'true';
-        if ($p['readonly']) $p['attributes']['readonly'] = 'true';
-        if ($p['form'])     $p['attributes']['form']     = $p['form'];
+        $p['attributes']['value'] = $p['value'];
 
-        static::get_field_classes($p);
-        static::get_row_classes($p);
-        static::get_field_styles($p);
-        static::get_row_styles($p);
+        $p['classes'][] = "field-{$slug}";
 
-        $p['classes']     = static::generate_classes($p['classes']);
-        $p['row_classes'] = static::generate_classes($p['row_classes']);
-        $p['styles']      = static::generate_styles($p['styles']);
-        $p['row_styles']  = static::generate_styles($p['row_styles']);
+        if ($p['wrap']) {
 
-        static::get_attributes($p);
-        static::get_once_attributes($p);
+            $p['row_id']     = $p['id'] . '-row';
+            $p['wrapper_id'] = $p['id'] . '-wrap';
 
-        $p['attributes']  = static::generate_attributes($p['attributes']);
-        $p['once_atts']   = static::generate_attributes($p['once_atts']);
+            $p['row_classes'][] = "row-{$p['name']}";
+            $p['row_classes'][] = "row-{$slug}";
 
-        return $p;
+            $p['wrapper_classes'][] = "field-wrap";
+
+        }
+
+        if ($p['label']) {
+
+            $p['label_tag']               = 'label';
+            $p['label_attributes']['for'] = $p['id'];
+            $p['label_content']           = $p['label'];
+
+        }
+
+        if ($p['required'])    $p['attributes']['required']    = 'true';
+        if ($p['disabled'])    $p['attributes']['disabled']    = 'true';
+        if ($p['readonly'])    $p['attributes']['readonly']    = 'true';
+        if ($p['form'])        $p['attributes']['form']        = $p['form'];
+        if ($p['placeholder']) $p['attributes']['placeholder'] = $p['placeholder'];
+
+        if ($p['width'] != 1) $p['row_styles']['flex'] = $p['width'];
+
+        $p['once_atts'] = static::get_once_attributes($p);
+
+        return parent::params($p);
 
     }
 
     protected static function get_value ($p) {
         
-        return is_null($p['value']) ? static::query_value($p['key'], $p['default']) : $p['value'];
+        return is_null($p['value']) ? static::query_value($p['name'], $p['default']) : $p['value'];
 
     }
 
@@ -228,21 +163,41 @@ class Field extends View {
 
     protected static function before ($p) {
 
-        if ($p['wrap']) echo "<div" . ($p['id'] ? " id='{$p['id']}-row'" : '') . " class='{$p['row_classes']}' style='{$p['row_styles']}'>";
+        if ($p['wrap']) {
 
-            if ($p['label']) echo "<label for='{$p['id']}'>{$p['label']}</label>";
+            echo $p['row']->open();
+            static::after_row_open($p);
 
-                if ($p['wrap']) echo "<div" . ($p['id'] ? " id='{$p['id']}-wrap'" : '') . " class='field-wrap'>";
+        }
 
-    }            
+        if ($p['label']) echo $p['label'];
+
+        if ($p['wrap']) {
+
+            echo $p['wrapper']->open();
+            static::after_wrap_open($p);
+
+        }
+
+    }
 
     protected static function after ($p) {
 
-        if (!$p['wrap']) return;
+        if ($p['wrap']) {
 
-            echo "</div>";
-        echo "</div>";
+            static::before_wrap_close($p);
+            echo $p['wrapper']->close(); 
+
+            static::before_row_close($p);
+            echo $p['row']->close();
+
+        }
 
     }
+
+    protected static function after_row_open    ($p) {}
+    protected static function after_wrap_open   ($p) {}
+    protected static function before_wrap_close ($p) {}
+    protected static function before_row_close  ($p) {}
 
 }

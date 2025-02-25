@@ -2,11 +2,7 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
-
-class Date extends Field {
-
-    protected static $template = 'input';
+class Date extends Input {
 
     protected static $defaults = [
         'type' => 'date',

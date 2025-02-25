@@ -2,11 +2,7 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
-
-class Date_Picker extends Field {
-
-    protected static $template = 'input';
+class Date_Picker extends Input {
 
     protected static $defaults = [
         'type'          => 'text',

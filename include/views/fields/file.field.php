@@ -2,9 +2,7 @@
 
 namespace Digitalis\Field;
 
-class File extends \Digitalis\Field {
-
-    protected static $template = 'input';
+class File extends Input {
 
     protected static $defaults = [
         'type'     => 'file',

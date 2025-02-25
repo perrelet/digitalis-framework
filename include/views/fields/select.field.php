@@ -2,14 +2,13 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
+use Digitalis\Attributes;
 
-class Select extends Field {
+class Select extends \Digitalis\Field {
 
     protected static $template = 'select';
 
     protected static $defaults = [
-        'type' => 'select',
     ];
 
     public static function params ($p) {
@@ -17,7 +16,9 @@ class Select extends Field {
         $p = parent::params($p);
 
         $p['option_atts'] = static::get_option_attributes($p);
-        $p['option_atts'] = static::generate_option_attributes($p);
+
+        $p['element']->set_tag('select');
+        $p['element']->set_attribute($p['once_atts']);
 
         return $p;
 
@@ -31,7 +32,7 @@ class Select extends Field {
 
                 if ($label) foreach ($label as $sub_option => $sub_option_label) {
 
-                    if (!isset($p['option_atts'][$sub_option])) $p['option_atts'][$sub_option] = [];
+                    if (!isset($p['option_atts'][$sub_option])) $p['option_atts'][$sub_option] = new Attributes();
                     if ($selected = static::selected($sub_option, $p['value'])) $p['option_atts'][$sub_option] += $selected;
 
                 }
@@ -39,8 +40,8 @@ class Select extends Field {
 
             } else {
 
-                if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = [];
-                if ($selected = static::selected($option, $p['value'])) $p['option_atts'][$option] += $selected;
+                if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
+                if ($selected = static::selected($option, $p['value'])) $p['option_atts'][$option]['selected'] = 'selected';
 
             }
 

@@ -2,11 +2,10 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
-
-class Input extends Field {
+class Input extends \Digitalis\Field {
 
     protected static $defaults = [
+        'type'      => 'text',
         'maxlength' => null,
         'minlength' => null,
     ];
@@ -15,8 +14,15 @@ class Input extends Field {
     
         if (!is_null($p['maxlength'])) $p['attributes']['maxlength'] = $p['maxlength'];
         if (!is_null($p['minlength'])) $p['attributes']['minlength'] = $p['minlength'];
+
+        if ($p['type']) $p['attributes']['type'] = $p['type'];
     
-        return parent::params($p);
+        $p = parent::params($p);
+
+        $p['element']->set_tag('input');
+        $p['element']->set_attribute($p['once_atts']);
+
+        return $p;
     
     }
 

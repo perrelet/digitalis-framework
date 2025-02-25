@@ -3,22 +3,22 @@
 namespace Digitalis\Field;
 
 use Digitalis\Field;
+use Digitalis\Attributes;
 
-class Checkbox_Group extends Field {
+class Checkbox_Group extends Input {
 
     protected static $template = 'checkbox-group';
 
     protected static $defaults = [
-        'type'           => 'checkbox-group',
+        'type'           => 'checkbox',
         'options'        => [],
         'option_atts'    => [],
         'select_all'     => false,
         'select_all_key' => 'all',
+        'null_value'     => 0,
     ];
 
     public static function params ($p) {
-        
-        $p = parent::params($p);
 
         if ($p['select_all']) {
 
@@ -28,8 +28,13 @@ class Checkbox_Group extends Field {
 
         }
 
+        $p = parent::params($p);
+
         $p['option_atts'] = static::get_option_attributes($p);
-        $p['option_atts'] = static::generate_option_attributes($p);
+
+        if (isset($p['element']['value'])) unset($p['element']['value']);
+        if (isset($p['element']['id']))    unset($p['element']['id']);
+        if (isset($p['element']['name']))  $p['element']['name'] .= "[]";
 
         return $p;
 
@@ -47,7 +52,10 @@ class Checkbox_Group extends Field {
     
         if ($p['options']) foreach ($p['options'] as $option => $label) {
 
-            if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = [];
+            if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
+
+            //$p['option_atts'][$option]['id']    = $p['id'] . '-' . $option;
+            $p['option_atts'][$option]['value'] = $option;
 
             if ($option == $p['select_all_key']) {
 
@@ -55,7 +63,7 @@ class Checkbox_Group extends Field {
 
             }
 
-            if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option] += $checked;
+            if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option]['checked'] = 'checked';
 
         }
 

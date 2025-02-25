@@ -2,9 +2,7 @@
 
 namespace Digitalis\Field;
 
-class Number extends \Digitalis\Field {
-
-    protected static $template = 'input';
+class Number extends Input {
 
     protected static $defaults = [
         'type'  => 'number',

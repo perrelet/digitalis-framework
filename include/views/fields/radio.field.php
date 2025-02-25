@@ -2,9 +2,9 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
+use Digitalis\Attributes;
 
-class Radio extends Field {
+class Radio extends Input {
 
     protected static $template = 'radio';
 
@@ -19,7 +19,6 @@ class Radio extends Field {
         $p = parent::params($p);
 
         $p['option_atts'] = static::get_option_attributes($p);
-        $p['option_atts'] = static::generate_option_attributes($p);
 
         return $p;
 
@@ -29,9 +28,9 @@ class Radio extends Field {
     
         if ($p['options']) foreach ($p['options'] as $option => $label) {
 
-            if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = [];
+            if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
 
-            if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option] += $checked;
+            if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option]['checked'] = 'checked';
 
         }
 

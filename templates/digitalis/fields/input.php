@@ -1,1 +1,1 @@
-<input type='<?= $type ?>' id='<?= $id ?>' name='<?= $key ?>' value='<?= $value ?>' <?= $once_atts ?> <?= $attributes ?>>
+<?= $element ?>

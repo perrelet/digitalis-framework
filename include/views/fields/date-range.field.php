@@ -2,8 +2,6 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
-
 class Date_Range extends Date_Picker {
 
     protected static $template = 'date-range';
@@ -13,8 +11,8 @@ class Date_Range extends Date_Picker {
         'value_end'     => null,
         'default_start' => '',
         'default_end'   => '',
-        'key_start'     => null,
-        'key_end'       => null,
+        'name_start'    => null,
+        'name_end'      => null,
         'seperator'     => '-',
     ];
 
@@ -22,11 +20,15 @@ class Date_Range extends Date_Picker {
 
         $p = parent::params($p);
 
-        if (!$p['key_start']) $p['key_start'] = $p['key'] . '-start';
-        if (!$p['key_end'])   $p['key_end']   = $p['key'] . '-end';
+        if (!$p['name_start']) $p['name_start'] = $p['name'] . '-start';
+        if (!$p['name_end'])   $p['name_end']   = $p['name'] . '-end';
 
-        $p['value_start'] = is_null($p['value_start']) ? static::query_value($p['key_start'], $p['default_start']) : $p['value_start'];
-        $p['value_end']   = is_null($p['value_end'])   ? static::query_value($p['key_end'],   $p['default_end'])   : $p['value_end'];
+        $p['value_start'] = is_null($p['value_start']) ? static::query_value($p['name_start'], $p['default_start']) : $p['value_start'];
+        $p['value_end']   = is_null($p['value_end'])   ? static::query_value($p['name_end'],   $p['default_end'])   : $p['value_end'];
+
+        if (isset($p['element']['value'])) unset($p['element']['value']);
+        if (isset($p['element']['id']))    unset($p['element']['id']);
+        if (isset($p['element']['name']))  unset($p['element']['name']);
 
         return $p;
 

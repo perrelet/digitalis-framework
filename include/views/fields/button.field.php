@@ -2,16 +2,23 @@
 
 namespace Digitalis\Field;
 
-use Digitalis\Field;
-
-class Button extends Field {
-
-    protected static $template = 'button';
+class Button extends Input {
 
     protected static $defaults = [
-        'key'  => false,
         'type' => 'button',
         'text' => 'Button',
     ];
+
+    public static function params ($p) {
+    
+        $p = parent::params($p);
+
+        $p['element']->set_tag('button');
+        $p['element']->set_attribute($p['once_atts']);
+        $p['element']->set_content($p['text']);
+
+        return $p;
+    
+    }
 
 }
