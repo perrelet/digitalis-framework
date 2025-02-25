@@ -33,7 +33,7 @@ abstract class Users_Table extends Screen_Table {
 
     public function render_filter_submit () {
 
-        \Digitalis\Field::render([
+        \Digitalis\Field\Input::render([
             'type'    => 'submit',
             'value'   => 'Filter',
             'classes' => ['button'],
