@@ -21,12 +21,12 @@ abstract class View {
 
     public static function get_merge_keys () {
 
-        $merge_keys = static::$merge;
+        $merge_keys = [];
         $class      = static::class;
 
         while ($class = get_parent_class($class)) $merge_keys = array_merge($class::$merge, $merge_keys);
     
-        return static::$merge;
+        return array_unique($merge_keys);
     
     }
 
@@ -42,7 +42,7 @@ abstract class View {
                 if (isset($class::$defaults[$key]) && is_array($class::$defaults[$key]) && $class::$defaults[$key]) {
 
                     if (!isset($defaults[$key])) $defaults[$key] = [];
-                    $defaults[$key] = wp_parse_args($defaults[$key], $class::$defaults[$key]);
+                    $defaults[$key] = wp_parse_args((array) $defaults[$key], (array) $class::$defaults[$key]);
                     
                     if (array_is_list($defaults[$key])) $defaults[$key] = array_unique($defaults[$key], SORT_REGULAR);
 
