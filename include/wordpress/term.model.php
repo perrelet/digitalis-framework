@@ -372,6 +372,7 @@ class Term extends Model {
         $this->term_id          = $term_id;
         $this->wp_term->term_id = $term_id;
         $this->id               = $term_id;
+        $this->reload();
 
         if ($term_array['field_input'] ?? false) $this->update_fields($term_array['field_input']);
 
