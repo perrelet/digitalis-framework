@@ -40,6 +40,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/attributes.class.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
