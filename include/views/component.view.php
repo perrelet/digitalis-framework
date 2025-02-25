@@ -43,6 +43,8 @@ class Component extends View {
         $element->add_style($p["{$prefix}styles"] ?? null);
         $element->set_attribute($p["{$prefix}attributes"] ?? null);
 
+        if (($href = ($p["{$prefix}href"] ?? null)) && ($element->get_tag() == 'a')) $element['href'] = $href;
+
         $p["{$prefix}attributes"] = $element->get_attributes();
 
         $p[$key] = $element;
