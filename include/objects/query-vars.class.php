@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-class Query_Vars {
+class Query_Vars implements \ArrayAccess {
 
     protected $query;
 
@@ -58,6 +58,12 @@ class Query_Vars {
         unset($this->query[$key]);
     
         return $this;
+    
+    }
+
+    public function has_var ($key) {
+    
+        return isset($this->query[$key]);
     
     }
 
@@ -181,6 +187,32 @@ class Query_Vars {
         if ($merge_falsy || $value) $this->query[$key] = $value; // What about falsey values??
 
         return $this;
+
+    }
+
+    //
+
+    public function offsetGet ($key) {
+
+        return $this->get_var($key);
+
+    }
+
+    public function offsetSet ($key, $value) {
+
+        $this->set_var($key, $value);
+
+    }
+
+    public function offsetUnset ($key) {
+
+        $this->unset_var($key);
+
+    }
+
+    public function offsetExists ($key) {
+
+        return $this->has_var($key);
 
     }
 
