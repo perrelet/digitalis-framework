@@ -350,7 +350,7 @@ namespace Digitalis {
                 default      => 8,
             };
         
-            $lines = array_values(array_filter(explode("\n", $value)));
+            $lines = array_values(array_map('htmlentities', array_filter(explode("\n", $value))));
             $next = -1;
             $html = '';
 
