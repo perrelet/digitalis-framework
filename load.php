@@ -41,6 +41,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/attributes.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/element.class.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
@@ -85,7 +86,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/component.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/htmx.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/link.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/table.component.php';
