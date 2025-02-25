@@ -5,7 +5,7 @@ namespace Digitalis;
 use Digitalis\Field\Hidden;
 use Digitalis\Field\Input;
 use Digitalis\Field\Submit;
-use Digitalis\Element\Table;
+use Digitalis\Component\Table;
 
 abstract class Commands_Page extends Admin_Sub_Page {
 

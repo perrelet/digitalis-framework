@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Element;
+namespace Digitalis\Component;
 
-abstract class Link extends \Digitalis\Element {
+abstract class Link extends \Digitalis\Component {
 
     protected static $defaults = [
         'tag'  => 'a',

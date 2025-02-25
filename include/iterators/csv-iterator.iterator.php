@@ -3,7 +3,7 @@
 namespace Digitalis;
 
 use Digitalis\Field;
-use Digitalis\Element\Table;
+use Digitalis\Component\Table;
 
 abstract class CSV_Iterator extends Iterator {
 

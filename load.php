@@ -86,11 +86,11 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/element.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/htmx.element.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/link.element.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/table.element.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/field-group.element.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/elements/form.field-group.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/htmx.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/link.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/table.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/field-group.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/form.field-group.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 

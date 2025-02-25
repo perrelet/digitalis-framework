@@ -4,9 +4,9 @@ namespace Digitalis;
 
 use Digitalis\Field\Input;
 
-class Field_Group extends Element {
+class Field_Group extends Component {
 
-    protected static $template = 'elements/field-group';
+    protected static $template = 'components/field-group';
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/";
 
     protected static $defaults = [

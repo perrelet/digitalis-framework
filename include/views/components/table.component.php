@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Element;
+namespace Digitalis\Component;
 
-abstract class Table extends \Digitalis\Element {
+abstract class Table extends \Digitalis\Component {
 
     protected static $template = 'table';
 

@@ -2,12 +2,12 @@
 
 namespace Digitalis;
 
-abstract class Archive extends Element {
+abstract class Archive extends Component {
 
     protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
 
     protected static $template = 'archive';
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/elements/";
+    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/components/";
 
     protected static $defaults = [
         'id'            => 'digitalis-archive',
