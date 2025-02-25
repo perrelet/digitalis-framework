@@ -13,7 +13,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/auto-instantiate.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';
@@ -31,7 +30,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/deprecated-component.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/plugin-integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
@@ -155,3 +153,8 @@ add_filter('sassy-variables', function ($variables) {
     return $variables;
 
 });
+
+//
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/deprecated-component.abstract.php';
