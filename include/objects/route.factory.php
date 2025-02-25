@@ -72,6 +72,7 @@ class Route extends Factory {
             /* 'param' => [
                 'default'           => 'Default',
                 'required'          => true,
+                'type'              => 'integer',
                 'validate_callback' => [$this, 'validate_param'],
                 'sanitize_callback' => [$this, 'sanitize_param'],
             ], */
