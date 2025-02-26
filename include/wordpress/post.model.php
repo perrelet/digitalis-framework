@@ -131,7 +131,13 @@ class Post extends Model {
 
             if (!$skip_main && $wp_query && $wp_query->is_main_query() && Digitalis_Query::is_multiple($query)) $query->merge($wp_query->query_vars);
 
-            $query->set_var('post_type', static::$post_type);
+            $query->set_var('post_type', static::$post_type ? static::$post_type : 'any');
+            if (static::$post_status) $query->set_var('post_status', static::$post_status);
+            if (static::$term)        $query->add_tax_query([
+                'taxonomy' => static::$taxonomy,
+                'field'    => is_int(static::$term) ? 'term_id' : 'slug',
+                'terms'    => static::$term,
+            ]);
             $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
             $query->merge($args, true);
 
