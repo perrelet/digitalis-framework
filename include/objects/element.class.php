@@ -22,6 +22,7 @@ class Element implements \ArrayAccess {
 
     protected $tag;
     protected $content;
+    protected $attributes;
 
     public function __construct ($tag = 'div', $attributes = [], $content = '') {
 
