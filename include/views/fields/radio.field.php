@@ -20,15 +20,20 @@ class Radio extends Input {
 
         $p['option_atts'] = static::get_option_attributes($p);
 
+        if (isset($p['element']['value'])) unset($p['element']['value']);
+        if (isset($p['element']['id']))    unset($p['element']['id']);
+
         return $p;
 
     }
 
     protected static function get_option_attributes ($p) {
     
-        if ($p['options']) foreach ($p['options'] as $option => $label) {
+        foreach ($p['options'] as $option => $label) {
 
             if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
+
+            $p['option_atts'][$option]['value'] = $option;
 
             if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option]['checked'] = 'checked';
 
