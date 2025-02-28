@@ -173,6 +173,12 @@ abstract class View {
     
     }
 
+    public function __toString() {
+
+        return $this->print(true);
+
+    }
+
     public function get_params () {
     
         return $this->instance_params;
