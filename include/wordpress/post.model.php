@@ -666,6 +666,12 @@ class Post extends Model {
     
     }
 
+    public function delete_meta ($key, $value = '') {
+    
+        return $this->is_new() ? false : delete_post_meta($this->wp_post->ID, $key, $value);
+    
+    }
+
     // ACF Methods
 
     public function get_field ($selector, $format_value = true) {
