@@ -49,7 +49,7 @@ abstract class Archive extends Component {
                     DIGITALIS_FRAMEWORK_URI . "assets/img/loaders/" . $p['loader'] :
                     $p['loader'];
 
-                return "<img role='progressbar' aria-valuetext='Loading' alt='Loading Icon' src='{$url}'>";
+                return "<img role='progressbar' aria-valuetext='Loading' loading='lazy' alt='Loading Icon' src='{$url}'>";
 
             case "file":
 
