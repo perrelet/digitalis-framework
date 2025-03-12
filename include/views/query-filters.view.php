@@ -47,10 +47,10 @@ abstract class Query_Filters extends Field_Group {
         
             if ($fields) foreach ($fields as &$field) {
             
-                if (($field['key'] ?? '') != $key) continue;
+                if (($field['name'] ?? ($field['key']) ?? '') != $key) continue;
 
                 $field['default'] = $default;
-            
+
             }
         
         }
