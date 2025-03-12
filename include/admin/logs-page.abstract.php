@@ -49,6 +49,14 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             if ($this->logs) foreach ($this->logs as $key => $log) {
 
+                if ($log instanceof Log) $log = [
+                    'name'     => $log->get_name(),
+                    'slug'     => $key,
+                    'path'     => $log->get_path(),
+                    'theme'    => $log->get_export_vars() ? ['basic', 'php'] : ['basic'],
+                    'instance' => $log,
+                ];
+
                 if (!is_array($log)) $log = [
                     'name' => $key,
                     'slug' => $key,
@@ -61,6 +69,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     'path'        => '',
                     'theme'       => explode(',', ($_GET['theme'] ?? 'basic')),
                     'permissions' => [],
+                    'instance'    => null,
                 ]);
 
                 if (!is_array($log['theme'])) $log['theme'] = [$log['theme']];
@@ -149,8 +158,10 @@ abstract class Logs_Page extends Admin_Sub_Page {
     
             } else {
 
+                $empty = ($current['instance'] && $current['instance']->get_export_vars()) ? "\$log = [];\n" : '';
+
                 echo "<div class='notice notice-success'><p>🧹 Successfully cleared '{$current['name']}'.</p></div>";
-                file_put_contents($current['path'], '');
+                file_put_contents($current['path'], $empty);
 
             }
 
@@ -262,6 +273,9 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         $filesize   = filesize($path);
         $min_offset = -1 * $filesize;
+        $max_pages  = max(ceil($filesize / $bytes_per_page), 1);
+
+        if ($page > $max_pages) $page = $max_pages;
 
         $offset = -1 * $page * $bytes_per_page;
         $maxlen = min($bytes_per_page, $filesize + $offset + $bytes_per_page);
@@ -280,6 +294,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
         if ($look_fwd) $maxlen += $over_fwd;
 
         $lines = file_get_contents($path, false, null, $offset, $maxlen);
+
+        //dprint($offset);
 
         if ($look_bwd || $look_fwd) {
 
@@ -474,13 +490,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
                             line-height: 1.2;
                             text-wrap: wrap;
                             font-family: inherit;
-
-                            &:not(:last-child) {
-
-                                margin-bottom: 0.25em;
-                                margin-top: 0;
-
-                            }
+                            margin-top: 0;
+                            margin-bottom: 0.25em;
 
                             span:before {
 
