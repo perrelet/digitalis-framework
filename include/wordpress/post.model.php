@@ -711,7 +711,7 @@ class Post extends Model {
         //dprint($post_array);
 
         $tax_input = $post_array['tax_input'] ?? []; // We need to process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
-        $post_array['tax_input'] = '';
+        if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
 
         if ($this->post_id == 'new') {
 
