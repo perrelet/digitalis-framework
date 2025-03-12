@@ -16,7 +16,7 @@ class Checkbox extends Input {
     
         $p = parent::params($p);
 
-        if ($p['value']) $p['element']['checked'] = 'checked';
+        if ($checked = static::checked($p['checked_value'], $p['value'])) $p['element']['checked'] = 'checked';
 
         $p['element']['value'] = $p['checked_value'];
 
