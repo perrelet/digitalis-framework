@@ -170,7 +170,7 @@ class Field extends Component {
 
         }
 
-        if ($p['label']) echo $p['label'];
+        if ($p['label']->get_content()) echo $p['label'];
 
         if ($p['wrap']) {
 
