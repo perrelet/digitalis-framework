@@ -4,7 +4,7 @@ namespace Digitalis;
 
 class Transients extends Utility {
 
-    protected $prefix = '';
+    protected static $prefix = '';
 
     public static function get ($transient) {
     
