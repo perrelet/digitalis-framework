@@ -100,30 +100,30 @@ class Element implements \ArrayAccess {
 
     }
 
-        //
+    //
 
-        public function offsetGet ($attribute) {
+    public function offsetGet ($attribute) {
 
-            return $this->get_attributes()->get_attribute($attribute);
-    
-        }
-    
-        public function offsetSet ($attribute, $value) {
-    
-            $this->get_attributes()->set_attribute($attribute, $value);
-    
-        }
-    
-        public function offsetUnset ($attribute) {
-    
-            $this->get_attributes()->remove_attribute($attribute);
-    
-        }
-    
-        public function offsetExists ($attribute) {
-    
-            return $this->get_attributes()->has_attribute($attribute);
-    
-        }
+        return $this->get_attributes()->get_attribute($attribute);
+
+    }
+
+    public function offsetSet ($attribute, $value) {
+
+        $this->get_attributes()->set_attribute($attribute, $value);
+
+    }
+
+    public function offsetUnset ($attribute) {
+
+        $this->get_attributes()->remove_attribute($attribute);
+
+    }
+
+    public function offsetExists ($attribute) {
+
+        return $this->get_attributes()->has_attribute($attribute);
+
+    }
 
 }
