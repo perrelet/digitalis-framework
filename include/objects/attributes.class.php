@@ -113,6 +113,12 @@ class Attributes implements \ArrayAccess {
     
     }
 
+    public function has_id () {
+    
+        return $this->has_attribute('id');
+    
+    }
+
     public function get_class () {
 
         return $this->get_attribute('class');
