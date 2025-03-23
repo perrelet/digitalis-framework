@@ -112,8 +112,8 @@ abstract class View implements \ArrayAccess {
 
         static::compute_params($params);
 
-        if (!static::permission(static::$params)) return;
-        if (!static::condition(static::$params))  return;
+        if (!static::permission(static::$params)) return '';
+        if (!static::condition(static::$params))  return '';
 
         self::$indexes[static::class]++;
 
