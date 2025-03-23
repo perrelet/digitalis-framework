@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class View {
+abstract class View implements \ArrayAccess {
 
     use Dependency_Injection;
 
@@ -205,9 +205,18 @@ abstract class View {
     
     }
 
-    public function get_configuration () {
+    public function unset_param ($key) {
     
-        return $this->configuration;
+        unset($this->instance_params[$key]);
+        return $this;
+    
+    }
+
+    public function has_param ($key) {
+    
+        return isset($this->instance_params[$key]);
+    
+    }
     
     }
 
@@ -217,6 +226,32 @@ abstract class View {
         $this->configuration = static::$params;
         return $result;
     
+    }
+
+    //
+
+    public function offsetGet ($key) {
+
+        return $this->get_param($key);
+
+    }
+
+    public function offsetSet ($key, $value) {
+
+        $this->set_param($key, $value);
+
+    }
+
+    public function offsetUnset ($key) {
+
+        $this->unset_param($key);
+
+    }
+
+    public function offsetExists ($key) {
+
+        return $this->has_param($key);
+
     }
 
 }
