@@ -19,14 +19,24 @@ abstract class View implements \ArrayAccess {
 
     public static function get_template ($params) { return static::$template; }
 
-    public static function get_merge_keys () {
+    protected static $merge_storage = [];
 
+    protected static function compute_merge_keys () {
+    
         $merge_keys = [];
         $class      = static::class;
 
         while ($class = get_parent_class($class)) $merge_keys = array_merge($class::$merge, $merge_keys);
     
         return array_unique($merge_keys);
+    
+    }
+
+    public static function get_merge_keys () {
+
+        if (!isset(self::$merge_storage[static::class])) self::$merge_storage[static::class] = static::compute_merge_keys();
+
+        return self::$merge_storage[static::class];
     
     }
 
