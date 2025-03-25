@@ -16,31 +16,29 @@ class Date_Range extends Date_Picker {
         'seperator'     => '-',
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
 
-        $p = parent::params($p);
+        parent::params($p);
 
         if (!$p['name_start']) $p['name_start'] = $p['name'] . '-start';
         if (!$p['name_end'])   $p['name_end']   = $p['name'] . '-end';
 
-        $p['value_start'] = is_null($p['value_start']) ? static::query_value($p['name_start'], $p['default_start']) : $p['value_start'];
-        $p['value_end']   = is_null($p['value_end'])   ? static::query_value($p['name_end'],   $p['default_end'])   : $p['value_end'];
+        $p['value_start'] = is_null($p['value_start']) ? $this->query_value($p['name_start'], $p['default_start']) : $p['value_start'];
+        $p['value_end']   = is_null($p['value_end'])   ? $this->query_value($p['name_end'],   $p['default_end'])   : $p['value_end'];
 
         if (isset($p['element']['value'])) unset($p['element']['value']);
         if (isset($p['element']['id']))    unset($p['element']['id']);
         if (isset($p['element']['name']))  unset($p['element']['name']);
 
-        return $p;
-
     }
 
-    public static function after ($p) {
+    public function after () {
 
-        $json = json_encode($p['date-picker']);
+        $json = json_encode($this['date-picker']);
 
-        echo "<script>new DateRangePicker(document.getElementById('{$p['id']}'), {$json});</script>";
+        echo "<script>new DateRangePicker(document.getElementById('{$this['id']}'), {$json});</script>";
 
-        parent::after($p);
+        parent::after();
 
     }
 

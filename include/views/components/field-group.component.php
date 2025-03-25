@@ -11,23 +11,40 @@ class Field_Group extends Component {
 
     protected static $defaults = [
         'fields'        => [],
+        'defaults'      => [],
         'label'         => false,
         'id'            => false,
         'tag'           => 'div',
+        'condition'     => null,
         'classes'       => ['digitalis-field-group', 'field-group'],
         'attributes'    => [],
     ];
 
-    protected static $merge = [
-        'classes',
-        'attributes',
-    ];
+    public function params (&$p) {
 
-    public static function get_attributes ($p, $prefix = '') {
+        $p['fields'] = $this->get_fields();
 
-        $p = parent::get_attributes($p, $prefix);
+        foreach ($p['defaults'] as $key => $default) foreach ($p['fields'] as &$field) {
+        
+            if (($field['name'] ?? ($field['key']) ?? '') != $key) continue;
+            $field['default'] = $default;
+            break;
 
-        if (isset($p['condition'])) {
+        }
+
+        if ($p['fields']) foreach ($p['fields'] as &$field) {
+
+            if (!($field instanceof View)) $field = wp_parse_args($field, [
+                'field' => Input::class,
+            ]);
+
+            $field = apply_filters('Digitalis/Field_Group/Field', $field, $p, static::class);
+
+            if (isset($field['options'])) $field['options'] = $this->get_field_options($field['options'], $field);
+
+        }
+
+        if ($p['condition']) {
 
             $p['attributes']['data-field-condition'] = json_encode($p['condition']);
 
@@ -37,48 +54,20 @@ class Field_Group extends Component {
 
         }
 
-        return $p;
+        parent::params($p);
 
     }
 
-    public static function get_fields ($fields) {
-        
-        return $fields;
-        
+    public function get_fields () {
+
+        return $this['fields'];
+
     }
 
-    public static function get_field_options ($options, $field) {
+    public function get_field_options ($options, $field) {
         
         return $options;
         
-    }
-
-    public static function params ($p) {
-
-        $p['fields'] = static::get_fields($p['fields']);
-
-        if ($p['fields']) foreach ($p['fields'] as &$field) {
-
-            if ($field instanceof View) {
-
-                $field = apply_filters('Digitalis/Field_Group/Field', $field, [], static::class);
-
-            } else {
-
-                if (isset($field['options'])) $field['options'] = static::get_field_options($field['options'], $field);
-
-                $field = wp_parse_args($field, [
-                    'field' => Input::class,
-                ]);
-    
-                $field = apply_filters('Digitalis/Field_Group/Field', $field, $p, static::class);
-
-            }
-
-        }
-
-        return parent::params($p);
-
     }
 
 }

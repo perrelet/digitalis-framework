@@ -9,18 +9,18 @@ class Component extends View {
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/components/";
 
     protected static $defaults = [
-        'id'            => null,
-        'tag'           => 'div',
-        'classes'       => [],
-        'styles'        => [],
-        'attributes'    => [],
-        'href'          => null,
-        'content'       => '',
+        'tag'     => 'div',
+        'id'      => null,
+        'class'   => [],
+        'style'   => [],
+        'attr'    => [],
+        'href'    => null,
+        'content' => '',
     ];
 
     protected static $elements = [];
 
-    protected static $merge = ['classes', 'styles', 'attributes'];
+    protected static $merge = ['attr', 'attributes', 'class', 'classes', 'style', 'styles', 'data'];
 
     public static function get_elements () {
     
@@ -28,80 +28,55 @@ class Component extends View {
     
     }
 
-    public static function prepare_element ($p, $element = null) {
+    public static function compute_merge_keys () {
 
-        $key    = $element ? $element : 'element';
-        $prefix = $element ? $element . '_' : '';
+        $merge_keys = parent::compute_merge_keys();
 
-        $element = new Element();
-
-        if ($p["{$prefix}tag"] ?? null) $element->set_tag($p["{$prefix}tag"]);
-
-        $element->set_content($p["{$prefix}content"] ?? '');
-        $element->set_id($p["{$prefix}id"] ?? null);
-        $element->add_class($p["{$prefix}classes"] ?? null);
-        $element->add_style($p["{$prefix}styles"] ?? null);
-        $element->set_attribute($p["{$prefix}attributes"] ?? null);
-
-        if (($href = ($p["{$prefix}href"] ?? null)) && ($element->get_tag() == 'a')) $element['href'] = $href;
-
-        $p["{$prefix}attributes"] = $element->get_attributes();
-
-        $p[$key] = $element;
-
-        return $p;
-    
-    }
-
-    public static function get_content ($p) {
-    
-        return $p['content'];
-    
-    }
-
-    public static function get_merge_keys () {
-
-        $merge_keys = parent::get_merge_keys();
-
-        foreach (static::get_elements() as $element) {
-
-            $merge_keys[] = "{$element}_classes";
-            $merge_keys[] = "{$element}_styles";
-            $merge_keys[] = "{$element}_attributes";
-
-        }
+        foreach (static::get_elements() as $element) foreach (self::$merge as $key) $merge_keys[] = "{$element}_{$key}";
 
         return $merge_keys;
     
     }
 
-    public static function get_defaults () {
-    
-        $defaults = parent::get_defaults();
+    //
 
-        foreach (static::get_elements() as $element) {
+    public function params (&$p) {
 
-            if (!isset($defaults["{$element}_classes"]))    $defaults["{$element}_classes"]    = [];
-            if (!isset($defaults["{$element}_styles"]))     $defaults["{$element}_styles"]     = [];
-            if (!isset($defaults["{$element}_attributes"])) $defaults["{$element}_attributes"] = [];
-            if (!isset($defaults["{$element}_content"]))    $defaults["{$element}_content"]    = '';
+        if ($content = $this->get_content()) $p['content'] = $content;
 
-        }
+        $this->create_element();
 
-        return $defaults;
-    
+        foreach (static::get_elements() as $element) $this->create_element($element);
+
     }
 
-    public static function params ($p) {
+    public function get_content () {}
 
-        $p = static::prepare_element($p);
+    public function create_element ($element = null) {
 
-        foreach (static::get_elements() as $element) $p = static::prepare_element($p, $element);
-        
-        $p['content'] = static::get_content($p);
+        $key    = $element ? $element : 'element';
+        $prefix = $element ? $element . '_' : '';
 
-        return $p;
+        if (($this[$key] ?? 0) instanceof Element) return;
 
+        $element = new Element();
+
+        if ($tag        = ($this["{$prefix}tag"]        ?? null)) $element->set_tag($tag);
+        if ($content    = ($this["{$prefix}content"]    ?? null)) $element->set_content($content);
+        if ($attributes = ($this["{$prefix}attr"]       ?? null)) $element->set_attribute($attributes);
+        if ($attributes = ($this["{$prefix}attributes"] ?? null)) $element->set_attribute($attributes);
+        if ($id         = ($this["{$prefix}id"]         ?? null)) $element->set_id($id);
+        if ($class      = ($this["{$prefix}class"]      ?? null)) $element->add_class($class);
+        if ($class      = ($this["{$prefix}classes"]    ?? null)) $element->add_class($class);
+        if ($style      = ($this["{$prefix}style"]      ?? null)) $element->add_style($style);
+        if ($style      = ($this["{$prefix}styles"]     ?? null)) $element->add_style($style);
+
+        if (($href = ($this["{$prefix}href"] ?? null)) && ($element->get_tag() == 'a')) $element['href'] = $href;
+
+        $this["{$prefix}attributes"] = $element->get_attributes();
+
+        $this[$key] = $element;
+    
     }
 
 }

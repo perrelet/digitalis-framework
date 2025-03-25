@@ -14,13 +14,7 @@ class ACF_AJAX_Form extends View {
         'extra_fields_after'  => [],
     ];
 
-    protected static function condition ($params) {
-
-        return function_exists('acf_form');
-
-    }
-
-    public static function params ($p) {
+    public function params (&$p) {
 
         $p['acf_form'] = wp_parse_args($p['acf_form'], [
             'id'                 => $p['id'],
@@ -35,34 +29,16 @@ class ACF_AJAX_Form extends View {
 
         }
 
-        if ($p['extra_fields_before']) $p['acf_form']['html_before_fields'] .= static::get_fields_html($p['extra_fields_before']);
-        if ($p['extra_fields_after'])  $p['acf_form']['html_after_fields']  .= static::get_fields_html($p['extra_fields_after']);
+        if ($p['extra_fields_before']) $p['acf_form']['html_before_fields'] .= $this->get_fields_html($p['extra_fields_before']);
+        if ($p['extra_fields_after'])  $p['acf_form']['html_after_fields']  .= $this->get_fields_html($p['extra_fields_after']);
 
         $p['acf_ajax_options'] = wp_parse_args($p['acf_ajax_options'], [
             'form_selector' => '#' . $p['id'],
         ]);
-
-        return $p;
     
     }
 
-    protected static function before_first ($p) {
-
-        echo "<script src='" . DIGITALIS_FRAMEWORK_URI . "assets/js/acf-ajax.class.js?" . DIGITALIS_FRAMEWORK_VERSION . "'></script>";
-
-    }
-
-    public static function view ($p = []) {
-
-        acf_form($p['acf_form']);
-
-        if ($p['dynamically_load']) echo "<script>acf.do_action('append', jQuery('#{$p['id']}'));</script>";
-
-        echo "<script>new ACF_AJAX(" . json_encode($p['acf_ajax_options']) . ");</script>";
-
-    }
-
-    protected static function get_fields_html ($fields) {
+    protected function get_fields_html ($fields) {
     
         ob_start(); 
         acf_render_fields($fields);
@@ -71,6 +47,28 @@ class ACF_AJAX_Form extends View {
 
         return $content;
     
+    }
+
+    public function condition () {
+
+        return function_exists('acf_form');
+
+    }
+
+    public function before_first () {
+
+        echo "<script src='" . DIGITALIS_FRAMEWORK_URI . "assets/js/acf-ajax.class.js?" . DIGITALIS_FRAMEWORK_VERSION . "'></script>";
+
+    }
+
+    public function view () {
+
+        acf_form($this['acf_form']);
+
+        if ($this['dynamically_load']) echo "<script>acf.do_action('append', jQuery('#{$this['id']}'));</script>";
+
+        echo "<script>new ACF_AJAX(" . json_encode($this['acf_ajax_options']) . ");</script>";
+
     }
 
 }

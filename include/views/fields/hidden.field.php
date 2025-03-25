@@ -9,11 +9,11 @@ class Hidden extends Input {
         'wrap' => false,
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
     
         $p['wrap'] = false;
     
-        return parent::params($p);
+        parent::params($p);
     
     }
 

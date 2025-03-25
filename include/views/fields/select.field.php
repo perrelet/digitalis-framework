@@ -11,44 +11,41 @@ class Select extends \Digitalis\Field {
     protected static $defaults = [
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
         
-        $p = parent::params($p);
+        parent::params($p);
 
-        $p['option_atts'] = static::get_option_attributes($p);
+        $p['option_atts'] = $this->get_option_attributes($p['option_atts']);
 
         $p['element']->set_tag('select');
         $p['element']->set_attribute($p['once_atts']);
 
-        return $p;
-
     }
 
-    protected static function get_option_attributes ($p) {
+    public function get_option_attributes ($atts = []) {
     
-        if ($p['options']) foreach ($p['options'] as $option => $label) {
+        foreach ($this['options'] as $option => $label) {
 
             if (is_array($label)) {
 
                 if ($label) foreach ($label as $sub_option => $sub_option_label) {
 
-                    if (!isset($p['option_atts'][$sub_option])) $p['option_atts'][$sub_option] = new Attributes();
-                    if ($selected = static::selected($sub_option, $p['value'])) $p['option_atts'][$sub_option] += $selected;
+                    if (!isset($atts[$sub_option])) $atts[$sub_option] = new Attributes();
+                    if ($selected = $this->selected($sub_option, $this['value'])) $atts[$sub_option]['selected'] = 'selected';
 
                 }
-                
 
             } else {
 
-                if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
-                if ($selected = static::selected($option, $p['value'])) $p['option_atts'][$option]['selected'] = 'selected';
+                if (!isset($atts[$option])) $atts[$option] = new Attributes();
+                if ($selected = $this->selected($option, $this['value'])) $atts[$option]['selected'] = 'selected';
 
             }
 
         }
 
-        return $p['option_atts'];
-    
+        return $atts;
+
     }
 
 }

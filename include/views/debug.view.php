@@ -4,75 +4,98 @@ namespace Digitalis {
 
     class Debug extends View {
 
-        protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
         protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/debug/";
+
         protected static $defaults = [
+            'values'    => [],
             'arg_names' => [],
         ];
 
-        protected static $debug_options = null;
-
-        public static function set_options (Debug_Options $options) {
-        
-            static::$debug_options = $options;
-        
-        }
-
-        public static function get_options () {
-        
-            return static::$debug_options ?? new Debug_Options;
-        
-        }
-
         public static function write (...$args) {
 
-            $p = [
-                'values' => [],
-            ];
+            $debug  = new Debug;
+            $values = [];
         
-            foreach ($args as $i => $arg) {
+            foreach ($args as $i => $arg) if ($arg instanceof Debug_Options) {
 
-                if ($arg instanceof Debug_Options) {
+                $debug->set_options($arg);
 
-                    $p = array_merge($p, (array) $arg);
-                    unset($args[$i]);
+            } else {
 
-                } else {
-
-                    $p['values'][$i] = $arg;
-
-                }
+                $values[$i] = $arg;
 
             }
 
-            static::render($p);
+            $debug->set_param('values', $values);
+            $debug->print();
 
         }
 
-        protected static function condition ($p) {
+        //
+
+        protected static function console ($value, $options = []) {
+
+            $options = wp_parse_args($options, [
+                'method' => 'debug',
+                'label'  => false,
+                'style'  => false,
+            ]);
+
+            $options['label'] = str_replace("\\", "\\\\", $options['label']);
+            $options['style'] = str_replace("\\", "\\\\", $options['style']);
+
+            if ($options['style'] == 'label') $options['style'] = 'color: #ccc; font-size: 0.8em;';
+
+            if (is_scalar($value)) {
+                $value = str_replace("\\", "\\\\", $value);
+                $value = $options['style'] ? "'%c{$value}'" : "'{$value}'";
+            } else {
+                $value = json_encode($value);
+            }
+
+            $params = [];
+            if ($options['label']) $params[] = "`{$options['label']}`";
+            if ($value)            $params[] = $value;
+            if ($options['style']) $params[] = "`{$options['style']}`";
+            $params = implode(', ', $params);
+
+            return "<script>console.{$options['method']}({$params});</script>";
+        
+        }
+
+        //
+
+        protected $debug_options;
+
+        public function print ($return = false) {
+
+            if (is_null($this->debug_options)) $this->debug_options = new Debug_Options;
+
+            return parent::print($return);
+
+        }
+
+        public function set_options (Debug_Options $options) {
+        
+            $this->debug_options = $options;
+        
+        }
+
+        public function get_options () {
+        
+            return $this->debug_options;
+        
+        }
+
+        public function condition () {
 
             return current_user_can('administrator');
 
         }
-
-        public static function render ($p = [], $print = true) {
-
-            static::$defaults = array_merge(static::$defaults, (array) static::get_options());
-            static::$defaults['values'] = [];
-
-            return parent::render($p, $print);
-
-        }
-
-        protected static function after ($p) {
-
-            if ($p['die']) die;
-
-        }
     
-        public static function get_template ($p) {
+        public function get_template () {
     
-            switch ($p['view']) {
+            switch ($this['view']) {
     
                 case 'debugger':
     
@@ -83,7 +106,7 @@ namespace Digitalis {
                         echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . 'assets/css/debugger.css') . "</style>";
                         echo "<script>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . 'assets/js/debugger.js') . "</script>";
 
-                    } else if ($p['append']) {
+                    } else if ($this['append']) {
 
                         return null;
 
@@ -99,8 +122,10 @@ namespace Digitalis {
             return null;
         
         }
-    
-        public static function params ($p) {
+
+        public function params (&$p) {
+
+            $p = array_merge($p, (array) $this->get_options());
     
             $p['backtrace'] = debug_backtrace(0, $p['backtrace_limit']);
             $offset         = 0;
@@ -151,7 +176,7 @@ namespace Digitalis {
     
                         } else {
     
-                            $p['bt_html'] .= static::wrap_lines($arg, [
+                            $p['bt_html'] .= $this->wrap_lines($arg, [
                                 'open'   => false,
                                 'indent' => 1,
                                 'expand' => 'print_r',
@@ -169,11 +194,9 @@ namespace Digitalis {
     
                 }
 
-                
-
             }
 
-            static::extract_arg_names($p);
+            $this->extract_arg_names($p);
             
             if (!$p['title']) $p['title'] = $p['debug_file'] . "::" . $p['debug_line'];
         
@@ -192,88 +215,17 @@ namespace Digitalis {
 
                 if ($p['view'] == 'debugger') {
 
-                    $value = static::wrap_lines($value, [
+                    $value = $this->wrap_lines($value, [
                         'expand' => $p['expand'],
                     ]);
                 
                 }
 
             }
-
-            return $p;
         
         }
 
-        public static function view ($p = []) {
-        
-            switch ($p['view']) {
-
-                case 'debugger':
-
-                    $html = '';
-
-                    foreach ($p['values'] as $i => $value) $html .= Debug_Code_Block::render([
-                        'label' => $p['arg_names'][$i] ?? false,
-                        'code'  => $value,
-                    ], false);
-
-                    $html = str_replace('`', '\`', $html);
-                    
-                    echo "<script>DigitalisDebugger.find().append(`{$html}`);</script>";
-
-                    break;
-
-                case 'js':
-
-                    if ($p['title']) echo static::console("> {$p['title']}", [
-                        'style' => 'label',
-                    ]);
-
-                    foreach ($p['values'] as $i => $value) {
-
-                        $options = [];
-                        if (isset($p['arg_names'][$i])) $options['label'] = $p['arg_names'][$i];
-                        echo static::console($value, $options);
-
-                    }
-                    break;
-
-                default:
-                case 'inline':
-                    foreach ($p['values'] as $value) echo "<pre>{$value}</pre>";
-                    break;
-
-            }
-        
-        }
-
-        //
-
-        protected static function get_type ($value, $html = true) {
-
-            $type = gettype($value);
-            $name = $type;
-
-            if ($type == 'object') {
-
-                $name = $value::class;
-                if ($parent = get_parent_class($value)) $name .= " extends {$parent}";
-
-            } elseif ($type == 'array') {
-
-                $name .= "[" . count($value) . "]";
-
-            } elseif ($type == 'string') {
-
-                $name .= "[" . strlen($value) . "]";
-
-            }
-
-            return $html ? "<span data-type='{$type}'>{$name}</span>" : $name;
-        
-        }
-
-        protected static function extract_arg_names (&$p) {
+        protected function extract_arg_names (&$p) {
 
             if ($p['debug_path'] && $p['debug_line'] && $p['debug_func'] && $file = @file($p['debug_path'])) {
 
@@ -318,7 +270,7 @@ namespace Digitalis {
                     if (!isset($p['values'][$i])) continue;
 
                     $value     = $p['values'][$i];
-                    $type      = static::get_type($value, $p['view'] == 'debugger');
+                    $type      = $this->get_type($value, $p['view'] == 'debugger');
                     $names[$i] = (($arg[0] ?? '') == '$') ? "{$arg} ({$type})" : $type;
 
                 }
@@ -329,7 +281,31 @@ namespace Digitalis {
 
         }
 
-        protected static function wrap_lines ($value, $options = []) {
+        protected function get_type ($value, $html = true) {
+
+            $type = gettype($value);
+            $name = $type;
+
+            if ($type == 'object') {
+
+                $name = $value::class;
+                if ($parent = get_parent_class($value)) $name .= " extends {$parent}";
+
+            } elseif ($type == 'array') {
+
+                $name .= "[" . count($value) . "]";
+
+            } elseif ($type == 'string') {
+
+                $name .= "[" . strlen($value) . "]";
+
+            }
+
+            return $html ? "<span data-type='{$type}'>{$name}</span>" : $name;
+        
+        }
+
+        protected function wrap_lines ($value, $options = []) {
 
             $options = wp_parse_args($options, [
                 'open'   => true,
@@ -376,36 +352,54 @@ namespace Digitalis {
         
         }
 
-        protected static function console ($value, $options = []) {
+        public function view () {
+        
+            switch ($this['view']) {
 
-            $options = wp_parse_args($options, [
-                'method' => 'debug',
-                'label'  => false,
-                'style'  => false,
-            ]);
+                case 'debugger':
 
-            $options['label'] = str_replace("\\", "\\\\", $options['label']);
-            $options['style'] = str_replace("\\", "\\\\", $options['style']);
+                    $html = '';
 
-            if ($options['style'] == 'label') $options['style'] = 'color: #ccc; font-size: 0.8em;';
+                    foreach ($this['values'] as $i => $value) $html .= Debug_Code_Block::render([
+                        'label' => $this['arg_names'][$i] ?? false,
+                        'code'  => $value,
+                    ], false);
 
-            if (is_scalar($value)) {
-                $value = str_replace("\\", "\\\\", $value);
-                $value = $options['style'] ? "'%c{$value}'" : "'{$value}'";
-            } else {
-                $value = json_encode($value);
+                    $html = str_replace('`', '\`', $html);
+                    
+                    echo "<script>DigitalisDebugger.find().append(`{$html}`);</script>";
+
+                    break;
+
+                case 'js':
+
+                    if ($this['title']) echo static::console("> {$this['title']}", [
+                        'style' => 'label',
+                    ]);
+
+                    foreach ($this['values'] as $i => $value) {
+
+                        $options = [];
+                        if (isset($this['arg_names'][$i])) $options['label'] = $this['arg_names'][$i];
+                        echo static::console($value, $options);
+
+                    }
+                    break;
+
+                default:
+                case 'inline':
+                    foreach ($this['values'] as $value) echo "<pre>{$value}</pre>";
+                    break;
+
             }
-
-            $params = [];
-            if ($options['label']) $params[] = "`{$options['label']}`";
-            if ($value)            $params[] = $value;
-            if ($options['style']) $params[] = "`{$options['style']}`";
-            $params = implode(', ', $params);
-
-            return "<script>console.{$options['method']}({$params});</script>";
         
         }
-    
+
+        public function after () {
+
+            if ($this['die']) die;
+
+        }
     
     }
 
@@ -519,4 +513,3 @@ namespace {
     }
 
 }
-

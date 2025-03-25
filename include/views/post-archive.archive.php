@@ -11,11 +11,11 @@ class Post_Archive extends Archive {
         'item_model' => Post::class,
     ];
 
-    protected static function get_page_links ($p, $query) {
+    public function get_page_links ($query) {
 
         if (!($query instanceof WP_Query) || !($query->max_num_pages > 1)) return [];
     
-        return paginate_links(wp_parse_args($p['paginate_args'], [
+        return paginate_links(wp_parse_args($this['paginate_args'], [
             'current'   => max(1, $query->get('paged')),
             'total'     => $query->max_num_pages,
             'type'      => 'array',

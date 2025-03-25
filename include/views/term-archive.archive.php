@@ -4,8 +4,6 @@ namespace Digitalis;
 
 abstract class Term_Archive extends Archive {
 
-    protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
-
     protected static $defaults = [
         'id'         => 'digitalis-term-archive',
         'classes'    => ['digitalis-term-archive'],
@@ -15,7 +13,7 @@ abstract class Term_Archive extends Archive {
         'item_model' => Term::class,
     ];
 
-    protected static function get_page_links ($p, $query) {
+    public function get_page_links ($query) {
 
         // TODO: WP_Term_Query doesn't appear to easily support pagination.
     

@@ -24,7 +24,7 @@ class HTMX extends \Digitalis\Component {
         '_'          => null,
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
 
         if ($p['url'])        $p['attributes']['hx-' . $p['method']] = $p['url'];
         if ($p['trigger'])    $p['attributes']['hx-trigger']         = $p['trigger'];
@@ -38,7 +38,7 @@ class HTMX extends \Digitalis\Component {
         if ($p['confirm'])    $p['attributes']['hx-confirm']         = $p['confirm'];
         if ($p['_'])          $p['attributes']['_']                  = $p['_'];
 
-        return parent::params($p);
+        parent::params($p);
     
     }
 

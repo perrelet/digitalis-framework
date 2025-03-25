@@ -9,21 +9,18 @@ class Hidden_Group extends \Digitalis\Field_Group {
         'classes' => ['hidden-group'],
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
     
-        if ($p['data']) foreach ($p['data'] as $key => $value) {
-        
-            $p['fields'][] = [
-                'field' => Hidden::class,
-                'key'   => $key,
+        if ($p['data']) foreach ($p['data'] as $name => $value) {
+
+            $p['fields'][] = new Hidden([
+                'name'  => $name,
                 'value' => $value,
-            ];
-        
+            ]);
+
         }
 
-        $p = parent::params($p);
-
-        return $p;
+        parent::params($p);
 
     }
 

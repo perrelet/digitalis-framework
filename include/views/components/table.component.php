@@ -25,29 +25,33 @@ abstract class Table extends \Digitalis\Component {
 
     protected static $merge = ['row_classes', 'row_atts', 'col_classes', 'col_atts'];
 
-    protected static function condition ($p) {
-        
-        return is_array($p['rows']);
+    public function params (&$p) {
+
+        $this->generate_col_atts($p);
+        $this->generate_row_atts($p);
+        $this->generate_cell_atts($p);
+
+        parent::params($p);
+
+    }
+
+    public function generate_col_atts (&$p) {
+    
+        $this->generate_shelf_classes($p, 'col');
+        $this->gather_shelf_atts($p, 'col');
+        $this->generate_shelf_atts($p, 'col');
     
     }
 
-    public static function generate_col_atts (&$p) {
+    public function generate_row_atts (&$p) {
     
-        static::generate_shelf_classes($p, 'col');
-        static::gather_shelf_atts($p, 'col');
-        static::generate_shelf_atts($p, 'col');
-    
-    }
-
-    public static function generate_row_atts (&$p) {
-    
-        static::generate_shelf_classes($p, 'row');
-        static::gather_shelf_atts($p, 'row');
-        static::generate_shelf_atts($p, 'row');
+        $this->generate_shelf_classes($p, 'row');
+        $this->gather_shelf_atts($p, 'row');
+        $this->generate_shelf_atts($p, 'row');
     
     }
 
-    public static function generate_cell_atts (&$p) {
+    public function generate_cell_atts (&$p) {
 
         if ($p['data_labels'] && $p['rows']) foreach ($p['rows'] as $i => $row) {
 
@@ -85,7 +89,7 @@ abstract class Table extends \Digitalis\Component {
     
     }
 
-    public static function generate_shelf_classes (&$p, $shelf = 'col') {
+    public function generate_shelf_classes (&$p, $shelf = 'col') {
     
         if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as &$classes) {
         
@@ -96,7 +100,7 @@ abstract class Table extends \Digitalis\Component {
     
     }
 
-    public static function gather_shelf_atts (&$p, $shelf = 'col') {
+    public function gather_shelf_atts (&$p, $shelf = 'col') {
 
         if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as $i => &$classes) {
         
@@ -108,7 +112,7 @@ abstract class Table extends \Digitalis\Component {
     
     }
 
-    public static function generate_shelf_atts (&$p, $shelf = 'col') {
+    public function generate_shelf_atts (&$p, $shelf = 'col') {
 
         $atts = [];
 
@@ -128,16 +132,10 @@ abstract class Table extends \Digitalis\Component {
 
     }
 
-    public static function params ($p) {
-
-        static::generate_col_atts($p);
-        static::generate_row_atts($p);
-        static::generate_cell_atts($p);
-
-        $p = parent::params($p);
-
-        return $p;
-
+    public function condition () {
+        
+        return is_array($tthis->params['rows']);
+    
     }
 
 }

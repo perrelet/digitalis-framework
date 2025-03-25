@@ -156,4 +156,5 @@ add_filter('sassy-variables', function ($variables) {
 //
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
-
+require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/view.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/component.view.php';

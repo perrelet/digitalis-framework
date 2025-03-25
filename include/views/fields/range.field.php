@@ -14,12 +14,10 @@ class Range extends Input {
         'value_suffix'  => '',
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
 
-        //dprint($p['attributes']);
-
-        $p['attributes']['min'] = $p['min'];
-        $p['attributes']['max'] = $p['max'];
+        $p['attributes']['min']  = $p['min'];
+        $p['attributes']['max']  = $p['max'];
         $p['attributes']['step'] = $p['step'];
         
         if ($p['show_value']) {
@@ -29,23 +27,21 @@ class Range extends Input {
 
         }
 
-        $p = parent::params($p);
+        parent::params($p);
 
-        return $p;
-        
     }
 
-    public static function after ($p) {
+    public function after () {
         
-        if ($p['show_value']) {
+        if ($this['show_value']) {
 
-            $output = $p['value_prefix'] . $p['value'] . $p['value_suffix'];
-            echo "<output name='{$p['key']}_output' for='{$p['id']}'>{$output}</output>";
+            $output = $this['value_prefix'] . $this['value'] . $this['value_suffix'];
+            echo "<output name='{$this['key']}_output' for='{$this['id']}'>{$output}</output>";
 
         }
 
-        parent::after($p);
-        
+        parent::after();
+
     }
 
 }

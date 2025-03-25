@@ -11,13 +11,7 @@ class Iterator_UI extends View {
         'iterator' => null,
     ];
 
-    protected static function condition ($p) {
-    
-        return ($p['iterator'] instanceof Iterator);
-    
-    }
-
-    public static function params ($p) {
+    public function params (&$p) {
 
         if (($p['iterator'] instanceof Iterator)) {
 
@@ -27,14 +21,18 @@ class Iterator_UI extends View {
 
         }
     
-        return $p;
+    }
+
+    public function condition () {
+    
+        return ($this['iterator'] instanceof Iterator);
     
     }
 
-    protected static function before_first ($p) {
-    
+    public function before_first () {
+
         echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css') . "</style>";
-    
+
     }
 
 }

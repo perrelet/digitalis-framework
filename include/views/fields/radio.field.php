@@ -14,33 +14,31 @@ class Radio extends Input {
         'option_atts' => [],
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
         
-        $p = parent::params($p);
+        parent::params($p);
 
-        $p['option_atts'] = static::get_option_attributes($p);
+        $p['option_atts'] = $this->get_option_attributes($p['option_atts']);
 
         if (isset($p['element']['value'])) unset($p['element']['value']);
         if (isset($p['element']['id']))    unset($p['element']['id']);
 
-        return $p;
-
     }
 
-    protected static function get_option_attributes ($p) {
-    
-        foreach ($p['options'] as $option => $label) {
+    public function get_option_attributes ($atts = []) {
 
-            if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
+        foreach ($this['options'] as $option => $label) {
 
-            $p['option_atts'][$option]['value'] = $option;
+            if (!isset($atts[$option])) $atts[$option] = new Attributes();
 
-            if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option]['checked'] = 'checked';
+            $atts[$option]['value'] = $option;
+
+            if ($checked = $this->checked($option, $this['value'])) $atts[$option]['checked'] = 'checked';
 
         }
 
-        return $p['option_atts'];
-    
+        return $atts;
+
     }
 
 }

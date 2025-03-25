@@ -18,7 +18,7 @@ class Checkbox_Group extends Input {
         'null_value'     => 0,
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
 
         if ($p['select_all']) {
 
@@ -28,47 +28,45 @@ class Checkbox_Group extends Input {
 
         }
 
-        $p = parent::params($p);
+        parent::params($p);
 
-        $p['option_atts'] = static::get_option_attributes($p);
+        $p['option_atts'] = $this->get_option_attributes($p['option_atts']);
 
         if (isset($p['element']['value'])) unset($p['element']['value']);
         if (isset($p['element']['id']))    unset($p['element']['id']);
         if (isset($p['element']['name']))  $p['element']['name'] .= "[]";
 
-        return $p;
-
     }
 
-    protected static function get_value ($p) {
+    public function get_value () {
 
-        $value = parent::get_value($p);
+        $value = parent::get_value();
         if (!is_array($value)) $value = explode(',', $value);
         return (array) $value;
         
     }
 
-    protected static function get_option_attributes ($p) {
+    protected function get_option_attributes ($atts = []) {
     
-        if ($p['options']) foreach ($p['options'] as $option => $label) {
+        foreach ($this['options'] as $option => $label) {
 
-            if (!isset($p['option_atts'][$option])) $p['option_atts'][$option] = new Attributes();
+            if (!isset($atts[$option])) $atts[$option] = new Attributes();
 
-            //$p['option_atts'][$option]['id']    = $p['id'] . '-' . $option;
-            $p['option_atts'][$option]['value'] = $option;
+            //$atts[$option]['id']    = $this['id'] . '-' . $option;
+            $atts[$option]['value'] = $option;
 
-            if ($option == $p['select_all_key']) {
+            if ($option == $this['select_all_key']) {
 
-                $p['option_atts'][$option]['onchange'] = "this.parentElement.parentElement.querySelectorAll(`[name=\"` + this.name + `\"]`).forEach((f, i) => { f.checked = this.checked });";
+                $atts[$option]['onchange'] = "this.parentElement.parentElement.querySelectorAll(`[name=\"` + this.name + `\"]`).forEach((f, i) => { f.checked = this.checked });";
 
             }
 
-            if ($checked = static::checked($option, $p['value'])) $p['option_atts'][$option]['checked'] = 'checked';
+            if ($checked = $this->checked($option, $this['value'])) $atts[$option]['checked'] = 'checked';
 
         }
 
-        return $p['option_atts'];
-    
+        return $atts;
+
     }
 
 }

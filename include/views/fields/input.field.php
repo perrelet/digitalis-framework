@@ -10,19 +10,17 @@ class Input extends \Digitalis\Field {
         'minlength' => null,
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
     
         if (!is_null($p['maxlength'])) $p['attributes']['maxlength'] = $p['maxlength'];
         if (!is_null($p['minlength'])) $p['attributes']['minlength'] = $p['minlength'];
 
         if ($p['type']) $p['attributes']['type'] = $p['type'];
     
-        $p = parent::params($p);
+        parent::params($p);
 
         $p['element']->set_tag('input');
         $p['element']->set_attribute($p['once_atts']);
-
-        return $p;
     
     }
 

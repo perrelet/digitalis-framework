@@ -12,16 +12,14 @@ class Checkbox extends Input {
         'checked_value' => 1,
     ];
 
-    public static function params ($p) {
-    
-        $p = parent::params($p);
+    public function params (&$p) {
 
-        if ($checked = static::checked($p['checked_value'], $p['value'])) $p['element']['checked'] = 'checked';
+        parent::params($p);
+
+        if ($checked = $this->checked($p['checked_value'], $p['value'])) $p['element']['checked'] = 'checked';
 
         $p['element']['value'] = $p['checked_value'];
 
-        return $p;
-    
     }
 
 }

@@ -4,8 +4,6 @@ namespace Digitalis;
 
 abstract class Archive extends Component {
 
-    protected static $params = []; // Because this view invokes another view, we need this in order to correctly LSB.
-
     protected static $template = 'archive';
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/components/";
 
@@ -39,143 +37,60 @@ abstract class Archive extends Component {
 
     protected static $items = [];
 
-    protected static function get_loader ($p) {
-
-        switch ($p['loader_type']) {
-
-            case "image":
-
-                $url = file_exists(DIGITALIS_FRAMEWORK_PATH . "assets/img/loaders/" . $p['loader']) ?
-                    DIGITALIS_FRAMEWORK_URI . "assets/img/loaders/" . $p['loader'] :
-                    $p['loader'];
-
-                return "<img role='progressbar' aria-valuetext='Loading' loading='lazy' alt='Loading Icon' src='{$url}'>";
-
-            case "file":
-
-                return file_exists($p['loader']) ? file_get_contents($p['loader']) : '';
-
-            case "callback":
-
-                return is_callable($p['loader']) ? call_user_func($p['loader']) : '';
-
-            case "html":
-            default:
-
-                return $p['loader'];
-
-        }
-
-    }
-
-    protected static function get_items ($query_vars, &$query, $skip_main) {
-
-        if (static::$params['item_model'] && ($call = [static::$params['item_model'], 'query']) && is_callable($call)) {
-
-            return call_user_func_array($call, [$query_vars, &$query, $skip_main]);
-
-        }
-
-    }
-
-    protected static function render_item ($item, $i) {
-
-        //
-    
-    }
-
-    protected static function before_items ($p) {}
-
-    protected static function after_items ($p) {}
-
-    protected static function render_items ($items) {
-        
-        if ($items) foreach ($items as $i => $item) static::render_item($item, $i);
-        
-    }
-
-    protected static function render_no_items ($p) {
-        
-        echo "<div class='no_items'>{$p['no_items']}</div>";
-        
-    }
-
-    protected static function get_controls ($p) {
-    
-        return $p['controls'];
-    
-    }
-
-    protected static function get_page_links ($p, $query) {
-    
-        //
-    
-    }
-
-    public static function filter_page_links (&$page_links) {
-
-        //
-
-    }
-
-    protected static function render_pagination ($page_links) {
-
-        if ($page_links) echo  "<div class='pagination-wrap'>" . implode("\n", $page_links) . "</div>";
-    
-    }
-
-    public static function get_content ($p = []) {
+    public function get_content () {
 
         ob_start();
 
-        if (!$p['items_only']) {
+        if (!$this['items_only']) {
 
-            if ($controls = static::get_controls($p)) {
+            if ($controls = $this->get_controls()) {
 
                 Field_Group::render([
                     'fields'    => $controls,
-                    'id'        => "{$p['id']}-controls",
+                    'id'        => "{$this['id']}-controls",
                     'classes'   => [
                         'archive-controls',
-                        "{$p['id']}-controls",
+                        "{$this['id']}-controls",
                     ],
                     'tag'       => 'form',
                 ]);
     
             }
 
-            echo  "<div class='digitalis-loader'>" . static::get_loader($p) . "</div>";
-            echo  "<div class='{$p['child_classes']['items']}'>";
+            echo  "<div class='digitalis-loader'>{$this->get_loader()}</div>";
+            echo  "<div class='{$this['child_classes']['items']}'>";
 
         }
 
         $query = null;
 
-        if (static::$items = (is_null($p['items']) ? static::get_items($p['query_vars'], $query, $p['skip_main']) : $p['items'])) {
+        if (is_null($this['items'])) $this['items'] = $this->get_items($this['query_vars'], $query, $this['skip_main']);
 
-            static::before_items($p);
-            static::render_items(static::$items);
-            static::after_items($p);
+        if ($this['items']) {
 
-            if ($p['pagination']) {
+            $this->before_items();
+            $this->render_items($this['items']);
+            $this->after_items();
 
-                $page_links = static::get_page_links($p, $query);
-                static::filter_page_links($page_links);
-                static::render_pagination($page_links);
+            if ($this['pagination']) {
+
+                $page_links = $this->get_page_links($query);
+                $this->filter_page_links($page_links);
+                $this->render_pagination($page_links);
 
             }
 
         } else {
 
-            if ($p['no_items'] !== false) {
+            if ($this['no_items'] !== false) {
 
-                static::render_no_items($p);
+                $this->render_no_items();
 
             }
 
         }
 
-        if (!$p['items_only']) {
+        if (!$this['items_only']) {
             
             echo  "</div>";
 
@@ -185,6 +100,90 @@ abstract class Archive extends Component {
         ob_end_clean();
 
         return $content;
+
+    }
+
+    public function get_items ($query_vars, &$query, $skip_main) {
+
+        if ($this['item_model'] && ($call = [$this['item_model'], 'query']) && is_callable($call)) {
+
+            return call_user_func_array($call, [$query_vars, &$query, $skip_main]);
+
+        }
+
+    }
+
+    public function before_items () {}
+    public function after_items ()  {}
+
+    public function render_items ($items) {
+        
+        foreach ($items as $i => $item) $this->render_item($item, $i);
+        
+    }
+
+    public function render_item ($item, $i) {
+
+        //
+    
+    }
+
+    public function render_no_items () {
+        
+        echo "<div class='no_items'>{$this['no_items']}</div>";
+        
+    }
+
+    public function get_page_links ($query) {
+    
+        //
+    
+    }
+
+    public function filter_page_links (&$page_links) {
+
+        //
+
+    }
+
+    public function render_pagination ($page_links) {
+
+        if ($page_links) echo  "<div class='pagination-wrap'>" . implode("\n", $page_links) . "</div>";
+    
+    }
+
+    public function get_controls () {
+    
+        return $this['controls'];
+    
+    }
+
+    public function get_loader () {
+
+        switch ($this['loader_type']) {
+
+            case "image":
+
+                $url = file_exists(DIGITALIS_FRAMEWORK_PATH . "assets/img/loaders/" . $this['loader']) ?
+                    DIGITALIS_FRAMEWORK_URI . "assets/img/loaders/" . $this['loader'] :
+                    $this['loader'];
+
+                return "<img role='progressbar' aria-valuetext='Loading' loading='lazy' alt='Loading Icon' src='{$url}'>";
+
+            case "file":
+
+                return file_exists($this['loader']) ? file_get_contents($this['loader']) : '';
+
+            case "callback":
+
+                return is_callable($this['loader']) ? call_user_func($this['loader']) : '';
+
+            case "html":
+            default:
+
+                return $this['loader'];
+
+        }
 
     }
 

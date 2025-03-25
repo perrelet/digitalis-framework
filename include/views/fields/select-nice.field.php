@@ -11,7 +11,7 @@ class Select_Nice extends Select {
         'load_styles'  => true,
     ];
 
-    public static function params ($p) {
+    public function params (&$p) {
 
         $js_var = str_replace("-", "_", $p['key']) . "_nice";
 
@@ -23,45 +23,43 @@ class Select_Nice extends Select {
             'placeholder'   => 'Select',
         ]);
 
-        $p = parent::params($p);
-
-        return $p;
+        parent::params($p);
 
     }
 
-    public static function load_styles () {
+    public function before_first () {
+
+        if ($this['load_styles'])  $this->load_styles();
+        if ($this['load_scripts']) $this->load_scripts();
+
+        parent::before_first();
+
+    }
+
+    public function load_styles () {
     
         echo '<link href="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/css/nice-select2.min.css" rel="stylesheet">';
     
     }
 
-    public static function load_scripts () {
+    public function load_scripts () {
     
         echo '<script src="https://cdn.jsdelivr.net/npm/nice-select2@2.2.0/dist/js/nice-select2.min.js"></script>';
     
     }
 
-    protected static function before_first ($p) {
-
-        if ($p['load_styles'])  static::load_styles();
-        if ($p['load_scripts']) static::load_scripts();
-
-        parent::before_first($p);
-
-    }
-
-    protected static function after_first ($p) {
+    public function after_first () {
 
         echo "<script>nice_selects = typeof(nice_selects) == 'undefined' ? {} : nice_selects;</script>";
 
     }
 
-    protected static function after ($p) {
+    public function after () {
 
-        $json = json_encode($p['nice-select']);
-        echo "<script>nice_selects.{$p['js_var']} = NiceSelect.bind(document.getElementById('{$p['id']}'), {$json});</script>";
+        $json = json_encode($this['nice-select']);
+        echo "<script>nice_selects.{$this['js_var']} = NiceSelect.bind(document.getElementById('{$this['id']}'), {$json});</script>";
 
-        parent::after($p);
+        parent::after();
 
     }
 
