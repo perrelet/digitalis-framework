@@ -2,7 +2,7 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.2.7');
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.0');
 define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_LIBRARY_PATH',        plugin_dir_path( __FILE__ ) . 'include/features/');
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
