@@ -82,9 +82,8 @@ trait Dependency_Injection {
 
     protected static function value_inject ($class, &$value) {
     
-        if (is_array($class))                       return;
+        if (!is_string($class))                     return;
         if (!class_exists($class))                  return;
-        if ($value instanceof $class)               return;
         if (!method_exists($class, 'get_instance')) return;
 
         if ($class === $value) $value = null;
