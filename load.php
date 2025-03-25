@@ -21,7 +21,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/factory.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/inherit-props.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/base.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/log.service.php';
@@ -157,4 +156,4 @@ add_filter('sassy-variables', function ($variables) {
 //
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/deprecated-component.abstract.php';
+
