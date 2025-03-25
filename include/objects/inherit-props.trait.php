@@ -4,7 +4,7 @@ namespace Digitalis;
 
 Trait Inherits_Props {
 
-    public static function inherit_static_props ($props) {
+    protected static function inherit_static_props ($props) {
     
         if ($props) foreach ($props as $prop => $merge) {
 
@@ -16,10 +16,16 @@ Trait Inherits_Props {
     
     }
  
-    public static function inherit_static_prop ($prop, $merge = []) {
+    protected static function inherit_static_prop ($prop, $merge = []) {
+
+        static::class::$$prop = static::inherit_merge_array($prop, $merge);
+    
+    }
+
+    protected static function inherit_merge_array ($prop, $merge = []) {
     
         $class = static::class;
-        $value = static::$$prop;
+        $value = $class::$$prop;
 
         while ($class = get_parent_class($class)) {
 
@@ -31,7 +37,7 @@ Trait Inherits_Props {
 
                     if (!isset($value[$key])) $value[$key] = [];
 
-                    $value[$key] = wp_parse_args($value[$key], $class::$$prop[$key]);
+                    $value[$key] = wp_parse_args((array) $value[$key], (array) $class::$$prop[$key]);
                     
                     if (array_is_list($value[$key])) $value[$key] = array_unique($value[$key], SORT_REGULAR);
 
@@ -43,7 +49,23 @@ Trait Inherits_Props {
 
         }
 
-        static::class::$$prop = $value;
+        return $value;
+    
+    }
+
+    protected static function deep_parse_args ($args, $defaults = [], $merge = []) {
+    
+        $args = wp_parse_args((array) $args, (array) $defaults);
+
+        foreach ($merge as $key) {
+
+            if (!isset($args[$key]) || !is_array($args[$key])) continue;
+
+            $args[$key] = wp_parse_args((array) $args[$key], (array) ($defaults[$key] ?? []));
+
+        }
+
+        return $args;
     
     }
 
