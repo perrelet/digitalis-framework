@@ -4,7 +4,7 @@ namespace Digitalis;
 
 abstract class View implements \ArrayAccess {
 
-    use Dependency_Injection;
+    use Dependency_Injection, Inherits_Props;
 
     protected static $defaults = [];           // Default args. Inherited by all derivative classes. 
     protected static $merge = [];              // Selected args will be merged (rather than overridden) by derivative classes.
@@ -20,6 +20,11 @@ abstract class View implements \ArrayAccess {
     public static function get_template ($params) { return static::$template; }
 
     protected static $merge_storage = [];
+    public static function get_defaults () {
+
+        return static::inherit_merge_array('defaults', static::get_merge_keys());
+
+    }
 
     protected static function compute_merge_keys () {
     
@@ -40,39 +45,19 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    public static function get_defaults () {
-        
-        $defaults   = static::$defaults;
-        $class      = static::class;
+    public static function compute_params (&$params = []) {
 
-        while ($class = get_parent_class($class)) {
+        $defaults = static::get_defaults();
+        $params   = static::deep_parse_args($params, $defaults, static::get_merge_keys());
+        $params   = static::inject_dependencies($params, $defaults);
 
-            foreach (static::get_merge_keys() as $key) {
-
-                if (isset($class::$defaults[$key]) && is_array($class::$defaults[$key]) && $class::$defaults[$key]) {
-
-                    if (!isset($defaults[$key])) $defaults[$key] = [];
-                    $defaults[$key] = wp_parse_args((array) $defaults[$key], (array) $class::$defaults[$key]);
-                    
-                    if (array_is_list($defaults[$key])) $defaults[$key] = array_unique($defaults[$key], SORT_REGULAR);
-
-                }
-
-            }
-
-            $defaults = wp_parse_args($defaults, $class::$defaults);
-
-        }
-
-        return $defaults;
-        
     }
 
-    protected static function inject_dependencies (&$p, $defaults) {
+    protected static function inject_dependencies ($params, $defaults) {
 
         if (static::$skip_inject) foreach (static::$skip_inject as $skip) if (isset($defaults[$skip])) unset($defaults[$skip]);
     
-        return static::array_inject($p, $defaults);
+        return static::array_inject($params, $defaults);
     
     }
 
