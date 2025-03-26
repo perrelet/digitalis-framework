@@ -6,17 +6,22 @@ abstract class View implements \ArrayAccess {
 
     use Dependency_Injection, Inherits_Props;
 
-    protected static $defaults      = [];      // Default args. Inherited by all derivative classes. 
-    protected static $merge         = [];      // Selected args will be merged (rather than overridden) by derivative classes.
-    protected static $skip_inject   = [];      // 
-    protected static $required      = [];      // Required args.
+    protected static $defaults      = [];      // Default params. Inherited by all derivative classes. 
+    protected static $required      = [];      // Param keys that are required.
+    protected static $merge         = [];      // Param keys to be merged (rather than overridden) in derivative classes.
+    protected static $skip_inject   = [];      // Param keys that should skip dependency injection.
 
-    protected static $template      = null;    // The name of the template file to load (.php extension not required). If null provided view will render via the static::view($p) method.
+    protected static $template      = null;    // The name of the template file to load (omit .php extension).
     protected static $template_path = __DIR__; // Absolute path to the template directory.
 
-    protected static $indexes         = [];
-    protected static $merge_storage   = [];
-    protected static $default_storage = [];
+    protected static $indexes = [];
+
+    protected static $inherited_props = [
+        'defaults',
+        'required',
+        'merge',
+        'skip_inject',
+    ];
 
     public static function render ($params = [], $print = true) {
 
@@ -24,37 +29,6 @@ abstract class View implements \ArrayAccess {
 
         return (new $class_name($params))->print(!$print);
 
-    }
-
-    public static function get_defaults () {
-
-        if (!isset(self::$default_storage[static::class])) {
-
-            self::$default_storage[static::class] = static::inherit_merge_array('defaults', static::get_merge_keys());
-
-        }
-
-        return self::$default_storage[static::class];
-
-    }
-
-    protected static function compute_merge_keys () {
-    
-        $merge_keys = [];
-        $class      = static::class;
-
-        while ($class = get_parent_class($class)) $merge_keys = array_merge($class::$merge, $merge_keys);
-    
-        return array_unique($merge_keys);
-    
-    }
-
-    public static function get_merge_keys () {
-
-        if (!isset(self::$merge_storage[static::class])) self::$merge_storage[static::class] = static::compute_merge_keys();
-
-        return self::$merge_storage[static::class];
-    
     }
 
     public static function compute_params (&$params = []) {
@@ -65,9 +39,33 @@ abstract class View implements \ArrayAccess {
 
     }
 
+    public static function get_defaults () {
+
+        return static::get_inherited_prop('defaults', static::get_merge_keys());
+
+    }
+
+    public static function get_required_keys () {
+
+        return static::get_inherited_prop('required');
+    
+    }
+
+    public static function get_merge_keys () {
+
+        return static::get_inherited_prop('merge');
+    
+    }
+
+    public static function get_skip_inject_keys () {
+
+        return static::get_inherited_prop('skip_inject');
+    
+    }
+
     protected static function inject_dependencies ($params, $defaults) {
 
-        if (static::$skip_inject) foreach (static::$skip_inject as $skip) if (isset($defaults[$skip])) unset($defaults[$skip]);
+        foreach (static::get_skip_inject_keys() as $key) if (isset($defaults[$key])) unset($defaults[$key]);
     
         return static::array_inject($params, $defaults);
     
@@ -152,11 +150,11 @@ abstract class View implements \ArrayAccess {
     
         $defaults = static::get_defaults();
 
-        foreach (static::$required as $required) {
+        foreach (static::get_required_keys() as $key) {
 
-            $value = $this[$required] ?? null;
+            $value = $this[$key] ?? null;
 
-            if (($class_name = ($defaults[$required] ?? false)) && class_exists($class_name)) {
+            if (($class_name = ($defaults[$key] ?? false)) && class_exists($class_name)) {
 
                 if (!($value instanceof $class_name)) return false;
 
