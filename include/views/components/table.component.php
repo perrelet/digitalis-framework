@@ -2,7 +2,7 @@
 
 namespace Digitalis\Component;
 
-abstract class Table extends \Digitalis\Component {
+class Table extends \Digitalis\Component {
 
     protected static $template = 'table';
 
