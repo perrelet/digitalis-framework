@@ -6,7 +6,7 @@ Trait Inherits_Props {
 
     protected static $prop_storage = [];
 
-    protected static function get_inherited_props () {
+    public static function get_inherited_props () {
     
         return property_exists(static::class, 'inherited_props') ? static::$inherited_props : [];
     
@@ -64,6 +64,7 @@ Trait Inherits_Props {
             if (!isset($args[$key]) || !is_array($args[$key])) continue;
 
             $args[$key] = wp_parse_args((array) $args[$key], (array) ($defaults[$key] ?? []));
+            if (array_is_list($args[$key])) $args[$key] = array_values(array_unique($args[$key], SORT_REGULAR));
 
         }
 
