@@ -9,9 +9,13 @@ abstract class View implements \ArrayAccess {
     protected static $defaults      = [];      // Default args. Inherited by all derivative classes. 
     protected static $merge         = [];      // Selected args will be merged (rather than overridden) by derivative classes.
     protected static $skip_inject   = [];      // 
+    protected static $required      = [];      // Required args.
+
     protected static $template      = null;    // The name of the template file to load (.php extension not required). If null provided view will render via the static::view($p) method.
     protected static $template_path = __DIR__; // Absolute path to the template directory.
 
+    protected static $indexes         = [];
+    protected static $merge_storage   = [];
     protected static $default_storage = [];
 
     public static function render ($params = [], $print = true) {
@@ -135,9 +139,34 @@ abstract class View implements \ArrayAccess {
     public function params (&$p) {}
 
     public function validate () {
-    
+
+        if (!$this->required())   return false;
         if (!$this->permission()) return false;
         if (!$this->condition())  return false;
+
+        return true;
+    
+    }
+
+    public function required () {
+    
+        $defaults = static::get_defaults();
+
+        foreach (static::$required as $required) {
+
+            $value = $this[$required] ?? null;
+
+            if (($class_name = ($defaults[$required] ?? false)) && class_exists($class_name)) {
+
+                if (!($value instanceof $class_name)) return false;
+
+            } else {
+
+                if (is_null($value)) return false;
+
+            }
+
+        }
 
         return true;
     
