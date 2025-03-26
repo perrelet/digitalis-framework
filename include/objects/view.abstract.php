@@ -26,16 +26,7 @@ abstract class View implements \ArrayAccess {
     public static function render ($params = [], $print = true) {
 
         $class_name = Call::get_class_name(static::class);
-
         return (new $class_name($params))->print(!$print);
-
-    }
-
-    public static function compute_params (&$params = []) {
-
-        $defaults = static::get_defaults();
-        $params   = static::deep_parse_args($params, $defaults, static::get_merge_keys());
-        $params   = static::inject_dependencies($params, $defaults);
 
     }
 
@@ -63,22 +54,15 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    protected static function inject_dependencies ($params, $defaults) {
-
-        foreach (static::get_skip_inject_keys() as $key) if (isset($defaults[$key])) unset($defaults[$key]);
-    
-        return static::array_inject($params, $defaults);
-    
-    }
-
     //
 
-    protected $params;
+    protected $params = [];
 
     public function __construct ($params = []) {
     
-        $this->set_params($params);
-    
+        $this->set_params(static::get_defaults());
+        $this->merge_params($params);
+
     }
 
     public function __toString() {
@@ -90,9 +74,9 @@ abstract class View implements \ArrayAccess {
     public function print ($return = false) {
 
         if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
-        $this->set_param('index', self::$indexes[static::class]);
 
-        static::compute_params($this->params);
+        $this->set_param('index', self::$indexes[static::class]);
+        $this->inject_dependencies($this->params, static::get_defaults());
         $this->params($this->params);
 
         if (!$this->validate()) return '';
@@ -131,6 +115,14 @@ abstract class View implements \ArrayAccess {
             return $html;
 
         }
+    
+    }
+
+    protected function inject_dependencies (&$params, $defaults) {
+
+        foreach (static::get_skip_inject_keys() as $key) if (isset($defaults[$key])) unset($defaults[$key]);
+    
+        static::array_inject($params, $defaults);
     
     }
 
@@ -211,6 +203,13 @@ abstract class View implements \ArrayAccess {
     public function set_params ($params) {
     
         $this->params = $params;
+        return $this;
+    
+    }
+
+    public function merge_params ($params) {
+    
+        $this->params = static::deep_parse_args($params, $this->params, static::get_merge_keys());
         return $this;
     
     }
