@@ -12,8 +12,7 @@ abstract class View implements \ArrayAccess {
     protected static $template      = null;    // The name of the template file to load (.php extension not required). If null provided view will render via the static::view($p) method.
     protected static $template_path = __DIR__; // Absolute path to the template directory.
 
-    protected static $indexes       = [];
-    protected static $merge_storage = [];
+    protected static $default_storage = [];
 
     public static function render ($params = [], $print = true) {
 
@@ -25,7 +24,13 @@ abstract class View implements \ArrayAccess {
 
     public static function get_defaults () {
 
-        return static::inherit_merge_array('defaults', static::get_merge_keys());
+        if (!isset(self::$default_storage[static::class])) {
+
+            self::$default_storage[static::class] = static::inherit_merge_array('defaults', static::get_merge_keys());
+
+        }
+
+        return self::$default_storage[static::class];
 
     }
 
