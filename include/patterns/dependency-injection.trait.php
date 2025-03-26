@@ -32,14 +32,14 @@ trait Dependency_Injection {
 
         $params = $reflection_function->getParameters();
 
-        if ($params) foreach ($params as $i => $param) {
+        foreach ($params as $i => $param) {
 
             if (!$type = $param->getType())             continue;
             if (!$class = $type->getName())             continue;
             if (!class_exists($class))                  continue; 
             if (!method_exists($class, 'get_instance')) continue;
 
-            $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null /* , true */);
+            $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null);
 
         }
 
