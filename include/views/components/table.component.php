@@ -13,6 +13,7 @@ class Table extends \Digitalis\Component {
         'last_col'       => false,
         'last_row'       => false,
         'data_labels'    => false,
+        'data_titles'    => false,
         'row_classes'    => [],
         'row_atts'       => [],
         'col_classes'    => [],
@@ -53,19 +54,25 @@ class Table extends \Digitalis\Component {
 
     public function generate_cell_atts (&$p) {
 
-        if ($p['data_labels'] && $p['rows']) foreach ($p['rows'] as $i => $row) {
+        if ($p['data_labels']) {
 
-            if ($row) foreach ($row as $j => $cell) {
+            $attribute = is_string($p['data_labels']) ? $p['data_labels'] : 'data-label';
 
-                if (!isset($p['cell_atts'][$i][$j])) $p['cell_atts'][$i][$j] = [];
-                if (isset($p['cell_atts'][$i][$j]['data-label'])) continue;
+            foreach ($p['rows'] as $i => $row) {
 
-                $p['cell_atts'][$i][$j]['data-label'] = trim(htmlspecialchars(strip_tags($cell)));
-            
+                if ($row) foreach ($row as $j => $cell) {
+
+                    if (!isset($p['cell_atts'][$i][$j])) $p['cell_atts'][$i][$j] = [];
+                    if (isset($p['cell_atts'][$i][$j][$attribute])) continue;
+
+                    $p['cell_atts'][$i][$j][$attribute] = trim(json_encode(strip_tags($cell)), '"');
+
+                }
+
             }
 
         }
-    
+
         $atts = [];
 
         if ($p["cell_atts"]) foreach ($p["cell_atts"] as $i => $row) {
@@ -108,6 +115,14 @@ class Table extends \Digitalis\Component {
 
             $p["{$shelf}_atts"][$i]['class'] = $classes;
         
+        }
+
+        if ($p['rows'] && ($shelf == 'col') && $p['data_titles']) {
+
+            $attribute = is_string($p['data_titles']) ? $p['data_titles'] : 'data-title';
+
+            foreach ($p['rows'][0] as $i => $cell) $p["{$shelf}_atts"][$i][$attribute] = trim(json_encode(strip_tags($cell)), '"');
+
         }
     
     }
