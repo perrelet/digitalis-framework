@@ -220,9 +220,14 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    public function set_param ($key, $value) {
+    public function set_param ($key = null, $value = null) {
     
-        $this->params[$key] = $value;
+        if (is_null($key)) {
+            $this->params[] = $value;
+        } else {
+            $this->params[$key] = $value;
+        }
+
         return $this;
     
     }
