@@ -68,9 +68,15 @@ class Element implements \ArrayAccess {
 
     //
 
-    public function get_attributes () {
+    public function get_attrs () {
 
         return $this->attributes;
+
+    }
+
+    public function get_attributes () {
+
+        return call_user_func_array([$this, 'get_attrs'], func_get_args());
 
     }
 
@@ -100,29 +106,63 @@ class Element implements \ArrayAccess {
 
     }
 
-    //
+    // Property Overloading
 
-    public function offsetGet ($attribute) {
+    public function __get ($attr) {
 
-        return $this->get_attributes()->get_attribute($attribute);
-
-    }
-
-    public function offsetSet ($attribute, $value) {
-
-        $this->get_attributes()->set_attribute($attribute, $value);
+        return $this->get_attrs()->get_attr($attr);
 
     }
 
-    public function offsetUnset ($attribute) {
+    public function __set ($attr, $value) {
 
-        $this->get_attributes()->remove_attribute($attribute);
+        if (is_null($attr)) {
+
+            return $this->get_attrs()->set_attr($value);
+
+        } else {
+
+            return $this->get_attrs()->set_attr($attr, $value);
+
+        }
 
     }
 
-    public function offsetExists ($attribute) {
+    public function __unset ($attr) {
 
-        return $this->get_attributes()->has_attribute($attribute);
+        return $this->get_attrs()->remove_attr($attr);
+
+    }
+
+    public function __isset ($attr) {
+
+        return $this->get_attrs()->has_attr($attr);
+
+    }
+
+    // ArrayAccess
+
+    public function offsetGet ($attr) {
+
+        return $this->__get($attr);
+
+    }
+
+    public function offsetSet ($attr, $value) {
+
+        return $this->__set($attr, $value);
+
+    }
+
+    public function offsetUnset ($attr) {
+
+        return $this->__unset($attr);
+
+    }
+
+    public function offsetExists ($attr) {
+
+        return $this->__isset($attr);
 
     }
 
