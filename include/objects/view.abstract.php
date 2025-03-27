@@ -259,29 +259,64 @@ abstract class View implements \ArrayAccess {
     
     }
 
+    // Property Overloading
+
+    public function &__get ($key) {
+
+        if (isset($this->params[$key])) { // Terinaries, null coalesce, etc cause `Only variable references should be returned by reference`
+
+            return $this->params[$key];
+
+        } else {
+
+            $null = null;
+            return $null;
+
+        }
+
+    }
+
+    public function __set ($key, $value) {
+
+        return $this->set_param($key, $value);
+
+    }
+
+    public function __unset ($key) {
+
+        return $this->unset_param($key);
+
+    }
+
+    public function __isset ($key) {
+
+        return $this->has_param($key);
+
+    }
+
     // ArrayAccess
 
-    public function offsetGet ($key) {
+    public function &offsetGet ($key) { // Return by reference, see: https://www.php.net/manual/en/arrayaccess.offsetget.php
 
-        return $this->get_param($key);
+        return $this->__get($key);
 
     }
 
     public function offsetSet ($key, $value) {
 
-        $this->set_param($key, $value);
+        $this->__set($key, $value);
 
     }
 
     public function offsetUnset ($key) {
 
-        $this->unset_param($key);
+        $this->__unset($key);
 
     }
 
     public function offsetExists ($key) {
 
-        return $this->has_param($key);
+        return $this->__isset($key);
 
     }
 
