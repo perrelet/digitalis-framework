@@ -45,8 +45,9 @@ abstract class Post_Type extends Singleton {
 
         // CRUD
 
-        if (method_exists($this, 'after_insert')) add_action('wp_after_insert_post', [$this, 'after_insert_wrap'], 10, 4);
-        if (method_exists($this, 'after_delete')) add_action('after_delete_post',    [$this, 'after_delete_wrap'], 10, 2);
+        if (method_exists($this, 'filter_post_data')) add_filter('wp_insert_post_data',  [$this, 'filter_post_data_wrap'], 10, 4);
+        if (method_exists($this, 'after_insert'))     add_action('wp_after_insert_post', [$this, 'after_insert_wrap'], 10, 4);
+        if (method_exists($this, 'after_delete'))     add_action('after_delete_post',    [$this, 'after_delete_wrap'], 10, 2);
 
         // Front
 
@@ -507,6 +508,16 @@ abstract class Post_Type extends Singleton {
     }
 
     //
+
+    public function filter_post_data_wrap ($data, $postarr, $unsanitized_postarr, $update) {
+    
+        if ($data['post_type'] != $this->slug) return $data;
+
+        $this->filter_post_data($data, $postarr, $unsanitized_postarr, $update);
+
+        return $data;
+    
+    }
 
     public function after_insert_wrap ($post_id, $post, $update, $post_before) {
 
