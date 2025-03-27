@@ -149,7 +149,48 @@ class Table extends \Digitalis\Component {
 
     public function condition () {
         
-        return is_array($tthis->params['rows']);
+        return is_array($this->rows);
+    
+    }
+
+    public function add_rows ($rows, $class = [], $atts = []) {
+    
+        foreach ($rows as $row) if (is_array($row) && isset($row['row'])) {
+
+            $this->add_row(
+                $row['row'],
+                $row['class'] ?? ($row['classes']    ?? ($class[$i] ?? [])),
+                $row['atts']  ?? ($row['attributes'] ?? ($atts[$i]  ?? [])),
+            );
+
+        } else {
+
+            $this->add_row($row);
+
+        }
+    
+    }
+
+    public function add_row ($row, $class = [], $atts = []) {
+
+        $i = count($this->rows);
+
+        $this->rows[$i] = $row;
+
+        $class = (array) $class;
+        $atts  = (array) $atts;
+
+        if ($class) $this->row_classes[$i] = array_merge($this->row_classes[$i] ?? [], $class);
+        if ($atts)  $this->row_atts[$i]    = array_merge($this->row_atts[$i]    ?? [], $atts);
+    
+    }
+
+    public function remove_headers () {
+    
+        $this->first_row = false;
+        $this->first_col = false;
+        $this->last_col  = false;
+        $this->last_row  = false;
     
     }
 
