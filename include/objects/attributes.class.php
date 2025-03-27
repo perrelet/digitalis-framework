@@ -4,28 +4,29 @@ namespace Digitalis;
 
 class Attributes implements \ArrayAccess {
 
-    protected $attributes = [];
-    protected $quote      = "'";
+    protected $attrs = [];
+    protected $quote = "'";
 
-    protected $string     = null;
+    protected $string = null;
 
-    public function __construct (array $attributes = []) {
+    public function __construct (array $attrs = []) {
     
-        $this->attributes = $attributes;
+        $this->attrs = $attrs;
     
     }
 
-    public function __toString() {
+    public function __toString () {
 
         if (is_null($this->string)) {
 
             $this->string = '';
 
-            foreach ($this->attributes as $name => $value) {
+            foreach ($this->attrs as $name => $value) {
     
                 if (is_array($value)) $value = ($name == 'style') ? $this->generate_css($value) : implode(' ',  array_unique($value));
-    
-                $this->string .= ($this->string ? ' ' : '') . "{$name}={$this->quote}{$value}{$this->quote}";
+
+                $this->string .= ($this->string ? ' ' : '') . $name;
+                if ($value) $this->string .= "={$this->quote}{$value}{$this->quote}";
     
             }
 
@@ -44,39 +45,40 @@ class Attributes implements \ArrayAccess {
 
     //
 
-    public function get_attributes () {
+    public function get_attrs () {
 
-        return $this->attributes;
+        return $this->attrs;
 
     }
 
-    public function set_attributes ($attributes) {
+    public function set_attrs ($attrs) {
 
-        $this->string     = null;
-        $this->attributes = $attributes;
+        $this->string = null;
+        $this->attrs  = $attrs;
         return $this;
 
     }
 
-    public function get_attribute ($attribute) {
+    public function get_attr ($attr) {
     
-        return $this->attributes[$attribute] ?? null;
+        return $this->attrs[$attr] ?? null;
     
     }
 
-    public function set_attribute ($attribute, $value = '') {
+    public function set_attr ($attr, $value = '') {
 
         $this->string = null;
 
-        if ($attribute instanceof self) $attribute = $attribute->get_attributes();
+        if ($attr instanceof self) $attr = $attr->get_attrs();
 
-        if (is_array($attribute)) {
+        if (is_array($attr)) {
 
-            foreach ($attribute as $attr => $value) $this->set_attribute($attr, $value);
+            foreach ($attr as $name => $value) $this->set_attr($name, $value);
 
-        } else {
+        } else if ($attr) {
 
-            if ($attribute) $this->attributes[$attribute] = $value;
+            if (!is_scalar($value)) $value = json_encode($value);
+            $this->attrs[$attr] = $value;
 
         }
 
@@ -84,51 +86,58 @@ class Attributes implements \ArrayAccess {
     
     }
 
-    public function remove_attribute ($attribute) {
+    public function remove_attr ($attr) {
     
         $this->string = null;
-        unset($this->attributes[$attribute]);
+        unset($this->attrs[$attr]);
         return $this;
     
     }
 
-    public function has_attribute ($attribute) {
+    public function has_attr ($attr) {
     
-        return isset($this->attributes[$attribute]);
+        return isset($this->attrs[$attr]);
     
     }
+
+    public function get_attributes   () { return call_user_func_array([$this, 'get_attrs'], func_get_args());   }
+    public function set_attributes   () { return call_user_func_array([$this, 'set_attrs'], func_get_args());   }
+    public function get_attribute    () { return call_user_func_array([$this, 'get_attr'], func_get_args());    }
+    public function set_attribute    () { return call_user_func_array([$this, 'set_attr'], func_get_args());    }
+    public function remove_attribute () { return call_user_func_array([$this, 'remove_attr'], func_get_args()); }
+    public function has_attribute    () { return call_user_func_array([$this, 'has_attr'], func_get_args());    }
 
     //
 
     public function get_id () {
     
-        return $this->get_attribute('id');
+        return $this->get_attr('id');
     
     }
 
     public function set_id ($id) {
     
-        if ($id) $this->set_attribute('id', $id);
+        if ($id) $this->set_attr('id', $id);
         return $this;
     
     }
 
     public function has_id () {
     
-        return $this->has_attribute('id');
+        return $this->has_attr('id');
     
     }
 
     public function get_class () {
 
-        return $this->get_attribute('class');
+        return $this->get_attr('class');
 
     }
 
     public function has_class ($class) {
 
-        if (!isset($this->attributes['class'])) return false;
-        return in_array($class, $this->attributes['class']);
+        if (!isset($this->attrs['class'])) return false;
+        return in_array($class, $this->attrs['class']);
 
     }
 
@@ -145,8 +154,8 @@ class Attributes implements \ArrayAccess {
                 if ($class) {
 
                     $this->string = null;
-                    if (!isset($this->attributes['class'])) $this->attributes['class'] = [];
-                    $this->attributes['class'][] = $class;
+                    if (!isset($this->attrs['class'])) $this->attrs['class'] = [];
+                    $this->attrs['class'][] = $class;
 
                 }
 
@@ -160,7 +169,7 @@ class Attributes implements \ArrayAccess {
 
     public function get_style () {
     
-        return $this->get_attribute('style');
+        return $this->get_attr('style');
     
     }
 
@@ -170,15 +179,15 @@ class Attributes implements \ArrayAccess {
 
         $this->string = null;
 
-        if (!isset($this->attributes['style'])) $this->attributes['style'] = [];
+        if (!isset($this->attrs['style'])) $this->attrs['style'] = [];
 
         if (is_array($property)) {
 
-            $this->attributes['style'] = array_merge($this->attributes['style'], $property);
+            $this->attrs['style'] = array_merge($this->attrs['style'], $property);
 
         } else {
 
-            $this->attributes['style'][$property] = $value;
+            $this->attrs['style'][$property] = $value;
 
         }
 
@@ -186,9 +195,22 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    public function set_data ($attribute, $value = '') {
+    public function add_data ($attr, $value = '') {
+
+        if (is_array($attr)) {
+
+            $attr = array_combine(
+                array_map(fn($key) => 'data-' . $key, array_keys($attr)), 
+                array_values($attr)
+            );
+
+        } else {
+
+            $attr = 'data-' . $attr;
+
+        }
     
-        return $this->set_attribute('data-' . $attribute, $value);
+        return $this->set_attr($attr, $value);
     
     }
 
@@ -204,29 +226,63 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    //
+    // Property Overloading
 
-    public function offsetGet ($attribute) {
+    public function __get ($attr) {
 
-        return $this->get_attribute($attribute);
-
-    }
-
-    public function offsetSet ($attribute, $value) {
-
-        $this->set_attribute($attribute, $value);
+        return $this->get_attr($attr);
 
     }
 
-    public function offsetUnset ($attribute) {
+    public function __set ($attr, $value) {
 
-        $this->remove_attribute($attribute);
+        if (is_null($attr)) {
+
+            return $this->set_attr($value);
+
+        } else {
+
+            return $this->set_attr($attr, $value);
+
+        }
 
     }
 
-    public function offsetExists ($attribute) {
+    public function __unset ($attr) {
 
-        return $this->has_attribute($attribute);
+        return $this->remove_attr($attr);
+
+    }
+
+    public function __isset ($attr) {
+
+        return $this->has_attr($attr);
+
+    }
+
+    // ArrayAccess
+
+    public function offsetGet ($attr) {
+
+        return $this->__get($attr);
+
+    }
+
+    public function offsetSet ($attr, $value) {
+
+        $this->__set($attr, $value);
+
+    }
+
+    public function offsetUnset ($attr) {
+
+        $this->__unset($attr);
+
+    }
+
+    public function offsetExists ($attr) {
+
+        return $this->__isset($attr);
 
     }
 
