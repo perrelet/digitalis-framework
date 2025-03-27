@@ -41,7 +41,7 @@ Trait Inherits_Props {
 
                     $value[$key] = array_merge((array) $class::$$prop[$key], (array) $value[$key]);
                     
-                    if (array_is_list($value[$key])) $value[$key] = array_values(array_unique($value[$key], SORT_REGULAR));
+                    static::make_list_unique($value[$key]);
 
                 }
 
@@ -51,7 +51,9 @@ Trait Inherits_Props {
 
         }
 
-        return array_is_list($value) ? array_values(array_unique($value, SORT_REGULAR)) : $value;
+        static::make_list_unique($value);
+
+        return $value;
     
     }
 
@@ -64,11 +66,17 @@ Trait Inherits_Props {
             if (!isset($args[$key]) || !is_array($args[$key])) continue;
 
             $args[$key] = wp_parse_args((array) $args[$key], (array) ($defaults[$key] ?? []));
-            if (array_is_list($args[$key])) $args[$key] = array_values(array_unique($args[$key], SORT_REGULAR));
+            static::make_list_unique($args[$key]);
 
         }
 
         return $args;
+    
+    }
+
+    protected static function make_list_unique (&$array) {
+    
+        if (array_is_list($array)) $array = array_values(array_unique($array, SORT_REGULAR));
     
     }
 
