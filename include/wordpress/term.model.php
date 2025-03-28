@@ -49,7 +49,7 @@ class Term extends Model {
         if (!$wp_term = get_term($id, static::$taxonomy))                 return false;
         if (static::$taxonomy && $wp_term->taxonomy != static::$taxonomy) return false;
 
-        return true;
+        return (is_int($id) && ($id > 0));
 
     }
 
@@ -64,7 +64,7 @@ class Term extends Model {
         if (!$wp_term = get_term_by($field, $value, static::$taxonomy)) return;
         if (!$term    = static::get_instance($wp_term->term_id))        return;
 
-        $term->init_term($wp_term);
+        $term->init_wp_model($wp_term);
 
         return $term;
 
@@ -168,11 +168,11 @@ class Term extends Model {
             $this->data->term_id  = $this->uid;
             $this->data->taxonomy = static::$taxonomy;
 
-            $this->init_term('new', $this->data);
+            $this->init_wp_model('new', $this->data);
 
         } else {
 
-            $this->init_term($this->id);
+            $this->init_wp_model($this->id);
 
         }
 

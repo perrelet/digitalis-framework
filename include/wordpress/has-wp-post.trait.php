@@ -9,7 +9,7 @@ trait Has_WP_Post {
 
     protected $wp_post;
 
-    protected function init_post ($post, $data = null) {
+    protected function init_wp_model ($post, $data = null) {
 
         $post_id = false;
 

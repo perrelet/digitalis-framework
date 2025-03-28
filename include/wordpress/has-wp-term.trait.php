@@ -11,7 +11,7 @@ trait Has_WP_Term {
 
     protected $wp_term;
 
-    protected function init_term ($term, $data = null) {
+    protected function init_wp_model ($term, $data = null) {
 
         $term_id = false;
 

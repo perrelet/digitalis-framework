@@ -105,7 +105,7 @@ class Post extends Model {
         if (!$wp_post = get_page_by_path($slug, 'OBJECT', $post_type)) return;
         if (!$post = static::get_instance($wp_post->ID))               return;
 
-        $post->init_post($post);
+        $post->init_wp_model($post);
 
         return $post;
     
@@ -173,11 +173,11 @@ class Post extends Model {
             if (static::$post_type) $this->data->post_type = static::$post_type;
             if (!property_exists($this->data, 'post_content')) $this->data->post_content = '';
 
-            $this->init_post('new', $this->data);
+            $this->init_wp_model('new', $this->data);
 
         } else {
 
-            $this->init_post($this->id);
+            $this->init_wp_model($this->id);
 
         }
 
