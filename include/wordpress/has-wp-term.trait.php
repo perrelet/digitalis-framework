@@ -73,44 +73,6 @@ trait Has_WP_Term {
 
     //
 
-    public function get_meta ($key, $single = true) {
-
-        return get_term_meta($this->wp_term->term_id, $key, $single);
-
-     }
-
-    public function add_meta ($key, $value, $unique = false) {
-
-        return add_term_meta($this->wp_term->term_id, $key, $value, $unique);
-
-    }
-
-    public function update_meta ($key, $value, $prev_value = '') {
-
-        return update_term_meta($this->wp_term->term_id, $key, $value, $prev_value);
-
-    }
-
-    public function get_field ($selector, $format_value = true) {
-
-        return get_field($selector, "term_{$this->wp_term->term_id}", $format_value);
-
-    }
-
-    public function update_field ($selector, $value) {
-
-        return update_field($selector, $value, "term_{$this->wp_term->term_id}");
-
-    }
-
-    public function update_fields ($data) {
-    
-        if ($data) foreach ($data as $selector => $value) $this->update_field($selector, $value);
-    
-    }
-
-    //
-
     public function get_slug () {
 
         return $this->get_wp_term()->slug;
@@ -187,6 +149,44 @@ trait Has_WP_Term {
     public function get_feed ($feed = '') {
     
         return get_term_feed_link($this->wp_term->term_id, '', $feed);
+    
+    }
+
+    // Meta
+
+    public function get_meta ($key, $single = true) {
+
+        return get_term_meta($this->wp_term->term_id, $key, $single);
+
+    }
+
+    public function add_meta ($key, $value, $unique = false) {
+
+        return add_term_meta($this->wp_term->term_id, $key, $value, $unique);
+
+    }
+
+    public function update_meta ($key, $value, $prev_value = '') {
+
+        return update_term_meta($this->wp_term->term_id, $key, $value, $prev_value);
+
+    }
+
+    public function get_field ($selector, $format_value = true) {
+
+        return get_field($selector, "term_{$this->wp_term->term_id}", $format_value);
+
+    }
+
+    public function update_field ($selector, $value) {
+
+        return update_field($selector, $value, "term_{$this->wp_term->term_id}");
+
+    }
+
+    public function update_fields ($data) {
+    
+        if ($data) foreach ($data as $selector => $value) $this->update_field($selector, $value);
     
     }
 
