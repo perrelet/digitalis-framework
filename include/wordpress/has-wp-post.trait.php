@@ -7,7 +7,7 @@ use WP_Post;
 
 trait Has_WP_Post {
 
-    use Has_ACF_Fields;
+    use Has_WP_Meta, Has_ACF_Fields;
 
     protected $wp_post;
 
@@ -30,12 +30,6 @@ trait Has_WP_Post {
 
     }
 
-    /* public function get_id() {
-
-        return $this->wp_post->ID; // Pass the id directly from the wp_post instance to handle new posts. ($this->wp_post->ID = random integer)
-
-    } */
-
     public function get_wp_post () {
 
         return $this->wp_post;
@@ -49,7 +43,21 @@ trait Has_WP_Post {
 
     }
 
-    // Access Methods
+    // Traits
+
+    public function get_meta_type () {
+
+        return 'post';
+
+    }
+
+    public function get_acf_id () {
+
+        return $this->is_new() ? null : $this->id;
+
+    }
+
+    // Encapsulation
 
     public function get_slug () {
         
@@ -453,46 +461,6 @@ trait Has_WP_Post {
         $this->wp_post->post_password = $password;
         return $this;
     
-    }
-
-    // Meta
-
-    public function get_meta ($key = '', $single = false) {
-
-        return $this->is_new() ? false : get_post_meta($this->wp_post->ID, $key, $single);
-
-    }
-
-    public function add_meta ($key, $value, $unique = false) {
-
-        return $this->is_new() ? false : add_post_meta($this->wp_post->ID, $key, $value, $unique);
-
-    }
-
-    public function update_meta ($key, $value, $prev_value = '') {
-
-        return $this->is_new() ? false : update_post_meta($this->wp_post->ID, $key, $value, $prev_value);
-
-    }
-
-    public function update_metas ($data) {
-    
-        if ($data) foreach ($data as $key => $value) $this->update_meta($key, $value);
-    
-    }
-
-    public function delete_meta ($key, $value = '') {
-    
-        return $this->is_new() ? false : delete_post_meta($this->wp_post->ID, $key, $value);
-    
-    }
-
-    // ACF
-
-    public function get_acf_id () {
-
-        return $this->is_new() ? null : $this->id;
-
     }
 
 }

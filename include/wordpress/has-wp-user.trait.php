@@ -7,7 +7,7 @@ use \DateTime;
 
 trait Has_WP_User {
 
-    use Has_ACF_Fields;
+    use Has_WP_Meta, Has_ACF_Fields;
 
     protected $wp_user;
 
@@ -46,7 +46,21 @@ trait Has_WP_User {
 
     }
 
-    //
+    // Traits
+
+    public function get_meta_type () {
+
+        return 'user';
+
+    }
+
+    public function get_acf_id () {
+
+        return $this->is_new() ? null : 'user_' . $this->id;
+
+    }
+
+    // Encapsulation
 
     public function get_role () {
     
@@ -208,46 +222,6 @@ trait Has_WP_User {
         
         return get_the_author_meta('admin_color', $this->id);
         
-    }
-
-    // Meta
-
-    public function get_meta ($key, $single = true) {
-
-        return $this->is_new() ? null : get_user_meta($this->id, $key, $single);
-
-    }
-
-    public function add_meta ($key, $value, $unique = false) {
-
-        return $this->is_new() ? null : add_user_meta($this->id, $key, $value, $unique);
-
-    }
-
-    public function update_meta ($key, $value, $prev_value = '') {
-
-        return $this->is_new() ? null : update_user_meta($this->id, $key, $value, $prev_value);
-
-    }
-
-    public function update_metas ($data) {
-    
-        if (is_array($data)) foreach ($data as $key => $value) $this->update_meta($key, $value);
-    
-    }
-
-    public function delete_meta ($key, $value = '') {
-
-        return $this->is_new() ? null : delete_user_meta($this->id, $key, $value);
-
-    }
-
-    // ACF
-
-    public function get_acf_id () {
-
-        return $this->is_new() ? null : 'user_' . $this->id;
-
     }
 
 }

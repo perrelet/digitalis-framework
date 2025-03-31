@@ -68,6 +68,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.feature.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-meta.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-term.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-user.trait.php';
