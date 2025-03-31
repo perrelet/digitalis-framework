@@ -405,41 +405,99 @@ trait Has_WP_Post {
     // Post Parent
 
     public function has_post_parent () {
-        
+
         return has_post_parent($this->wp_post);
-        
+
     }
 
     public function get_post_parent () {
-        
+
         return get_post_parent($this->wp_post);
-        
+
     }
 
     public function get_parent_id () {
-    
-        return ($parent = $this->get_post_parent()) ? $parent->ID : null;
-    
+
+        return $this->wp_post->post_parent;
+
     }
 
     public function set_parent_id ($parent_id) {
-    
+
         $this->wp_post->post_parent = (int) $parent_id;
         return $this;
-    
+
     }
 
     public function get_parent () {
-    
+
         return ($parent_id = $this->get_parent_id()) ? static::get_instance($parent_id) : null;
-    
+
     }
 
     public function set_parent ($post) {
-    
+
         if (($post instanceof Post) && ($post_id = $post->get_id())) $this->set_parent_id($post_id);
         return $this;
+
+    }
+
+    // Revisions
+
+    public function is_revisions_enabled () {
+
+        return wp_revisions_enabled($this->wp_post);
+
+    }
+
+    public function get_max_revisions () {
     
+        return wp_revisions_to_keep($this->wp_post);
+    
+    }
+
+    public function get_revisions () {
+
+        return Revision::get_instances(wp_get_post_revisions($this->wp_post, $args = null));
+
+    }
+
+    public function get_latest_revision_id_and_total_count () {
+
+        return wp_get_latest_revision_id_and_total_count($this->wp_post);
+
+    }
+
+    public function get_latest_revision_id () {
+
+        $info = $this->get_latest_revision_id_and_total_count();
+        return is_array($info) ? ($info['latest_id'] ?? null) : null;
+
+    }
+
+    public function get_latest_revision () {
+
+        return ($id = $this->get_latest_revision_id()) ? Revision::get_instance($id) : null;
+
+    }
+
+    public function get_revision_count () {
+
+        $info = $this->get_latest_revision_id_and_total_count();
+        return is_array($info) ? ($info['count'] ?? null) : null;
+
+    }
+
+    public function get_revisions_url () {
+
+        return wp_get_post_revisions_url($this->wp_post);
+
+    }
+
+    public function get_autosave ($user_id = 0) {
+
+        return wp_get_post_autosave($this->wp_post->ID, $user_id);
+
     }
 
     // Password Protection
