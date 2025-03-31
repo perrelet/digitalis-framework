@@ -5,74 +5,44 @@ namespace Digitalis;
 use \WP_User;
 use \DateTime;
 
-class User extends Model {
-    use Has_WP_User;
+trait Has_WP_User {
 
-    protected static $role = false; // string|false|array - Validate by user role. Leave false to allow any role.
+    protected $wp_user;
 
-    public static function extract_id ($data = null) {
+    protected function init_wp_model ($data) {
 
-        if (is_null($data))           return get_current_user_id();
-        if ($data instanceof WP_User) return $data->ID;
+        if (is_int($data)) {
 
-        return (int) parent::extract_id($data);
+            $this->set_wp_user(get_user_by('id', $data));
 
-    }
+        } else if ($data instanceof WP_User) {
 
-    public static function validate_id ($id) {
+            $this->set_wp_user($data);
 
-        //if ($id == 'new') return true;
+        } else {
 
-        if (static::$role) {
-
-            if (!is_array(static::$role))                         static::$role = [static::$role];
-            if (!$wp_user = get_user_by('id', $id))               return false;
-            if (!array_intersect(static::$role, $wp_user->roles)) return false;
+            $this->set_wp_user(new WP_User($data));
+            //if ($this->uid) wp_cache_set($this->uid, $this->get_wp_post(), 'posts');
 
         }
 
-        return (is_int($id) && ($id > 0));
+    }
+
+    public function get_wp_user () {
+
+        if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->id);
+
+        return $this->wp_user;
 
     }
 
-    public static function get_specificity () {
-    
-        return (int) ((bool) static::$role);
-    
-    }
+    public function set_wp_user ($wp_user) {
 
-    public static function get_by ($field, $value) {
+        if (!($wp_user instanceof WP_User)) return;
 
-        if (!$wp_user = get_user_by($field, $value)) return;
-        if (!$user = static::get_instance($wp_user->ID)) return;
-
-        $user->set_wp_user($wp_user);
-
-        return $user;
+        $this->wp_user = $wp_user;
 
     }
-
-    public static function get_by_email ($email) {
-
-        return static::get_by('email', $email);
-
-    }
-
-    public static function get_by_login ($login) {
-
-        return static::get_by('login', $login);
-
-    }
-
-    public static function get_by_slug ($slug) {
-
-        return static::get_by('slug', $slug);
-
-    }
-
-    //
-
-    protected $wp_user;
 
     //
 
@@ -94,49 +64,9 @@ class User extends Model {
 
     }
 
-    public function get_meta ($key, $single = true) {
-
-       return get_user_meta($this->id, $key, $single);
-
-    }
-
-    public function update_meta ($key, $value, $prev_value = '') {
-
-        return update_user_meta($this->id, $key, $value, $prev_value);
- 
-    }
-
-    public function add_meta ($key, $value, $unique = false) {
-
-        return add_user_meta($this->id, $key, $value, $unique);
- 
-    }
-
-    public function get_field ($selector, $format_value = true) {
-
-        return get_field($selector, "user_{$this->get_id()}", $format_value);
-
-    }
-
     public function update_field ($selector, $value) {
 
         return update_field($selector, $value, "user_{$this->get_id()}");
-
-    }
-
-    public function get_wp_user () {
-
-        if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->id);
-
-        return $this->wp_user;
-
-    }
-
-    public function set_wp_user ($wp_user) {
-
-        if (!($wp_user instanceof WP_User)) return;
-
-        $this->wp_user = $wp_user;
 
     }
 
@@ -278,15 +208,29 @@ class User extends Model {
         
     }
 
-    // CRUD
+    // Meta
 
-    public function save ($user_data = []) {
+    public function get_meta ($key, $single = true) {
 
-        $user_data['ID'] = $this->get_id();
+        return get_user_meta($this->id, $key, $single);
 
-        return wp_update_user($user_data);
+    }
 
-        //TODO: wp_insert_user
+    public function add_meta ($key, $value, $unique = false) {
+
+        return add_user_meta($this->id, $key, $value, $unique);
+
+    }
+
+    public function update_meta ($key, $value, $prev_value = '') {
+
+        return update_user_meta($this->id, $key, $value, $prev_value);
+
+    }
+
+    public function get_field ($selector, $format_value = true) {
+
+        return get_field($selector, "user_{$this->get_id()}", $format_value);
 
     }
 
