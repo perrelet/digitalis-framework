@@ -17,11 +17,11 @@ class Order_Item extends Model {
 
     }
 
-    public static function validate ($data, $uid, $id) {
+    public static function validate ($id) {
 
         if (static::$product_type) {
 
-            $item = ($data instanceof WC_Order_Item) ? $data : new WC_Order_Item_Product($data);
+            $item = new WC_Order_Item_Product($id);
             return ($item && ($product = $item->get_product()) && ($product->get_type() == static::$product_type));
 
         } else {
@@ -49,22 +49,17 @@ class Order_Item extends Model {
     protected $item;
     protected $siblings;
 
-    public function __construct ($data = null, $uid = null, $id = null) {
+    protected function build_instance ($data) {
 
-        parent::__construct($data, $uid, $id);
+        if (is_array($data)) $data = (object) $data;
 
-        if ($this->data instanceof WC_Order_Item) {
+        $this->item = new \WC_Order_Item_Product($data);
 
-            $this->item = $this->data;
+    }
 
-        } else {
+    protected function hydrate_instance () {
 
-            // https://github.com/woocommerce/woocommerce/issues/35548
-            // https://github.com/woocommerce/woocommerce/issues/30603
-
-            $this->item = new WC_Order_Item_Product($this->data);
-
-        }
+        $this->item = new \WC_Order_Item_Product($this->id);
 
     }
 

@@ -17,11 +17,9 @@ class Order extends Model {
 
     }
 
-    public static function validate ($data, $uid, $id) {
+    public static function validate_id ($id) {
 
-        if (!($data instanceof WC_Order)) return (bool) wc_get_order($id);
-
-        return parent::validate($data, $uid, $id);
+        return (bool) wc_get_order($id);
 
     }
 
@@ -34,19 +32,17 @@ class Order extends Model {
     
     }
 
-    public function __construct ($data = null, $uid = null, $id = null) {
+    protected function build_instance ($data) {
 
-        parent::__construct($data, $uid, $id);
+        if (is_array($data)) $data = (object) $data;
 
-        if ($this->data instanceof WC_Order) {
+        $this->wc_order = new \WC_Order($data);
 
-            $this->wc_order = $this->data;
+    }
 
-        } else {
+    protected function hydrate_instance () {
 
-            $this->wc_order = wc_get_order($this->id);
-
-        }
+        $this->wc_order = wc_get_order($this->id);
 
     }
 

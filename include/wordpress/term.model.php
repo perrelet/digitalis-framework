@@ -5,7 +5,6 @@ namespace Digitalis;
 use stdClass;
 use WP_Term;
 use WP_Term_Query;
-use WP_Error;
 
 class Term extends Model {
 
@@ -19,33 +18,26 @@ class Term extends Model {
 
     }
 
-    public static function extract_id ($data = null) {
-
+    public static function get_global_id () {
+    
         global $wp_query;
+
         $wp_term = ($wp_query && ($term = $wp_query->get_queried_object()) instanceof WP_Term) ? $term : null;
 
-        if (is_null($data) && $wp_term) return $wp_term->term_id;
-        if ($data instanceof WP_Term)   return $data->term_id;
-        if ($data instanceof stdClass)  return 'new';
-        if ($data == 'new')             return 'new';
-
-        return (int) parent::extract_id($data);
-
+        if ($wp_term) return $wp_term->term_id;
+    
     }
 
-    public static function extract_uid ($id, $data = null) {
+    public static function extract_id ($data = null) {
 
-        if ($id == 'new') return random_int(1000000000, PHP_INT_MAX);
-
-        return parent::extract_uid($id, $data);
+        if ($data instanceof WP_Term) return $data->term_id;
+        
+        return (int) parent::extract_id($data);
 
     }
 
     public static function validate_id ($id) {
 
-        if ($id == 'new') return true;
-
-        if (!is_int($id) || ($id <= 0))                                   return false;
         if (!$wp_term = get_term($id, static::$taxonomy))                 return false;
         if (static::$taxonomy && $wp_term->taxonomy != static::$taxonomy) return false;
 
@@ -63,8 +55,6 @@ class Term extends Model {
 
         if (!$wp_term = get_term_by($field, $value, static::$taxonomy)) return;
         if (!$term    = static::get_instance($wp_term->term_id))        return;
-
-        $term->init_wp_model($wp_term);
 
         return $term;
 
@@ -154,27 +144,22 @@ class Term extends Model {
 
     //
 
-    protected $is_new;
     protected $children = [];
 
-    public function __construct ($data = null, $uid = null, $id = null) {
+    protected function build_instance ($data) {
 
-        parent::__construct($data, $uid, $id);
+        if (is_array($data)) $data = (object) $data;
+        if (is_null($data))  $data = new stdClass();
 
-        if ($this->id == 'new') {
+        if (static::$taxonomy) $data->taxonomy = static::$taxonomy;
 
-            if (!is_object($this->data)) $this->data = new stdClass();
+        $this->init_wp_model($data);
 
-            $this->data->term_id  = $this->uid;
-            $this->data->taxonomy = static::$taxonomy;
+    }
 
-            $this->init_wp_model('new', $this->data);
+    protected function hydrate_instance () {
 
-        } else {
-
-            $this->init_wp_model($this->id);
-
-        }
+        $this->init_wp_model($this->id);
 
     }
 
@@ -182,14 +167,14 @@ class Term extends Model {
 
     public function reload () {
     
-        $this->wp_term = get_term($this->get_id(), static::$taxonomy);
+        if ($this->id) $this->init_wp_model($this->id);
     
     }
 
     public function save ($term_array = []) {
 
         $taxonomy = static::$taxonomy ? static::$taxonomy : ($term_array['taxonomy'] ?? false);
-        if (!$taxonomy) return;
+        if (!$taxonomy) return; // TODO: HANDLE ERROR
 
         $term_array = wp_parse_args($term_array, get_object_vars($this->wp_term));
 
@@ -223,7 +208,7 @@ class Term extends Model {
     public function delete ($args = []) {
 
         $taxonomy;
-        if (!$taxonomy = static::$taxonomy ? static::$taxonomy : ($args['taxonomy'] ?? false)) return;
+        if (!$taxonomy = static::$taxonomy ? static::$taxonomy : ($args['taxonomy'] ?? false)) return; // TODO: HANDLE ERROR
     
         return wp_delete_term($this->wp_term->term_id, $taxonomy, $args);
     

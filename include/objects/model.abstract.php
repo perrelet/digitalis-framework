@@ -19,18 +19,13 @@ class Model extends Factory {
     public static function extract_id ($data = null) {
 
         if ($data instanceof self) return $data->get_id();
+        if (!is_scalar($data))     return null;
 
         return $data;
 
     }
 
-    public static function extract_uid ($id, $data = null) {
-
-        return $id;
-
-    }
-
-    public static function validate ($data, $uid, $id) {
+    public static function validate ($id) {
 
         return true;
 
@@ -54,7 +49,7 @@ class Model extends Factory {
     
     }
 
-    public static function get_class_name ($data, $uid, $id, $auto_resolve = null) {
+    public static function get_class_name ($id, $auto_resolve = null) {
 
         $class_name = static::class;
 
@@ -79,50 +74,46 @@ class Model extends Factory {
 
         return Call::get_class_name($class_name, [
             'id'   => $id,
-            'uid'  => $uid,
-            'data' => $data,
         ]);
 
     }
 
     public static function get_instance ($data = null, $auto_resolve = null) {
 
-        static::process_data($data);
-        $id  = static::extract_id($data);
-        $uid = static::extract_uid($id, $data);
+        static::prepare_data($data);
 
-        if (is_null($uid) || is_null($id)) return null;
+        if (is_null($data) && method_exists(static::class, 'get_global_id')) {
+            $id = static::get_global_id();
+        } else {
+            $id = static::extract_id($data);
+        }
 
-        $class_name = static::get_class_name($data, $uid, $id, $auto_resolve);
+        if (is_null($id)) return null;
+
+        $class_name = static::get_class_name($id, $auto_resolve);
 
         if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
         
-        if (!isset(self::$instances[$class_name][$uid])) {
+        if (!isset(self::$instances[$class_name][$id])) {
             
-            if (static::validate($data, $uid, $id) && static::validate_id($id)) {
+            if (static::validate($id) && static::validate_id($id)) {
 
-                $model = new $class_name($data, $uid, $id);
+                $model = new $class_name($id);
                 $model->init();
 
-                self::$instances[$class_name][$uid] = $model;
+                self::$instances[$class_name][$id] = $model;
 
             } else {
 
-                self::$instances[$class_name][$uid] = null;
+                self::$instances[$class_name][$id] = null;
 
             }
 
         }
 
-        return self::$instances[$class_name][$uid];
+        return self::$instances[$class_name][$id];
 
     }
-
-    /* public static function inst ($data = null) {
-        
-        return self::get_instance($data);
-        
-    } */
 
     public static function get_instances ($ids) {
 
@@ -162,25 +153,28 @@ class Model extends Factory {
 
     //
 
-    protected $data;
     protected $id;
-    protected $uid;
+    protected $is_new;
 
-    public function __construct ($data = null, $uid = null, $id = null) {
+    public function __construct ($data = null) {
 
-        if (is_null($uid)) {
+        $this->is_new = !is_int($data);
 
-            static::process_data($data);
-            $id  = static::extract_id($data);
-            $uid = static::extract_uid($id, $data);
+        if ($this->is_new) {
+
+            $this->build_instance($data);
+
+        } else {
+
+            $this->id = $data;
+            $this->hydrate_instance();
 
         }
 
-        $this->data = $data;
-        $this->uid  = $uid;
-        $this->id   = $id;
-
     }
+
+    protected function build_instance   ($data) {}
+    protected function hydrate_instance ()      {}
 
     public function init () {
 
@@ -196,22 +190,16 @@ class Model extends Factory {
 
     }
 
-    public function get_uid () {
-
-        return $this->uid;
-
-    }
-
-    public function get_data () {
-
-        return $this->data;
-
-    }
-
     public function is_first_instance () {
 
-        return $this->id == array_key_first(self::$instances[static::get_class_name($this->data, $this->uid, $this->id)]);
+        return $this->id == array_key_first(self::$instances[static::get_class_name($this->id)]);
 
+    }
+
+    public function is_new () {
+    
+        return $this->is_new;
+    
     }
 
     public function get_global_var () {

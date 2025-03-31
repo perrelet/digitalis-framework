@@ -23,30 +23,25 @@ class Post extends Model {
 
     }
 
-    public static function extract_id ($data = null) {
-
+    public static function get_global_id () {
+    
         global $post;
 
-        if (is_null($data) && $post)   return $post->ID;
-        if ($data instanceof WP_Post)  return $data->ID;
-        if ($data instanceof stdClass) return 'new';
-        if ($data == 'new')            return 'new';
+        if ($post instanceof WP_Post) return $post->ID;
+    
+    }
+
+    public static function extract_id ($data = null) {
+
+        if (is_object($data) && property_exists($data, 'ID'))   return $data->ID;
+        if (is_object($data) && method_exists($data, 'get_id')) return $data->get_id();
 
         return (int) parent::extract_id($data);
 
     }
 
-    public static function extract_uid ($id, $data = null) {
-
-        if ($id == 'new') return random_int(1000000000, PHP_INT_MAX);
-
-        return parent::extract_uid($id, $data);
-
-    }
-
     public static function validate_id ($id) {
 
-        if ($id == 'new')                                                        return true;
         if (static::$post_type && (get_post_type($id) != static::$post_type))    return false;
         if (static::$term && (!has_term(static::$term, static::$taxonomy, $id))) return false;
 
@@ -105,8 +100,6 @@ class Post extends Model {
         if (!$wp_post = get_page_by_path($slug, 'OBJECT', $post_type)) return;
         if (!$post = static::get_instance($wp_post->ID))               return;
 
-        $post->init_wp_model($post);
-
         return $post;
     
     }
@@ -159,27 +152,21 @@ class Post extends Model {
 
     //
 
-    protected $is_new;
+    protected function build_instance ($data) {
 
-    public function __construct ($data = null, $uid = null, $id = null) {
+        if (is_array($data)) $data = (object) $data;
+        if (is_null($data))  $data = new stdClass();
 
-        parent::__construct($data, $uid, $id);
+        if (static::$post_type)                      $data->post_type    = static::$post_type;
+        if (!property_exists($data, 'post_content')) $data->post_content = '';
 
-        if ($this->id == 'new') {
+        $this->init_wp_model($data);
 
-            if (!is_object($this->data)) $this->data = new stdClass();
+    }
 
-            $this->data->ID = $this->uid;
-            if (static::$post_type) $this->data->post_type = static::$post_type;
-            if (!property_exists($this->data, 'post_content')) $this->data->post_content = '';
+    protected function hydrate_instance () {
 
-            $this->init_wp_model('new', $this->data);
-
-        } else {
-
-            $this->init_wp_model($this->id);
-
-        }
+        $this->init_wp_model($this->id);
 
     }
 
@@ -193,7 +180,7 @@ class Post extends Model {
 
     public function reload () {
     
-        $this->wp_post       = get_post($this->get_id());
+        if ($this->id) $this->init_wp_model($this->id);
         $this->content_cache = [];
     
     }
@@ -223,6 +210,7 @@ class Post extends Model {
         $this->is_new      = false;
         $this->wp_post->ID = $post_id;
         $this->id          = $post_id;
+        $this->reload();
 
         if ($tax_input) foreach ($tax_input as $taxonomy => $terms) {
 
@@ -232,11 +220,15 @@ class Post extends Model {
 
         if ($post_array['field_input'] ?? false) $this->update_fields($post_array['field_input']);
 
+        // TODO: Add to cache
+
         return $this;
 
     }
 
     public function delete ($force_delete = false) {
+
+        // TODO: delete this object? null the cache?
     
         return wp_delete_post($this->wp_post->ID, $force_delete);
     

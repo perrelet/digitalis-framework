@@ -4,35 +4,25 @@ namespace Digitalis;
 
 use stdClass;
 use WP_Term;
-use WP_Term_Query;
-use WP_Error;
 
 trait Has_WP_Term {
 
     protected $wp_term;
 
-    protected function init_wp_model ($term, $data = null) {
+    protected function init_wp_model ($data) {
 
-        $term_id = false;
+        if (is_int($data)) {
 
-        if (is_int($term))                { $term_id = $term;          }
-        elseif (is_string($term))         { $term_id = (int) $term;    }
-        elseif ($term instanceof WP_Term) { $term_id = $term->term_id; }
+            $this->set_wp_term(WP_Term::get_instance($data));
 
-        if ($term_id) {
+        } else if ($data instanceof WP_Term) {
 
-            $this->is_new  = false;
-            $this->wp_term = $term instanceof WP_Term ? $term : WP_Term::get_instance($term_id, static::$taxonomy);
-            $this->id      = $term_id;
+            $this->set_wp_term($data);
 
-        } elseif ($term == 'new' && ($data instanceof stdClass)) {
+        } else {
 
-            $this->is_new  = true;
-            $this->wp_term = new WP_Term($data);
-
-            wp_cache_set($data->term_id, $this->wp_term, 'terms');
-
-            $this->id = $term_id;
+            $this->set_wp_term(new WP_Term($data));
+            //if ($this->uid) wp_cache_set($this->uid, $this->get_wp_post(), 'posts');
 
         }
 
@@ -51,17 +41,11 @@ trait Has_WP_Term {
 
     }
 
-    public function get_id() {
+    /* public function get_id() {
 
         return $this->wp_term->term_id; // Pass the id directly from the wp_term instance to handle new terms. ($this->wp_term->ID = random integer)
 
-    }
-
-    public function is_new () {
-    
-        return $this->is_new;
-    
-    }
+    } */
 
     public function get_children () {
 
@@ -75,49 +59,105 @@ trait Has_WP_Term {
 
     public function get_slug () {
 
-        return $this->get_wp_term()->slug;
+        return $this->wp_term->slug;
+
+    }
+
+    public function set_slug ($slug) {
+
+        $this->wp_term->slug = $slug;
+        return $this;
 
     }
 
     public function get_name () {
 
-        return $this->get_wp_term()->name;
+        return $this->wp_term->name;
+
+    }
+
+    public function set_name ($name) {
+
+        $this->wp_term->name = $name;
+        return $this;
 
     }
 
     public function get_term_group () {
 
-        return $this->get_wp_term()->term_group;
+        return $this->wp_term->term_group;
+
+    }
+
+    public function set_term_group ($term_group) {
+
+        $this->wp_term->term_group = $term_group;
+        return $this;
 
     }
 
     public function get_term_taxonomy_id () {
 
-        return $this->get_wp_term()->term_taxonomy_id;
+        return $this->wp_term->term_taxonomy_id;
+
+    }
+
+    public function set_term_taxonomy_id ($term_taxonomy_id) {
+
+        $this->wp_term->term_taxonomy_id = $term_taxonomy_id;
+        return $this;
 
     }
 
     public function get_taxonomy () {
 
-        return $this->get_wp_term()->taxonomy;
+        return $this->wp_term->taxonomy;
+
+    }
+
+    public function set_taxonomy ($taxonomy) {
+
+        $this->wp_term->taxonomy = $taxonomy;
+        return $this;
 
     }
 
     public function get_description () {
 
-        return $this->get_wp_term()->description;
+        return $this->wp_term->description;
+
+    }
+
+    public function set_description ($description) {
+
+        $this->wp_term->description = $description;
+        return $this;
 
     }
 
     public function get_parent_id () {
 
-        return $this->get_wp_term()->parent;
+        return $this->wp_term->parent;
+
+    }
+
+    public function set_parent_id ($parent_id) {
+
+        $this->wp_term->parent = $parent_id;
+        return $this;
 
     }
 
     public function get_parent () {
 
         return static::get_instance($this->get_parent_id());
+
+    }
+
+    public function set_parent ($parent) {
+
+        if ($id = static::extract_id($parent)) $this->set_parent_id($id);
+        return $this;
 
     }
 
@@ -134,9 +174,11 @@ trait Has_WP_Term {
     
     }
 
+    //
+
     public function get_count () {
 
-        return $this->get_wp_term()->count;
+        return $this->wp_term->count;
 
     }
 
@@ -156,19 +198,19 @@ trait Has_WP_Term {
 
     public function get_meta ($key, $single = true) {
 
-        return get_term_meta($this->wp_term->term_id, $key, $single);
+        return $this->is_new() ? false : get_term_meta($this->wp_term->term_id, $key, $single);
 
     }
 
     public function add_meta ($key, $value, $unique = false) {
 
-        return add_term_meta($this->wp_term->term_id, $key, $value, $unique);
+        return $this->is_new() ? false : add_term_meta($this->wp_term->term_id, $key, $value, $unique);
 
     }
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return update_term_meta($this->wp_term->term_id, $key, $value, $prev_value);
+        return $this->is_new() ? false : update_term_meta($this->wp_term->term_id, $key, $value, $prev_value);
 
     }
 

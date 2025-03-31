@@ -9,37 +9,30 @@ trait Has_WP_Post {
 
     protected $wp_post;
 
-    protected function init_wp_model ($post, $data = null) {
+    protected function init_wp_model ($data) {
 
-        $post_id = false;
+        if (is_int($data)) {
 
-        if (is_int($post))                { $post_id = $post;       }
-        elseif (is_string($post))         { $post_id = (int) $post; }
-        elseif ($post instanceof WP_Post) { $post_id = $post->ID;   }
+            $this->set_wp_post(WP_Post::get_instance($data));
 
-        if ($post_id) {
+        } else if ($data instanceof WP_Post) {
 
-            $this->is_new = false;
-            $this->id     = $post_id;
-            $this->set_wp_post($post instanceof WP_Post ? $post : WP_Post::get_instance($post_id));
+            $this->set_wp_post($data);
 
-        } elseif ($post == 'new' && ($data instanceof stdClass)) {
+        } else {
 
-            $this->is_new = true;
-            $this->id     = false;
             $this->set_wp_post(new WP_Post($data));
-
-            wp_cache_set($data->ID, $this->get_wp_post(), 'posts');
+            //if ($this->uid) wp_cache_set($this->uid, $this->get_wp_post(), 'posts');
 
         }
 
     }
 
-    public function get_id() {
+    /* public function get_id() {
 
         return $this->wp_post->ID; // Pass the id directly from the wp_post instance to handle new posts. ($this->wp_post->ID = random integer)
 
-    }
+    } */
 
     public function get_wp_post () {
 
@@ -52,12 +45,6 @@ trait Has_WP_Post {
         $this->wp_post = $wp_post;
         return $this;
 
-    }
-
-    public function is_new () {
-    
-        return $this->is_new;
-    
     }
 
     // Access Methods
@@ -170,21 +157,22 @@ trait Has_WP_Post {
 
     // Type
 
-    public function get_type () {
+    public function get_type () { // REFACTOR get_post_type()
 
-        return get_post_type($this->wp_post);
+        return $this->wp_post->post_type;
 
+    }
+
+    public function set_post_type ($post_type) {
+    
+        $this->wp_post->post_type = $post_type;
+        return $this;
+    
     }
 
     public function get_post_type_object () {
 
         return get_post_type_object($this->get_type());
-
-    }
-
-    public function get_type_object () {
-
-        return $this->get_post_type_object();
 
     }
 
@@ -469,7 +457,7 @@ trait Has_WP_Post {
 
     public function get_meta ($key = '', $single = false) {
 
-        return get_post_meta($this->wp_post->ID, $key, $single);
+        return $this->is_new() ? false : get_post_meta($this->wp_post->ID, $key, $single);
 
     }
 
