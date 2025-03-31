@@ -6,7 +6,7 @@ class Creational extends Design_Pattern {
 
     protected static $instance_indexes = [];
 
-    public static function on_include () {}
+    public static function static_init () {}
 
     public static function instance_condition () {
     

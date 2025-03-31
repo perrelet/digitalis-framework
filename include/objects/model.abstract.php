@@ -144,7 +144,7 @@ class Model extends Factory {
 
     protected static $class_map = [];
 
-    public static function hello () {
+    public static function static_init () {
 
         $specificity = static::get_specificity();
         $parent      = static::class;

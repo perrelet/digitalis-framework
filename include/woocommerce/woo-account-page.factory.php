@@ -74,7 +74,7 @@ class Woo_Account_Page extends Factory {
 
     //
 
-    public static function static_init () {
+    public static function run_once () {
 
         add_filter('woocommerce_get_query_vars',     [static::class, 'get_query_vars_static']);
         add_filter('woocommerce_account_menu_items', [static::class, 'account_menu_items_static'], PHP_INT_MAX - 1);
@@ -83,7 +83,7 @@ class Woo_Account_Page extends Factory {
 
     public function __construct () {
 
-        if (!self::get_instance_count(self::class)) self::static_init();
+        if (!self::get_instance_count(self::class)) self::run_once();
 
         self::$pages[$this->slug] = $this;
         if (is_null($this->endpoint)) $this->endpoint = $this->slug;
