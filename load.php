@@ -86,6 +86,11 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.utility.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 
+\Digitalis\Post::static_init();
+\Digitalis\Page::static_init();
+\Digitalis\Revision::static_init();
+\Digitalis\Attachment::static_init();
+
 //require DIGITALIS_FRAMEWORK_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
 //require DIGITALIS_FRAMEWORK_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
 
