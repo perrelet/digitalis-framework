@@ -13,7 +13,7 @@ class Term extends Model {
 
     protected static $taxonomy = null;
 
-    public static function process_data (&$data) {
+    public static function prepare_data (&$data) {
 
         if (is_array($data)) $data = (object) $data;
 

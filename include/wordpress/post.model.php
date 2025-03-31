@@ -17,7 +17,7 @@ class Post extends Model {
 
     protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
 
-    public static function process_data (&$data) {
+    public static function prepare_data (&$data) {
 
         if (is_array($data)) $data = (object) $data;
 

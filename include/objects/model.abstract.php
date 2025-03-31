@@ -14,7 +14,7 @@ class Model extends Factory {
 
     protected static $instances = [];
 
-    public static function process_data (&$data) {}
+    public static function prepare_data (&$data) {}
 
     public static function extract_id ($data = null) {
 

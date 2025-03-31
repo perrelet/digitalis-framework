@@ -44,7 +44,7 @@ abstract class Factory extends Creational {
         $class_name = Call::get_class_name(static::class);
         if ($class_name != static::class) return $class_name::get_instance($data);
 
-        static::process_data($data);
+        static::prepare_data($data);
 
         if (!$class_name::instance_condition($data)) return null;
 
@@ -63,7 +63,7 @@ abstract class Factory extends Creational {
 
     }
 
-    public static function process_data (&$data) {}
+    public static function prepare_data (&$data) {}
 
     protected function get_cache_key () {
 

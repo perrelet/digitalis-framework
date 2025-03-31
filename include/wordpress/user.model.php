@@ -9,6 +9,11 @@ class User extends Model {
     use Has_WP_User;
 
     protected static $role = false; // string|false|array - Validate by user role. Leave false to allow any role.
+    public static function prepare_data (&$data) {
+
+        if (is_array($data)) $data = (object) $data;
+
+    }
 
     public static function extract_id ($data = null) {
 
