@@ -99,7 +99,7 @@ abstract class Post_Type extends Singleton {
             if (is_callable($call) && ($instance = call_user_func($call))) {
                 
                 //while (isset($GLOBALS[$global_var])) $global_var = "_{$global_var}";
-                $GLOBALS[$instance->get_global_var()] = $instance;
+                if ($var = $instance->get_global_var()) $GLOBALS[$var] = $instance;
 
             }
 
