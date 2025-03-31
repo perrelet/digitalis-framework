@@ -69,7 +69,7 @@ trait Autoloader {
 
     }
 
-    public function load_class ($path, $instantiate = null) {
+    public function load_class ($path, $instantiation = null) {
     
         if (!is_file($path)) return false;
 
@@ -78,44 +78,55 @@ trait Autoloader {
         if (!$class_name = $this->extract_class_name($path)) return false;
         if (!class_exists($class_name))                      return false;
 
-        if (method_exists($class_name, 'hello'))      call_user_func([$class_name, 'hello']);
-        if (method_exists($class_name, 'on_include')) call_user_func([$class_name, 'on_include']);
+        if (method_exists($class_name, 'hello'))       call_user_func([$class_name, 'hello']);
+        if (method_exists($class_name, 'static_init')) call_user_func([$class_name, 'static_init']);
 
-        if (is_null($instantiate)) {
+        if (is_null($instantiation)) $instantiation = $this->resolve_auto_instantiation($class_name, $path);
 
-            if ($instantiate = method_exists($class_name, 'auto_init') ? call_user_func([$class_name, 'auto_init']) : false) {
+        return $this->instantiate_class($class_name, $instantiation);
     
-                $reflection = new ReflectionClass($class_name);
-    
-                if ($reflection->isAbstract())                       $instantiate = false;
-                if (strpos(basename($path), '.abstract.') !== false) $instantiate = false;
-    
-            }
+    }
 
-        } 
+    protected function resolve_auto_instantiation ($class_name, $path = '') {
 
-        $instantiate = apply_filters('Digitalis/Instantiate/' . str_replace('\\', '/', ltrim($class_name, '\\')), $instantiate, $path);
+        $instantiation = false;
+        if (method_exists($class_name, 'get_auto_instantiation')) $instantiation = $class_name::get_auto_instantiation();
 
-        if ($instantiate === false) {
+        $reflection = new ReflectionClass($class_name);
+        if ($reflection->isAbstract())                                $instantiation = false;
+        if ($path && strpos(basename($path), '.abstract.') !== false) $instantiation = false;
+
+        $instantiation = apply_filters('Digitalis/Instantiate/', $instantiation, $class_name, $path);
+        $instantiation = apply_filters('Digitalis/Instantiate/' . str_replace('\\', '/', ltrim($class_name, '\\')), $instantiation, $path);
+
+        return $instantiation;
+
+    }
+
+    protected function instantiate_class ($class_name, $instantiation) {
+
+        if ($instantiation === false) {
 
             return false;
 
-        } elseif ($instantiate === true) {
+        } elseif ($instantiation === true) {
 
             return new $class_name();
 
-        } elseif (!is_scalar($instantiate)) {
+        } elseif (!is_scalar($instantiation)) {
 
             $call = [$class_name, 'get_instance'];
-            return is_callable($call) ? call_user_func($call, $instantiate) : false;
+            return is_callable($call) ? call_user_func($call, $instantiation) : false;
 
         } else {
 
-            $call = [$class_name, $instantiate];
+            $call = [$class_name, $instantiation];
             return is_callable($call) ? call_user_func($call) : false;
 
         }
-    
+
+        return false;
+
     }
 
     protected function get_file_names ($path, $ext = 'php') {

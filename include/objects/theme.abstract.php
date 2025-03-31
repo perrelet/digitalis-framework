@@ -12,7 +12,7 @@ abstract class Theme {
 
     protected $features;
 
-    public static function auto_init () { return true; }
+    public static function get_auto_instantiation () { return true; }
     
     public function __construct () {
 

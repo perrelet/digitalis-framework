@@ -6,7 +6,7 @@ use Exception;
 
 class Model extends Factory {
 
-    public static function auto_init () {
+    public static function get_auto_instantiation () {
         
         return false;
     
