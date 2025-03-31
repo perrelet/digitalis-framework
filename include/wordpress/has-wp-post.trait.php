@@ -7,6 +7,8 @@ use WP_Post;
 
 trait Has_WP_Post {
 
+    use Has_ACF_Fields;
+
     protected $wp_post;
 
     protected function init_wp_model ($data) {
@@ -485,30 +487,12 @@ trait Has_WP_Post {
     
     }
 
-    // ACF Methods
+    // ACF
 
-    public function get_field ($selector, $format_value = true) {
+    public function get_acf_id () {
 
-        return get_field($selector, $this->wp_post->ID, $format_value);
+        return $this->is_new() ? null : $this->id;
 
-    }
-
-    public function esc_field ($selector, $format_value = true) {
-
-        return trim(esc_attr($this->get_field($selector, $format_value)));
-
-    }
-
-    public function update_field ($selector, $value) {
-
-        return $this->is_new() ? false : update_field($selector, $value, $this->wp_post->ID);
-        
-    }
-
-    public function update_fields ($data) {
-    
-        if ($data) foreach ($data as $selector => $value) $this->update_field($selector, $value);
-    
     }
 
 }

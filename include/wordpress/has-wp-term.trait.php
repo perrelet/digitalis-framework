@@ -7,6 +7,8 @@ use WP_Term;
 
 trait Has_WP_Term {
 
+    use Has_ACF_Fields;
+
     protected $wp_term;
 
     protected function init_wp_model ($data) {
@@ -184,13 +186,13 @@ trait Has_WP_Term {
 
     public function get_url () {
 
-        return get_term_link($this->wp_term->term_id);
+        return get_term_link($this->id);
 
     }
 
     public function get_feed ($feed = '') {
     
-        return get_term_feed_link($this->wp_term->term_id, '', $feed);
+        return get_term_feed_link($this->id, '', $feed);
     
     }
 
@@ -198,38 +200,40 @@ trait Has_WP_Term {
 
     public function get_meta ($key, $single = true) {
 
-        return $this->is_new() ? false : get_term_meta($this->wp_term->term_id, $key, $single);
+        return $this->is_new() ? null : get_term_meta($this->id, $key, $single);
 
     }
 
     public function add_meta ($key, $value, $unique = false) {
 
-        return $this->is_new() ? false : add_term_meta($this->wp_term->term_id, $key, $value, $unique);
+        return $this->is_new() ? null : add_term_meta($this->id, $key, $value, $unique);
 
     }
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return $this->is_new() ? false : update_term_meta($this->wp_term->term_id, $key, $value, $prev_value);
+        return $this->is_new() ? null : update_term_meta($this->id, $key, $value, $prev_value);
 
     }
 
-    public function get_field ($selector, $format_value = true) {
-
-        return get_field($selector, "term_{$this->wp_term->term_id}", $format_value);
-
-    }
-
-    public function update_field ($selector, $value) {
-
-        return update_field($selector, $value, "term_{$this->wp_term->term_id}");
-
-    }
-
-    public function update_fields ($data) {
+    public function update_metas ($data) {
     
-        if ($data) foreach ($data as $selector => $value) $this->update_field($selector, $value);
+        if (is_array($data)) foreach ($data as $key => $value) $this->update_meta($key, $value);
     
+    }
+
+    public function delete_meta ($key, $value = '') {
+
+        return $this->is_new() ? null : delete_term_meta($this->id, $key, $value);
+
+    }
+
+    // ACF
+
+    public function get_acf_id () {
+
+        return $this->is_new() ? null : 'term_' . $this->id;
+
     }
 
 }

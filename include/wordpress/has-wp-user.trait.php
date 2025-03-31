@@ -7,6 +7,8 @@ use \DateTime;
 
 trait Has_WP_User {
 
+    use Has_ACF_Fields;
+
     protected $wp_user;
 
     protected function init_wp_model ($data) {
@@ -212,25 +214,39 @@ trait Has_WP_User {
 
     public function get_meta ($key, $single = true) {
 
-        return get_user_meta($this->id, $key, $single);
+        return $this->is_new() ? null : get_user_meta($this->id, $key, $single);
 
     }
 
     public function add_meta ($key, $value, $unique = false) {
 
-        return add_user_meta($this->id, $key, $value, $unique);
+        return $this->is_new() ? null : add_user_meta($this->id, $key, $value, $unique);
 
     }
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return update_user_meta($this->id, $key, $value, $prev_value);
+        return $this->is_new() ? null : update_user_meta($this->id, $key, $value, $prev_value);
 
     }
 
-    public function get_field ($selector, $format_value = true) {
+    public function update_metas ($data) {
+    
+        if (is_array($data)) foreach ($data as $key => $value) $this->update_meta($key, $value);
+    
+    }
 
-        return get_field($selector, "user_{$this->get_id()}", $format_value);
+    public function delete_meta ($key, $value = '') {
+
+        return $this->is_new() ? null : delete_user_meta($this->id, $key, $value);
+
+    }
+
+    // ACF
+
+    public function get_acf_id () {
+
+        return $this->is_new() ? null : 'user_' . $this->id;
 
     }
 
