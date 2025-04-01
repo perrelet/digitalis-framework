@@ -24,9 +24,14 @@ trait Has_WP_Post {
         } else {
 
             $this->set_wp_post(new WP_Post($data));
-            //if ($this->uid) wp_cache_set($this->uid, $this->get_wp_post(), 'posts');
 
         }
+
+    }
+
+    protected function cache_wp_model () {
+
+        wp_cache_set($this->wp_post->ID, $this->wp_post, 'posts');
 
     }
 
@@ -53,7 +58,7 @@ trait Has_WP_Post {
 
     public function get_acf_id () {
 
-        return $this->is_new() ? null : $this->id;
+        return $this->is_new() ? null : $this->wp_post->ID;
 
     }
 
@@ -66,10 +71,11 @@ trait Has_WP_Post {
     }
 
     public function set_slug ($slug) {
-        
+
         $this->wp_post->post_name = $slug;
+        $this->cache_wp_model();
         return $this;
-        
+
     }
 
     public function get_guid () {
@@ -79,10 +85,11 @@ trait Has_WP_Post {
     }
 
     public function set_guid ($guid) {
-        
+
         $this->wp_post->guid = $guid;
+        $this->cache_wp_model();
         return $this;
-        
+
     }
 
     public function get_classes ($class = '') {
@@ -98,10 +105,11 @@ trait Has_WP_Post {
     }
 
     public function set_title ($title) {
-    
+
         $this->wp_post->post_title = $title;
+        $this->cache_wp_model();
         return $this;
-    
+
     }
 
     protected $content_cache = [];
@@ -125,6 +133,7 @@ trait Has_WP_Post {
     public function set_content ($content) {
     
         $this->wp_post->post_content = $content;
+        $this->cache_wp_model();
         return $this;
     
     }
@@ -142,6 +151,7 @@ trait Has_WP_Post {
     public function set_excerpt ($excerpt) {
     
         $this->wp_post->post_excerpt = $excerpt;
+        $this->cache_wp_model();
         return $this;
     
     }
@@ -155,6 +165,7 @@ trait Has_WP_Post {
     public function set_status ($status) {
     
         $this->wp_post->post_status = $status;
+        $this->cache_wp_model();
         return $this;
     
     }
@@ -176,6 +187,7 @@ trait Has_WP_Post {
     public function set_post_type ($post_type) {
     
         $this->wp_post->post_type = $post_type;
+        $this->cache_wp_model();
         return $this;
     
     }
@@ -253,6 +265,7 @@ trait Has_WP_Post {
     public function set_date ($date) {
     
         $this->wp_post->post_date = $date;
+        $this->cache_wp_model();
         return $this;
     
     }
@@ -260,6 +273,7 @@ trait Has_WP_Post {
     public function set_date_gmt ($date) {
     
         $this->wp_post->post_date_gmt = $date;
+        $this->cache_wp_model();
         return $this;
     
     }

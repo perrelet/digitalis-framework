@@ -146,14 +146,21 @@ class Term extends Model {
 
     protected $children = [];
 
+    protected function generate_uuid ($data) {
+
+        return spl_object_id((object) $data) * -1;
+
+    }
+
     protected function build_instance ($data) {
 
-        if (is_array($data)) $data = (object) $data;
-        if (is_null($data))  $data = new stdClass();
+        $wp_term          = new WP_Term((object) $data);
+        $wp_term->term_id = $this->id;
 
-        if (static::$taxonomy) $data->taxonomy = static::$taxonomy;
+        if (static::$taxonomy) $wp_term->taxonomy = static::$taxonomy;
 
-        $this->init_wp_model($data);
+        $this->init_wp_model($wp_term);
+        $this->cache_wp_model();
 
     }
 

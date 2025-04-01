@@ -95,7 +95,7 @@ class Model extends Factory {
         if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
         
         if (!isset(self::$instances[$class_name][$id])) {
-            
+
             if (static::validate($id) && static::validate_id($id)) {
 
                 $model = new $class_name($id);
@@ -158,18 +158,29 @@ class Model extends Factory {
 
     public function __construct ($data = null) {
 
-        $this->is_new = !is_int($data);
+        $this->is_new = is_int($data) ? $data < 0 : true;
 
-        if ($this->is_new) {
-
-            $this->build_instance($data);
-
-        } else {
+        if (is_int($data)) {
 
             $this->id = $data;
             $this->hydrate_instance();
 
+        } else {
+
+            $this->id = $this->generate_uuid($data);
+
+            $this->build_instance($data);
+
+            if (!isset(self::$instances[static::class]))            self::$instances[static::class] = [];
+            if (!isset(self::$instances[static::class][$this->id])) self::$instances[static::class][$this->id] = $this;
+
         }
+
+    }
+
+    protected function generate_uuid ($data) {
+
+        return spl_object_id((object) $data);
 
     }
 

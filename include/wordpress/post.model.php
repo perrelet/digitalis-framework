@@ -152,15 +152,21 @@ class Post extends Model {
 
     //
 
+    protected function generate_uuid ($data) {
+
+        return spl_object_id((object) $data) * -1;
+
+    }
+
     protected function build_instance ($data) {
 
-        if (is_array($data)) $data = (object) $data;
-        if (is_null($data))  $data = new stdClass();
+        $wp_post     = new WP_Post((object) $data);
+        $wp_post->ID = $this->id;
 
-        if (static::$post_type)                      $data->post_type    = static::$post_type;
-        if (!property_exists($data, 'post_content')) $data->post_content = '';
+        if (static::$post_type) $wp_post->post_type = static::$post_type;
 
-        $this->init_wp_model($data);
+        $this->init_wp_model($wp_post);
+        $this->cache_wp_model();
 
     }
 

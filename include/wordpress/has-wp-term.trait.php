@@ -24,9 +24,14 @@ trait Has_WP_Term {
         } else {
 
             $this->set_wp_term(new WP_Term($data));
-            //if ($this->uid) wp_cache_set($this->uid, $this->get_wp_post(), 'posts');
 
         }
+
+    }
+
+    protected function cache_wp_model () {
+
+        wp_cache_set($this->wp_term->term_id, $this->wp_term, 'terms');
 
     }
 
@@ -42,12 +47,6 @@ trait Has_WP_Term {
         return $this;
 
     }
-
-    /* public function get_id() {
-
-        return $this->wp_term->term_id; // Pass the id directly from the wp_term instance to handle new terms. ($this->wp_term->ID = random integer)
-
-    } */
 
     public function get_children () {
 
@@ -67,7 +66,7 @@ trait Has_WP_Term {
 
     public function get_acf_id () {
 
-        return $this->is_new() ? null : 'term_' . $this->id;
+        return $this->is_new() ? null : 'term_' . $this->wp_term->term_id;
 
     }
 
@@ -82,6 +81,7 @@ trait Has_WP_Term {
     public function set_slug ($slug) {
 
         $this->wp_term->slug = $slug;
+        $this->cache_wp_model();
         return $this;
 
     }
@@ -95,6 +95,7 @@ trait Has_WP_Term {
     public function set_name ($name) {
 
         $this->wp_term->name = $name;
+        $this->cache_wp_model();
         return $this;
 
     }
@@ -108,6 +109,7 @@ trait Has_WP_Term {
     public function set_term_group ($term_group) {
 
         $this->wp_term->term_group = $term_group;
+        $this->cache_wp_model();
         return $this;
 
     }
@@ -121,6 +123,7 @@ trait Has_WP_Term {
     public function set_term_taxonomy_id ($term_taxonomy_id) {
 
         $this->wp_term->term_taxonomy_id = $term_taxonomy_id;
+        $this->cache_wp_model();
         return $this;
 
     }
@@ -134,6 +137,7 @@ trait Has_WP_Term {
     public function set_taxonomy ($taxonomy) {
 
         $this->wp_term->taxonomy = $taxonomy;
+        $this->cache_wp_model();
         return $this;
 
     }
@@ -147,6 +151,7 @@ trait Has_WP_Term {
     public function set_description ($description) {
 
         $this->wp_term->description = $description;
+        $this->cache_wp_model();
         return $this;
 
     }
@@ -160,6 +165,7 @@ trait Has_WP_Term {
     public function set_parent_id ($parent_id) {
 
         $this->wp_term->parent = $parent_id;
+        $this->cache_wp_model();
         return $this;
 
     }

@@ -84,14 +84,21 @@ class User extends Model {
 
     //
 
+    protected function generate_uuid ($data) {
+
+        return spl_object_id((object) $data) * -1;
+
+    }
+
     protected function build_instance ($data) {
 
-        if (is_array($data)) $data = (object) $data;
-        if (is_null($data))  $data = new stdClass();
+        $wp_user     = new WP_User((object) $data);
+        $wp_user->ID = $this->id;
 
-        if (static::$role) $data->roles = static::$role;
+        if (static::$role) $wp_user->roles = static::$role;
 
-        $this->init_wp_model($data);
+        $this->init_wp_model($wp_user);
+        $this->cache_wp_model();
 
     }
 
