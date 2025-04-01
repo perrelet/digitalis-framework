@@ -69,6 +69,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.feature.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-meta.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-comment.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-term.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-user.trait.php';
@@ -77,12 +78,13 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-role.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/comment.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/page.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/revision.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/attachment.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.utility.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 

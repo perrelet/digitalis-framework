@@ -92,7 +92,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_classes ($class = '') {
+    public function get_css_classes ($class = '') {
 
         return get_post_class($class, $this->wp_post);
 
@@ -511,6 +511,72 @@ trait Has_WP_Post {
     public function get_autosave ($user_id = 0) {
 
         return wp_get_post_autosave($this->wp_post->ID, $user_id);
+
+    }
+
+    // Comments
+
+    public function get_comments_url () {
+
+        return get_comments_link($this->wp_post);
+
+    }
+
+    public function get_comment_count () {
+
+        return get_comments_number($this->wp_post);
+
+    }
+
+    public function get_comment_count_text ($zero = false, $one = false, $more = false) {
+
+        return get_comment_count($zero, $one, $more, $this->wp_post);
+
+    }
+
+    public function is_comments_open () {
+
+        return comments_open($this->wp_post);
+
+    }
+
+    public function is_pings_open () {
+
+        return pings_open($this->wp_post);
+
+    }
+
+    public function get_reply_url ($args = []) {
+
+        return get_post_reply_link($args, $this->wp_post);
+
+    }
+
+    public function get_cancel_reply_url ($link_text = '') {
+
+        return get_cancel_comment_reply_link($link_text, $this->wp_post);
+
+    }
+
+    public function get_comment_id_fields () {
+
+        return get_comment_id_fields($this->wp_post);
+
+    }
+
+    public function get_comment_form_title ($no_reply_text = false, $reply_text = false, $link_to_parent = true) {
+
+        return comment_form_title($no_reply_text, $reply_text, $link_to_parent, $this->wp_post);
+
+    }
+
+    public function get_comment_form ($args = []) {
+
+        ob_start();
+        comment_form($args, $this->wp_post);
+        $html = ob_get_contents();
+        ob_end_clean();
+        return $html;
 
     }
 
