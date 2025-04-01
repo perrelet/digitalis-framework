@@ -16,16 +16,10 @@ trait Has_WP_Meta {
 
     }
 
-    public function get_meta ($key = '', $single = false) {
+    public function get_meta ($key = '', $single = true) {
 
         return $this->is_new() ? null : get_metadata($this->get_meta_type(), $this->get_meta_id(), $key, $single);
 
-    }
-
-    public function get_single_meta ($key = '') {
-    
-        return $this->get_meta($key, true);
-    
     }
 
     public function get_all_meta () {
