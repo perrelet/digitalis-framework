@@ -76,6 +76,12 @@ class User extends Model {
 
     }
 
+    public static function get_by_username ($username) {
+
+        return static::get_by_login();
+
+    }
+
     public static function get_by_slug ($slug) {
 
         return static::get_by('slug', $slug);
@@ -83,12 +89,6 @@ class User extends Model {
     }
 
     //
-
-    protected function generate_uuid ($data) {
-
-        return spl_object_id((object) $data) * -1;
-
-    }
 
     protected function build_instance ($data) {
 
