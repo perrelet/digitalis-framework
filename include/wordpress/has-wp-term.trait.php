@@ -58,7 +58,7 @@ trait Has_WP_Term {
 
     // Traits
 
-    public function get_meta_type () {
+    public function get_wp_meta_type () {
 
         return 'term';
 

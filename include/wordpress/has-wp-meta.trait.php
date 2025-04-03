@@ -4,7 +4,7 @@ namespace Digitalis;
 
 trait Has_WP_Meta {
 
-    public function get_meta_type () {
+    public function get_wp_meta_type () {
 
         // ..
 
@@ -18,7 +18,7 @@ trait Has_WP_Meta {
 
     public function get_meta ($key = '', $single = true) {
 
-        return $this->is_new() ? null : get_metadata($this->get_meta_type(), $this->get_meta_id(), $key, $single);
+        return $this->is_new() ? null : get_metadata($this->get_wp_meta_type(), $this->get_meta_id(), $key, $single);
 
     }
 
@@ -30,7 +30,7 @@ trait Has_WP_Meta {
 
     public function add_meta ($key, $value, $unique = false) {
 
-        return $this->is_new() ? null : add_metadata($this->get_meta_type(), $this->get_meta_id(), $key, $value, $unique);
+        return $this->is_new() ? null : add_metadata($this->get_wp_meta_type(), $this->get_meta_id(), $key, $value, $unique);
 
     }
 
@@ -42,7 +42,7 @@ trait Has_WP_Meta {
 
     public function update_meta ($key, $value, $prev_value = '') {
 
-        return $this->is_new() ? null : update_metadata($this->get_meta_type(), $this->get_meta_id(), $key, $value, $prev_value);
+        return $this->is_new() ? null : update_metadata($this->get_wp_meta_type(), $this->get_meta_id(), $key, $value, $prev_value);
 
     }
 
@@ -54,7 +54,7 @@ trait Has_WP_Meta {
 
     public function delete_meta ($key, $value = '') {
     
-        return $this->is_new() ? null : delete_metadata($this->get_meta_type(), $this->get_meta_id(), $key, $value);
+        return $this->is_new() ? null : delete_metadata($this->get_wp_meta_type(), $this->get_meta_id(), $key, $value);
     
     }
 
