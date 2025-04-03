@@ -8,7 +8,7 @@ use WP_User;
 
 trait Has_WP_User {
 
-    use Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
 
     protected $wp_user;
 
@@ -30,12 +30,6 @@ trait Has_WP_User {
 
     }
 
-    protected function cache_wp_model () {
-
-        wp_cache_set($this->wp_user->ID, $this->wp_user, 'users');
-
-    }
-
     public function get_wp_user () {
 
         if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->wp_user->ID);
@@ -53,6 +47,24 @@ trait Has_WP_User {
     }
 
     // Traits
+
+    public function get_wp_model () {
+
+        return $this->wp_user;
+
+    }
+
+    public function get_wp_model_id () {
+
+        return $this->wp_user->ID;
+
+    }
+
+    public function get_wp_cache_group () {
+
+        return 'users';
+    
+    }
 
     public function get_wp_meta_type () {
 

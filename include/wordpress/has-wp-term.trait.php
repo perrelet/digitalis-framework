@@ -7,7 +7,7 @@ use WP_Term;
 
 trait Has_WP_Term {
 
-    use Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
 
     protected $wp_term;
 
@@ -26,12 +26,6 @@ trait Has_WP_Term {
             $this->set_wp_term(new WP_Term($data));
 
         }
-
-    }
-
-    protected function cache_wp_model () {
-
-        wp_cache_set($this->wp_term->term_id, $this->wp_term, 'terms');
 
     }
 
@@ -57,6 +51,24 @@ trait Has_WP_Term {
     }
 
     // Traits
+
+    public function get_wp_model () {
+
+        return $this->wp_term;
+
+    }
+
+    public function get_wp_model_id () {
+
+        return $this->wp_term->term_id;
+
+    }
+
+    public function get_wp_cache_group () {
+
+        return 'terms';
+    
+    }
 
     public function get_wp_meta_type () {
 

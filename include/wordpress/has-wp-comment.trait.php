@@ -9,7 +9,7 @@ use WP_Comment;
 
 trait Has_WP_Comment {
 
-    use Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
 
     protected $wp_comment;
 
@@ -46,12 +46,29 @@ trait Has_WP_Comment {
     public function set_wp_comment ($wp_comment) {
 
         $this->wp_comment = $wp_comment;
-        $this->cache_wp_model();
         return $this;
 
     }
 
     // Traits
+
+    public function get_wp_model () {
+
+        return $this->wp_comment;
+
+    }
+
+    public function get_wp_model_id () {
+
+        return $this->wp_comment->comment_ID;
+
+    }
+
+    public function get_wp_cache_group () {
+
+        return 'comment';
+    
+    }
 
     public function get_wp_meta_type () {
 

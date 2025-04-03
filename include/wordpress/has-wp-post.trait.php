@@ -7,7 +7,7 @@ use WP_Post;
 
 trait Has_WP_Post {
 
-    use Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
 
     protected $wp_post;
 
@@ -29,12 +29,6 @@ trait Has_WP_Post {
 
     }
 
-    protected function cache_wp_model () {
-
-        wp_cache_set($this->wp_post->ID, $this->wp_post, 'posts');
-
-    }
-
     public function get_wp_post () {
 
         return $this->wp_post;
@@ -49,6 +43,24 @@ trait Has_WP_Post {
     }
 
     // Traits
+
+    public function get_wp_model () {
+
+        return $this->wp_post;
+
+    }
+
+    public function get_wp_model_id () {
+
+        return $this->wp_post->ID;
+
+    }
+
+    public function get_wp_cache_group () {
+
+        return 'posts';
+    
+    }
 
     public function get_wp_meta_type () {
 
@@ -133,6 +145,7 @@ trait Has_WP_Post {
     public function set_content ($content) {
     
         $this->wp_post->post_content = $content;
+        $this->content_cache = [];
         $this->cache_wp_model();
         return $this;
     
@@ -289,6 +302,7 @@ trait Has_WP_Post {
     public function set_author_id ($author_id) {
     
         $this->wp_post->post_author = (int) $author_id;
+        $this->cache_wp_model();
         return $this;
     
     }
@@ -589,16 +603,26 @@ trait Has_WP_Post {
     }
 
     public function get_password_form () {
-        
+
         return get_the_password_form($this->wp_post);
-        
+
     }
 
     public function set_password ($password) {
-    
+
         $this->wp_post->post_password = $password;
         return $this;
-    
+
     }
+
+    // Data Access
+
+    /* public function reload_wp_post () {
+
+        $this->init_wp_model($this->id);
+        $this->content_cache = [];
+    
+    } */
+
 
 }

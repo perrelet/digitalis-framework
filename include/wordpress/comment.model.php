@@ -31,12 +31,6 @@ class Comment extends Model {
 
     //
 
-    protected function generate_uuid ($data) {
-
-        return spl_object_id((object) $data) * -1;
-
-    }
-
     protected function build_instance ($data) {
 
         $wp_comment             = new WP_Comment((object) $data);

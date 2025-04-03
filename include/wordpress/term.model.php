@@ -146,12 +146,6 @@ class Term extends Model {
 
     protected $children = [];
 
-    protected function generate_uuid ($data) {
-
-        return spl_object_id((object) $data) * -1;
-
-    }
-
     protected function build_instance ($data) {
 
         $wp_term          = new WP_Term((object) $data);
@@ -170,12 +164,12 @@ class Term extends Model {
 
     }
 
-    // CRUD Methods
+    // Data Access
 
     public function reload () {
-    
-        if ($this->id) $this->init_wp_model($this->id);
-    
+
+        $this->init_wp_model($this->id);
+
     }
 
     public function save ($term_array = []) {

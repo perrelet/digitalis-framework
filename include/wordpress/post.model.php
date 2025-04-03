@@ -152,12 +152,6 @@ class Post extends Model {
 
     //
 
-    protected function generate_uuid ($data) {
-
-        return spl_object_id((object) $data) * -1;
-
-    }
-
     protected function build_instance ($data) {
 
         $wp_post     = new WP_Post((object) $data);
@@ -182,11 +176,11 @@ class Post extends Model {
 
     }
 
-    // CRUD Methods
+    // Data Access
 
     public function reload () {
     
-        if ($this->id) $this->init_wp_model($this->id);
+        $this->init_wp_model($this->id);
         $this->content_cache = [];
     
     }
