@@ -14,6 +14,12 @@ class Log extends Service {
     protected $date_format = null;
     protected $export_vars = false;
 
+    public function __invoke ($msg) {
+
+        return $this->log($msg);
+
+    }
+
     public function log ($msg) {
 
         if ($this->get_export_vars()) {
@@ -26,7 +32,7 @@ class Log extends Service {
 
         }
 
-        $this->write($this->format_line($msg));
+        return $this->write($this->format_line($msg));
     
     }
 
