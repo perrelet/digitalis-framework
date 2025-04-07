@@ -165,6 +165,8 @@ namespace Digitalis {
                         $type = gettype($arg);
     
                         if (is_scalar($arg)) {
+
+                            $arg = htmlentities($arg);
     
                             if (is_string($arg)) {
                                 $name = "\"{$arg}\"";
@@ -354,33 +356,31 @@ namespace Digitalis {
 
         public function view () {
         
-            switch ($this['view']) {
+            switch ($this->view) {
 
                 case 'debugger':
 
                     $html = '';
 
-                    foreach ($this['values'] as $i => $value) $html .= Debug_Code_Block::render([
-                        'label' => $this['arg_names'][$i] ?? false,
+                    foreach ($this->values as $i => $value) $html .= (string) new Debug_Code_Block([
+                        'label' => $this->arg_names[$i] ?? false,
                         'code'  => $value,
-                    ], false);
+                    ]);
 
-                    $html = str_replace('`', '\`', $html);
-                    
-                    echo "<script>DigitalisDebugger.find().append(`{$html}`);</script>";
+                    echo '<script>DigitalisDebugger.find().append(' . json_encode($html) . ');</script>';
 
                     break;
 
                 case 'js':
 
-                    if ($this['title']) echo static::console("> {$this['title']}", [
+                    if ($this->title) echo static::console("> {$this->title}", [
                         'style' => 'label',
                     ]);
 
-                    foreach ($this['values'] as $i => $value) {
+                    foreach ($this->values as $i => $value) {
 
                         $options = [];
-                        if (isset($this['arg_names'][$i])) $options['label'] = $this['arg_names'][$i];
+                        if (isset($this->arg_names[$i])) $options['label'] = $this->arg_names[$i];
                         echo static::console($value, $options);
 
                     }
@@ -388,7 +388,7 @@ namespace Digitalis {
 
                 default:
                 case 'inline':
-                    foreach ($this['values'] as $value) echo "<pre>{$value}</pre>";
+                    foreach ($this->values as $value) echo "<pre>{$value}</pre>";
                     break;
 
             }
@@ -397,7 +397,7 @@ namespace Digitalis {
 
         public function after () {
 
-            if ($this['die']) die;
+            if ($this->die) die;
 
         }
     
