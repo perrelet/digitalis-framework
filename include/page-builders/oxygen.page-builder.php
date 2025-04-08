@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-class Oxygen extends Builder {
+class Oxygen extends Page_Builder {
 
     protected $slug = 'oxygen';
 

@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-class Bricks extends Builder {
+class Bricks extends Page_Builder {
 
     protected $slug = 'bricks';
 

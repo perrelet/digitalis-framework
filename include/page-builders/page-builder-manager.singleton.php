@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-class Builder_Manager extends Singleton {
+class Page_Builder_Manager extends Singleton {
 
     use Autoloader;
 
@@ -26,7 +26,7 @@ class Builder_Manager extends Singleton {
 
         $this->builders = [];
 
-        if ($builders = $this->autoload(__DIR__, true, 'builder.php')) foreach ($builders as $builder) {
+        if ($builders = $this->autoload(__DIR__, true, 'page-builder.php')) foreach ($builders as $builder) {
 
             $this->builders[$builder->get_slug()] = $builder;
             

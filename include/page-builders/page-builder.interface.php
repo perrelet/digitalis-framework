@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-interface Builder_Interface {
+interface Page_Builder_Interface {
 
     /**
      * Condition to determine if the builder has been initialised.

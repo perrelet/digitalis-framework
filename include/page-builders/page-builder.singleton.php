@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-abstract class Builder extends Integration implements Builder_Interface {
+abstract class Page_Builder extends Singleton implements Page_Builder_Interface {
 
     protected $slug = 'builder';
 
