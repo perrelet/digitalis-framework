@@ -20,6 +20,17 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/dependency-injection.trait.
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/factory.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-hooks.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-meta.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-model.trait.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-comment.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-term.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-user.trait.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/inherit-props.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
@@ -29,9 +40,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/plugin-integration.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
@@ -66,14 +77,6 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/terms-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/wc-orders.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.feature.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
-
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-meta.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-model.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-comment.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-term.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-user.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
