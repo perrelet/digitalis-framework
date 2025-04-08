@@ -8,23 +8,34 @@ use ReflectionFunction;
 trait Dependency_Injection {
 
     protected static function inject ($call, $args = [], $values = []) {
-    
-        if (is_array($call)) {
 
-            if (!is_callable($call)) return;
+        if (!is_callable($call)) return;
 
-            $class = new ReflectionClass($call[0]);
-            $func  = $class->getMethod($call[1]);
-            $args = static::method_inject($func, $args, $values);
+        $args = static::get_inject_args($call, $args, $values);
+        return call_user_func_array($call, $args);
 
-        } else {
+    }
 
-            $func  = new ReflectionFunction($call);
-            $args  = static::function_inject($func, $args, $values);
+    protected static function get_inject_args ($call, $args = [], $values = []) {
+
+        if (is_callable($call)) {
+
+            if (is_array($call)) {
+
+                $class = new ReflectionClass($call[0]);
+                $func  = $class->getMethod($call[1]);
+                $args = static::method_inject($func, $args, $values);
+
+            } else {
+
+                $func  = new ReflectionFunction($call);
+                $args  = static::function_inject($func, $args, $values);
+
+            }
 
         }
 
-        return call_user_func_array($call, $args);
+        return $args;
     
     }
 
@@ -36,7 +47,7 @@ trait Dependency_Injection {
 
             if (!$type = $param->getType())             continue;
             if (!$class = $type->getName())             continue;
-            if (!class_exists($class))                  continue; 
+            if (!class_exists($class))                  continue;
             if (!method_exists($class, 'get_instance')) continue;
 
             $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null);
