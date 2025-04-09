@@ -18,6 +18,7 @@ class Model extends Factory {
 
     public static function extract_id ($data = null) {
 
+        if (is_numeric($data))     return (int) $data;
         if ($data instanceof self) return $data->get_id();
         if (!is_scalar($data))     return null;
 
