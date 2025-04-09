@@ -31,12 +31,6 @@ trait Has_WP_Comment {
 
     }
 
-    protected function cache_wp_model () {
-
-        wp_cache_set($this->wp_comment->comment_ID, $this->wp_comment, 'comment');
-
-    }
-
     public function get_wp_comment () {
 
         return $this->wp_comment;
