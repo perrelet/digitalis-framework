@@ -94,7 +94,7 @@ abstract class Theme {
 
     public function enqueue_style_last ($handle, $src, $deps = [], $version = false) {
 
-        if (Builder_Manager::get_instance()->is_backend_ui()) return;
+        if (Page_Builder_Manager::get_instance()->is_backend_ui()) return;
 
         global $digitalis_styles;
 
