@@ -35,8 +35,6 @@ abstract class Archive extends Component {
         'item_model',
     ];
 
-    protected static $items = [];
-
     public function get_content () {
 
         ob_start();
