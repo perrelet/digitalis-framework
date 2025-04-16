@@ -17,7 +17,7 @@ class Order_Item extends Model {
 
     }
 
-    public static function validate ($id) {
+    public static function validate_id ($id) {
 
         if (static::$product_type) {
 
