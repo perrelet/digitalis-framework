@@ -22,20 +22,36 @@ class Component extends View {
 
     protected static $merge = ['attr', 'attributes', 'class', 'classes', 'style', 'styles', 'data'];
 
+    protected static $inherited_props = [
+        'defaults',
+        'required',
+        'merge',
+        'skip_inject',
+        'elements',
+    ];
+
     public static function get_elements () {
     
-        return static::$elements;
+        return static::get_inherited_prop('elements');
     
     }
 
-    public static function compute_merge_keys () {
+    public static function get_merge_keys () {
 
-        $merge_keys = parent::compute_merge_keys();
+        if (!isset(self::$prop_storage[static::class]['merge'])) {
 
-        foreach (static::get_elements() as $element) foreach (self::$merge as $key) $merge_keys[] = "{$element}_{$key}";
+            parent::get_merge_keys();
 
-        return $merge_keys;
-    
+            foreach (static::get_elements() as $element) foreach (self::$merge as $key) {
+
+                self::$prop_storage[static::class]['merge'][] = "{$element}_{$key}";
+
+            }
+
+        }
+
+        return self::$prop_storage[static::class]['merge'];
+
     }
 
     //
