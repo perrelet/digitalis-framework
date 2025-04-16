@@ -18,7 +18,7 @@ abstract class Design_System extends Singleton {
         if (!$handle) $handle = __NAMESPACE__ . '-front';
 
         $this->maybe_enqueue_style(function () {
-            return !Builder_Manager::get_instance()->is_backend_ui();
+            return !Page_Builder_Manager::get_instance()->is_backend_ui();
         }, $src, $handle, $args);
     
     }
@@ -28,7 +28,7 @@ abstract class Design_System extends Singleton {
         if (!$handle) $handle = __NAMESPACE__ . '-builder';
 
         $this->maybe_enqueue_style(function () {
-            return Builder_Manager::get_instance()->is_backend_ui();
+            return Page_Builder_Manager::get_instance()->is_backend_ui();
         }, $src, $handle, $args);
     
     }
@@ -77,7 +77,7 @@ abstract class Design_System extends Singleton {
 
         }
     
-        if ($args['builders']) Builder_Manager::get_instance()->add_colors($colors, $args);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->add_colors($colors, $args);
     
     }
 
@@ -93,7 +93,7 @@ abstract class Design_System extends Singleton {
         
         }
 
-        if ($args['builders']) Builder_Manager::get_instance()->remove_colors($colors);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_colors($colors);
     
     }
 
@@ -119,7 +119,7 @@ abstract class Design_System extends Singleton {
 
         }
 
-        if ($args['builders']) Builder_Manager::get_instance()->add_classes($classes, $args);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->add_classes($classes, $args);
     
     }
 
@@ -135,7 +135,7 @@ abstract class Design_System extends Singleton {
         
         }
     
-        if ($args['builders']) Builder_Manager::get_instance()->remove_classes($classes);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_classes($classes);
     
     }
 
@@ -163,7 +163,7 @@ abstract class Design_System extends Singleton {
 
         }
 
-        if ($args['builders']) Builder_Manager::get_instance()->add_variables($variables, $args);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->add_variables($variables, $args);
 
         if ($args['scss']) add_filter('sassy-variables', function ($scss_vars) use ($variables) {
 
@@ -188,7 +188,7 @@ abstract class Design_System extends Singleton {
 
         if ($variables) foreach ($variables as $name) if (isset($this->variables[$name])) unset($this->variables[$name]);
 
-        if ($args['builders']) Builder_Manager::get_instance()->remove_variables($variables);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_variables($variables);
 
         if ($args['scss']) add_filter('sassy-variables', function ($scss_vars) use ($variables) {
 
@@ -222,7 +222,7 @@ abstract class Design_System extends Singleton {
 
         }
 
-        if ($args['builders']) Builder_Manager::get_instance()->add_variable_folders($folders, $args);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->add_variable_folders($folders, $args);
 
     }
 
@@ -238,7 +238,7 @@ abstract class Design_System extends Singleton {
 
         }
     
-        if ($args['builders']) Builder_Manager::get_instance()->remove_variable_folders($folders, $args);
+        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_variable_folders($folders, $args);
     
     }
 
