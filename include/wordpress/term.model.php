@@ -5,6 +5,7 @@ namespace Digitalis;
 use stdClass;
 use WP_Term;
 use WP_Term_Query;
+use WP_Error;
 
 class Term extends Model {
 
@@ -39,6 +40,7 @@ class Term extends Model {
     public static function validate_id ($id) {
 
         if (!$wp_term = get_term($id, static::$taxonomy))                 return false;
+        if ($wp_term instanceof WP_Error)                                 return false;
         if (static::$taxonomy && $wp_term->taxonomy != static::$taxonomy) return false;
 
         return (is_int($id) && ($id > 0));
