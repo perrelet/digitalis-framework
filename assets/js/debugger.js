@@ -66,6 +66,10 @@ class DigitalisDebugger extends HTMLElement {
 
         this.querySelectorAll(`button`).forEach(button => button.addEventListener("keydown", (e) => { if (e.code == `Enter`) button.click(); }))
 
+        // https://github.com/WICG/webcomponents/issues/551
+        // https://stackoverflow.com/questions/79060310/web-components-custom-parsedcallback-method-is-not-working
+        // https://dev.to/dannyengelman/web-component-developers-do-not-connect-with-the-connectedcallback-yet-4jo7
+
         setTimeout(() => {
 
             this.main = this.querySelector(`main`);
