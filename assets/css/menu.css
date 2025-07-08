@@ -1,0 +1,338 @@
+
+.bricks-mobile-menu li a:focus {
+
+    background-color: red;
+
+}
+
+body[lock-scroll] {
+
+    overflow: hidden;
+
+}
+
+digitalis-nav {
+
+    --menu-carat-size: 0.6em;
+    --menu-hamburger-size: 1.5em;
+    --menu-hamburger-thickness: 0.25em;
+    --menu-close-size: 1.5em;
+    --menu-close-thickness: 0.25em;
+
+    position: relative;
+    z-index: 1;
+
+    &[data-is-mobile=true] {
+
+        z-index: 2;
+
+    }
+
+    &[aria-hidden=true] {
+
+        display: none;
+
+    }
+
+    ul {
+
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        display: flex;
+        flex-direction: var(--menu-direction);
+        align-items: flex-start;
+        gap: 0.25em 1em;
+
+        li:hover > .child-wrap {
+
+            z-index: 1; /* Ensure hovering previous item doesn't reopen current item */
+
+        }
+
+    }
+
+    .child-wrap {
+
+        transition: 0.2s;
+        transition-property: transform, opacity;
+        transform: translate(0, -10px);
+
+        visibility: hidden;
+        opacity: 0;
+
+        &[open] {
+
+            visibility: visible;
+            opacity: 1;
+            transform: translate(0, 0);
+
+        }
+
+        &:not([open]) + fixed-menu-bg {
+
+            display: none !important;
+
+        }
+
+        &[data-fixed=true] > ul {
+
+            max-height: 100vh;
+            overflow-y: auto;
+
+        }
+
+    }
+
+    fixed-menu-bg {
+
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 100vw;
+        width: 100dvw;
+        height: 100vh;
+        height: 100dvh;
+        background-color: rgba(0,0,0,0.5);
+
+    }
+
+    .menu-item {
+
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+
+        &:focus {
+
+            box-shadow: 0px 0px 0px 1px currentColor;
+
+        }
+
+        &:not([data-carat=false]):has(+ .child-wrap):after {
+
+            content: '';
+            display: inline-block;
+            margin-left: 0.2em;
+            margin-top: calc(var(--menu-carat-size) / 2);
+            width: var(--menu-carat-size);
+            height: var(--menu-carat-size);
+            border: calc(var(--menu-carat-size) / 2) solid transparent;
+            border-top-color: currentColor;
+
+        }
+
+    }
+
+    [data-direction=column] .menu-item:has(+ .child-wrap):after {
+
+        border-top-color: transparent;
+        border-left-color: currentColor;
+
+    }
+
+    [data-fixed] {
+
+        z-index: 1;
+
+    }
+
+    [data-position=relative] {
+
+        position: relative;
+
+    }
+
+    [data-position=absolute] {
+
+        position: absolute;
+
+    }
+
+    [data-position=over] {
+
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+
+    }
+
+    [data-position^=block-below] { position: absolute; }
+
+    [data-position=block-below] {
+
+        left: 0;
+        width: 100%;
+
+    }
+
+    [data-position=block-inside-above],
+    [data-position=block-above] {
+
+        left: 0;
+        top: 0;
+        width: 100%;
+
+    }
+
+    [data-position=block-above] { transform: translate(0, -100%); }
+
+    [data-position=block-inside-right],
+    [data-position=block-right] {
+
+        position: absolute;
+        right: 0;
+        top: 0;
+
+    }
+
+    [data-position=block-right] { transform: translate(100%, 0); }
+
+    [data-position=full-screen] {
+
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 100vw;
+        width: 100dvw;
+        height: 100vh;
+        height: 100dvh;
+
+    }
+
+    [data-position=left-screen] {
+
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        height: 100dvh;
+        transform: translate(-100%, 0);
+
+    }
+
+    .hamburger {
+
+        margin-left: auto;
+
+        > [role=button] {
+
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: var(--menu-hamburger-size);
+            height: var(--menu-hamburger-size);
+            cursor: pointer;
+
+            > div {
+
+                width: 100%;
+                height: var(--menu-hamburger-thickness);
+                background-color: currentColor;
+                transition: 0.2s;
+
+                &:nth-child(2) { transition-delay: 0.05s; }
+                &:nth-child(3) { transition-delay: 0.1s; }
+
+            }
+
+            &:hover,
+            &:focus {
+
+                > div {
+
+                    transform: rotate(180deg);
+
+                }
+
+            }
+
+        }
+
+    }
+
+    .child-wrap {
+
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .close-menu-button {
+            
+            min-width: var(--menu-close-size);
+            min-height: var(--menu-close-size);
+            transition: 0.2s;
+            cursor: pointer;
+    
+            &:before,
+            &:after {
+    
+                content: '';
+                position: absolute;
+                display: block;
+                width: var(--menu-close-size);
+                height: var(--menu-close-thickness);
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: auto;
+                background-color: currentColor;
+                transition: 0.2s;
+    
+            }
+    
+            &:before { transform: rotate(45deg); }
+            &:after { transform: rotate(-45deg); }
+    
+            &:hover,
+            &:focus {
+    
+                transform: rotate(90deg);
+    
+            }
+    
+        }
+
+        &[data-close-position~=over] {
+
+            .close-menu-button {
+            
+                position: absolute;
+                top: 0.5em;
+                right: 1em;
+            
+            }
+
+            &[data-close-position~=bottom] .close-menu-button { top: initial;   bottom: 0.5em; }
+            &[data-close-position~=left]   .close-menu-button { right: initial; left: 1em;     }
+
+        }
+
+        &[data-close-position~=beside] {
+
+            flex-direction: row;
+
+            .close-menu-button {
+                
+                position: relative;
+            
+            }
+
+            &[data-close-position~=bottom] .close-menu-button { margin-top: auto; }
+            &[data-close-position~=left]   .close-menu-button { order: -1;        }
+            &[data-close-position~=before] .close-menu-button { order: -1;        }
+
+        }
+
+    }
+    
+}

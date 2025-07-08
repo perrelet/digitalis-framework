@@ -108,6 +108,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/link.component.php'
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/table.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/field-group.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/form.field-group.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-item.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu.component.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 
