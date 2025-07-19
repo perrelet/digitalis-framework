@@ -159,16 +159,17 @@ class Model extends Factory {
 
     public function __construct ($data = null) {
 
-        $this->is_new = is_int($data) ? $data < 0 : true;
+        if (is_scalar($data)) {
 
-        if (is_int($data)) {
+            $this->id     = $data;
+            $this->is_new = is_int($data) ? ($data < 0) : false;
 
-            $this->id = $data;
             $this->hydrate_instance();
 
         } else {
 
-            $this->id = $this->generate_uuid($data);
+            $this->id     = $this->generate_uuid($data);
+            $this->is_new = true;
 
             $this->build_instance($data);
 
