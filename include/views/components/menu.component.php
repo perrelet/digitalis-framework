@@ -55,9 +55,9 @@ class Menu extends Component {
 
         }
 
-        if (($p['index'] > 1) || ($p['level'] > 1)) {
+        if (($p['view_index'] > 1) || ($p['level'] > 1)) {
             
-            $p['element']->set_id("{$p['id']}-{$p['index']}-{$p['level']}" . ($p['is_mobile'] ? '-mobile' : ''));
+            $p['element']->set_id("{$p['id']}-{$p['view_index']}-{$p['level']}" . ($p['is_mobile'] ? '-mobile' : ''));
 
         }
 

@@ -44,7 +44,7 @@ class Field extends Component {
 
         $slug = $this->get_class_slug();
 
-        if (!$p['id']) $p['id'] = ($p['name'] ?? "{$slug}-{$p['index']}") . '-field';
+        if (!$p['id']) $p['id'] = ($p['name'] ?? "{$slug}-{$p['view_index']}") . '-field';
         $p['attributes']['data-field-id'] = $p['id'];
 
         if ($p['key'])  $p['name'] = $p['key'];
