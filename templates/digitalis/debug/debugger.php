@@ -4,7 +4,7 @@
 <digitalis-debugger
     <?= $open ? 'open' : '' ?>
     data-closable="<?= $closable ?>"
-    data-index="<?= $index ?>"
+    data-index="<?= $view_index ?>"
     style="--index: <?= $index ?>; z-index: calc(2147483647 - var(--index)) !important;"
 >
     <header>

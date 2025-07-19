@@ -75,7 +75,7 @@ abstract class View implements \ArrayAccess {
 
         if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
 
-        $this->set_param('index', self::$indexes[static::class]);
+        $this->set_param('view_index', self::$indexes[static::class]);
         $this->inject_dependencies($this->params, static::get_defaults());
         $this->params($this->params);
 
@@ -257,13 +257,13 @@ abstract class View implements \ArrayAccess {
 
     public function get_index () {
     
-        return $this->get_param('index');
+        return $this->get_param('view_index');
     
     }
 
     public function is_first () {
     
-        return $this->get_param('index') === 0;
+        return $this->get_param('view_index') === 0;
     
     }
 
