@@ -100,7 +100,7 @@ class Model extends Factory {
             if (static::validate_data($data) && static::validate_id($id)) {
 
                 $model = new $class_name($id);
-                $model->init();
+                $model->init($data);
 
                 self::$instances[$class_name][$id] = $model;
 
@@ -188,7 +188,7 @@ class Model extends Factory {
     protected function build_instance   ($data) {}
     protected function hydrate_instance ()      {}
 
-    public function init () {
+    public function init ($data) {
 
         // ...
 
