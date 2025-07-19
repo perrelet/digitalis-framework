@@ -7,6 +7,8 @@ use DateTimeZone;
 
 abstract class Iterator extends Singleton {
 
+    use Dependency_Injection;
+
     protected $title              = 'Iterator';
     protected $key                = 'digitalis_iterator';
     protected $batch_size         = 1;
@@ -52,7 +54,7 @@ abstract class Iterator extends Singleton {
 
     public function get_items () { return []; }
 
-    public function process_item ($item) { 
+    public function process_item ($item) {
 
         return true;
     

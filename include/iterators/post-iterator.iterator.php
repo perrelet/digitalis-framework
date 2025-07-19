@@ -65,7 +65,7 @@ abstract class Post_Iterator extends Iterator {
 
     public function process_item ($item) {
 
-        return $this->process_post($item);
+        return static::inject([$this, 'process_post'], [$item, $item]);
 
     }
 

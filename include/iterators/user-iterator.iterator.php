@@ -50,7 +50,7 @@ abstract class User_Iterator extends Iterator {
 
     public function process_item ($item) {
 
-        return $this->process_user($item);
+        return static::inject([$this, 'process_user'], [$item, $item]);
 
     }
 
