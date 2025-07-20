@@ -8,30 +8,34 @@ class Field extends Component {
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
-        'name'           => null,
-        'key'            => null, // deprecated
-        'id'             => null,
-        'label'          => false,
-        'default'        => '',
-        'value'          => null,
-        'value_callback' => false,
-        'condition'      => null,
-        'classes'        => ['digitalis-field', 'field'],
-        'styles'         => [],
-        'attributes'     => [],
-        'row_classes'    => ['row', 'field-row'],
-        'row_styles'     => [],
-        'row_attributes' => [],
-        'options'        => [],
-        'option_atts'    => [],
-        'placeholder'    => false,
-        'once_atts'      => [],
-        'wrap'           => true,
-        'width'          => 1,
-        'required'       => null,
-        'disabled'       => null,
-        'readonly'       => null,
-        'form'           => null,
+        'name'              => null,
+        'key'               => null, // deprecated
+        'id'                => null,
+        'label'             => false,
+        'default'           => '',
+        'value'             => null,
+        'value_callback'    => false,
+        'condition'         => null,
+        'classes'           => ['digitalis-field', 'field'],
+        'styles'            => [],
+        'attributes'        => [],
+        'row_classes'       => ['row', 'field-row'],
+        'row_styles'        => [],
+        'row_attributes'    => [],
+        'options'           => [],
+        'option_atts'       => [],
+        'placeholder'       => false,
+        'once_atts'         => [],
+        'wrap'              => true,
+        'after_row_open'    => '',
+        'after_wrap_open'   => '',
+        'before_wrap_close' => '',
+        'before_row_close'  => '',
+        'width'             => 1,
+        'required'          => null,
+        'disabled'          => null,
+        'readonly'          => null,
+        'form'              => null,
     ];
 
     protected static $merge = [
@@ -92,11 +96,11 @@ class Field extends Component {
 
     public function get_once_attributes () {
 
-        $attributes = new Attributes($this['once_atts']);
+        $attributes = new Attributes($this->once_atts);
 
-        if ($this['condition']) {
+        if ($this->condition) {
 
-            $attributes['data-field-condition'] = json_encode($this['condition']);
+            $attributes['data-field-condition'] = json_encode($this->condition);
 
             wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
                 'in_footer' => true,
@@ -164,18 +168,18 @@ class Field extends Component {
 
     public function before () {
 
-        if ($this['wrap']) {
+        if ($this->wrap) {
 
-            echo $this['row']->open();
+            echo $this->row->open();
             $this->after_row_open();
 
         }
 
-        if ($this['label']->get_content()) echo $this['label'];
+        if ($this->label->get_content()) echo $this->label;
 
-        if ($this['wrap']) {
+        if ($this->wrap) {
 
-            echo $this['wrapper']->open();
+            echo $this->wrapper->open();
             $this->after_wrap_open();
 
         }
@@ -184,21 +188,40 @@ class Field extends Component {
 
     public function after () {
 
-        if ($this['wrap']) {
+        if ($this->wrap) {
 
             $this->before_wrap_close();
-            echo $this['wrapper']->close(); 
+            echo $this->wrapper->close(); 
 
             $this->before_row_close();
-            echo $this['row']->close();
+            echo $this->row->close();
 
         }
 
     }
 
-    public function after_row_open    () {}
-    public function after_wrap_open   () {}
-    public function before_wrap_close () {}
-    public function before_row_close  () {}
+    public function after_row_open () {
+
+        if ($this->after_row_open) echo $this->after_row_open;
+
+    }
+
+    public function after_wrap_open () {
+
+        if ($this->after_wrap_open) echo $this->after_wrap_open;
+
+    }
+
+    public function before_wrap_close () {
+
+        if ($this->before_wrap_close) echo $this->before_wrap_close;
+
+    }
+
+    public function before_row_close () {
+
+        if ($this->before_row_close) echo $this->before_row_close;
+
+    }
 
 }
