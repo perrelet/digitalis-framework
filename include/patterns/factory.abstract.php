@@ -29,10 +29,11 @@ abstract class Factory extends Creational {
     
     }
 
-    public static function make ($data = [], ...$args) {
+    public static function create ($data = []) {
 
         if (!$instance = static::constructor_inject(static::class, array_slice(func_get_args(), 2))) return;
 
+        static::prepare_data($data);
         static::construct_instance($instance, $data);
 
         return $instance;
@@ -50,7 +51,7 @@ abstract class Factory extends Creational {
 
         if ($data && is_scalar($data)) return self::$instances[$class_name][$data] ?? null;
 
-        $instance = static::make($data);
+        $instance = static::create($data);
 
         if ($key = $instance->get_cache_key()) {
 
