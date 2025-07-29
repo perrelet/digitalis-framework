@@ -4,6 +4,7 @@ namespace Digitalis;
 
 use ReflectionClass;
 use ReflectionFunction;
+use ReflectionUnionType;
 
 trait Dependency_Injection {
 
@@ -46,6 +47,7 @@ trait Dependency_Injection {
         foreach ($params as $i => $param) {
 
             if (!$type = $param->getType())             continue;
+            if ($type instanceof ReflectionUnionType)   $type = $type->getTypes()[0];
             if (!$class = $type->getName())             continue;
             if (!class_exists($class))                  continue;
             if (!method_exists($class, 'get_instance')) continue;
