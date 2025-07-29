@@ -13,6 +13,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/auto-instantiate.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/traits/is-stashable.trait.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';

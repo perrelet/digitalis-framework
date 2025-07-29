@@ -4,7 +4,7 @@ namespace Digitalis;
 
 abstract class WP_Model extends Model {
 
-    use Has_WP_Model;
+    use Has_WP_Model, Is_Stashable;
 
     public static function validate_id ($id) {
 
