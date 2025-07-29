@@ -24,7 +24,7 @@ trait Has_WP_User {
 
         } else {
 
-            $this->set_wp_user(new WP_User($data));
+            $this->set_wp_user(new WP_User((object) $data));
 
         }
 
@@ -100,17 +100,15 @@ trait Has_WP_User {
 
     public function set_roles ($roles) {
 
-        $this->wp_user->roles = (array) $roles;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('roles', (array) $roles);
 
     }
 
     public function add_role ($role) {
-    
-        $this->wp_user->roles[] = $role;
-        $this->cache_wp_model();
-        return $this;
+
+        $roles = (array) $this->get_wp_model_prop('roles');
+        $roles[] = $role;
+        return $this->set_roles($roles);
     
     }
 
@@ -122,9 +120,7 @@ trait Has_WP_User {
 
     public function set_username ($username) {
 
-        $this->wp_user->user_login = $username;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('user_login', $username);
 
     }
 
@@ -136,10 +132,8 @@ trait Has_WP_User {
 
     public function set_password ($password) {
 
-        $this->wp_user->user_pass           = wp_hash_password($password);
-        $this->wp_user->user_activation_key = '';
-        $this->cache_wp_model();
-        return $this;
+        $this->set_wp_model_prop('user_activation_key', '');
+        return $this->set_wp_model_prop('user_pass', wp_hash_password($password));
 
     }
 
@@ -163,9 +157,7 @@ trait Has_WP_User {
 
     public function set_email ($email) {
 
-        $this->wp_user->user_email = $email;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('user_email', $email);
 
     }
 
@@ -177,9 +169,7 @@ trait Has_WP_User {
 
     public function set_user_url ($url) {
 
-        $this->wp_user->user_url = $url;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('user_url', $url);
 
     }
 
@@ -198,10 +188,7 @@ trait Has_WP_User {
     public function set_registered_date ($date) {
 
         if ($date instanceof DateTime) $date = $date->format('Y-m-d H:i:s');
-
-        $this->wp_user->user_registered = $date;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('user_registered', $date);
 
     }
 
@@ -215,9 +202,7 @@ trait Has_WP_User {
 
     public function set_display_name ($display_name) {
 
-        $this->wp_user->display_name = $display_name;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('display_name', $display_name);
 
     }
 
@@ -235,9 +220,7 @@ trait Has_WP_User {
 
     public function set_nicename ($nicename) {
 
-        $this->wp_user->user_nicename = $nicename;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('user_nicename', $nicename);
 
     }
 

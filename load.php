@@ -82,6 +82,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-taxonomy.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-role.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/wp-model.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/comment.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/page.post.php';

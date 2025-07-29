@@ -6,7 +6,7 @@ use stdClass;
 use WP_Post;
 use WP_Query;
 
-class Post extends Model {
+class Post extends WP_Model {
 
     use Has_WP_Post;
 
@@ -16,12 +16,6 @@ class Post extends Model {
     protected static $taxonomy        = 'category';  // string            - Taxonomy to validate term against.
 
     protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
-
-    public static function prepare_data (&$data) {
-
-        if (is_array($data)) $data = (object) $data;
-
-    }
 
     public static function get_global_id () {
     
@@ -52,7 +46,7 @@ class Post extends Model {
 
         }
 
-        return (is_int($id) && ($id > 0));
+        return parent::validate_id($id);
 
     }
 
@@ -160,13 +154,8 @@ class Post extends Model {
         if (static::$post_type) $wp_post->post_type = static::$post_type;
 
         $this->init_wp_model($wp_post);
-        $this->cache_wp_model();
-
-    }
-
-    protected function hydrate_instance () {
-
-        $this->init_wp_model($this->id);
+        
+        parent::build_instance($data);
 
     }
 
@@ -179,9 +168,10 @@ class Post extends Model {
     // Data Access
 
     public function reload () {
+
+        $this->clear_content_cache();
     
-        $this->init_wp_model($this->id);
-        $this->content_cache = [];
+        return parent::reload();
     
     }
 
@@ -189,13 +179,12 @@ class Post extends Model {
 
         $post_array = wp_parse_args($post_array, get_object_vars($this->wp_post));
 
-        if ($this->is_new() && isset($post_array['ID'])) unset($post_array['ID']);
-
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
 
         if ($this->is_new()) {
 
+            if (isset($post_array['ID'])) unset($post_array['ID']);
             $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
 
         } else {
@@ -210,7 +199,14 @@ class Post extends Model {
         $this->is_new      = false;
         $this->wp_post->ID = $post_id;
         $this->id          = $post_id;
-        $this->reload();
+
+        foreach ($post_array as $key => $value) $this->wp_post->$key = $value;
+
+        $this->dirty = false;
+        $this->cache_wp_model();
+        $this->cache_instance();
+        $this->clear_content_cache();
+        $this->unstash();
 
         if ($tax_input) foreach ($tax_input as $taxonomy => $terms) {
 

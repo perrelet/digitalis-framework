@@ -6,17 +6,11 @@ use stdClass;
 use WP_User;
 use DateTime;
 
-class User extends Model {
+class User extends WP_Model {
 
     use Has_WP_User;
 
     protected static $role = false; // string|false|array - Validate by user role. Leave false to allow any role.
-
-    public static function prepare_data (&$data) {
-
-        if (is_array($data)) $data = (object) $data;
-
-    }
 
     public static function get_global_id () {
     
@@ -45,7 +39,7 @@ class User extends Model {
 
         }
 
-        return (is_int($id) && ($id > 0));
+        return parent::validate_id($id);
 
     }
 
@@ -98,13 +92,8 @@ class User extends Model {
         if (static::$role) $wp_user->roles = static::$role;
 
         $this->init_wp_model($wp_user);
-        $this->cache_wp_model();
 
-    }
-
-    protected function hydrate_instance () {
-
-        $this->init_wp_model($this->id);
+        parent::build_instance($data);
 
     }
 

@@ -34,7 +34,7 @@ class Model extends Factory {
 
     public static function validate_id ($id) {
 
-        return ($id > 0);
+        return true;
 
     }
 
@@ -48,6 +48,24 @@ class Model extends Factory {
     
         return !static::get_specificity();
     
+    }
+
+    public static function get_uuid_prefix () {
+    
+        return 'new-';
+    
+    }
+
+    public static function generate_uuid ($data) {
+
+        return static::get_uuid_prefix() . wp_generate_uuid4();
+
+    }
+
+    public static function is_uuid ($data) {
+
+        return is_string($data) && (substr($data, 0, strlen(static::get_uuid_prefix())) == static::get_uuid_prefix());
+
     }
 
     public static function get_class_name ($id, $auto_resolve = null) {
@@ -79,40 +97,53 @@ class Model extends Factory {
 
     }
 
-    public static function get_instance ($data = null, $auto_resolve = null) {
-
+    protected static function resolve_data (&$data = [], $auto_resolve = null) {
+    
         static::prepare_data($data);
 
-        if (is_null($data) && method_exists(static::class, 'get_global_id')) {
-            $id = static::get_global_id();
+        if (static::is_uuid($data)) {
+
+            $id = $data;
+
         } else {
-            $id = static::extract_id($data);
-        }
 
-        if (is_null($id)) return null;
-
-        $class_name = static::get_class_name($id, $auto_resolve);
-
-        if (!isset(self::$instances[$class_name])) self::$instances[$class_name] = [];
-        
-        if (!isset(self::$instances[$class_name][$id])) {
-
-            if (static::validate_data($data) && static::validate_id($id)) {
-
-                $model = new $class_name($id);
-                $model->init($data);
-
-                self::$instances[$class_name][$id] = $model;
-
-            } else {
-
-                self::$instances[$class_name][$id] = null;
-
-            }
+            $id = (is_null($data) && method_exists(static::class, 'get_global_id')) ?
+                static::get_global_id() :
+                static::extract_id($data);
 
         }
 
-        return self::$instances[$class_name][$id];
+        return [$id, static::get_class_name($id, $auto_resolve)];
+    
+    }
+
+    public static function create ($data = [], $auto_resolve = null) {
+
+        [$id, $class_name] = static::resolve_data($data, $auto_resolve);
+
+        if (is_null($id))                 return null;
+        if ($class_name != static::class) return $class_name::create($data, false);
+
+        $instance = new $class_name($data);
+        $instance->init($data);
+
+        return $instance;
+    
+    }
+
+    public static function get_instance ($data = null, $auto_resolve = null) {
+
+        [$id, $class_name] = static::resolve_data($data, $auto_resolve);
+
+        if (is_null($id))                 return null;
+        if ($class_name != static::class) return $class_name::get_instance($data, false);
+
+        if (isset(self::$instances[$class_name][$id]))                  return self::$instances[$class_name][$id];
+        if (!static::validate_data($data) || !static::validate_id($id)) return null;
+
+        $instance = new $class_name($id);
+        $instance->init($data);
+        return $instance;
 
     }
 
@@ -162,27 +193,20 @@ class Model extends Factory {
         if (is_scalar($data)) {
 
             $this->id     = $data;
-            $this->is_new = is_int($data) ? ($data < 0) : false;
+            $this->is_new = false; //is_int($data) ? ($data < 0) : false;
 
             $this->hydrate_instance();
 
         } else {
 
-            $this->id     = $this->generate_uuid($data);
+            $this->id     = static::generate_uuid($data);
             $this->is_new = true;
 
             $this->build_instance($data);
 
-            if (!isset(self::$instances[static::class]))            self::$instances[static::class] = [];
-            if (!isset(self::$instances[static::class][$this->id])) self::$instances[static::class][$this->id] = $this;
-
         }
 
-    }
-
-    protected function generate_uuid ($data) {
-
-        return spl_object_id((object) $data);
+        $this->cache_instance();
 
     }
 
@@ -193,6 +217,14 @@ class Model extends Factory {
 
         // ...
 
+    }
+
+    public function cache_instance () {
+    
+        if (!isset(self::$instances[static::class])) self::$instances[static::class] = [];
+        self::$instances[static::class][$this->id] = $this;
+        return $this;
+    
     }
 
     //

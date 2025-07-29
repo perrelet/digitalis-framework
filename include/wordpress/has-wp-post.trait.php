@@ -23,7 +23,7 @@ trait Has_WP_Post {
 
         } else {
 
-            $this->set_wp_post(new WP_Post($data));
+            $this->set_wp_post(new WP_Post((object) $data));
 
         }
 
@@ -37,6 +37,7 @@ trait Has_WP_Post {
 
     public function set_wp_post ($wp_post) {
 
+        $wp_post->ID = $this->get_id();
         $this->wp_post = $wp_post;
         return $this;
 
@@ -84,9 +85,7 @@ trait Has_WP_Post {
 
     public function set_slug ($slug) {
 
-        $this->wp_post->post_name = $slug;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_name', $slug);
 
     }
 
@@ -98,9 +97,7 @@ trait Has_WP_Post {
 
     public function set_guid ($guid) {
 
-        $this->wp_post->guid = $guid;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('guid', $guid);
 
     }
 
@@ -118,9 +115,7 @@ trait Has_WP_Post {
 
     public function set_title ($title) {
 
-        $this->wp_post->post_title = $title;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_title', $title);
 
     }
 
@@ -144,10 +139,14 @@ trait Has_WP_Post {
 
     public function set_content ($content) {
     
-        $this->wp_post->post_content = $content;
+        $this->clear_content_cache();
+        return $this->set_wp_model_prop('post_content', $content);
+    
+    }
+
+    public function clear_content_cache () {
+    
         $this->content_cache = [];
-        $this->cache_wp_model();
-        return $this;
     
     }
 
@@ -163,9 +162,7 @@ trait Has_WP_Post {
 
     public function set_excerpt ($excerpt) {
     
-        $this->wp_post->post_excerpt = $excerpt;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_excerpt', $excerpt);
     
     }
 
@@ -177,10 +174,14 @@ trait Has_WP_Post {
 
     public function set_status ($status) {
     
-        $this->wp_post->post_status = $status;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_status', $status);
     
+    }
+
+    public function is_auto_draft () {
+
+        return $this->get_status() == 'auto-draft';
+
     }
 
     public function is_sticky () {
@@ -199,9 +200,7 @@ trait Has_WP_Post {
 
     public function set_post_type ($post_type) {
     
-        $this->wp_post->post_type = $post_type;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_type', $post_type);
     
     }
 
@@ -277,17 +276,13 @@ trait Has_WP_Post {
 
     public function set_date ($date) {
     
-        $this->wp_post->post_date = $date;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_date', $date);
     
     }
 
     public function set_date_gmt ($date) {
     
-        $this->wp_post->post_date_gmt = $date;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('post_date_gmt', $date);
     
     }
 
@@ -301,10 +296,8 @@ trait Has_WP_Post {
 
     public function set_author_id ($author_id) {
     
-        $this->wp_post->post_author = (int) $author_id;
-        $this->cache_wp_model();
-        return $this;
-    
+        return $this->set_wp_model_prop('post_author', $author_id);
+
     }
 
     public function get_author ($auto_resolve = true) {
@@ -452,8 +445,7 @@ trait Has_WP_Post {
 
     public function set_parent_id ($parent_id) {
 
-        $this->wp_post->post_parent = (int) $parent_id;
-        return $this;
+        return $this->set_wp_model_prop('post_parent', (int) $parent_id);
 
     }
 
@@ -610,8 +602,7 @@ trait Has_WP_Post {
 
     public function set_password ($password) {
 
-        $this->wp_post->post_password = $password;
-        return $this;
+        return $this->set_wp_model_prop('post_password', $password);
 
     }
 

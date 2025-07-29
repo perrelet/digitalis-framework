@@ -7,17 +7,11 @@ use WP_Term;
 use WP_Term_Query;
 use WP_Error;
 
-class Term extends Model {
+class Term extends WP_Model {
 
     use Has_WP_Term;
 
     protected static $taxonomy = null;
-
-    public static function prepare_data (&$data) {
-
-        if (is_array($data)) $data = (object) $data;
-
-    }
 
     public static function get_global_id () {
     
@@ -43,7 +37,7 @@ class Term extends Model {
         if ($wp_term instanceof WP_Error)                                 return false;
         if (static::$taxonomy && $wp_term->taxonomy != static::$taxonomy) return false;
 
-        return (is_int($id) && ($id > 0));
+        return parent::validate_id($id);
 
     }
 
@@ -156,23 +150,12 @@ class Term extends Model {
         if (static::$taxonomy) $wp_term->taxonomy = static::$taxonomy;
 
         $this->init_wp_model($wp_term);
-        $this->cache_wp_model();
 
-    }
-
-    protected function hydrate_instance () {
-
-        $this->init_wp_model($this->id);
+        parent::build_instance($data);
 
     }
 
     // Data Access
-
-    public function reload () {
-
-        $this->init_wp_model($this->id);
-
-    }
 
     public function save ($term_array = []) {
 
@@ -200,7 +183,15 @@ class Term extends Model {
         $this->is_new           = false;
         $this->wp_term->term_id = $term_id;
         $this->id               = $term_id;
-        $this->reload();
+
+        foreach ($term_array as $key => $value) $this->wp_term->$key = $value;
+
+        $this->dirty = false;
+        $this->cache_wp_model();
+        $this->cache_instance();
+        $this->unstash();
+
+        self::$instances[static::class][$term_id] = $this;
 
         if ($term_array['field_input'] ?? false) $this->update_fields($term_array['field_input']);
 

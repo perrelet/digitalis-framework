@@ -25,7 +25,7 @@ trait Has_WP_Comment {
 
         } else {
 
-            $this->set_wp_comment(new WP_Comment($data));
+            $this->set_wp_comment(new WP_Comment((object) $data));
 
         }
 
@@ -86,9 +86,7 @@ trait Has_WP_Comment {
 
     public function set_post_id ($comment_post_ID) {
 
-        $this->wp_comment->post_name = $comment_post_ID;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_post_ID', $comment_post_ID);
 
     }
 
@@ -110,12 +108,7 @@ trait Has_WP_Comment {
         else if ($author instanceof WP_User) { $author = $author->user_login; }
         else if (!is_string($author))        { $author = (($user = User::inst($author)) ? $user->get_username() : null); }
 
-        if ($author) {
-            
-            $this->wp_comment->comment_author = $author;
-            $this->cache_wp_model();
-
-        }
+        if ($author) return $this->set_wp_model_prop('comment_author', $author);
 
         return $this;
 
@@ -129,9 +122,7 @@ trait Has_WP_Comment {
 
     public function set_author_email ($email) {
 
-        $this->wp_comment->comment_author_email = $email;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_author_email', $email);
 
     }
 
@@ -149,9 +140,7 @@ trait Has_WP_Comment {
 
     public function set_author_url ($url) {
 
-        $this->wp_comment->comment_author_url = $url;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_author_url', $url);
 
     }
 
@@ -175,9 +164,7 @@ trait Has_WP_Comment {
 
     public function set_author_ip ($ip) {
 
-        $this->wp_comment->comment_author_IP = $ip;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_author_IP', $ip);
 
     }
 
@@ -196,9 +183,7 @@ trait Has_WP_Comment {
     public function set_date ($date) {
 
         if ($date instanceof DateTime) $date = $date->format('Y-m-d H:i:s');
-        $this->wp_comment->comment_date = $date;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_date', $date);
 
     }
 
@@ -217,9 +202,7 @@ trait Has_WP_Comment {
     public function set_date_gmt ($date) {
 
         if ($date instanceof DateTime) $date = $date->format('Y-m-d H:i:s');
-        $this->wp_comment->comment_date_gmt = $date;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_date_gmt', $date);
 
     }
 
@@ -238,8 +221,7 @@ trait Has_WP_Comment {
     public function set_content ($content) {
 
         $this->wp_comment->comment_content = $content;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('comment_content', $content);
 
     }
 

@@ -23,7 +23,7 @@ trait Has_WP_Term {
 
         } else {
 
-            $this->set_wp_term(new WP_Term($data));
+            $this->set_wp_term(new WP_Term((object) $data));
 
         }
 
@@ -92,9 +92,7 @@ trait Has_WP_Term {
 
     public function set_slug ($slug) {
 
-        $this->wp_term->slug = $slug;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('slug', $slug);
 
     }
 
@@ -106,9 +104,7 @@ trait Has_WP_Term {
 
     public function set_name ($name) {
 
-        $this->wp_term->name = $name;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('name', $name);
 
     }
 
@@ -120,9 +116,7 @@ trait Has_WP_Term {
 
     public function set_term_group ($term_group) {
 
-        $this->wp_term->term_group = $term_group;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('term_group', $term_group);
 
     }
 
@@ -134,9 +128,7 @@ trait Has_WP_Term {
 
     public function set_term_taxonomy_id ($term_taxonomy_id) {
 
-        $this->wp_term->term_taxonomy_id = $term_taxonomy_id;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('term_taxonomy_id', $term_taxonomy_id);
 
     }
 
@@ -148,9 +140,7 @@ trait Has_WP_Term {
 
     public function set_taxonomy ($taxonomy) {
 
-        $this->wp_term->taxonomy = $taxonomy;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('taxonomy', $taxonomy);
 
     }
 
@@ -162,9 +152,7 @@ trait Has_WP_Term {
 
     public function set_description ($description) {
 
-        $this->wp_term->description = $description;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('description', $description);
 
     }
 
@@ -176,9 +164,7 @@ trait Has_WP_Term {
 
     public function set_parent_id ($parent_id) {
 
-        $this->wp_term->parent = $parent_id;
-        $this->cache_wp_model();
-        return $this;
+        return $this->set_wp_model_prop('parent', $parent_id);
 
     }
 

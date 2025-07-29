@@ -4,15 +4,9 @@ namespace Digitalis;
 
 use WP_Comment;
 
-class Comment extends Model {
+class Comment extends WP_Model {
 
     use Has_WP_Comment;
-
-    public static function prepare_data (&$data) {
-
-        if (is_array($data)) $data = (object) $data;
-
-    }
 
     public static function extract_id ($data = null) {
 
@@ -25,7 +19,7 @@ class Comment extends Model {
 
     public static function validate_id ($id) {
 
-        return (is_int($id) && ($id > 0));
+        return parent::validate_id($id);
 
     }
 
@@ -37,13 +31,8 @@ class Comment extends Model {
         $wp_comment->comment_ID = $this->id;
 
         $this->init_wp_model($wp_comment);
-        $this->cache_wp_model();
 
-    }
-
-    protected function hydrate_instance () {
-
-        $this->init_wp_model($this->id);
+        parent::build_instance($data);
 
     }
 
