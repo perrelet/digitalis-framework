@@ -19,7 +19,7 @@ trait Is_Stashable {
 
     public static function flush_stash () {
     
-        return $this->get_cache_store()->flush_group(static::get_stash_group());
+        return static::get_cache_store()->flush_group(static::get_stash_group());
     
     }
 
@@ -38,14 +38,16 @@ trait Is_Stashable {
 
     public function stash ($ttl = 300) {
     
-        return $this->get_cache_store()->set($this->get_cache_key(), $this, static::get_stash_group(), $ttl);
+        return static::get_cache_store()->set($this->get_cache_key(), $this, static::get_stash_group(), $ttl);
     
     }
 
     public function unstash () {
     
-        return $this->get_cache_store()->delete($key, static::get_stash_group());
+        return static::get_cache_store()->delete($this->get_cache_key(), static::get_stash_group());
     
     }
+
+    abstract protected function get_cache_key ();
 
 } 
