@@ -4,7 +4,7 @@ namespace Digitalis;
 
 use \WC_Product_Query;
 
-abstract class Product_Iterator extends Post_Iterator {
+abstract class Product_Iterator extends Iterator {
 
     protected $labels = [
         'single'    => 'product',
@@ -14,6 +14,12 @@ abstract class Product_Iterator extends Post_Iterator {
     public function process_product ($product) {}
 
     //
+
+    public function get_query_vars ($vars) {
+
+        return $vars;
+
+    }
 
     public function get_default_query_vars () {
 
