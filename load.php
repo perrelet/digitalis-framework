@@ -62,6 +62,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/page-builders/page-builder.singleton
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/iterator.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/csv-iterator.iterator.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/post-iterator.iterator.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/order-iterator.iterator.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/product-iterator.post-iterator.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/user-iterator.iterator.php';
 
