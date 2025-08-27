@@ -152,6 +152,7 @@ add_action('plugins_loaded', function () {
 //add_action('woocommerce_loaded', function () {
 
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
+    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/customer.user.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-status.post-status.php';
     require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order.abstract.php';
