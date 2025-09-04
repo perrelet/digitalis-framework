@@ -5,6 +5,7 @@ namespace Digitalis;
 use DateTime;
 use WP_Error;
 use WP_User;
+use WP_Comment_Query;
 
 trait Has_WP_User {
 
@@ -275,6 +276,13 @@ trait Has_WP_User {
     }
 
     //
+
+    public function get_comments ($args = []) {
+    
+        $args['user_id'] = $this->get_id();
+        return Comment::get_instances((new WP_Comment_Query())->query($args));
+    
+    }
 
     public function is_spammer () {
 
