@@ -284,6 +284,15 @@ trait Has_WP_User {
     
     }
 
+    public function get_comment_count ($args = []) {
+
+        $args['user_id'] = $this->get_id();
+        $args['count']   = true;
+
+        return (new WP_Comment_Query())->query($args);
+
+    }
+
     public function is_spammer () {
 
         return is_user_spammy($this->wp_user);
