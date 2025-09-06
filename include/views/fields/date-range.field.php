@@ -34,7 +34,7 @@ class Date_Range extends Date_Picker {
 
     public function after () {
 
-        $json = json_encode($this['date-picker']);
+        $json = json_encode($this['date_picker']);
 
         echo "<script>new DateRangePicker(document.getElementById('{$this['id']}'), {$json});</script>";
 

@@ -6,13 +6,13 @@ class Date_Picker extends Input {
 
     protected static $defaults = [
         'type'          => 'text',
-        'date-picker'   => [],
+        'date_picker'   => [],
         'classes'       => ['field-date-picker'],
     ];
 
     public function params (&$p) {
 
-        $p['date-picker'] = wp_parse_args($p['date-picker'], [
+        $p['date_picker'] = wp_parse_args($p['date_picker'], [
             'autohide'  => false,
             'format'    => "dd/mm/yyyy",
         ]);
@@ -32,7 +32,7 @@ class Date_Picker extends Input {
 
     public function after () {
 
-        $json = json_encode($this['date-picker']);
+        $json = json_encode($this['date_picker']);
 
         if (strpos(static::class, 'Date_Range') === false) echo "<script>new Datepicker(document.getElementById('{$this['id']}'), {$json});</script>";
 
