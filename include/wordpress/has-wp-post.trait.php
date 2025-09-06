@@ -4,6 +4,7 @@ namespace Digitalis;
 
 use stdClass;
 use WP_Post;
+use WP_Comment_Query;
 
 trait Has_WP_Post {
 
@@ -522,15 +523,34 @@ trait Has_WP_Post {
 
     // Comments
 
-    public function get_comments_url () {
+    public function get_comments ($args = []) {
 
-        return get_comments_link($this->wp_post);
+        $args['post_id'] = $this->get_id();
+
+        return Comment::get_instances((new WP_Comment_Query())->query($args));
+    
+    }
+
+    public function get_comment_count ($args = []) {
+
+        if ($args) {
+
+            $args['post_id'] = $this->get_id();
+            $args['count']   = true;
+
+            return (new WP_Comment_Query())->query($args);
+
+        } else {
+
+            return get_comments_number($this->wp_post);
+
+        }
 
     }
 
-    public function get_comment_count () {
+    public function get_comments_url () {
 
-        return get_comments_number($this->wp_post);
+        return get_comments_link($this->wp_post);
 
     }
 

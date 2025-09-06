@@ -14,7 +14,7 @@ class User extends WP_Model {
 
     public static function get_global_id () {
     
-        return get_current_user_id();
+        return ($id = get_current_user_id()) ? $id : null;
     
     }
 

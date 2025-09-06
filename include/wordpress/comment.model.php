@@ -10,7 +10,7 @@ class Comment extends WP_Model {
 
     public static function extract_id ($data = null) {
 
-        if (is_object($data) && property_exists($data, 'comment_ID')) return $data->comment_ID;
+        if (is_object($data) && property_exists($data, 'comment_ID')) return (int) $data->comment_ID;
         if (is_object($data) && method_exists($data, 'get_id'))       return $data->get_id();
 
         return (int) parent::extract_id($data);
