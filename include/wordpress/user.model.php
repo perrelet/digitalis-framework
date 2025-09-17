@@ -91,9 +91,7 @@ class User extends WP_Model {
 
         if (static::$role) $wp_user->roles = static::$role;
 
-        $this->init_wp_model($wp_user);
-
-        parent::build_instance($data);
+        parent::build_instance($wp_user);
 
     }
 

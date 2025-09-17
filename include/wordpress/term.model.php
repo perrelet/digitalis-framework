@@ -149,9 +149,7 @@ class Term extends WP_Model {
 
         if (static::$taxonomy) $wp_term->taxonomy = static::$taxonomy;
 
-        $this->init_wp_model($wp_term);
-
-        parent::build_instance($data);
+        parent::build_instance($wp_term);
 
     }
 

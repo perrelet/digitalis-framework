@@ -152,10 +152,8 @@ class Post extends WP_Model {
         $wp_post->ID = $this->id;
 
         if (static::$post_type) $wp_post->post_type = static::$post_type;
-
-        $this->init_wp_model($wp_post);
         
-        parent::build_instance($data);
+        parent::build_instance($wp_post);
 
     }
 

@@ -30,9 +30,7 @@ class Comment extends WP_Model {
         $wp_comment             = new WP_Comment((object) $data);
         $wp_comment->comment_ID = $this->id;
 
-        $this->init_wp_model($wp_comment);
-
-        parent::build_instance($data);
+        parent::build_instance($wp_comment);
 
     }
 
