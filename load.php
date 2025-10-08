@@ -2,7 +2,7 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.0');
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.01');
 define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_LIBRARY_PATH',        plugin_dir_path( __FILE__ ) . 'include/features/');
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
@@ -92,7 +92,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/revision.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/attachment.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.utility.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 
 \Digitalis\Post::static_init();
