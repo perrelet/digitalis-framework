@@ -4,10 +4,11 @@ namespace Digitalis;
 
 class Attributes implements \ArrayAccess {
 
-    protected $attrs = [];
-    protected $quote = "'";
+    protected $attrs    = [];
+    protected $quote    = "'";
+    protected $encoding = 'UTF-8';
 
-    protected $string = null;
+    protected $string   = null;
 
     public function __construct (array $attrs = []) {
     
@@ -17,24 +18,76 @@ class Attributes implements \ArrayAccess {
 
     public function __toString () {
 
-        if (is_null($this->string)) {
+        if (!is_null($this->string)) return $this->string;
 
-            $this->string = '';
+        $out = [];
 
-            foreach ($this->attrs as $name => $value) {
-    
-                if (is_array($value)) $value = ($name == 'style') ? $this->generate_css($value) : implode(' ',  array_unique($value));
+        foreach ($this->attrs as $name => $value) {
 
-                $this->string .= ($this->string ? ' ' : '') . $name;
-                if ($value) $this->string .= "={$this->quote}{$value}{$this->quote}";
-    
-            }
+            $name = strtolower((string) $name);
+
+            //if (!$this->is_safe_attr_name($name)) continue;
+
+            $value = $this->normalize_value($name, $value);
+
+            if (is_null($value)) continue;
+
+            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . $value . $this->quote;
 
         }
-    
-        return $this->string;
+
+        return $this->string = implode(' ', $out);
 
     }
+
+    protected function normalize_value ($name, $value) {
+
+        if ($value === null || $value === false) return null;
+        if ($value === true)                     return '';
+
+        if (is_array($value)) {
+
+            $value = match (true) {
+                $name === 'class'               => $this->generate_classes($value),
+                $name === 'style'               => $this->generate_css($value),
+                str_starts_with($name, 'data-') => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                default                         => implode(' ', array_map('strval', $value)),
+            };
+
+        } else {
+
+            $value = (string) $value;
+
+        }
+
+        return $this->escape_attr($value);
+
+    }
+
+    protected function generate_classes ($classes) {
+
+        $tokens = array_unique(array_filter(array_map('trim', array_map('strval', $classes))));
+        return implode(' ', $tokens);
+
+    }
+
+    protected function generate_css ($styles) {
+
+        $css = '';
+
+        foreach ($styles as $property => $value) $css .= "{$property}: {$value};";
+
+        return $css;
+
+    }
+
+    protected function escape_attr ($value) {
+
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, $this->encoding, false);
+
+    }
+
+    //
 
     public function set_quote ($quote) {
 
@@ -77,12 +130,17 @@ class Attributes implements \ArrayAccess {
 
         } else if ($attr) {
 
-            if (!is_scalar($value)) $value = json_encode($value);
             $this->attrs[$attr] = $value;
 
         }
 
         return $this;
+    
+    }
+
+    public function add_attrs ($attrs) {
+    
+        return $this->set_attr($attrs);
     
     }
 
@@ -100,12 +158,13 @@ class Attributes implements \ArrayAccess {
     
     }
 
-    public function get_attributes   () { return call_user_func_array([$this, 'get_attrs'], func_get_args());   }
-    public function set_attributes   () { return call_user_func_array([$this, 'set_attrs'], func_get_args());   }
-    public function get_attribute    () { return call_user_func_array([$this, 'get_attr'], func_get_args());    }
-    public function set_attribute    () { return call_user_func_array([$this, 'set_attr'], func_get_args());    }
-    public function remove_attribute () { return call_user_func_array([$this, 'remove_attr'], func_get_args()); }
-    public function has_attribute    () { return call_user_func_array([$this, 'has_attr'], func_get_args());    }
+    public function get_attributes   (...$args) { return $this->get_attrs(...$args);   }
+    public function set_attributes   (...$args) { return $this->set_attrs(...$args);   }
+    public function add_attributes   (...$args) { return $this->add_attrs(...$args);   }
+    public function get_attribute    (...$args) { return $this->get_attr(...$args);    }
+    public function set_attribute    (...$args) { return $this->set_attr(...$args);    }
+    public function remove_attribute (...$args) { return $this->remove_attr(...$args); }
+    public function has_attribute    (...$args) { return $this->has_attr(...$args);    }
 
     //
 
@@ -212,18 +271,6 @@ class Attributes implements \ArrayAccess {
     
         return $this->set_attr($attr, $value);
     
-    }
-
-    //
-
-    protected function generate_css ($styles) {
-
-        $css = '';
-
-        foreach ($styles as $property => $value) $css .= "{$property}: {$value};";
-
-        return $css;
-
     }
 
     // Property Overloading
