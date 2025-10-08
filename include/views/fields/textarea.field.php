@@ -22,7 +22,6 @@ class Textarea extends \Digitalis\Field {
         parent::params($p);
     
         $p['element']->set_tag('textarea');
-        $p['element']->set_attribute($p['once_atts']);
         $p['element']->set_content($p['value']);
 
         if (isset($p['element']['value'])) unset($p['element']['value']);

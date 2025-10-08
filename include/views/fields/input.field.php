@@ -20,7 +20,6 @@ class Input extends \Digitalis\Field {
         parent::params($p);
 
         $p['element']->set_tag('input');
-        $p['element']->set_attribute($p['once_atts']);
     
     }
 

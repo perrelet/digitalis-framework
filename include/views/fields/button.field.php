@@ -14,7 +14,6 @@ class Button extends Input {
         parent::params($p);
 
         $p['element']->set_tag('button');
-        $p['element']->set_attribute($p['once_atts']);
         $p['element']->set_content($p['text']);
 
     }

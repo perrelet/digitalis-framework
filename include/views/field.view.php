@@ -92,6 +92,9 @@ class Field extends Component {
 
         parent::params($p);
 
+        $p['pre_once_atts'] = clone $p['attributes'];
+        $p['element']->add_attrs($p['once_atts']);
+
     }
 
     public function get_once_attributes () {

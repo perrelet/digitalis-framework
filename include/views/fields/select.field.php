@@ -18,7 +18,6 @@ class Select extends \Digitalis\Field {
         $p['option_atts'] = $this->get_option_attributes($p['option_atts']);
 
         $p['element']->set_tag('select');
-        $p['element']->set_attribute($p['once_atts']);
 
     }
 
