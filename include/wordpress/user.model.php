@@ -72,7 +72,7 @@ class User extends WP_Model {
 
     public static function get_by_username ($username) {
 
-        return static::get_by_login();
+        return static::get_by_login($username);
 
     }
 
