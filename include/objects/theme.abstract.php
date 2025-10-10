@@ -10,8 +10,6 @@ abstract class Theme {
         'after_setup_theme'     => 'theme_supports',
     ];
 
-    protected $features;
-
     public static function get_auto_instantiation () { return true; }
     
     public function __construct () {
@@ -23,42 +21,6 @@ abstract class Theme {
     }
 
     //
-
-    protected function register_features () { // Features registered by child classes will be automatically appended to the features array
-
-        return [
-            'js_modules' => function () {
-                add_filter('script_loader_tag', [$this, 'add_modules_attribute'], 10, 3);
-            },
-        ];
-
-    }
-
-    protected function get_features () {
-
-        if (is_null($this->features)) {
-
-            $this->features = $this->register_features();
-
-            $class = get_called_class();
-            while ($class = get_parent_class($class)) $this->features += call_user_func($class . "::" . 'register_features');
-
-        }
-
-        return $this->features;
-
-    }
-
-    protected function activate_feature ($slug) {
-
-        if (isset($this->get_features()[$slug])) {
-
-            $func = $this->get_features()[$slug];
-            $func();
-
-        }
-
-    }
 
     public function theme_supports () {
 
