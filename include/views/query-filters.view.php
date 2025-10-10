@@ -56,6 +56,20 @@ abstract class Query_Filters extends Field_Group {
         wp_enqueue_script($handle, $this['module_url'], [], $this['module_version'], true);
         wp_localize_script($handle, $this['js_params_object'], $js_params);
 
+        add_filter('script_loader_tag', function ($tag, $script_handle, $src) use ($handle) {
+
+            if ($script_handle != $handle) return $tag;
+
+            if (preg_match('/\s+type=([\'"])(.*?)\1/i', $tag)) {
+                $tag = preg_replace('/\s+type=([\'"])(.*?)\1/i', ' type="module"', $tag, 1);
+            } else {
+                $tag = str_replace('<script ', '<script type="module" ', $tag);
+            }
+
+            return $tag;
+
+        }, 10, 3);
+
     }
 
 }
