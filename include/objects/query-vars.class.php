@@ -192,27 +192,27 @@ class Query_Vars implements \ArrayAccess {
 
     //
 
-    public function offsetGet ($key) {
+    public function offsetGet (mixed $offset): mixed {
 
-        return $this->get_var($key);
-
-    }
-
-    public function offsetSet ($key, $value) {
-
-        $this->set_var($key, $value);
+        return $this->get_var($offset);
 
     }
 
-    public function offsetUnset ($key) {
+    public function offsetSet (mixed $offset, mixed $value): void {
 
-        $this->unset_var($key);
+        $this->set_var($offset, $value);
 
     }
 
-    public function offsetExists ($key) {
+    public function offsetUnset (mixed $offset): void {
 
-        return $this->has_var($key);
+        $this->unset_var($offset);
+
+    }
+
+    public function offsetExists (mixed $offset): bool {
+
+        return $this->has_var($offset);
 
     }
 

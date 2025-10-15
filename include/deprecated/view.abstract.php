@@ -213,25 +213,25 @@ abstract class Deprecated_View implements \ArrayAccess {
 
     //
 
-    public function offsetGet ($key) {
+    public function offsetGet (mixed $key): mixed {
 
         return $this->get_param($key);
 
     }
 
-    public function offsetSet ($key, $value) {
+    public function offsetSet (mixed $key, mixed $value): void {
 
         $this->set_param($key, $value);
 
     }
 
-    public function offsetUnset ($key) {
+    public function offsetUnset (mixed $key): void {
 
         $this->unset_param($key);
 
     }
 
-    public function offsetExists ($key) {
+    public function offsetExists (mixed $key): bool {
 
         return $this->has_param($key);
 

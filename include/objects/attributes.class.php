@@ -309,25 +309,25 @@ class Attributes implements \ArrayAccess {
 
     // ArrayAccess
 
-    public function offsetGet ($attr) {
+    public function offsetGet (mixed $attr): mixed {
 
         return $this->__get($attr);
 
     }
 
-    public function offsetSet ($attr, $value) {
+    public function offsetSet ($attr, mixed $value): void {
 
         $this->__set($attr, $value);
 
     }
 
-    public function offsetUnset ($attr) {
+    public function offsetUnset (mixed $attr): void {
 
         $this->__unset($attr);
 
     }
 
-    public function offsetExists ($attr) {
+    public function offsetExists (mixed $attr): bool {
 
         return $this->__isset($attr);
 

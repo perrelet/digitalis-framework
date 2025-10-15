@@ -304,25 +304,25 @@ abstract class View implements \ArrayAccess {
 
     // ArrayAccess
 
-    public function &offsetGet ($key) { // Return by reference, see: https://www.php.net/manual/en/arrayaccess.offsetget.php
+    public function &offsetGet (mixed $key): mixed { // Return by reference, see: https://www.php.net/manual/en/arrayaccess.offsetget.php
 
         return $this->__get($key);
 
     }
 
-    public function offsetSet ($key, $value) {
+    public function offsetSet (mixed $key, mixed $value): void {
 
         $this->__set($key, $value);
 
     }
 
-    public function offsetUnset ($key) {
+    public function offsetUnset (mixed $key): void {
 
         $this->__unset($key);
 
     }
 
-    public function offsetExists ($key) {
+    public function offsetExists (mixed $key): bool {
 
         return $this->__isset($key);
 

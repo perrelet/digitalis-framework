@@ -116,6 +116,9 @@ class Element implements \ArrayAccess {
 
     public function __set ($attr, $value) {
 
+        if ($attr == 'content')                    return $this->set_content($value);
+        if (in_array($attr, ['class', 'classes'])) return $this->get_attrs()->add_class($value);
+
         if (is_null($attr)) {
 
             return $this->get_attrs()->set_attr($value);
@@ -142,25 +145,25 @@ class Element implements \ArrayAccess {
 
     // ArrayAccess
 
-    public function offsetGet ($attr) {
+    public function offsetGet (mixed $attr): mixed {
 
         return $this->__get($attr);
 
     }
 
-    public function offsetSet ($attr, $value) {
+    public function offsetSet (mixed $attr, mixed $value): void {
 
-        return $this->__set($attr, $value);
-
-    }
-
-    public function offsetUnset ($attr) {
-
-        return $this->__unset($attr);
+        $this->__set($attr, $value);
 
     }
 
-    public function offsetExists ($attr) {
+    public function offsetUnset (mixed $attr): void {
+
+        $this->__unset($attr);
+
+    }
+
+    public function offsetExists (mixed $attr): bool {
 
         return $this->__isset($attr);
 
