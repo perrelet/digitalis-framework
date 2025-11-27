@@ -33,8 +33,8 @@ abstract class Post_Status extends Singleton {
         if (is_null($this->_args)) {
 
             $this->_args = wp_parse_args($this->args, [
-                'label'                     => $this->singular,
-                'label_count'               => _n_noop($this->singular, $this->plural),
+                'label'                     => $this->get_singular(),
+                'label_count'               => _n_noop($this->get_singular(), $this->get_plural()),
                 'exclude_from_search'       => null,
                 '_builtin'                  => false,
                 'public'                    => null,
@@ -60,18 +60,66 @@ abstract class Post_Status extends Singleton {
 
         $this->get_args();
 
-        if (!is_array($this->post_types)) $this->post_types = [$this->post_types];
+        $this->post_types = (array) $this->post_types;
 
-        if ($this->register)  add_action('init', [$this, 'register']);
-        if ($this->add_to_ui) $this->add_to_ui();
+        if ($this->get_register())  add_action('init', [$this, 'register']);
+        if ($this->get_add_to_ui()) $this->add_to_ui();
 
         //add_filter('wc_order_statuses', 'misha_add_status_to_list');
     
     }
 
+    public function get_slug () {
+
+        return $this->slug;
+
+    }
+
+    public function get_post_types () {
+
+        return $this->post_types;
+
+    }
+
+    public function get_singular () {
+
+        return $this->singular;
+
+    }
+
+    public function get_plural () {
+
+        return $this->plural;
+
+    }
+
+    public function get_text_domain () {
+
+        return $this->text_domain;
+
+    }
+
+    public function get_position () {
+
+        return $this->position;
+
+    }
+
+    public function get_register () {
+
+        return $this->register;
+
+    }
+
+    public function get_add_to_ui () {
+
+        return $this->add_to_ui;
+
+    }
+
     public function register () {
 
-        $this->post_status = register_post_status($this->slug, $this->args);
+        $this->post_status = register_post_status($this->get_slug(), $this->args);
 
     }
 
@@ -81,22 +129,22 @@ abstract class Post_Status extends Singleton {
 
             global $post;
     
-            if (in_array($post->post_type, $this->post_types)){
+            if (in_array($post->post_type, $this->get_post_types())){
 
                 $selected = '';
 
                 $js = "jQuery(document).ready(function($){";
                 
-                if ($post->post_status == $this->slug) {
+                if ($post->post_status == $this->get_slug()) {
     
                     $selected = " selected='selected'";
                     $js      .= "$(`#post-status-display`).html(` {$this->args['label']}`);";
     
                 }
                 
-                $option = "<option value='{$this->slug}'{$selected}>{$this->args['label']}</option>";
+                $option = "<option value='{$this->get_slug()}'{$selected}>{$this->args['label']}</option>";
 
-                $js .= "let post_status_pos = $(`select#post_status option[value='{$this->position}']`);";
+                $js .= "let post_status_pos = $(`select#post_status option[value='{$this->get_position()}']`);";
                 $js .= "if (post_status_pos.length) {";
                     if ($this->after) {
                         $js .= "$(`{$option}`).insertAfter(post_status_pos);";
@@ -120,7 +168,7 @@ abstract class Post_Status extends Singleton {
 
             $arg = get_query_var('post_status');
 
-            if (($arg != $this->slug) && ($post->post_status == $this->slug)) return [$this->args['label']];
+            if (($arg != $this->get_slug()) && ($post->post_status == $this->get_slug())) return [$this->args['label']];
 
             return $states;
 
