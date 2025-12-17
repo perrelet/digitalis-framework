@@ -306,6 +306,7 @@ abstract class Post_Type extends Singleton {
         $wp->parse_request();
         $wp_query->query_vars = $wp->query_vars;
         $wp_query->set('post_type', $this->slug);
+        $this->main_query($wp_query);
 
         /* $qv = new Query_Vars($wp_query->query_vars);
         $qv->merge($this->query_vars());
