@@ -4,8 +4,8 @@ namespace Digitalis;
 
 class ACF_Block extends Factory {
 
-    protected $slug     = 'custom-block';
-    protected $view     = View::class;
+    protected $slug = 'custom-block';
+    protected $view = View::class;
 
     protected $block    = [
         'title'           => 'Custom Block',
@@ -43,6 +43,12 @@ class ACF_Block extends Factory {
         
     }
 
+    public function get_fields () {
+    
+        return $this->fields;
+    
+    }
+
     public function include_fields () {
 
         $field_group = [
@@ -69,7 +75,7 @@ class ACF_Block extends Factory {
             ],
         ];
 
-        if ($this->fields) foreach ($this->fields as $key => $field) {
+        foreach ($this->get_fields() as $key => $field) {
 
             if (!is_array($field)) $field = [
                 'label' => $field,
@@ -112,7 +118,7 @@ class ACF_Block extends Factory {
             'context'    => $context,
         ], $this->defaults);
 
-        if ($this->fields) foreach ($this->fields as $key => $field) {
+        foreach ($this->get_fields() as $key => $field) {
 
             $params[$key] = get_field($key);
 
