@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis\Woo;
+namespace Digitalis\WP;
 
 class Hide_Posts_Post_Type extends \Digitalis\Feature {
 
