@@ -148,22 +148,25 @@ export class Digitalis_Query {
 
     auto_submit = (e) => {
 
-        let auto_submit;
-        const is_control = this.elements.controls && [...this.elements.controls.elements].includes(e.target);
+        const target     = e.target
+        const is_control = this.elements.controls && [...this.elements.controls.elements].includes(target);
 
-        if (is_control) {
-            auto_submit = this.options.auto_submit_controls;
-        } else {
-            auto_submit = this.options.auto_submit_break ? (this.options.auto_submit_break <= window.innerWidth) : this.options.auto_submit;
-        }
+        let auto_submit       = is_control ? this.options.auto_submit_controls : this.options.auto_submit;
+        let auto_submit_break = this.options.auto_submit_break;
+
+        if (target.hasAttribute(`data-auto-submit`))       auto_submit       = (e.target.getAttribute(`data-auto-submit`) == 'true');
+        if (target.hasAttribute(`data-auto-submit-break`)) auto_submit_break = intVal(target.getAttribute(`data-auto-submit-break`));
+
+        if ((auto_submit_break > 0) && (auto_submit_break <= window.innerWidth)) this.options.auto_submit = false;
 
         let args = {
             auto_submit: auto_submit,
             is_control:  is_control,
             query:       this,
+            event:       e,
         };
 
-        document.dispatchEvent(new CustomEvent('Digitalis/Query/Auto_Submit', {detail: args}));
+        document.dispatchEvent(new CustomEvent(`Digitalis/Query/Auto_Submit`, {detail: args}));
 
         if (args.auto_submit) this.submit();
 
