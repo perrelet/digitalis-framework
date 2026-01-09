@@ -63,7 +63,7 @@ class ACF_Block extends Factory {
             'active'                => true,
             'description'           => '',
             'show_in_rest'          => 0,
-            'fields'                => [],
+            'fields'                => $this->get_fields(),
             'location'  => [
                 [
                     [
@@ -75,36 +75,48 @@ class ACF_Block extends Factory {
             ],
         ];
 
-        foreach ($this->get_fields() as $key => $field) {
-
-            if (!is_array($field)) $field = [
-                'label' => $field,
-            ];
-            
-            $field_group['fields'][] = wp_parse_args($field, [
-                'key'               => "field_dummy-{$key}",
-                'name'              => $key,
-                'label'             => '',
-                'aria-label'        => '',
-                'type'              => 'text',
-                'instructions'      => '',
-                'required'          => 0,
-                'conditional_logic' => 0,
-                'default_value'     => '',
-                'maxlength'         => '',
-                'placeholder'       => '',
-                'prepend'           => '',
-                'append'            => '',
-                'wrapper' => [
-                    'width' => '',
-                    'class' => '',
-                    'id'    => '',
-                ],
-            ]);
-            
-        }
+        foreach ($field_group['fields'] as $key => &$field) $this->prepare_field($field['key'] ?? $key, $field);
 
         if ($field_group['fields']) acf_add_local_field_group($field_group);
+
+    }
+
+    protected function prepare_field ($key, &$field) {
+
+        if (!is_array($field)) $field = [
+            'label' => $field,
+        ];
+
+        $field  = wp_parse_args($field, [
+            'key'               => "field_dummy-{$key}",
+            'name'              => $key,
+            'label'             => '',
+            'aria-label'        => '',
+            'type'              => 'text',
+            'instructions'      => '',
+            'required'          => 0,
+            'conditional_logic' => 0,
+            'default_value'     => '',
+            'maxlength'         => '',
+            'placeholder'       => '',
+            'prepend'           => '',
+            'append'            => '',
+            'wrapper' => [
+                'width' => '',
+                'class' => '',
+                'id'    => '',
+            ],
+        ]);
+
+        if (isset($field['sub_fields'])) {
+
+            foreach ($field['sub_fields'] as $sub_field_key => &$sub_field) {
+
+                $this->prepare_field($sub_field['key'] ?? $sub_field_key, $sub_field);
+
+            }
+
+        }
 
     }
 
