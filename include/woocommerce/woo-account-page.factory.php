@@ -103,9 +103,10 @@ class Woo_Account_Page extends Factory {
 
     // OVERRIDE
 
-    protected function render_before() {}
-    protected function render() {}
-    protected function render_after() {}
+    protected function render_before () {}
+    protected function render () {}
+    protected function render_after () {}
+    protected function render_no_access () {}
 
     // INTERNAL
 
@@ -354,6 +355,10 @@ class Woo_Account_Page extends Factory {
             is_callable($call) ? call_user_func($call) : $this->render();
 
             $this->render_after();
+
+        } else {
+
+            $this->render_no_access();
 
         }
 
