@@ -11,6 +11,7 @@ abstract class Order_Status extends Post_Status {
 
     protected $position   = 0;
     protected $before     = true;
+    protected $priority   = 11;
 
     protected $allow_edit = true;
     protected $is_pending = false;
@@ -52,20 +53,25 @@ abstract class Order_Status extends Post_Status {
 
             if (is_null($this->wc_order_statuses)) {
 
-                if (!is_int($this->position)) $this->position = array_search($this->position, array_keys($order_statuses));
-                if (!$this->before) $this->position++;
+                $position = $this->get_position();
+
+                if (!is_int($position)) $position = array_search($position, array_keys($order_statuses));
+                if (!is_int($position)) $position = count($order_statuses) - 1;
+                if (!$this->before) $position++;
+
+                $position = min($position, count($order_statuses) - 1);
 
                 $this->wc_order_statuses =
-                    array_slice($order_statuses, 0, $this->position, true) +
+                    array_slice($order_statuses, 0, $position, true) +
                     [$this->slug => $this->args['label']] +
-                    array_slice($order_statuses, $this->position, count($order_statuses) - 1, true)
+                    array_slice($order_statuses, $position, count($order_statuses), true)
                 ;
-
+    
             }
 
             return $this->wc_order_statuses;
 
-        });
+        }, $this->priority);
     
     }
 
