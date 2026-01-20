@@ -49,17 +49,24 @@ abstract class Commands_Page extends Admin_Sub_Page {
 
     protected function maybe_execute () {
 
-        if (!$command = ($_GET['command'] ?? false)) return;
+        if (!isset($_GET['command'])) return;
 
-        foreach ($this->get_commands() as $key => $command) {
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce(sanitize_key($_GET['_wpnonce']), 'digitalis_command_' . $this->slug)) {
+            echo "<div class='notice notice-error'><p>Security check failed. Please try again.</p></div>";
+            return;
+        }
 
-            if (!isset($_GET[$key])) continue;
+        $commands = $this->get_commands();
+
+        foreach ($commands as $key => $command) {
+
+            if (!isset($_GET[$key]) || !array_key_exists($key, $commands)) continue;
 
             $args = [];
 
             if ($command['fields']) foreach ($command['fields'] as $field_name => $field_data) {
 
-                if (isset($_GET[$field_name])) $args[$field_name] = $_GET[$field_name];
+                if (isset($_GET[$field_name])) $args[$field_name] = sanitize_text_field(wp_unslash($_GET[$field_name]));
 
             }
 
@@ -67,9 +74,12 @@ abstract class Commands_Page extends Admin_Sub_Page {
 
             $call = is_array($command['call']) ? get_class($command['call'][0]) . '::' . $command['call'][1] : $command['call'];
 
+            $escaped_args = array_map('esc_html', $args);
+            $escaped_call = esc_html($call);
+
             echo "<div class='commands-output'>";
-                echo "<pre class='command-args'><b>Command:</b> {$call}(" . implode(', ', $args). ");</pre>";
-                echo "<pre class='command-response'><b>Response:</b>\n\n" . print_r($response, true) . "</pre>";
+                echo "<pre class='command-args'><b>Command:</b> " . $escaped_call . "(" . implode(', ', $escaped_args) . ");</pre>";
+                echo "<pre class='command-response'><b>Response:</b>\n\n" . esc_html(print_r($response, true)) . "</pre>";
             echo "</div>";
 
             return true;
@@ -93,6 +103,11 @@ abstract class Commands_Page extends Admin_Sub_Page {
                     'field' => Hidden::class,
                     'key'   => 'page',
                     'value' => $this->slug,
+                ],
+                [
+                    'field' => Hidden::class,
+                    'key'   => '_wpnonce',
+                    'value' => wp_create_nonce('digitalis_command_' . $this->slug),
                 ],
                 [
                     'field' => Hidden::class,
