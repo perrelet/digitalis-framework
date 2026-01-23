@@ -215,11 +215,11 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
 
         $id = false;
 
-        if (isset($_REQUEST['post_id'])) $id = $_REQUEST['post_id'];
-        if (isset($_REQUEST['user_id'])) $id = $_REQUEST['user_id'];
+        if (isset($_REQUEST['post_id'])) $id = (int) $_REQUEST['post_id'];
+        if (isset($_REQUEST['user_id'])) $id = (int) $_REQUEST['user_id'];
 
         return $id;
-    
+
     }
 
     public function detect_type ($selector) {

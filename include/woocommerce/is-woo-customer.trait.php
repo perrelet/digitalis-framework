@@ -63,4 +63,20 @@ trait Is_Woo_Customer {
 
     }
 
+    public function get_first_name () {
+
+        if ($name = parent::get_first_name())         return $name;
+        if ($name = $this->get_billing_first_name())  return $name;
+        if ($name = $this->get_shipping_first_name()) return $name;
+
+    }
+
+    public function get_last_name () {
+
+        if ($name = parent::get_last_name())         return $name;
+        if ($name = $this->get_billing_last_name())  return $name;
+        if ($name = $this->get_shipping_last_name()) return $name;
+
+    }
+
 }

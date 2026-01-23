@@ -229,9 +229,10 @@ abstract class Admin_Table extends Feature {
     }
 
     public function get_filter_value ($key, $filter) {
-    
-        return sanitize_text_field(urldecode($_GET[$key] ?? $filter['null_value']));
-    
+
+        $value = wp_unslash($_GET[$key] ?? $filter['null_value']);
+        return sanitize_text_field(urldecode($value));
+
     }
 
     public function null_filter_value ($value, $filter) {

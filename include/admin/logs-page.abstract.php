@@ -63,11 +63,19 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     'path' => $log
                 ];
 
+                $allowed_themes = array_keys($this->get_syntax_rules());
+                $theme_input = sanitize_text_field(wp_unslash($_GET['theme'] ?? 'basic'));
+                $theme_values = array_filter(
+                    explode(',', $theme_input),
+                    function($t) use ($allowed_themes) { return in_array($t, $allowed_themes, true); }
+                );
+                if (empty($theme_values)) $theme_values = ['basic'];
+
                 $log = wp_parse_args($log, [
                     'name'        => 'Log',
                     'slug'        => 'log',
                     'path'        => '',
-                    'theme'       => explode(',', ($_GET['theme'] ?? 'basic')),
+                    'theme'       => $theme_values,
                     'permissions' => [],
                     'instance'    => null,
                 ]);
@@ -160,7 +168,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 $empty = ($current['instance'] && $current['instance']->get_export_vars()) ? "\$log = [];\n" : '';
 
-                echo "<div class='notice notice-success'><p>🧹 Successfully cleared '{$current['name']}'.</p></div>";
+                echo "<div class='notice notice-success'><p>🧹 Successfully cleared '" . esc_html($current['name']) . "'.</p></div>";
                 file_put_contents($current['path'], $empty);
 
             }
@@ -205,8 +213,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
                 $size .= " bytes";
 
                 echo "<div class='log-info'>";
-                    echo "<div class='path'>{$current['path']}</div>";
-                    echo "<div class='size'>{$size}<span class='goto bottom' onclick='window.scrollTo(0, document.querySelector(`#hash-bottom`).offsetTop);'></span></div>";
+                    echo "<div class='path'>" . esc_html($current['path']) . "</div>";
+                    echo "<div class='size'>" . esc_html($size) . "<span class='goto bottom' onclick='window.scrollTo(0, document.querySelector(`#hash-bottom`).offsetTop);'></span></div>";
                 echo "</div>";
 
                 echo "<div class='lines'>";
@@ -222,8 +230,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
                 echo "</div>";
 
                 echo "<div class='log-info'>";
-                    echo "<div class='path'>{$current['path']}</div>";
-                    echo "<div class='size'>{$size}<span class='goto top' onclick='window.scrollTo(0, document.querySelector(`#hash-top`).offsetTop);'></span></div>";
+                    echo "<div class='path'>" . esc_html($current['path']) . "</div>";
+                    echo "<div class='size'>" . esc_html($size) . "<span class='goto top' onclick='window.scrollTo(0, document.querySelector(`#hash-top`).offsetTop);'></span></div>";
                 echo "</div>";
 
                 echo "<span id='hash-bottom'></span>";
@@ -261,7 +269,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 $class = ($current['slug'] == $log['slug']) ? 'selected' : 'none';
 
-                echo "<a href='{$url}' class='{$class}'>{$log['name']}</a>";
+                echo "<a href='" . esc_url($url) . "' class='" . esc_attr($class) . "'>" . esc_html($log['name']) . "</a>";
             
             }
 
