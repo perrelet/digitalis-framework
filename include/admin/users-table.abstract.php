@@ -15,6 +15,20 @@ abstract class Users_Table extends Screen_Table {
     
     }
 
+    protected function get_row_actions_hook ($slug) {
+    
+        return 'user_row_actions';
+    
+    }
+
+    public function row_actions_wrap ($actions, $wp_user) {
+
+        static::inject([$this, 'row_actions'], [&$actions, $wp_user]);
+
+        return $actions;
+
+    }
+
     public function default_tax_args ($filter, $taxonomy) {
 
         $args = parent::default_tax_args($filter, $taxonomy);

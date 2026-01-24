@@ -41,6 +41,22 @@ abstract class Posts_Table extends Screen_Table {
     
     }
 
+    protected function get_row_actions_hook ($slug) {
+    
+        return ($slug == 'page') ? 'page_row_actions' : 'post_row_actions';
+    
+    }
+
+    public function row_actions_wrap ($actions, $wp_post) {
+    
+        if (!in_array($wp_post->post_type, $this->slug)) return $actions;
+
+        static::inject([$this, 'row_actions'], [&$actions, $wp_post]);
+
+        return $actions;
+    
+    }
+
     public function post_column ($column, $post_id) {
 
         $call = [$this, "column_" . str_replace('-', '_', $column)];
