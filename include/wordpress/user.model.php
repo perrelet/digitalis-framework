@@ -3,8 +3,9 @@
 namespace Digitalis;
 
 use stdClass;
-use WP_User;
 use DateTime;
+use WP_User;
+use WP_User_Query;
 
 class User extends WP_Model {
 
@@ -79,6 +80,35 @@ class User extends WP_Model {
     public static function get_by_slug ($slug) {
 
         return static::get_by('slug', $slug);
+
+    }
+
+    //
+
+    public static function query ($args = [], &$query = null) {
+
+        $args = (is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args);
+    
+        if (static::$role) $args['role__in'] = (array) static::$role;
+
+        $query    = new WP_User_Query($args);
+        $wp_users = $query->get_results(); // lol, results?
+
+        $instances = static::get_instances($wp_users);
+
+        return $instances;
+    
+    }
+
+    public static function get_query_vars ($args = []) {
+
+        return $args;
+
+    }
+
+    public static function get_admin_query_vars ($args = []) {
+
+        return $args;
 
     }
 
