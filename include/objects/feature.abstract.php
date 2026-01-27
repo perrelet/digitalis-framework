@@ -6,6 +6,8 @@ abstract class Feature extends Factory {
 
     use Has_WP_Hooks;
 
+    protected static $cache_group = self::class;   
+
     public static function load () {
 
         return call_user_func_array([static::class, 'get_instance'], func_get_args());

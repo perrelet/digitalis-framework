@@ -6,6 +6,7 @@ class Options extends Factory {
 
     use Has_WP_Hooks;
 
+    protected static $cache_group    = self::class;
     protected static $cache_property = 'prefix';
 
     protected $prefix     = '';

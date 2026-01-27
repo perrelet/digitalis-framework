@@ -4,6 +4,9 @@ namespace Digitalis;
 
 class ACF_Block extends Factory {
 
+    protected static $cache_group    = self::class;
+    protected static $cache_property = 'slug';
+
     protected $slug = 'custom-block';
     protected $view = View::class;
 

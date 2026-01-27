@@ -6,6 +6,7 @@ use DateTime;
 
 class Log extends Service {
 
+    protected static $cache_group    = self::class;  
     protected static $cache_property = 'file';
 
     protected $directory   = ABSPATH . '../logs';

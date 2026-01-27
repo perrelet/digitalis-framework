@@ -17,6 +17,7 @@ class Route extends Factory {
 
     use Dependency_Injection;
 
+    protected static $cache_group    = self::class;
     protected static $cache_property = 'route';
 
     /**

@@ -6,6 +6,7 @@ class Meta_Box extends Feature {
 
     use Dependency_Injection;
 
+    protected static $cache_group    = self::class;
     protected static $cache_property = 'id';
 
     protected $id       = 'digitalis-metabox';

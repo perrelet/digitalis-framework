@@ -4,6 +4,9 @@ namespace Digitalis;
 
 class Woo_Account_Page extends Factory {
 
+    protected static $cache_group    = self::class;
+    protected static $cache_property = 'slug';    
+
     protected $slug = 'account_page';
     protected $title = 'Account Page';
     protected $endpoint = null;

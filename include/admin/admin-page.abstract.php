@@ -4,6 +4,9 @@ namespace Digitalis;
 
 class Admin_Page extends Factory {
 
+    protected static $cache_group    = self::class;
+    protected static $cache_property = 'slug';    
+
     protected $slug       = 'admin-menu-page';
     protected $title      = 'Page Title';
     protected $menu_title = 'Menu Title';
