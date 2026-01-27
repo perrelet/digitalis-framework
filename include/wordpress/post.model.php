@@ -129,7 +129,6 @@ class Post extends WP_Model {
             ]);
             $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
             $query->merge($args, true);
-            $query->set_var('fields', 'ids');
 
             $posts = $query->query();
 
