@@ -32,7 +32,7 @@ class Attributes implements \ArrayAccess {
 
             if (is_null($value)) continue;
 
-            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . $value . $this->quote;
+            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . esc_attr($value) . $this->quote;
 
         }
 
