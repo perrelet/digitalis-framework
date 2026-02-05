@@ -27,7 +27,10 @@ export class Digitalis_Query {
     };
 
     elements = {};
-    state = {};
+    state = {
+        requests:  0,
+        responses: 0,
+    };
 
     constructor (options) {
 
@@ -157,7 +160,7 @@ export class Digitalis_Query {
         if (target.hasAttribute(`data-auto-submit`))       auto_submit       = (e.target.getAttribute(`data-auto-submit`) == 'true');
         if (target.hasAttribute(`data-auto-submit-break`)) auto_submit_break = intVal(target.getAttribute(`data-auto-submit-break`));
 
-        if ((auto_submit_break > 0) && (auto_submit_break <= window.innerWidth)) this.options.auto_submit = false;
+        if ((auto_submit_break > 0) && (window.innerWidth <= auto_submit_break)) auto_submit = false;
 
         let args = {
             auto_submit: auto_submit,
@@ -254,6 +257,7 @@ export class Digitalis_Query {
 
     request (action, data, new_url = false, success_callback = 'success', error_callback = 'error') {
 
+        this.state.requests++;
         this.loading();
 
         let url = new URL(this.options.ajax_url, this.options.base_url);
@@ -273,7 +277,8 @@ export class Digitalis_Query {
 
             if (http.readyState == XMLHttpRequest.DONE) {
 
-                this.loaded();
+                this.state.responses++;
+                if (this.state.responses >= this.state.requests) this.loaded();
 
                 let response;
 
