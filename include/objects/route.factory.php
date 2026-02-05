@@ -21,105 +21,161 @@ class Route extends Factory {
     protected static $cache_property = 'route';
 
     /**
-     * @link /wp-json/{$namespace}/{$route}       JSON Response.
-     * @link /wp-json/html/{$namespace}/{$route}  HTML Response.
+     * @link /{$format}/{$namespace}/{$route}       JSON Response.
      * @var string       $namespace               The namespace and version.
      * @var string       $route                   The endpoint for this route.
-     * @var bool         $wp_query                Whether to set `$wp_query->query_vars = $wp->query_vars;` and emulate a normal WordPress query.
-     * @var bool|string  $html_prefix             Prefixed route for accessing endpoint without JSON processing. See https://htmx.org/essays/how-did-rest-come-to-mean-the-opposite-of-rest/. Set `false` this feature off.
+     * @var bool         $wp_query                Whether to emulate a normal WordPress query. Note: $wp isn't reset so repeat `rest_do_request` calls may result in unexpected behaviour. 
      * @var bool|string  $view                    The view class to render at the endpoint (view args are inherited from `WP_REST_Request`). Set `false` to turn off and use the `callback` method.
-     * @var array        $rest_args               Args passed when calling `register_rest_route`.
+     * @var bool         $require_nonce           Enforce nonce check.
+     * @var array        $definition              Args passed to `register_rest_route`.
+     * @var array        $args                    $args['args'] passed to `register_rest_route`.
      */
 
     protected $namespace     = 'digitalis/v1';
     protected $route         = 'route';
     protected $wp_query      = false;
-    protected $html_prefix   = 'html/';
     protected $view          = false; /* View::class */
     protected $require_nonce = false;
-    protected $rest_args     = [];
-
-    protected static $index = 0;
+    protected $definition    = [];
+    protected $args          = [];
 
     public function __construct () {
 
-        add_action('rest_api_init', [$this, 'register_api_routes']);
+        add_action('rest_api_init', [$this, 'register_route']);
 
-        if ($this->wp_query) add_filter('rest_request_before_callbacks', [$this, 'set_wp_query_vars'], 10, 3);
-
-        if (++static::$index == 1) add_filter('rest_pre_serve_request', [$this, 'rest_pre_serve_request'], 10, 4);
+        if ($this->wp_query) add_filter('rest_request_before_callbacks', [$this, 'maybe_set_wp_query_vars'], 10, 3);
 
     }
 
-    public function set_wp_query_vars ($response, $handler, $request) {
+    public function register_route () {
 
-        if ($this->is_this_route($request)) {
+        register_rest_route($this->get_namespace(), $this->get_route(), $this->get_definition());
 
-            global $wp;
+    }
 
-            $wp->query_posts();
-            $wp->handle_404();
-            $wp->register_globals();
+    public function maybe_set_wp_query_vars ($response, $handler, $request) {
 
-        }
+        if (!$this->is_this_route($request)) return $response;
+
+        global $wp;
+
+        $wp->query_posts();
+        $wp->handle_404();
+        $wp->register_globals();
 
         return $response;
         
     }
 
-    protected function get_params () {
-        
-        return [
-            /* 'param' => [
-                'default'           => 'Default',
-                'required'          => true,
-                'type'              => 'integer',
-                'validate_callback' => [$this, 'validate_param'],
-                'sanitize_callback' => [$this, 'sanitize_param'],
-            ], */
-        ];
-        
+    public function get_namespace () {
+
+        return $this->namespace;
+
     }
 
-    protected function get_rest_args () {
-        
-        return wp_parse_args($this->rest_args, [
-            'args'                  => $this->get_params(),
+    public function get_route () {
+
+        return $this->route;
+
+    }
+
+    public function get_view () {
+
+        return $this->view;
+
+    }
+
+    public function get_require_nonce () {
+
+        return $this->require_nonce;
+
+    }
+
+    protected $definition_cache;
+
+    public function get_definition () {
+
+        if (is_null($this->definition_cache)) $this->definition_cache = wp_parse_args($this->definition, [
+            'args'                  => $this->get_args(),
             'methods'               => ['GET', 'POST'],
             'callback'              => [$this, 'callback_wrap'],
             'permission_callback'   => [$this, 'permission_wrap'],
         ]);
-        
-    }
 
-    public function register_api_routes () {
-
-        $this->rest_args = $this->get_rest_args();
-
-        register_rest_route($this->namespace, $this->route, $this->rest_args);
-        if ($this->html_prefix) register_rest_route($this->html_prefix . $this->namespace, $this->route, $this->rest_args);
+        return $this->definition_cache;        
 
     }
 
-    static $permission = null;
+    public function get_args () {
 
-    public function permission_wrap (WP_REST_Request $request) {
-    
-        //if (is_null(static::$permission)) static::$permission = $this->permission($request);
-        if (is_null(static::$permission)) static::$permission = $this->request_inject($request, 'permission');
+        return $this->args;
 
-        return static::$permission;
-    
+        /* [
+            'arg' => [
+                'default'           => 1,
+                'required'          => true,
+                'type'              => 'integer',
+                'validate_callback' => [$this, 'validate_arg'],
+                'sanitize_callback' => [$this, 'sanitize_arg'],
+            ],
+            ...
+        ]; */
+
     }
 
     public function permission (WP_REST_Request $request) {
-        
+
         return true;
-        
+
     }
 
-    protected function check_nonce (WP_REST_Request $request) {
+    public function render_view ($view, $params) {
+
+        return call_user_func("{$view}::render", $params, false);
+
+    }
+
+    public function callback (WP_REST_Request $request) {
+
+        return $this->respond('Hello ' . static::class);
+
+    }
+
+    public function get_url ($query_params = [], $nonce = null, $format = 'json') {
+
+        if (is_null($nonce)) $nonce = $this->get_require_nonce();
+
+        return REST_URL_Builder::get_instance()->for_route($this, $query_params, $nonce, $format);
     
+    }
+
+    public function add_query_params ($url, $query_params = []) {
+    
+        return add_query_arg($query_params, $url);
+    
+    }
+
+    public function nonce_url ($url) {
+    
+        $url = add_query_arg('_wpnonce', $this->get_nonce(), $url);
+        $url = str_replace("%25post_id%25", "%post_id%", $url);
+
+        return $url;
+    
+    }
+
+    protected $nonce_cache;
+
+    public function get_nonce () {
+        
+        if (is_null($this->nonce_cache)) $this->nonce_cache = wp_create_nonce('wp_rest');
+
+        return $this->nonce_cache;
+
+    }
+
+    public function check_nonce (WP_REST_Request $request) {
+
         $nonce = $request->get_param('_wpnonce');
         if (!$nonce) $nonce = $request->get_header('Nonce');
 
@@ -136,18 +192,33 @@ class Route extends Factory {
         );
 
         return true;
-    
+
     }
 
-    public function get_view () {
+    public function is_this_route (WP_REST_Request $request) {
+
+        $route = '/' . trim($this->get_namespace(), '/') . '/' . ltrim($this->get_route(), '/');
+        if ($request->get_route() !== $route) return false;
+
+        return true;
+
+    }
+
+    //
+
+    protected $permission_cache;
+
+    public function permission_wrap (WP_REST_Request $request) {
     
-        return $this->view;
+        if (is_null($this->permission_cache)) $this->permission_cache = $this->request_inject($request, 'permission');
+
+        return $this->permission_cache;
     
     }
 
     public function callback_wrap (WP_REST_Request $request) {
 
-        if ($this->require_nonce) {
+        if ($this->get_require_nonce()) {
 
             $nonce_check = $this->check_nonce($request);
             if ($nonce_check instanceof WP_Error) return $nonce_check;
@@ -158,9 +229,10 @@ class Route extends Factory {
 
             if (!is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$view}' provided."));
 
-            $params = [];
-            
-            if ($this->rest_args['args']) foreach ($this->rest_args['args'] as $key => $arg) $params[$key] = $request->get_param($key);
+            $params     = [];
+            $definition = $this->get_definition();
+
+            if ($definition['args'] ?? []) foreach ($definition['args'] as $key => $arg) $params[$key] = $request->get_param($key);
 
             return $this->respond($this->render_view($view, $params));
 
@@ -168,86 +240,29 @@ class Route extends Factory {
 
             return $this->request_inject($request, 'callback');
 
-            /* $request_params = $request->get_params();
-            $values         = [];
-
-            if ($params = $this->get_params()) foreach ($params as $key => $param) {
-            
-                if ((!$class = ($param['class'] ?? false))) continue;
-                if (!isset($request_params[$key]))          continue;
-
-                if ($value = static::value_inject($class, $request_params[$key])) {
-
-                    $values[$class] = $value;
-
-                } else {
-
-                    return new \WP_Error(
-                        "missing_resource",
-                        "Unable to locate a '{$class}' with '$key' = " . print_r($request->get_params()[$key], true) . ".",
-                        [
-                            'status' => 404,
-                        ]
-                    );
-
-                }
-            
-            }
-
-            return static::inject([$this, 'callback'], [$request], $values); */
-
         }
 
     }
-
-    public function render_view ($view, $params) {
     
-        return call_user_func("{$view}::render", $params, false);
-    
-    }
-
-    public function callback (WP_REST_Request $request) {
-
-        return $this->respond("Hello Route");
-
-    }
+    //
 
     protected function respond ($response) {
-        
+
         return rest_ensure_response($response);
-        
+
     }
-
-    public function rest_pre_serve_request ($served, $result, $request, $wp_rest_server) {
-
-        if (substr($request->get_route(), 0, strlen($this->html_prefix) + 1) == '/' . $this->html_prefix) {
-            
-            $embed = isset($_GET['_embed']) ? rest_parse_embed_param($_GET['_embed']) : false;
-            $result = $wp_rest_server->response_to_data($result, $embed);
-    
-            print_r($result);
-
-            return true;
-    
-        }
-    
-        return $served;
-        
-    }
-
-    //
 
     protected function request_inject (WP_REST_Request $request, $method) {
     
-        $request_params = $request->get_params();
-        $values         = [];
+        $params = $request->get_params();
+        $values = [];
 
-        if ($params = $this->get_params()) foreach ($params as $key => $param) {
+        if ($args = $this->get_args()) foreach ($args as $key => $arg) {
         
-            if ((!$class = ($param['class'] ?? false))) continue;
-            if (!isset($request_params[$key]))          continue;
+            if ((!$class = ($arg['class'] ?? false))) continue;
+            if (!isset($params[$key]))                continue;
 
-            if ($value = static::value_inject($class, $request_params[$key])) {
+            if ($value = static::value_inject($class, $params[$key])) {
 
                 $values[$class] = $value;
 
@@ -267,49 +282,6 @@ class Route extends Factory {
 
         return static::inject([$this, $method], [$request], $values);
     
-    }
-
-    public static function get_url ($query_params = [], $html = true, $nonce = true) {
-
-        $self = static::inst();
-
-        $url = $html ? "{$self->html_prefix}{$self->namespace}/{$self->route}" : "{$self->namespace}/{$self->route}";
-        $url = get_rest_url(null, $url);
-        if ($query_params) $url = add_query_arg($query_params, $url);
-        if ($nonce) $url = static::nonce_url($url);
-    
-        return $url;
-    
-    }
-
-    public static function nonce_url ($url) {
-    
-        $url = add_query_arg('_wpnonce', static::get_nonce(), $url);
-        $url = str_replace("%25post_id%25", "%post_id%", $url);
-
-        return $url;
-    
-    }
-
-    public static $nonce;
-
-    public static function get_nonce () {
-        
-        if (!static::$nonce) static::$nonce = wp_create_nonce('wp_rest');
-
-        return static::$nonce;
-        
-    }
-
-    //
-
-    protected function is_this_route (WP_REST_Request $request) {
-
-        if (ltrim($request->get_route(), "/") == "{$this->namespace}/{$this->route}") return true;
-        if (ltrim($request->get_route(), "/") == "{$this->html_prefix}{$this->namespace}/{$this->route}") return true;
-
-        return false;
-
     }
 
 }

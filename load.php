@@ -41,6 +41,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/rest-url-builder.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
@@ -184,3 +185,4 @@ add_filter('sassy-variables', function ($variables) {
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/view.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/component.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/route.factory.php';
