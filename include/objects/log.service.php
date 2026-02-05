@@ -9,8 +9,8 @@ class Log extends Service {
     protected static $cache_group    = self::class;  
     protected static $cache_property = 'file';
 
-    protected $directory   = ABSPATH . '../logs';
     protected $file        = 'log.log';
+    protected $directory   = null;
     protected $name        = null;
     protected $date_format = null;
     protected $export_vars = false;
@@ -43,15 +43,15 @@ class Log extends Service {
     
     }
 
-    public function get_directory () {
-    
-        return $this->directory;
-    
-    }
-
     public function get_file () {
     
         return $this->file;
+    
+    }
+
+    public function get_directory () {
+    
+        return $this->directory ?: ini_get('error_log');
     
     }
 
