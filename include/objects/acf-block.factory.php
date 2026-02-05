@@ -135,7 +135,8 @@ class ACF_Block extends Factory {
 
         foreach ($this->get_fields() as $key => $field) {
 
-            $params[$key] = get_field($key);
+            $value = get_field($key);
+            $params[$key] = (($field['null_on_false'] ?? false) && $value === false) ? null : $value;
 
         }
 
