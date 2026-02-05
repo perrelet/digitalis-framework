@@ -103,6 +103,8 @@ class Term extends WP_Model {
 
         if ($args['hierarchy']) {
 
+            foreach ($instances as $term) $term->tree_children = [];
+
             $hierarchy = [];
             static::build_hierarchy($instances, $hierarchy, $args['parent'] ?? ($args['child_of'] ?? 0));
             return $hierarchy;
@@ -113,8 +115,10 @@ class Term extends WP_Model {
     
     }
 
+    protected $tree_children = [];
+
     protected static function build_hierarchy (&$terms, &$hierarchy, $parent_id = 0) {
-    
+
         if ($terms) foreach ($terms as $i => $term) if ($term->get_parent_id() == $parent_id) {
 
             $hierarchy[] = $term;
@@ -122,7 +126,7 @@ class Term extends WP_Model {
 
         }
 
-        if ($hierarchy) foreach ($hierarchy as $term) static::build_hierarchy($terms, $term->children, $term->get_id());
+        if ($hierarchy) foreach ($hierarchy as $term) static::build_hierarchy($terms, $term->tree_children, $term->get_id());
     
     }
 
@@ -139,8 +143,6 @@ class Term extends WP_Model {
     }
 
     //
-
-    protected $children = [];
 
     protected function build_instance ($data) {
 
