@@ -38,37 +38,63 @@ abstract class Query_Filters extends Field_Group {
         
     }
 
-    public function before_first () {
-
-        parent::before_first();
-
-        if (!$this['module_url']) return;
-
-        $js_params = wp_parse_args($this['js_params'], [
-            'ajax_url'          => admin_url('admin-ajax.php'),
-            'action'            => $this['action'],
-            'archive_id'        => $this['archive_id'],
-            'selectors'         => $this['selectors'],
+    public function get_js_params () {
+    
+        return wp_parse_args($this->js_params, [
+            'ajax_url'   => admin_url('admin-ajax.php'),
+            'action'     => $this->action,
+            'archive_id' => $this->archive_id,
+            'selectors'  => $this->selectors,
         ]);
+    
+    }
 
-        $handle = static::class . '-query-module';
+    public function get_script_attributes () {
+    
+        return new Attributes([
+            'type'         => 'module',
+            'data-version' => $this->module_version,
+        ]);
+    
+    }
 
-        wp_enqueue_script($handle, $this['module_url'], [], $this['module_version'], true);
-        wp_localize_script($handle, $this['js_params_object'], $js_params);
+    public function get_module_url () {
+    
+        if (!$url = $this->module_url) return;
 
-        add_filter('script_loader_tag', function ($tag, $script_handle, $src) use ($handle) {
+        if ($version = $this->module_version) {
+            $url = remove_query_arg('ver', $url);
+            $url = add_query_arg('ver', rawurlencode($version), $url);
+        }
 
-            if ($script_handle != $handle) return $tag;
+        return $url;
+    
+    }
 
-            if (preg_match('/\s+type=([\'"])(.*?)\1/i', $tag)) {
-                $tag = preg_replace('/\s+type=([\'"])(.*?)\1/i', ' type="module"', $tag, 1);
-            } else {
-                $tag = str_replace('<script ', '<script type="module" ', $tag);
-            }
+    public function get_script_js () {
 
-            return $tag;
+        if (!$url = $this->get_module_url()) return;
 
-        }, 10, 3);
+        $js  = "import boot from " . json_encode($url) . ";";
+        $js .= "try { boot(" . json_encode($this->get_js_params()) . "); } catch (e) { console.error(e); }";
+
+        return $js;
+
+    }
+
+    public function get_script () {
+
+        if (!$js = $this->get_script_js()) return;
+
+        return new Element('script', $this->get_script_attributes(), $js);
+
+    }
+
+    public function before () {
+
+        parent::before();
+
+        if ($script = $this->get_script()) echo $script;
 
     }
 
