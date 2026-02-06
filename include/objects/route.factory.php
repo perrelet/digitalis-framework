@@ -33,6 +33,7 @@ class Route extends Factory {
 
     protected $namespace     = 'digitalis/v1';
     protected $route         = 'route';
+    protected $format        = 'json';
     protected $wp_query      = false;
     protected $view          = false; /* View::class */
     protected $require_nonce = false;
@@ -141,18 +142,26 @@ class Route extends Factory {
 
     }
 
-    public function get_url ($query_params = [], $nonce = null, $format = 'json') {
+    public function get_format () {
 
-        if (is_null($nonce)) $nonce = $this->get_require_nonce();
+        if ($this->format) return $this->format;
+        return $this->get_view() ? 'html' : 'json';
+
+    }
+
+    public function get_url ($query_params = [], $nonce = null, $format = null) {
+
+        if (is_null($nonce))  $nonce  = $this->get_require_nonce();
+        if (is_null($format)) $format = $this->get_format();
 
         return REST_URL_Builder::get_instance()->for_route($this, $query_params, $nonce, $format);
-    
+
     }
 
     public function add_query_params ($url, $query_params = []) {
-    
+
         return add_query_arg($query_params, $url);
-    
+
     }
 
     public function nonce_url ($url) {
