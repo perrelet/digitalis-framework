@@ -40,7 +40,7 @@ if ((typeof ACF_AJAX !== 'function')) {
             
             });
     
-            this.$form.on('click','.acf-button', function() {
+            this.$form.on('click', '.acf-form-submit input[type=submit]', function() {
     
                 this.validate_form();
     
