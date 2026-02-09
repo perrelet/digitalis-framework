@@ -25,7 +25,8 @@ class Route extends Factory {
      * @var string       $namespace               The namespace and version.
      * @var string       $route                   The endpoint for this route.
      * @var bool         $wp_query                Whether to emulate a normal WordPress query. Note: $wp isn't reset so repeat `rest_do_request` calls may result in unexpected behaviour. 
-     * @var bool|string  $view                    The view class to render at the endpoint (view args are inherited from `WP_REST_Request`). Set `false` to turn off and use the `callback` method.
+     * @var string       $handler                 The handler method name responsible for executing the route's primary application logic.
+     * @var bool|string  $view                    The view class to render at the endpoint (view args are inherited from `WP_REST_Request`). Set `false` to turn off and use the `$handler`.
      * @var bool         $require_nonce           Enforce nonce check.
      * @var array        $definition              Args passed to `register_rest_route`.
      * @var array        $args                    $args['args'] passed to `register_rest_route`.
@@ -35,6 +36,7 @@ class Route extends Factory {
     protected $route         = 'route';
     protected $format        = 'json';
     protected $wp_query      = false;
+    protected $handler       = 'handle';
     protected $view          = false; /* View::class */
     protected $require_nonce = false;
     protected $definition    = [];
@@ -86,6 +88,12 @@ class Route extends Factory {
 
     }
 
+    public function get_handler () {
+
+        return $this->handler;
+
+    }
+
     public function get_require_nonce () {
 
         return $this->require_nonce;
@@ -133,6 +141,12 @@ class Route extends Factory {
     public function render_view ($view, $params) {
 
         return call_user_func("{$view}::render", $params, false);
+
+    }
+
+    public function handle (WP_REST_Request $request) {
+
+        return $this->request_inject($request, 'callback');
 
     }
 
@@ -234,6 +248,13 @@ class Route extends Factory {
 
         }
 
+        $handler = $this->get_handler();
+
+        if (!method_exists($this, $handler)) return $this->respond(new WP_Error('route-handler-missing', "Handler method '{$handler}' does not exist on " . static::class, ['status' => 500] ));
+
+        $result = $this->request_inject($request, $handler);
+        if ($result instanceof WP_Error) return $this->respond($result);
+
         if ($view = $this->get_view()) {
 
             if (!is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$view}' provided."));
@@ -245,11 +266,9 @@ class Route extends Factory {
 
             return $this->respond($this->render_view($view, $params));
 
-        } else {
-
-            return $this->request_inject($request, 'callback');
-
         }
+
+        return $this->respond($result);
 
     }
     
