@@ -100,13 +100,15 @@ class HTML_REST_API extends Feature {
     
         }
 
+        if ($body instanceof View) $body = (string) $body;
+
         status_header($status);
 
         if (!isset($headers['Content-Type'])) $headers['Content-Type'] = 'text/html; charset=UTF-8';
 
         foreach ($headers as $name => $value) header($name . ': ' . $value);
 
-        if (is_string($body) || is_numeric($body)) {
+        if (is_string($body) || is_numeric($body) || is_null($body)) {
 
             echo (string) $body;
             return true;
