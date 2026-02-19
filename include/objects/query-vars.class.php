@@ -2,6 +2,8 @@
 
 namespace Digitalis;
 
+use WP_Query;
+
 class Query_Vars implements \ArrayAccess {
 
     protected $query;
@@ -41,14 +43,13 @@ class Query_Vars implements \ArrayAccess {
 
     public function get_var ($key, $default = null) {
 
-        return isset($this->query[$key]) ? $this->query[$key] : $default;
+        return $this->query[$key] ?? $default;
 
     }
 
     public function set_var ($key, $value) {
 
         $this->query[$key] = $value;
-
         return $this;
 
     }
@@ -56,7 +57,6 @@ class Query_Vars implements \ArrayAccess {
     public function unset_var ($key) {
 
         unset($this->query[$key]);
-    
         return $this;
     
     }
@@ -190,29 +190,70 @@ class Query_Vars implements \ArrayAccess {
 
     }
 
-    //
+    public function get_stamp () {
 
-    public function offsetGet (mixed $offset): mixed {
-
-        return $this->get_var($offset);
+        return (array) $this->get_var('digitalis');
 
     }
 
-    public function offsetSet (mixed $offset, mixed $value): void {
+    // Property Overloading
 
-        $this->set_var($offset, $value);
+    public function &__get ($key) {
+
+        if (isset($this->query[$key])) { // Terinaries, null coalesce, etc cause `Only variable references should be returned by reference`
+
+            return $this->query[$key];
+
+        } else {
+
+            $null = null;
+            return $null;
+
+        }
 
     }
 
-    public function offsetUnset (mixed $offset): void {
+    public function __set ($key, $value) {
 
-        $this->unset_var($offset);
+        return $this->set_var($key, $value);
 
     }
 
-    public function offsetExists (mixed $offset): bool {
+    public function __unset ($key) {
 
-        return $this->has_var($offset);
+        return $this->unset_var($key);
+
+    }
+
+    public function __isset ($key) {
+
+        return $this->has_var($key);
+
+    }
+
+    // ArrayAccess
+
+    public function &offsetGet (mixed $key): mixed { // Return by reference, see: https://www.php.net/manual/en/arrayaccess.offsetget.php
+
+        return $this->__get($key);
+
+    }
+
+    public function offsetSet (mixed $key, mixed $value): void {
+
+        $this->__set($key, $value);
+
+    }
+
+    public function offsetUnset (mixed $key): void {
+
+        $this->__unset($key);
+
+    }
+
+    public function offsetExists (mixed $key): bool {
+
+        return $this->__isset($key);
 
     }
 
@@ -240,6 +281,55 @@ class Query_Vars implements \ArrayAccess {
 
         }
 
+    }
+
+    //
+
+    public static function compare_post_type (WP_Query $wp_query, $post_type) {
+
+        if (
+            ($wp_query->is_tax() || $wp_query->is_tag() || $wp_query->is_category()) &&
+            ($queried_object = $wp_query->get_queried_object()) &&
+            ($taxonomy = $queried_object->taxonomy ?? false) &&
+            ($taxonomy = get_taxonomy($taxonomy))
+        ) {
+
+            return in_array($post_type, $taxonomy->object_type);
+
+        } else {
+
+            if ($queried_post_type = $wp_query->get('post_type')) {
+
+                if (is_array($queried_post_type)) {
+
+                    if (in_array('any', $queried_post_type) || in_array($post_type, $queried_post_type)) return true;
+
+                } else {
+
+                    if (($queried_post_type == 'any') || ($queried_post_type == $post_type)) return true;
+
+                }
+
+            } elseif (($post_type == 'post') && $wp_query) {
+
+                return $wp_query->is_posts_page || $wp_query->is_author;
+
+            }
+
+            return false;
+
+        }
+
+    }
+
+    public static function is_multiple ($wp_query = null) {
+
+        if (is_null($wp_query)) global $wp_query;
+
+        if ((bool) $wp_query->get(Post_Type::AJAX_Flag)) return true;
+
+        return $wp_query && ($wp_query->is_archive() || $wp_query->is_search() || $wp_query->is_posts_page);
+    
     }
 
 }

@@ -53,6 +53,8 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-manager.singleton.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-profile.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/rest-url-builder.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';

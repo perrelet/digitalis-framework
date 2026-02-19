@@ -116,21 +116,29 @@ class Post extends WP_Model {
 
             // Build a fresh wp_query.
 
-            $query = new Digitalis_Query();
+            $vars = new Query_Vars;
 
-            if (!$skip_main && $wp_query && $wp_query->is_main_query() && Digitalis_Query::is_multiple($query)) $query->merge($wp_query->query_vars);
+            if ($wp_query && $wp_query->get(Post_Type::AJAX_Flag)) $vars->merge($wp_query->query_vars);
 
-            $query->set_var('post_type', static::$post_type ? static::$post_type : 'any');
-            if (static::$post_status) $query->set_var('post_status', static::$post_status);
-            if (static::$term)        $query->add_tax_query([
+            $vars->post_type = static::$post_type ?: 'any';
+
+            if (static::$post_status) $vars->post_status = static::$post_status;
+
+            if (static::$term) $vars->add_tax_query([
                 'taxonomy' => static::$taxonomy,
                 'field'    => is_int(static::$term) ? 'term_id' : 'slug',
                 'terms'    => static::$term,
             ]);
-            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
-            $query->merge($args, true);
 
-            $posts = $query->query();
+            $vars->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
+            $vars->merge($args, true);
+
+            $query = new WP_Query();
+            $query->query_vars = $vars->to_array();
+
+            $posts = Query_Manager::get_instance()->execute($query, [
+                'role' => 'programmatic',
+            ]);
 
         }
 
@@ -140,7 +148,7 @@ class Post extends WP_Model {
 
     protected static function query_is_post_type ($wp_query) {
 
-        return Digitalis_Query::compare_post_type($wp_query, static::$post_type);
+        return Query_Vars::compare_post_type($wp_query, static::$post_type);
 
     }
 

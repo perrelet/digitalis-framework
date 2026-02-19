@@ -4,6 +4,8 @@ namespace Digitalis;
 
 use WP_Query;
 
+// SOON TO BE DEPRECATED
+
 class Digitalis_Query extends WP_Query {
 
     protected $query_vars_obj;
@@ -116,6 +118,8 @@ class Digitalis_Query extends WP_Query {
         
     }
 
+    //
+
     public function is_post_type ($post_type) {
 
         return static::compare_post_type($this, $post_type);
@@ -142,26 +146,24 @@ class Digitalis_Query extends WP_Query {
             if ($queried_post_type = $wp_query->get('post_type')) {
 
                 if (is_array($queried_post_type)) {
-    
+
                     if (in_array('any', $queried_post_type) || in_array($post_type, $queried_post_type)) return true;
-    
+
                 } else {
-    
+
                     if (($queried_post_type == 'any') || ($queried_post_type == $post_type)) return true;
-    
+
                 }
-    
+
             } elseif (($post_type == 'post') && $wp_query) {
-    
+
                 return $wp_query->is_posts_page || $wp_query->is_author;
-    
+
             }
-    
+
             return false;
 
         }
-
-
 
     }
 
