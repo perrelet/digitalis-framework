@@ -105,7 +105,7 @@ class Post extends WP_Model {
         $instances = [];
         $posts     = [];
 
-        if (!$skip_main && !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query)) {
+        if (!$skip_main && static::is_main_query($wp_query)) {
 
             // Use the existing global wp_query.
 
@@ -118,7 +118,7 @@ class Post extends WP_Model {
 
             $vars = new Query_Vars;
 
-            if ($wp_query && $wp_query->get(Post_Type::AJAX_Flag)) $vars->merge($wp_query->query_vars);
+            if (static::is_digitalis_ajax($wp_query)) $vars->merge($wp_query->query_vars);
 
             $vars->post_type = static::$post_type ?: 'any';
 
@@ -146,7 +146,19 @@ class Post extends WP_Model {
 
     }
 
-    protected static function query_is_post_type ($wp_query) {
+    public static function is_main_query ($wp_query) {
+    
+        return !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query);
+    
+    }
+
+    public static function is_digitalis_ajax ($wp_query) {
+    
+        return ($wp_query && $wp_query->get(Post_Type::AJAX_Flag) && static::query_is_post_type($wp_query));
+    
+    }
+
+    public static function query_is_post_type ($wp_query) {
 
         return Query_Vars::compare_post_type($wp_query, static::$post_type);
 
