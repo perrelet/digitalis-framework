@@ -21,6 +21,18 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/dependency-injection.trait.
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/factory.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/db-context.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/column.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/index.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/table.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/table-registry.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/schema.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration-logger.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/option-migration-logger.migration-logger.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/schema-context.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration-runner.final.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-hooks.trait.php';
