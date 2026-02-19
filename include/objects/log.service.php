@@ -6,19 +6,14 @@ use DateTime;
 
 class Log extends Service {
 
-    protected static $cache_group = self::class;  
+    protected static $cache_group    = self::class;  
+    protected static $cache_property = 'file';  
 
     protected $file        = 'log.log';
     protected $directory   = null;
     protected $name        = null;
     protected $date_format = null;
     protected $export_vars = false;
-
-    protected function get_cache_key () {
-
-        return realpath($this->get_path());
-    
-    }
 
     public function __invoke ($msg) {
 
