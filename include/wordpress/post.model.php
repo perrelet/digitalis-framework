@@ -116,25 +116,24 @@ class Post extends WP_Model {
 
             // Build a fresh wp_query.
 
-            $vars = new Query_Vars;
+            $qv = new Query_Vars;
 
-            if (static::is_digitalis_ajax($wp_query)) $vars->merge($wp_query->query_vars);
+            if (static::is_digitalis_ajax($wp_query)) $qv->merge($wp_query->query_vars);
 
-            $vars->post_type = static::$post_type ?: 'any';
+            $qv->post_type = static::$post_type ?: 'any';
 
-            if (static::$post_status) $vars->post_status = static::$post_status;
+            if (static::$post_status) $qv->post_status = static::$post_status;
 
-            if (static::$term) $vars->add_tax_query([
+            if (static::$term) $qv->add_tax_query([
                 'taxonomy' => static::$taxonomy,
                 'field'    => is_int(static::$term) ? 'term_id' : 'slug',
                 'terms'    => static::$term,
             ]);
 
-            $vars->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
-            $vars->merge($args, true);
+            $qv->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
+            $qv->merge($args, true);
 
-            $query = new WP_Query();
-            $query->query_vars = $vars->to_array();
+            $query = $qv->make_query();
 
             $posts = Query_Manager::get_instance()->execute($query, [
                 'role' => 'programmatic',
