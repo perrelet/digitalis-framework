@@ -6,6 +6,8 @@ use WP_Query;
 
 class Query_Manager extends Singleton {
 
+    protected const STAMP_KEY = 'digitalis';
+
     protected $context;
     protected $profiles   = [];
     protected $sorted     = true;
@@ -110,19 +112,23 @@ class Query_Manager extends Singleton {
     public function apply (WP_Query $wp_query) {
 
         if ($this->is_applied($wp_query)) return [new Query_Vars($wp_query->query_vars), []];
-        $this->mark_applied($wp_query);
+
         $this->sort();
 
-        $vars = new Query_Vars($wp_query->query_vars);
-        $mods = [];
+        $vars    = new Query_Vars($wp_query->query_vars);
+        $mods    = [];
+        $applied = [];
 
         foreach ($this->profiles as $profile) {
 
             if (!$profile->should_apply($wp_query)) continue;
 
+            $applied[] = $profile::class;
             $profile->apply($vars, $wp_query, $mods);
 
         }
+
+        $this->mark_applied($wp_query, $applied);
 
         foreach ($vars->to_array() as $key => $value) $wp_query->set($key, $value);
 
@@ -152,7 +158,7 @@ class Query_Manager extends Singleton {
 
     protected function stamp_context ($wp_query, $query_role, $merge = []) {
 
-        $existing = $wp_query->get('digitalis');
+        $existing = $wp_query->get(self::STAMP_KEY);
         if (!is_array($existing)) $existing = [];
 
         $base = [
@@ -162,19 +168,19 @@ class Query_Manager extends Singleton {
             'multiple' => $this->is_multiple($wp_query),
         ];
 
-        $wp_query->set('digitalis', array_merge($existing, $merge, $base));
+        $wp_query->set(self::STAMP_KEY, array_merge($existing, $merge, $base));
 
     }
 
     protected function get_stamp ($wp_query) {
 
-        return (array) $wp_query->get('digitalis');
+        return (array) $wp_query->get(self::STAMP_KEY);
 
     }
 
     protected function set_stamp ($wp_query, $stamp) {
 
-        $wp_query->set('digitalis', $stamp);
+        $wp_query->set(self::STAMP_KEY, $stamp);
 
     }
 
@@ -210,9 +216,9 @@ class Query_Manager extends Singleton {
 
     }
 
-    protected function mark_applied ($wp_query) {
+    protected function mark_applied ($wp_query, $applied) {
 
-        $this->merge_stamp($wp_query, ['applied' => true]);
+        $this->merge_stamp($wp_query, ['applied' => $applied]);
 
     }
 
