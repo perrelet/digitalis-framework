@@ -30,7 +30,6 @@ export class Digitalis_Mapbox {
         this.state   = Digitalis_Mapbox.default_state;
         
         this.add_event_listeners();
-        this.init_map();
 
     }
 
@@ -334,7 +333,7 @@ export class Digitalis_Mapbox {
         const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
         let padding = Math.min(100, width * 0.05);
 
-        if ((width > 1000) && filters_panel.classList.contains('open')) {
+        if (filters_panel && (width > 1000) && filters_panel.classList.contains('open')) {
 
             padding = {
                 top:    padding,

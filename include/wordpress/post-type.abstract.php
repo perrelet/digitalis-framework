@@ -4,6 +4,8 @@ namespace Digitalis;
 
 abstract class Post_Type extends Singleton {
 
+    const AJAX_Flag = 'digitalis_ajax_query';
+
     protected $slug         = 'post-type';
     protected $archive      = 'post-types';
     protected $icon         = 'dashicons-format-aside';
@@ -249,7 +251,7 @@ abstract class Post_Type extends Singleton {
 
     public function main_query_wrap ($query) {
 
-        if ($this->is_main_query($query) && Digitalis_Query::is_multiple($query)) {
+        if ($this->is_main_query($query) && Query_Vars::is_multiple($query)) {
 
             $this->main_query($query);
 
@@ -306,12 +308,8 @@ abstract class Post_Type extends Singleton {
         $wp->parse_request();
         $wp_query->query_vars = $wp->query_vars;
         $wp_query->set('post_type', $this->slug);
+        $wp_query->set(self::AJAX_Flag, true);
         $this->main_query($wp_query);
-
-        /* $qv = new Query_Vars($wp_query->query_vars);
-        $qv->merge($this->query_vars());
-        $qv->set_var('post_type', $this->slug);
-        $wp_query->query($qv->to_array()); */ // We want to defer setting the query args to the derived ajax_query method (let the merge happen in Post::Query)
 
         return $this->ajax_query();
 
@@ -522,6 +520,8 @@ abstract class Post_Type extends Singleton {
 
     public function after_insert_wrap ($post_id, $post, $update, $post_before) {
 
+        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) return;
+
         if ($post->post_type != $this->slug) return;
 
         // Turning this off as it doesn't honor acf updates
@@ -579,7 +579,7 @@ abstract class Post_Type extends Singleton {
 
     protected function is_main_query ($query) {
 
-        return ((!is_admin() || wp_doing_ajax()) && $query->is_main_query() && Digitalis_Query::compare_post_type($query, $this->slug));
+        return ((!is_admin() || wp_doing_ajax()) && $query->is_main_query() && Query_Vars::compare_post_type($query, $this->slug));
 
     }
 

@@ -42,14 +42,6 @@ trait Has_WP_Term {
 
     }
 
-    public function get_children () {
-
-        // Where'd you go?
-    
-        return $this->children;
-    
-    }
-
     // Traits
 
     public function get_wp_model () {
@@ -191,6 +183,18 @@ trait Has_WP_Term {
         if (!$asc) $parents = array_reverse($parents);
 
         return $parents;
+    
+    }
+
+    protected $children = null;
+
+    public function get_children () {
+
+        if (is_null($this->children)) $this->children = static::query([
+            'parent' => $this->get_id(),
+        ]);
+    
+        return $this->children;
     
     }
 

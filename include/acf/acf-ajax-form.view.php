@@ -65,9 +65,9 @@ class ACF_AJAX_Form extends View {
 
         acf_form($this['acf_form']);
 
-        if ($this['dynamically_load']) echo "<script>acf.do_action('append', jQuery('#{$this['id']}'));</script>";
+        if ($this['dynamically_load']) echo "<script>acf.do_action('append', jQuery('#" . esc_js($this['id']) . "'));</script>";
 
-        echo "<script>new ACF_AJAX(" . json_encode($this['acf_ajax_options']) . ");</script>";
+        echo "<script>new ACF_AJAX(" . wp_json_encode($this['acf_ajax_options']) . ");</script>";
 
     }
 

@@ -105,7 +105,7 @@ class Post extends WP_Model {
         $instances = [];
         $posts     = [];
 
-        if (!$skip_main && !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query)) {
+        if (!$skip_main && static::is_main_query($wp_query)) {
 
             // Use the existing global wp_query.
 
@@ -116,21 +116,28 @@ class Post extends WP_Model {
 
             // Build a fresh wp_query.
 
-            $query = new Digitalis_Query();
+            $qv = new Query_Vars;
 
-            if (!$skip_main && $wp_query && $wp_query->is_main_query() && Digitalis_Query::is_multiple($query)) $query->merge($wp_query->query_vars);
+            if (static::is_digitalis_ajax($wp_query)) $qv->merge($wp_query->query_vars);
 
-            $query->set_var('post_type', static::$post_type ? static::$post_type : 'any');
-            if (static::$post_status) $query->set_var('post_status', static::$post_status);
-            if (static::$term)        $query->add_tax_query([
+            $qv->post_type = static::$post_type ?: 'any';
+
+            if (static::$post_status) $qv->post_status = static::$post_status;
+
+            if (static::$term) $qv->add_tax_query([
                 'taxonomy' => static::$taxonomy,
                 'field'    => is_int(static::$term) ? 'term_id' : 'slug',
                 'terms'    => static::$term,
             ]);
-            $query->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
-            $query->merge($args, true);
 
-            $posts = $query->query();
+            $qv->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
+            $qv->merge($args, true);
+
+            $query = $qv->make_query();
+
+            $posts = Query_Manager::get_instance()->execute($query, [
+                'role' => 'programmatic',
+            ]);
 
         }
 
@@ -138,9 +145,21 @@ class Post extends WP_Model {
 
     }
 
-    protected static function query_is_post_type ($wp_query) {
+    public static function is_main_query ($wp_query) {
+    
+        return !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query);
+    
+    }
 
-        return Digitalis_Query::compare_post_type($wp_query, static::$post_type);
+    public static function is_digitalis_ajax ($wp_query) {
+    
+        return ($wp_query && $wp_query->get(Post_Type::AJAX_Flag) && static::query_is_post_type($wp_query));
+    
+    }
+
+    public static function query_is_post_type ($wp_query) {
+
+        return Query_Vars::compare_post_type($wp_query, static::$post_type);
 
     }
 

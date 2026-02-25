@@ -62,9 +62,22 @@ class Attachment extends Post {
     }
 
     public function get_caption () {
-    
+
         return wp_get_attachment_caption($this->wp_post->ID);
-    
+
+    }
+
+    public function get_alt_text () {
+
+        return $this->get_meta('_wp_attachment_image_alt');
+
+    }
+
+    public function set_alt_text ($alt_text) {
+
+        $this->update_meta('_wp_attachment_image_alt', wp_slash($alt_text));
+        return $this;
+
     }
 
     public function get_attachment_thumbnail () {
@@ -91,16 +104,13 @@ class Attachment extends Post {
 
     }
 
+    protected $src_cache = [];
+
     public function get_image_src ($size = 'medium', $icon = false) {
 
-        static $src;
-        if (is_null($src)) $src = [];
-
-        $key = implode(func_get_args(), ';');
-
-        if (!isset($src[$key])) $src[$key] = wp_get_attachment_image_src($this->wp_post->ID, $size, $icon);
-    
-        return $src[$key];
+        $key = implode(';', func_get_args());
+        if (!isset($this->src_cache[$key])) $this->src_cache[$key] = wp_get_attachment_image_src($this->wp_post->ID, $size, $icon);
+        return $this->src_cache[$key];
     
     }
 
@@ -137,6 +147,12 @@ class Attachment extends Post {
     public function get_id3_keys ($context = 'display') {
     
         return wp_get_attachment_id3_keys($this->wp_post, $context);
+    
+    }
+
+    public function get_attachment_taxonomies ($output = 'names') {
+    
+        return get_taxonomies($this->wp_post, $output);
     
     }
 

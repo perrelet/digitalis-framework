@@ -18,13 +18,15 @@ abstract class Screen_Table extends Admin_Table {
 
         foreach ($this->slug as $slug) {
 
-            $columns_hook  = $this->get_columns_hook($slug);
-            $column_hook   = $this->get_column_hook($slug);
-            $sortable_hook = $this->get_sortable_hook($slug);
+            $columns_hook     = $this->get_columns_hook($slug);
+            $column_hook      = $this->get_column_hook($slug);
+            $sortable_hook    = $this->get_sortable_hook($slug);
+            $row_actions_hook = $this->get_row_actions_hook($slug);
 
-            if ($columns_hook)  add_filter($columns_hook,  [$this, 'columns_wrap'], $this->priority);
-            if ($column_hook)   add_filter($column_hook,   [$this, 'column'],       $this->priority, 3);
-            if ($sortable_hook) add_filter($sortable_hook, [$this, 'sortable_wrap'], $this->priority);
+            if ($columns_hook)     add_filter($columns_hook,     [$this, 'columns_wrap'],     $this->priority);
+            if ($column_hook)      add_filter($column_hook,      [$this, 'column'],           $this->priority, 3);
+            if ($sortable_hook)    add_filter($sortable_hook,    [$this, 'sortable_wrap'],    $this->priority);
+            if ($row_actions_hook) add_filter($row_actions_hook, [$this, 'row_actions_wrap'], $this->priority, 2);
 
         }
     
@@ -40,6 +42,12 @@ abstract class Screen_Table extends Admin_Table {
 
         // ...
 
+    }
+
+    public function row_actions (&$actions) {
+    
+        // ..
+    
     }
 
     protected function get_columns_hook ($slug) {
@@ -60,6 +68,12 @@ abstract class Screen_Table extends Admin_Table {
     
     }
 
+    protected function get_row_actions_hook ($slug) {
+    
+        return false;
+    
+    }
+
     public function columns_wrap ($columns) {
 
         $this->columns = &$columns;
@@ -76,6 +90,12 @@ abstract class Screen_Table extends Admin_Table {
 
         return $columns;
         
+    }
+
+    public function row_actions_wrap ($actions, $object) {
+
+        return $actions;
+    
     }
 
     protected function remove_column ($key) {

@@ -2,7 +2,7 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.01');
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.02');
 define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_LIBRARY_PATH',        plugin_dir_path( __FILE__ ) . 'include/features/');
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
@@ -20,6 +20,18 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.p
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/dependency-injection.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/factory.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/db-context.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/column.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/index.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/table.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/table-registry.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/schema.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration-logger.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/option-migration-logger.migration-logger.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/schema-context.final.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration-runner.final.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
 
@@ -41,6 +53,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-manager.singleton.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-profile.factory.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/rest-url-builder.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
@@ -184,3 +199,4 @@ add_filter('sassy-variables', function ($variables) {
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/view.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/component.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/route.factory.php';

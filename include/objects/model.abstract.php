@@ -167,6 +167,12 @@ class Model extends Factory {
 
     protected static $class_map = [];
 
+    public static function get_class_map () {
+    
+        return static::$class_map;
+    
+    }
+
     public static function static_init () {
 
         $specificity = static::get_specificity();
