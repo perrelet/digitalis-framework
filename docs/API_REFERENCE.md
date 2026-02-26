@@ -4,8 +4,14 @@
 
 - [Design Patterns](#design-patterns)
 - [Core Objects](#core-objects)
+  - [Query_Vars](#digitalisquery_vars)
+  - [Query_Manager](#digitalisquery_manager)
+  - [Query_Profile](#digitalisquery_profile)
 - [WordPress Models](#wordpress-models)
 - [Views & Components](#views--components)
+  - [Route](#digitalisroute)
+  - [REST_URL_Builder](#digitalisrest_url_builder)
+  - [HTML_REST_API](#digitalishtml_rest_api)
 - [Form Fields](#form-fields)
 - [Admin Classes](#admin-classes)
 - [Iterators](#iterators)
@@ -50,7 +56,7 @@ abstract class Singleton extends Design_Pattern
 
 ### `Digitalis\Factory`
 
-Creates and manages instances with optional caching.
+Creates and manages instances with optional caching. Instances are stored in a shared registry keyed by `$cache_group` + `$cache_property` value.
 
 ```php
 abstract class Factory extends Design_Pattern
@@ -58,14 +64,16 @@ abstract class Factory extends Design_Pattern
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$cache_property` | `string\|null` | `null` | Property name to use as cache key |
-| `$cache` | `array` | `[]` | Instance cache storage |
+| `$cache_group` | `string` | `'__global__'` | Namespace for instance storage. Override to isolate a family of subclasses. |
+| `$cache_property` | `string\|null` | `null` | Instance property whose value becomes the cache key. |
+| `$instances` | `array` | `[]` | Shared static registry of all cached instances. |
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `create()` | `static create(array $data = []): static` | Creates new instance |
 | `get_instance()` | `static get_instance(mixed $identifier): ?static` | Gets cached or creates new instance |
 | `get_instances()` | `static get_instances(array $identifiers): array` | Gets multiple instances |
+| `get_instance_map()` | `static get_instance_map(): array` | Returns `['group' => ['key' => ClassName]]` map of all cached instances |
 
 ---
 
@@ -158,19 +166,36 @@ abstract class Integration extends Singleton
 Plugin application base class.
 
 ```php
-abstract class App extends Creational
+abstract class App extends Singleton
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `$path` | `string` | Plugin directory path |
-| `$url` | `string` | Plugin directory URL |
+| `$reflection` | `ReflectionClass` | Reflection of the concrete subclass, used to resolve the plugin path. |
+| `$path` | `string` | Absolute path to the plugin directory (trailing slash). |
+| `$url` | `string` | URL to the plugin directory (trailing slash). |
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `autoload()` | `public autoload(string $path = null, bool $recursive = true): void` | Autoloads classes from directory |
-| `load_class()` | `public load_class(string $path, callable $instantiation = null): void` | Loads single class file |
-| `register_bricks_elements()` | `public register_bricks_elements(string $path): void` | Registers Bricks page builder elements |
+| `get_path()` | `public get_path(): string` | Returns `$path`. |
+| `get_url()` | `public get_url(): string` | Returns `$url`. |
+| `boot()` | `public boot(): void` | Entry point, called on `plugins_loaded`. Calls `load()`, `ensure_schema()`, `boot_shared()`, then the appropriate context methods. |
+| `load()` | `public load(): void` | Runs `autoload()` and registers Bricks elements. Always runs. |
+| `ensure_schema()` | `public ensure_schema(): void` | No-op stub. Override to run DB migrations via `Migration_Runner`. Always runs before context branching. |
+| `boot_shared()` | `public boot_shared(): void` | Override for code that runs on every request after loading. |
+| `boot_admin()` | `public boot_admin(): void` | Override for admin-only boot logic. |
+| `boot_front()` | `public boot_front(): void` | Override for front-end-only boot logic. |
+| `boot_ajax()` | `public boot_ajax(): void` | Override for ajax boot logic. Does not short-circuit; REST boot may also run. |
+| `boot_rest()` | `public boot_rest(): void` | Override for REST request boot logic. |
+| `boot_cli()` | `public boot_cli(): void` | Override for WP-CLI boot logic. |
+| `boot_cron()` | `public boot_cron(): void` | Override for cron boot logic. |
+| `load_admin()` | `public load_admin(): void` | Autoloads `_admin/`. |
+| `load_cli()` | `public load_cli(): void` | Autoloads `_cli/`. |
+| `load_cron()` | `public load_cron(): void` | Autoloads `_cron/`. |
+| `load_ajax()` | `public load_ajax(): void` | Autoloads `_ajax/`. |
+| `load_rest()` | `public load_rest(): void` | Autoloads `_rest/`. |
+| `autoload()` | `public autoload(string $path = null, bool $recursive = true): void` | Autoloads classes from directory. |
+| `load_class()` | `public load_class(string $path, callable $instantiation = null): void` | Loads a single class file. |
 
 ---
 
@@ -226,6 +251,9 @@ class Post extends WP_Model
 | `get_excerpt()` | `public get_excerpt(): string` | Returns post excerpt |
 | `get_permalink()` | `public get_permalink(): string` | Returns post URL |
 | `get_thumbnail_id()` | `public get_thumbnail_id(): int` | Returns featured image ID |
+| `is_main_query()` | `static is_main_query(?WP_Query $wp_query): bool` | True if the query is the non-ajax main query for this post type. |
+| `is_digitalis_ajax()` | `static is_digitalis_ajax(?WP_Query $wp_query): bool` | True if the query is a Digitalis ajax query for this post type. |
+| `query_is_post_type()` | `static query_is_post_type(WP_Query $wp_query): bool` | True if the query targets this model's `$post_type` (public). |
 
 ---
 
@@ -252,6 +280,9 @@ class User extends WP_Model
 | `get_display_name()` | `public get_display_name(): string` | Returns display name |
 | `get_email()` | `public get_email(): string` | Returns email |
 | `has_role()` | `public has_role(string $role): bool` | Checks if user has role |
+| `query()` | `static query(array $args = [], &$query = null): array` | Queries users via `WP_User_Query`. Applies `$role` filter automatically. |
+| `get_query_vars()` | `static get_query_vars(array $args = []): array` | Override to modify front-end query args. |
+| `get_admin_query_vars()` | `static get_admin_query_vars(array $args = []): array` | Override to modify admin query args. |
 
 ---
 
@@ -326,9 +357,9 @@ abstract class Taxonomy extends Singleton
 
 ---
 
-### `Digitalis\Digitalis_Query`
+### `Digitalis\Digitalis_Query` ⚠️ Deprecated
 
-Extended WP_Query with helpers.
+> **Deprecated.** Use `Query_Vars::make_query()` + `Query_Manager::get_instance()->execute()` instead. `Digitalis_Query` is retained for backwards compatibility but will be removed.
 
 ```php
 class Digitalis_Query extends WP_Query
@@ -342,6 +373,122 @@ class Digitalis_Query extends WP_Query
 | `add_meta_query()` | `public add_meta_query(array $query): self` | Adds meta query |
 | `add_tax_query()` | `public add_tax_query(array $query): self` | Adds taxonomy query |
 | `merge()` | `public merge(array $args): self` | Merges query args |
+
+---
+
+### `Digitalis\Query_Vars`
+
+Fluent builder for `WP_Query` arguments. Implements `ArrayAccess`, `IteratorAggregate`, `JsonSerializable`, `Countable`. Supports property overloading.
+
+```php
+class Query_Vars implements ArrayAccess, IteratorAggregate, JsonSerializable, Countable
+```
+
+```php
+$qv = new Query_Vars(['post_type' => 'project']);
+$qv->post_status = 'publish';                         // property overloading
+$qv->add_meta_query(['key' => 'featured', 'value' => '1']);
+$posts = Query_Manager::get_instance()->execute($qv->make_query());
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `get()` | `public get(string $key, mixed $default = null): mixed` | Get a var. |
+| `set()` | `public set(string $key, mixed $value): static` | Set a var. |
+| `has()` | `public has(string $key): bool` | `array_key_exists` check — detects `false`, `0`, `null`. |
+| `remove()` | `public remove(string $key): static` | Unset a var. |
+| `get_var / set_var / has_var / unset_var` | — | Aliases for the above. |
+| `get_vars()` | `public get_vars(): array` | Return all vars as array. |
+| `to_array()` | `public to_array(): array` | Alias for `get_vars()`. |
+| `set_vars()` | `public set_vars(array $vars): static` | Replace all vars (merges with `meta_query`/`tax_query` defaults). |
+| `get_meta_query()` | `public get_meta_query(): array` | Return current `meta_query`. |
+| `get_tax_query()` | `public get_tax_query(): array` | Return current `tax_query`. |
+| `add_meta_query()` | `public add_meta_query(array $clause): static` | Append a meta query clause. |
+| `add_tax_query()` | `public add_tax_query(array $clause): static` | Append a tax query clause. |
+| `clear_meta_query()` | `public clear_meta_query(): static` | Reset `meta_query` to `[]`. |
+| `clear_tax_query()` | `public clear_tax_query(): static` | Reset `tax_query` to `[]`. |
+| `merge()` | `public merge(array $query, bool $allow_empty = false): static` | Smart merge. Skips `null`, `''`, `[]` unless `$allow_empty`. |
+| `merge_var()` | `public merge_var(string $key, mixed $value, bool $allow_empty = false): static` | Merge a single var with WP-aware logic for `post_type`, `post_status`, arrays. |
+| `overwrite()` | `public overwrite(array $query): static` | Unconditional set for each key. |
+| `find_path()` | `public find_path(array $haystack, mixed $match, string $key, string $compare): ?array` | Return path array to a nested clause, or `null`. |
+| `find_meta_query_path()` | `public find_meta_query_path(mixed $match, string $key = 'key', string $compare = '='): ?array` | Find path in `meta_query`. |
+| `find_tax_query_path()` | `public find_tax_query_path(mixed $match, string $key = 'taxonomy', string $compare = '='): ?array` | Find path in `tax_query`. |
+| `get_meta_block()` | `public &get_meta_block(array $path): mixed` | Return reference to `meta_query` block at path. |
+| `get_tax_block()` | `public &get_tax_block(array $path): mixed` | Return reference to `tax_query` block at path. |
+| `upsert_meta_query()` | `public upsert_meta_query(mixed $match, array $new_block, string $key = 'key', string $compare = '='): static` | Update existing clause or append. |
+| `upsert_tax_query()` | `public upsert_tax_query(mixed $match, array $new_block, string $key = 'taxonomy', string $compare = '='): static` | Update existing clause or append. |
+| `get_stamp()` | `public get_stamp(): array` | Return `(array) $this->get('digitalis')` — the `Query_Manager` stamp. |
+| `make_query()` | `public make_query(array $overrides = []): WP_Query` | Produce a bare `WP_Query` with `query_vars` set. No DB call. |
+| `count()` | `public count(): int` | Number of vars set. |
+| `getIterator()` | `public getIterator(): Traversable` | For `foreach`. |
+| `jsonSerialize()` | `public jsonSerialize(): mixed` | For `json_encode()`. |
+| `compare_post_type()` | `static compare_post_type(WP_Query $wp_query, string $post_type): bool` | True if query targets given post type (handles taxonomy archives, `'any'`, arrays). |
+| `is_multiple()` | `static is_multiple(?WP_Query $wp_query = null): bool` | True if query is a listing (archive, search, posts page, or Digitalis ajax). Falls back to global `$wp_query`. |
+
+---
+
+### `Digitalis\Query_Manager`
+
+Singleton dispatcher that applies `Query_Profile` instances to every `WP_Query` that passes through it. Hooks into `pre_get_posts`, `posts_clauses`, and `posts_results`.
+
+```php
+class Query_Manager extends Singleton
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `register()` | `public register(Query_Profile $profile): static` | Add a profile to the registry. |
+| `apply()` | `public apply(WP_Query $wp_query): array` | Apply all matching profiles to a query. Returns `[$vars, $mods]`. Idempotent — skips if already stamped. |
+| `execute()` | `public execute(WP_Query $wp_query, array $stamp_merge = []): array` | Apply profiles and execute the query. Returns posts array. |
+| `get_context()` | `public get_context(): string` | Returns detected request context: `cli`, `cron`, `rest`, `ajax`, `admin`, `front`. |
+| `pre_get_posts()` | `public pre_get_posts(WP_Query $wp_query): void` | WordPress hook handler — stamps and applies profiles to the main query. |
+| `posts_clauses()` | `public posts_clauses(array $clauses, WP_Query $wp_query): array` | WordPress hook — applies SQL-level mods registered by profiles. |
+| `posts_results()` | `public posts_results(array $posts, WP_Query $wp_query): array` | WordPress hook — cleans up mod registry after SQL executes. |
+
+**Stamp keys** written to every processed query's `digitalis` var:
+
+| Key | Description |
+|---|---|
+| `id` | Auto-incrementing per-request query ID. |
+| `role` | `front_main`, `admin_main`, or `programmatic`. |
+| `context` | Request context string. |
+| `multiple` | Whether the query is a listing. |
+| `selection_mode` | `implicit` or `explicit`. |
+| `allow_profile_select` | Whether `_profiles` / `_suppress` vars are honoured. |
+| `applied` | Array of profile class names that ran. |
+
+**Special query vars** (set on `WP_Query` before calling `execute()`):
+
+| Var | Description |
+|---|---|
+| `_profiles` | Array of `Query_Profile` class names to explicitly run (selectable mode). |
+| `_suppress` | Array of `Query_Profile` class names to skip. |
+
+---
+
+### `Digitalis\Query_Profile`
+
+Profile that self-registers with `Query_Manager` on construction. Declares when it applies and what it does.
+
+```php
+class Query_Profile extends Factory
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `$mode` | `string` | `'selectable'` | `baseline` (always), `ambient` (implicit queries), `selectable` (explicit opt-in only). |
+| `$priority` | `int` | `10` | Sort order — higher runs first. |
+| `$post_type` | `string\|array` | `null` | Restrict to these post types. Empty = any. |
+| `$post_status` | `string\|array` | `null` | Restrict to these statuses. Empty = any. |
+| `$role` | `string\|array` | `null` | Restrict to stamp role values. Empty = any. |
+| `$context` | `string\|array` | `null` | Restrict to stamp context values. Empty = any. |
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `should_apply()` | `public should_apply(WP_Query $wp_query): bool` | Returns true if this profile should run on this query. |
+| `condition()` | `public condition(WP_Query $wp_query): bool` | Override for additional runtime conditions. Default: `true`. |
+| `apply()` | `public apply(Query_Vars $vars, WP_Query $wp_query, array &$mods): void` | Override to modify `$vars` or push SQL closures into `$mods`. |
+| `get_priority()` | `public get_priority(): int` | Returns `$priority`. |
 
 ---
 
@@ -404,27 +551,128 @@ class Component extends View
 
 ### `Digitalis\Route`
 
-REST API endpoint registration.
+REST API endpoint registration and handling.
 
 ```php
-abstract class Route extends Factory
+class Route extends Factory
+```
+
+Registers on `rest_api_init`. Accepts both `GET` and `POST` by default. URL generation is delegated to `REST_URL_Builder`.
+
+```php
+class Invoice_Route extends Route {
+    protected $namespace     = 'my-plugin/v1';
+    protected $route         = 'invoice/(?P<id>\d+)';
+    protected $require_nonce = true;
+
+    protected $args = [
+        'id' => ['required' => true, 'type' => 'integer', 'class' => Order::class],
+    ];
+
+    public function permission (WP_REST_Request $request) {
+        return is_user_logged_in();
+    }
+
+    public function callback (WP_REST_Request $request, Order $order) {
+        return $this->respond($order->to_array());
+    }
+}
+
+Invoice_Route::get_instance();
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$namespace` | `string` | `'digitalis'` | API namespace |
-| `$version` | `string` | `'v1'` | API version |
-| `$route` | `string` | `''` | Route path |
-| `$methods` | `string\|array` | `'GET'` | HTTP methods |
-| `$view` | `string` | `''` | View class to render |
-| `$require_nonce` | `bool` | `false` | Require nonce verification |
-| `$html_prefix` | `string` | `''` | Prefix for HTMX responses |
+| `$namespace` | `string` | `'digitalis/v1'` | REST namespace including version. |
+| `$route` | `string` | `'route'` | Route path (WP regex syntax). |
+| `$format` | `string` | `'json'` | Default URL format for `get_url()`. Set to `'html'` for HTML REST routes. Auto-detects from `$view` if falsy. |
+| `$wp_query` | `bool` | `false` | If true, emulates a normal WP query before callbacks run. |
+| `$handler` | `string` | `'handle'` | Method name to call as the primary handler. Defaults to `handle()` which delegates to `callback()`. |
+| `$view` | `string\|false` | `false` | View class to render. If set, `callback_wrap()` renders this view and ignores `callback()` return value. |
+| `$require_nonce` | `bool` | `false` | If true, `_wpnonce` param or `Nonce` header is verified before `callback_wrap()` runs. |
+| `$definition` | `array` | `[]` | Merged into the args passed to `register_rest_route()`. |
+| `$args` | `array` | `[]` | Route parameter definitions. Supports `class` key for dependency injection. |
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `register_api_routes()` | `public register_api_routes(): void` | Registers REST route |
-| `handle()` | `public handle(WP_REST_Request $request): mixed` | Handles request |
-| `permission_callback()` | `public permission_callback(): bool` | Permission check |
+| `register_route()` | `public register_route(): void` | Calls `register_rest_route()`. Hooked to `rest_api_init`. |
+| `get_definition()` | `public get_definition(): array` | Returns merged route definition (cached). |
+| `get_args()` | `public get_args(): array` | Returns `$args`. |
+| `get_namespace()` | `public get_namespace(): string` | Returns `$namespace`. |
+| `get_route()` | `public get_route(): string` | Returns `$route`. |
+| `get_format()` | `public get_format(): string` | Returns `$format`, auto-detecting `'html'` if `$view` is set. |
+| `get_handler()` | `public get_handler(): string` | Returns `$handler`. |
+| `get_view()` | `public get_view(): string\|false` | Returns `$view`. |
+| `permission()` | `public permission(WP_REST_Request $request): mixed` | Override to add permission logic. Supports DI from `$args`. Default: `true`. |
+| `callback()` | `public callback(WP_REST_Request $request): mixed` | Override for route logic. Supports DI from `$args`. |
+| `handle()` | `public handle(WP_REST_Request $request): mixed` | Default handler — delegates to `callback()` via `request_inject()`. |
+| `permission_wrap()` | `public permission_wrap(WP_REST_Request $request): mixed` | WP callback — calls and caches `permission()`. |
+| `callback_wrap()` | `public callback_wrap(WP_REST_Request $request): mixed` | WP callback — checks nonce, calls handler, renders view if set. |
+| `get_url()` | `public get_url(array $params = [], ?bool $nonce = null, ?string $format = null): string` | Build URL via `REST_URL_Builder`. Respects `$require_nonce` and `$format` by default. |
+| `get_nonce()` | `public get_nonce(): string` | Returns (cached) `wp_rest` nonce. |
+| `nonce_url()` | `public nonce_url(string $url): string` | Appends `_wpnonce` param to URL. |
+| `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates `_wpnonce` param or `Nonce` header. |
+| `respond()` | `protected respond(mixed $response): WP_REST_Response` | Wraps response in `rest_ensure_response()`. |
+| `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request matches this route. |
+| `render_view()` | `public render_view(string $view, array $params): string` | Calls `View::render($params, false)`. |
+| `add_query_params()` | `public add_query_params(string $url, array $params): string` | Appends query params via `add_query_arg()`. |
+
+**Dependency injection in args:**
+
+Set `'class' => Model::class` on any arg. If the param is present in the request, `Model::get_instance($value)` is called and the result is injected into `permission()` / `callback()` by type-hint. Returns a 404 `WP_Error` if resolution fails.
+
+---
+
+### `Digitalis\REST_URL_Builder`
+
+Singleton URL builder for `Route` instances. Manages named format strategies.
+
+```php
+class REST_URL_Builder extends Singleton
+```
+
+Built-in formats: `'json'` (registered by default), `'html'` (registered when `HTML_REST_API` feature is active).
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `register_format()` | `public register_format(string $name, callable $builder): void` | Register a URL builder. Receives `Route $route`, returns URL string. |
+| `for_route()` | `public for_route(Route $route, array $params = [], bool $nonce = true, string $format = 'json'): string` | Build a URL for a route. Appends query params and nonce if requested. |
+
+---
+
+### `Digitalis\HTML_REST_API`
+
+Feature that intercepts REST responses and serves raw HTML instead of JSON. Enables clean HTMX integration without a separate HTML endpoint.
+
+```php
+class HTML_REST_API extends Feature
+```
+
+A request is treated as an HTML REST request if:
+- The URL path starts with `/{$rest_prefix}/` (default: `/wp-html/`), OR
+- The request carries an `HX-Request: true` header (HTMX).
+
+Registers the `'html'` format with `REST_URL_Builder`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `$rest_prefix` | `string` | `'wp-html'` | URL prefix replacing `/wp-json/` for HTML responses. |
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `add_rewrite_rules()` | `public add_rewrite_rules(): void` | Registers rewrite rule mapping `wp-html/...` to the REST router. |
+| `get_url()` | `public get_url(string $path = '', ?int $blog_id = null, string $scheme = 'rest'): string` | Build an HTML REST URL (replaces `/wp-json/` with `/wp-html/`). |
+| `get_path()` | `public get_path(string $path = ''): string` | Like `get_url()` but returns path only (no scheme/host). |
+| `rest_pre_serve_request()` | `public rest_pre_serve_request(...)` | Filter handler — intercepts and outputs raw HTML. Routes returning a `View` instance are automatically cast to string. |
+
+**Response behaviour:**
+
+| Return value from `callback()` | Output |
+|---|---|
+| `string` / `int` / `null` | Echoed directly, `Content-Type: text/html` |
+| `View` instance | Cast to string, echoed |
+| `WP_Error` | Error message echoed, appropriate HTTP status set |
+| Any other type | `HTTP 500`, plain text error message |
 
 ---
 

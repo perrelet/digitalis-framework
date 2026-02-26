@@ -8,6 +8,8 @@ Reference for admin pages, tables, meta boxes, and ACF integration.
 
 - [Admin Pages](#admin-pages)
 - [Admin Sub Pages](#admin-sub-pages)
+- [Commands Page](#commands-page)
+- [Logs Page](#logs-page)
 - [Posts Table](#posts-table)
 - [Users Table](#users-table)
 - [Terms Table](#terms-table)
@@ -65,6 +67,8 @@ class Settings_Page extends Admin_Page {
 |--------|-------------|
 | `callback()` | Override to render page content |
 | `get_url($blog_id)` | Get admin page URL |
+
+`Admin_Page` is a Factory cached by `$slug`, so `Admin_Page::get_instance('my-settings')` returns the registered instance.
 
 ### With View
 
@@ -200,6 +204,126 @@ class WC_Reports extends Admin_Sub_Page {
 
 ---
 
+## Commands Page
+
+A specialized `Admin_Sub_Page` for running arbitrary PHP commands from the WP admin. Extend it to create a developer tools or maintenance page.
+
+**Location:** `include/admin/commands-page.abstract.php`
+
+```php
+namespace Digitalis;
+
+class Dev_Commands_Page extends Commands_Page {
+
+    protected $parent     = 'tools.php';
+    protected $slug       = 'dev-commands';
+    protected $title      = 'Developer Commands';
+    protected $menu_title = 'Dev Commands';
+    protected $capability = 'manage_options';
+
+    public function get_commands() {
+        return [
+            'clear_transients' => [
+                'label'  => 'Clear Transients',
+                'call'   => [$this, 'run_clear_transients'],
+                'fields' => [],
+            ],
+            'sync_accounts' => [
+                'label'  => 'Sync Accounts',
+                'call'   => [$this, 'run_sync_accounts'],
+                'fields' => [
+                    'limit' => ['label' => 'Limit', 'type' => 'number', 'default' => 100],
+                ],
+            ],
+        ];
+    }
+
+    public function run_clear_transients() {
+        global $wpdb;
+        return $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_%'");
+    }
+
+    public function run_sync_accounts($limit = 100) {
+        // ...
+    }
+}
+```
+
+### Nonce Verification
+
+Commands_Page automatically injects a `_wpnonce` hidden field into the command form and verifies it on submission. You do not need to add nonce handling yourself — commands that fail the nonce check are rejected with an admin notice.
+
+### Command Definition
+
+```php
+'command_key' => [
+    'label'  => 'Human-readable label',  // Displayed in the UI
+    'call'   => callable,                // Function/method to call
+    'fields' => [                        // Input fields (optional)
+        'field_name' => [
+            'label'   => 'Field Label',
+            'type'    => 'text',         // Standard HTML input type
+            'default' => '',
+        ],
+    ],
+]
+```
+
+Field values passed to `$call` are sanitized with `sanitize_text_field()` before use.
+
+---
+
+## Logs Page
+
+A specialized `Admin_Sub_Page` for viewing and clearing log files in the WP admin. Uses the `Log` service for file reading.
+
+**Location:** `include/admin/logs-page.abstract.php`
+
+```php
+namespace Digitalis;
+
+class Plugin_Logs_Page extends Logs_Page {
+
+    protected $parent     = 'tools.php';
+    protected $slug       = 'plugin-logs';
+    protected $title      = 'Plugin Logs';
+    protected $menu_title = 'Logs';
+    protected $capability = 'manage_options';
+
+    public function get_logs() {
+        return [
+            [
+                'name'     => 'Application Log',
+                'slug'     => 'app',
+                'instance' => Log::get_instance('app.log'),
+            ],
+            [
+                'name'     => 'Error Log',
+                'slug'     => 'error',
+                'path'     => ini_get('error_log'),
+            ],
+        ];
+    }
+}
+```
+
+### Log Definition
+
+```php
+[
+    'name'        => 'Display Name',
+    'slug'        => 'unique-slug',     // Used in query string
+    'path'        => '/abs/path.log',   // Direct path (or use instance)
+    'instance'    => Log::get_instance(), // Log instance (preferred)
+    'theme'       => ['basic'],          // Syntax highlighting theme(s)
+    'permissions' => [],                 // Additional cap checks
+]
+```
+
+The page renders the log tail with pagination. The `theme` values are validated against the page's `get_syntax_rules()` allowlist — unrecognised values are ignored.
+
+---
+
 ## Posts Table
 
 Customize the admin posts list table with columns and filters.
@@ -297,6 +421,33 @@ $this->prepend_column(['new_col' => 'Label']);
 $this->remove_column('date');
 $this->remove_column('comments');
 ```
+
+### Row Actions
+
+Override `row_actions()` to add or modify the inline action links on each row. The post model is injected via DI.
+
+```php
+class Projects_Table extends Posts_Table {
+
+    protected $post_type = 'project';
+
+    public function row_actions (&$actions, Project $project) {
+        $actions['archive'] = sprintf(
+            '<a href="%s">Archive</a>',
+            esc_url(add_query_arg([
+                'action'     => 'archive_project',
+                'project_id' => $project->get_id(),
+                '_wpnonce'   => wp_create_nonce('archive_project_' . $project->get_id()),
+            ], admin_url('admin-post.php')))
+        );
+
+        // Optionally remove an existing action
+        unset($actions['trash']);
+    }
+}
+```
+
+`$actions` is passed by reference, so you can add, modify, or remove entries in place. The `row_actions_wrap()` method is hooked to `post_row_actions` (or `page_row_actions` for the `page` post type) automatically.
 
 ### Table Filters
 
@@ -399,6 +550,22 @@ class Accounts_Table extends Users_Table {
             'meta_value' => $user->get_id(),
         ]));
         return "<span class='count'>{$count}</span>";
+    }
+}
+```
+
+### Row Actions
+
+Same as Posts Table. Override `row_actions()` — the user model is injected via DI. Hooked to `user_row_actions`.
+
+```php
+class Accounts_Table extends Users_Table {
+
+    public function row_actions (&$actions, Account $user) {
+        $actions['impersonate'] = sprintf(
+            '<a href="%s">Login as user</a>',
+            esc_url(add_query_arg(['user_id' => $user->get_id()], admin_url('admin-post.php')))
+        );
     }
 }
 ```
@@ -1014,6 +1181,8 @@ class Header_View extends View {
 | `name.terms-table.php` | Terms_Table |
 | `name.meta-box.php` | Meta_Box |
 | `name.acf-block.php` | ACF_Block |
+
+> Admin_Page instances are cached by `$slug`; Meta_Box instances by `$id`. Both support `::get_instance()` lookup.
 
 ### Admin Page Properties
 

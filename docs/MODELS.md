@@ -10,6 +10,7 @@ Quick reference for model classes and their available methods.
 - [Getting Instances](#getting-instances)
 - [Post Model](#post-model)
 - [User Model](#user-model)
+- [Attachment Model](#attachment-model)
 - [Term Model](#term-model)
 - [Order Model](#order-model)
 - [Customer Model](#customer-model)
@@ -249,6 +250,16 @@ $projects = Project::query([
 // Returns array of model instances
 ```
 
+`Post::query()` builds args via `Query_Vars` and dispatches through `Query_Manager::execute()`, so registered `Query_Profile` instances will apply automatically.
+
+### Static Query Helpers
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `is_main_query(WP_Query $wp_query)` | `bool` | True if this is WordPress's main query |
+| `is_digitalis_ajax(WP_Query $wp_query)` | `bool` | True if this is a Digitalis AJAX request |
+| `query_is_post_type(WP_Query $wp_query)` | `bool` | True if the query is for this post type |
+
 ---
 
 ## User Model
@@ -352,6 +363,84 @@ class Account extends User {
 | `reload()` | Refresh from database |
 | `send_new_user_notifications($notify)` | Send welcome email |
 
+### Querying Users
+
+```php
+// Basic query (role auto-applied if $role is set on the subclass)
+$users = User::query([
+    'number'  => 20,
+    'orderby' => 'registered',
+    'order'   => 'DESC',
+]);
+
+// Pass a reference to get the underlying WP_User_Query
+$users = Account::query([], $query);
+$total = $query->get_total();
+```
+
+Override `get_query_vars()` or `get_admin_query_vars()` to inject default args:
+
+```php
+class Account extends User {
+    protected static $role = 'account';
+
+    public static function get_query_vars ($args = []) {
+        return array_merge(['orderby' => 'display_name'], $args);
+    }
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `query($args, &$query)` | Run a `WP_User_Query`; returns model instances |
+| `get_query_vars($args)` | Override to add default front-end query args |
+| `get_admin_query_vars($args)` | Override to add default admin query args |
+
+---
+
+## Attachment Model
+
+`Attachment` extends `Post` with `$post_type = 'attachment'`.
+
+### Type & Path
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `is($type)` | `bool` | `wp_attachment_is()` check (e.g. `'image'`, `'audio'`) |
+| `is_image()` | `bool` | Is an image attachment |
+| `get_path($unfiltered)` | `string` | Absolute file path |
+| `get_file_name($unfiltered)` | `string` | File name (basename) |
+| `get_file_extension($unfiltered)` | `string` | File extension |
+| `get_file_url()` | `string` | URL to the raw file |
+| `get_mime_type()` | `string` | MIME type |
+| `set_mime_type($mime_type)` | `$this` | Set MIME type |
+
+### Image Data
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_image($size, $attr, $icon)` | `string` | `<img>` HTML |
+| `get_image_url($size, $icon)` | `string` | Image URL for a given size |
+| `get_image_src($size, $icon)` | `array\|false` | `[url, w, h, resized]` — result is cached per instance |
+| `get_image_width($size, $icon)` | `int\|null` | Image width |
+| `get_image_height($size, $icon)` | `int\|null` | Image height |
+| `get_image_is_resized($size, $icon)` | `bool\|null` | Whether image was resized |
+| `get_image_srcset($size, $image_meta)` | `string\|false` | `srcset` attribute value |
+| `get_image_sizes($size, $image_meta)` | `string\|false` | `sizes` attribute value |
+| `get_attachment_thumbnail()` | `string` | Thumbnail URL |
+
+### Metadata & Alt
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_caption()` | `string` | Attachment caption |
+| `get_alt_text()` | `string` | Image alt text (`_wp_attachment_image_alt` meta) |
+| `set_alt_text($alt_text)` | `$this` | Set image alt text |
+| `get_metadata($unfiltered)` | `array\|false` | `wp_get_attachment_metadata()` |
+| `update_metadata($data)` | `int\|bool` | `wp_update_attachment_metadata()` |
+| `get_id3_keys($context)` | `array` | ID3 tag keys |
+| `get_attachment_taxonomies($output)` | `array` | Taxonomies attached to this file (`'names'` or `'objects'`) |
+
 ---
 
 ## Term Model
@@ -395,7 +484,9 @@ class Project_Category extends Term {
 | `set_parent_id($id)` | `$this` | Set parent ID |
 | `set_parent($term)` | `$this` | Set parent by instance |
 | `get_all_parents($asc)` | `array` | All ancestor terms |
-| `get_children()` | `array` | Direct children |
+| `get_children()` | `array` | Direct children — lazy-loaded via `static::query(['parent' => $this->get_id()])` on first call |
+
+> **Note:** `$children` (populated by `get_children()`) and `$tree_children` (used internally by `build_hierarchy()`) are separate properties. Do not rely on `$tree_children` directly; it is an implementation detail of hierarchy tree construction.
 
 ### URLs
 

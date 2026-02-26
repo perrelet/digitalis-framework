@@ -8,6 +8,7 @@ Reference for utility classes, traits, and helper patterns.
 
 - [Call Utility](#call-utility)
 - [List_Utility](#list_utility)
+- [Log Service](#log-service)
 - [Query_Vars](#query_vars)
 - [Digitalis_Query](#digitalis_query)
 - [Dependency Injection](#dependency-injection)
@@ -167,19 +168,115 @@ echo new Select([
 
 ---
 
+## Log Service
+
+File-based logger. Extends `Service` so instances are resolved via `get_instance($file)`.
+
+**Location:** `framework/include/objects/log.service.php`
+
+### Class Properties
+
+```php
+class My_Log extends Log {
+    protected $file        = 'my-plugin.log';  // File name (default: 'log.log')
+    protected $directory   = null;              // Directory (default: PHP error_log dir)
+    protected $name        = null;              // Logger name shown in lines (default: class name)
+    protected $date_format = null;              // Date format (auto per export_vars mode)
+    protected $export_vars = false;             // Use var_export() format
+}
+```
+
+When `$directory` is `null` the log is written to the same directory as PHP's configured `error_log`. When `$file` is empty it falls back to the same filename as PHP's `error_log`.
+
+### Writing
+
+```php
+use Digitalis\Log;
+
+// Via instance
+$log = Log::get_instance('my-plugin.log');
+$log->log('Something happened');
+$log->log(['key' => 'value']);  // Non-scalars are print_r'd or var_export'd
+
+// Raw text write (no formatting)
+$log->write('raw line');
+
+// Callable shorthand (__invoke)
+$log('Quick message');
+
+// Static shorthand
+Log::w('message');
+Log::w('message', 'my-plugin.log');  // Specific file
+```
+
+### Reading
+
+```php
+// Read entire file
+$contents = $log->read();
+$contents = Log::r('my-plugin.log');  // Static
+
+// Read a page (tail-like, from end of file)
+$page = $log->get_page(1);        // Most recent ~200 KB
+$page = $log->get_page(2);        // Previous page
+$page = $log->get_page(-1);       // Last page (oldest content)
+
+// Get page and byte count
+$page = $log->get_page(1, [], $bytes);
+echo "Returned {$bytes} bytes";
+
+// Custom page size
+$page = $log->get_page(1, ['bpp' => 50000, 'overflow' => 200]);
+```
+
+`get_page()` reads backwards from the end of the file:
+
+| Arg | Default | Description |
+|-----|---------|-------------|
+| `bpp` | `200000` | Bytes per page |
+| `overflow` | `500` | Extra bytes read on each edge to find clean line boundaries |
+
+### Export Vars Mode
+
+```php
+$log->set_export_vars(true);
+$log->log(['key' => 'value']);
+// Writes: $log['2026-01-01 12:00:00.000000'] = array ( 'key' => 'value', );
+```
+
+When `export_vars` is `true`:
+- Messages are formatted with `var_export()`
+- Lines are written as PHP variable assignments
+- Date format defaults to `Y-m-d H:i:s.u` (microseconds)
+
+### Path Resolution
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_file()` | `string` | File name; falls back to `basename(ini_get('error_log'))` |
+| `get_directory()` | `string` | Directory; falls back to `dirname(ini_get('error_log'))` |
+| `get_path()` | `string` | Full path (`directory/file`) |
+
+The `write()` method creates the directory automatically via `wp_mkdir_p()` if it does not exist.
+
+---
+
 ## Query_Vars
 
 Fluent builder for WordPress query arguments with smart merging and WP quirk handling.
 
 **Location:** `framework/include/objects/query-vars.class.php`
 
+Implements `ArrayAccess`, `IteratorAggregate`, `JsonSerializable`, `Countable`.
+
 ### Core Purpose
 
 Query_Vars solves several WP_Query pain points:
 - **Smart merging** of query args from multiple sources
 - **Array handling** for `post_type`, `post_status`, `meta_query`, `tax_query`
-- **Reference-based finding** to modify nested meta/tax queries in place
-- **ArrayAccess** for convenient property-style access
+- **Path-based finding** to locate and modify nested meta/tax query clauses
+- **ArrayAccess + property overloading** for convenient access
+- **`make_query()`** to produce a ready-to-execute `WP_Query` without running it
 
 ### Basic Usage
 
@@ -191,39 +288,37 @@ $qv = new Query_Vars([
     'posts_per_page' => 10,
 ]);
 
-// Get/set variables
-$qv->set('orderby', 'date');
-$qv->set('order', 'DESC');
-$type = $qv->get('post_type');  // 'project'
+// Accepts a WP_Query directly
+$qv = new Query_Vars($wp_query);
 
-// ArrayAccess
+// Get/set/check/remove
+$qv->set('orderby', 'date');
+$type = $qv->get('post_type');   // 'project'
+$qv->has('author');              // bool
+$qv->remove('author');
+
+// Property overloading (same as get/set/has/remove)
+$qv->meta_key = 'priority';
+echo $qv->post_type;
+isset($qv->author);
+unset($qv->author);
+
+// ArrayAccess (same as get/set/has/remove)
 $qv['meta_key'] = 'priority';
 echo $qv['post_type'];
 
-// Check existence
-if ($qv->has_var('author')) { ... }
+// Count and iterate
+count($qv);
+foreach ($qv as $key => $value) { ... }
+json_encode($qv);   // JsonSerializable
 
-// Remove variable
-$qv->unset('author');
-
-// Convert to array for WP_Query
+// Convert to array (for manual WP_Query use)
 $args = $qv->to_array();
-$query = new WP_Query($args);
 ```
 
-### Constructor Defaults
+The old `get_var()`, `set_var()`, `has_var()`, `unset_var()` are retained as aliases. The primary API is `get/set/has/remove`.
 
-Query_Vars initializes with empty arrays for meta_query and tax_query:
-
-```php
-// Internally:
-$this->query = wp_parse_args($query_vars, [
-    'meta_query' => [],
-    'tax_query'  => [],
-]);
-```
-
-This ensures `add_meta_query()` and `add_tax_query()` always work without null checks.
+`meta_query` and `tax_query` are initialised as empty arrays so `add_meta_query()` / `add_tax_query()` always work without null checks.
 
 ### Meta Queries
 
@@ -308,24 +403,33 @@ $qv->merge(['post_status' => 'draft']);  // ['publish', 'draft']
 $qv->overwrite(['post_status' => 'private']);  // 'private'
 ```
 
-**Falsy value handling:**
-```php
-// By default, falsy values are skipped
-$qv->merge(['posts_per_page' => 0]);  // Ignored!
+**Empty value handling (`$allow_empty`):**
 
-// Use $merge_falsy = true to include falsy values
-$qv->merge(['posts_per_page' => 0], true);  // Applied
+By default `merge()` skips values that are "empty" in the framework sense — `null`, `''`, or `[]`. All other values (including `0`, `false`, `'0'`) are merged normally.
+
+```php
+// null / '' / [] are skipped by default
+$qv->merge(['author' => null]);     // Skipped
+$qv->merge(['author' => '']);       // Skipped
+$qv->merge(['tax_query' => []]);    // Skipped
+
+// 0, false, '0' ARE applied (they are meaningful query values)
+$qv->merge(['posts_per_page' => 0]);   // Applied
+$qv->merge(['ignore_sticky_posts' => false]); // Applied
+
+// Force empty values through with $allow_empty = true
+$qv->merge(['author' => null], true);  // Applied (sets author to null)
 ```
 
-### Finding & Modifying Nested Queries (By Reference)
+### Finding & Modifying Nested Queries (Path-Based)
 
-Find meta/tax query clauses and modify them in place:
+Locate a meta or tax query clause by value, get a reference to it, and modify it in place.
 
 ```php
 $qv = new Query_Vars([
     'meta_query' => [
         ['key' => 'account', 'value' => 5],
-        ['key' => 'status', 'value' => 'active'],
+        ['key' => 'status',  'value' => 'active'],
         [
             'relation' => 'OR',
             ['key' => 'priority', 'value' => 'high'],
@@ -334,27 +438,74 @@ $qv = new Query_Vars([
     ],
 ]);
 
-// Find meta query by key (returns reference)
-$meta =& $qv->find_meta_query('account');
-$meta['value'] = 10;  // Modifies in place!
+// Step 1: find the path (array of array indices into meta_query)
+$path = $qv->find_meta_query_path('account');   // e.g. [0]
+$path = $qv->find_meta_query_path('priority');  // finds first match, even in nested OR
 
-// Find with comparison operators
-$meta =& $qv->find_meta_query('priority', 'IN');  // Find where key IN array
-$meta =& $qv->find_meta_query('project_%', 'LIKE');  // Pattern matching
+// Step 2: get a reference to the clause
+if ($path !== null) {
+    $block =& $qv->get_meta_block($path);
+    $block['value'] = 10;   // Modifies in place
+}
 
-// Find tax query by taxonomy
-$tax =& $qv->find_tax_query('category');
-$tax['terms'][] = 'new-term';
-
-// Recursive search - finds nested queries too
-$nested =& $qv->find_meta_query('priority');  // Finds in nested OR group
+// Tax query: same pattern
+$path  = $qv->find_tax_query_path('project_category');
+if ($path !== null) {
+    $tax =& $qv->get_tax_block($path);
+    $tax['terms'][] = 'new-slug';
+}
 ```
 
-**Available comparison operators:**
-- `=`, `!=`, `==`, `!==` - Equality
-- `<`, `<=`, `>`, `>=` - Comparison
-- `IN`, `!IN` - Array membership (loose)
-- `IN=`, `!IN=` - Array membership (strict)
+`find_meta_query_path($match_value, $key = 'key', $compare = '=')` — returns an array path (e.g. `[2, 0]`) into `meta_query`, or `null` if not found.
+
+`find_tax_query_path($match_value, $key = 'taxonomy', $compare = '=')` — same for `tax_query`.
+
+**Available comparison operators** (for `$compare`):
+- `=`, `!=`, `==`, `!==` — equality
+- `<`, `<=`, `>`, `>=` — comparison
+- `IN`, `!IN` — array membership (loose `==`)
+- `IN=`, `!IN=` — array membership (strict `===`)
+
+### Upsert (Add or Update)
+
+`upsert_meta_query()` finds an existing clause and merges new values into it, or appends it if not found:
+
+```php
+// If a meta_query clause with key='account' exists, merge $new_block into it.
+// Otherwise, add $new_block as a new clause.
+$qv->upsert_meta_query('account', [
+    'key'     => 'account',
+    'value'   => $new_id,
+    'compare' => '=',
+]);
+
+// Same for tax queries
+$qv->upsert_tax_query('project_category', [
+    'taxonomy' => 'project_category',
+    'field'    => 'term_id',
+    'terms'    => [5, 6],
+]);
+```
+
+### Creating Queries
+
+`make_query()` returns a `WP_Query` with the vars loaded but **not executed**. This is how `Post::query()` hands off to `Query_Manager::execute()`.
+
+```php
+$wp_query = $qv->make_query();
+// $wp_query->query_vars is set, but no DB query has run yet
+
+// Pass additional overrides
+$wp_query = $qv->make_query(['posts_per_page' => 5]);
+```
+
+### Stamp
+
+The `digitalis` query var is reserved for framework metadata. Read it as an array:
+
+```php
+$stamp = $qv->get_stamp();  // (array) $qv->get('digitalis')
+```
 
 ### Real-World Usage Examples
 
@@ -389,9 +540,20 @@ public function query_vars($query_vars) {
 }
 ```
 
+**Update an existing meta query clause:**
+```php
+$path = $qv->find_meta_query_path('project_account');
+if ($path !== null) {
+    $block          =& $qv->get_meta_block($path);
+    $block['value'] = $new_account_id;
+}
+```
+
 ---
 
 ## Digitalis_Query
+
+> ⚠️ **Deprecated.** Use `Query_Vars::make_query()` to build the query object and `Query_Manager::execute()` to run it. The static utilities `compare_post_type()` and `is_multiple()` have moved to `Query_Vars`.
 
 Extended WP_Query with deferred execution and fluent Query_Vars integration.
 
@@ -510,21 +672,18 @@ $meta['value'] = 'active';
 
 ### Static Utilities
 
-#### `compare_post_type($wp_query, $post_type)`
+These static helpers are defined on `Query_Vars` (they were previously on `Digitalis_Query`, which is now deprecated).
+
+#### `Query_Vars::compare_post_type($wp_query, $post_type)`
 
 Determines whether a WP_Query refers to a specific post type. Handles edge cases:
 
 ```php
-use Digitalis\Digitalis_Query;
+use Digitalis\Query_Vars;
 
-// Basic usage
-if (Digitalis_Query::compare_post_type($wp_query, 'project')) {
+if (Query_Vars::compare_post_type($wp_query, 'project')) {
     // Query is for projects
 }
-
-// Instance method shortcut
-$query = new Digitalis_Query(['post_type' => 'project']);
-$query->is_post_type('project');  // true
 ```
 
 **Handles these scenarios:**
@@ -560,18 +719,17 @@ $query->is_post_type('project');  // true
    Digitalis_Query::compare_post_type($wp_query, 'post');  // true
    ```
 
-#### `is_multiple($wp_query)`
+#### `Query_Vars::is_multiple($wp_query = null)`
 
 Determines whether a WP_Query is for plural results (archive, search, etc.):
 
 ```php
-// Check if archive/search/multiple posts page
-if (Digitalis_Query::is_multiple($wp_query)) {
+if (Query_Vars::is_multiple($wp_query)) {
     // Display archive template
 }
 
 // Uses global $wp_query if null passed
-if (Digitalis_Query::is_multiple()) {
+if (Query_Vars::is_multiple()) {
     // Currently on an archive page
 }
 ```
@@ -580,7 +738,7 @@ if (Digitalis_Query::is_multiple()) {
 - `$wp_query->is_archive()`
 - `$wp_query->is_search()`
 - `$wp_query->is_posts_page`
-- AJAX requests where action starts with 'query'
+- Digitalis AJAX queries (presence of `Post_Type::AJAX_Flag` query var)
 
 ### Real-World Usage Examples
 
@@ -955,8 +1113,9 @@ class My_Plugin extends App {
 |-------|---------|
 | `Call` | Static method calls with class filtering |
 | `List_Utility` | Static lookup lists / enums |
+| `Log` | File-based logger with paginated reading |
 | `Query_Vars` | Fluent WP_Query args builder |
-| `Digitalis_Query` | Extended WP_Query with Query_Vars |
+| `Digitalis_Query` | ⚠️ Deprecated — use Query_Vars + Query_Manager |
 
 ### Traits
 
@@ -984,45 +1143,64 @@ MyList::lookup($key);            // Get label by key
 MyList::reverse_lookup($label);  // Get key by label
 ```
 
+### Log
+
+```php
+Log::w($msg, $file);           // Static write
+Log::r($file);                 // Static read
+$log = Log::get_instance($file);
+$log->log($msg);               // Write (formats line)
+$log->write($text);            // Write raw text
+$log->read();                  // Read entire file
+$log->get_page($page, $args, $bytes); // Paginated read
+$log->set_export_vars(true);   // Switch to var_export mode
+```
+
 ### Query_Vars
 
 ```php
-$qv = new Query_Vars($args);
-$qv->set($key, $value);                  // Set variable
-$qv->get($key, $default);                // Get variable
-$qv->has_var($key);                      // Check existence
-$qv->unset($key);                        // Remove variable
-$qv->add_meta_query($clause);            // Append meta query
-$qv->add_tax_query($clause);             // Append tax query
-$qv->get_meta_query();                   // Get meta query array
-$qv->get_tax_query();                    // Get tax query array
-$meta =& $qv->find_meta_query($key);     // Find by reference
-$tax =& $qv->find_tax_query($taxonomy);  // Find by reference
-$qv->merge($args, $merge_falsy);         // Smart merge
-$qv->merge_var($key, $value);            // Merge single var
-$qv->overwrite($args);                   // Replace vars
-$qv->to_array();                         // Export to array
-```
-
-### Digitalis_Query
-
-```php
-$query = new Digitalis_Query($args);           // No execution yet!
-$query->set_var($key, $value);                 // Set variable
-$query->get_var($key, $default);               // Get variable
-$query->unset_var($key);                       // Remove variable
-$query->add_meta_query($clause);               // Append meta query
-$query->add_tax_query($clause);                // Append tax query
-$query->merge($args, $merge_falsy);            // Smart merge
-$query->overwrite($args);                      // Replace vars
-$query->get_query_vars();                      // Get args array
-$query->get_query_vars_obj();                  // Get Query_Vars instance
-$query->query($args, $merge_falsy);            // Execute (returns posts)
-$query->is_post_type($slug);                   // Check post type
+$qv = new Query_Vars($args);           // array or WP_Query
+$qv->set($key, $value);                // Set variable
+$qv->get($key, $default);              // Get variable
+$qv->has($key);                        // Check existence
+$qv->remove($key);                     // Remove variable
+$qv->add_meta_query($clause);          // Append meta query
+$qv->add_tax_query($clause);           // Append tax query
+$qv->clear_meta_query();               // Clear all meta queries
+$qv->clear_tax_query();                // Clear all tax queries
+$qv->get_meta_query();                 // Get meta query array
+$qv->get_tax_query();                  // Get tax query array
+$path = $qv->find_meta_query_path($v); // Find clause path (or null)
+$path = $qv->find_tax_query_path($v);  // Find clause path (or null)
+$block =& $qv->get_meta_block($path);  // Get reference to clause
+$block =& $qv->get_tax_block($path);   // Get reference to clause
+$qv->upsert_meta_query($v, $block);    // Add or update meta clause
+$qv->upsert_tax_query($v, $block);     // Add or update tax clause
+$qv->merge($args, $allow_empty);       // Smart merge (skips null/''/[])
+$qv->merge_var($key, $value);          // Merge single var
+$qv->overwrite($args);                 // Replace vars
+$qv->make_query($overrides);           // Build WP_Query (not executed)
+$qv->get_stamp();                      // Get 'digitalis' query var
+$qv->to_array();                       // Export to array
 
 // Static utilities
-Digitalis_Query::compare_post_type($wp_query, $slug);  // Check query post type
-Digitalis_Query::is_multiple($wp_query);               // Check if archive/search
+Query_Vars::compare_post_type($wp_query, $slug);
+Query_Vars::is_multiple($wp_query);
+```
+
+### Digitalis_Query (⚠️ Deprecated)
+
+Migrate to `Query_Vars::make_query()` + `Query_Manager::execute()`.
+
+```php
+// Old
+$query = new Digitalis_Query($args);
+$query->merge($more_args)->query();
+
+// New
+$qv = new Query_Vars($args);
+$qv->merge($more_args);
+Query_Manager::get_instance()->execute($qv->make_query());
 ```
 
 ### Dependency Injection

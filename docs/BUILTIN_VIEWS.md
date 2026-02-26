@@ -7,6 +7,8 @@ Complete documentation of all views, components, and fields shipped with the Dig
 ## Table of Contents
 
 - [Overview](#overview)
+- [Built-in Features](#built-in-features)
+  - [Turn_Off_Emojicons](#turn_off_emojicons)
 - [Core Views](#core-views)
   - [Debug](#debug)
   - [Archive](#archive)
@@ -57,6 +59,38 @@ The framework provides a comprehensive library of pre-built views organized into
 | **Fields** | Form inputs | `Input`, `Select`, `Checkbox`, `Date_Picker` |
 
 All built-in views follow the same patterns documented in [VIEW_SYSTEM.md](./VIEW_SYSTEM.md).
+
+---
+
+## Built-in Features
+
+Standalone `Feature` classes shipped with the framework that are available for optional use.
+
+### Turn_Off_Emojicons
+
+**Namespace:** `Digitalis\Turn_Off_Emojicons`
+**File:** `include/features/wp/turn-off-emojicons.feature.php`
+
+Completely disables WordPress's emoji detection and loading across the front end, admin, and login screens. Removes the inline detection script, emoji CSS, TinyMCE plugin, DNS prefetch hint, and `wp_mail` emoji conversion.
+
+#### Usage
+
+Instantiate it once during your plugin or theme boot:
+
+```php
+// In App::boot_shared() or similar
+new \Digitalis\Turn_Off_Emojicons();
+```
+
+Or if loaded via the framework autoloader, create an instance in your plugin's `include/` directory:
+
+```php
+// include/turn-off-emojicons.feature.php
+namespace Digitalis;
+class Turn_Off_Emojicons extends \Digitalis\Turn_Off_Emojicons {}
+```
+
+There are no configuration options — instantiation is all that is required.
 
 ---
 
@@ -291,7 +325,9 @@ Iterator_UI::render(['iterator' => $iterator]);
 **Namespace:** `Digitalis\Query_Filters`
 **File:** `include/views/query-filters.view.php`
 
-Abstract field group for AJAX-powered archive filtering.
+Abstract field group for AJAX-powered archive filtering. Renders filter fields and bootstraps the JavaScript query module inline.
+
+> ⚠️ **Breaking change (script loading):** The script is now rendered as an inline `<script type="module">` via `before()` instead of being enqueued through `wp_enqueue_script()` + `wp_localize_script()`. If your subclass overrode `before_first()` to add custom script behaviour, move that logic to `before()`. The `js_params_object` parameter (WP script localisation handle) has been removed.
 
 #### Parameters
 
@@ -299,9 +335,10 @@ Abstract field group for AJAX-powered archive filtering.
 |-----------|------|---------|-------------|
 | `archive_id` | `string` | `'digitalis-archive'` | Target archive ID |
 | `selectors` | `array` | (auto-generated) | DOM selectors |
-| `module_url` | `string` | (framework URL) | Query JS module |
-| `action` | `string` | `'query_[post_type]'` | AJAX action |
-| `js_params_object` | `string` | `'query_params'` | JS params variable |
+| `module_url` | `string` | (framework URL) | ES module URL for the query boot function |
+| `module_version` | `string\|null` | `null` | Version appended as `?ver=` on the module URL |
+| `action` | `string` | `'query_[post_type]'` | AJAX action passed to the module |
+| `js_params` | `array` | `[]` | Extra params merged into the boot call |
 | `fields` | `array` | `[]` | Filter fields |
 
 #### Usage
@@ -330,6 +367,29 @@ class Product_Filters extends Query_Filters {
     }
 }
 ```
+
+#### How Script Loading Works
+
+`before()` calls `get_script()`, which renders:
+
+```html
+<script type="module" data-version="...">
+import boot from "/path/to/query.js?ver=...";
+try { boot({"ajax_url":"...","action":"...","archive_id":"...","selectors":{...}}); } catch (e) { console.error(e); }
+</script>
+```
+
+The script is rendered inline on every render of the view, not deferred through the WP enqueue system. This means it works in HTMX/HTML REST API responses without requiring a full page load.
+
+#### Overridable Methods
+
+| Method | Description |
+|--------|-------------|
+| `get_js_params()` | Returns the params object passed to `boot()`. Override to add custom params. |
+| `get_module_url()` | Returns the module URL with version query arg applied. |
+| `get_script_js()` | Returns the raw JS string (import + boot call). |
+| `get_script()` | Returns the full `<script>` `Element` (or `null` if no module URL). |
+| `get_script_attributes()` | Returns `Attributes` for the `<script>` tag. |
 
 ---
 

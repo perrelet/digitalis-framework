@@ -119,14 +119,14 @@ abstract class Singleton extends Design_Pattern {
 
 ### 2. Factory Pattern
 
-Creates and caches instances with optional property-based caching.
+Creates and caches instances with optional property-based caching. Instances are stored in a shared registry keyed by `$cache_group` and the value of `$cache_property` on the instance.
 
 ```php
 namespace Digitalis;
 
 abstract class Factory extends Design_Pattern {
-    protected static $cache_property = null;  // Property to use as cache key
-    protected static $cache = [];
+    protected static $cache_group    = '__global__'; // Namespace for instance storage
+    protected static $cache_property = null;         // Instance property to use as cache key
 
     public static function create($data = []) {
         // Creates new instance with optional caching
@@ -135,8 +135,14 @@ abstract class Factory extends Design_Pattern {
     public static function get_instance($identifier) {
         // Returns cached instance or creates new one
     }
+
+    public static function get_instance_map() {
+        // Returns ['group' => ['key' => ClassName]] map of all cached instances
+    }
 }
 ```
+
+`$cache_group` allows subclass families to share or isolate their instance caches. Override it to prevent cross-class cache collisions.
 
 ### 3. Model Pattern
 
@@ -312,15 +318,20 @@ abstract class Post_Type extends Singleton {
 
 ### Custom Query System
 
-```php
-namespace Digitalis;
+Queries are built with `Query_Vars` and executed via `Query_Manager`.
 
-class Digitalis_Query extends WP_Query {
-    // Deferred execution - call query() explicitly
-    // Query_Vars helper for building queries
-    // Meta and tax query helpers
-}
+```php
+$qv = new Query_Vars(['post_type' => 'project', 'posts_per_page' => 10]);
+$qv->post_status = 'publish';          // property overloading
+$qv->add_meta_query(['key' => 'featured', 'value' => '1']);
+
+$wp_query = $qv->make_query();         // produce a WP_Query
+$posts    = Query_Manager::get_instance()->execute($wp_query);
 ```
+
+> **Full documentation:** See [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md).
+
+`Digitalis_Query` (the old `WP_Query` subclass) is deprecated. Use `Query_Vars::make_query()` to produce a plain `WP_Query` instead.
 
 ---
 
@@ -394,21 +405,39 @@ class My_Feature extends Feature {
 
 ### Autoload Usage
 
+`load()` runs unconditionally on every request. Context-specific directories are autoloaded by the default `load_*` implementations (e.g. `load_admin()` autoloads `_admin/`). Override `boot_*` methods for code that should run after loading in a specific context.
+
 ```php
 class My_Plugin extends App {
-    public function load() {
-        parent::load();
 
-        // Autoload all classes in /include (recursive)
-        $this->autoload($this->path . 'include');
+    // Runs on every request after load() and ensure_schema()
+    public function boot_shared () {
+        My_Service::get_instance();
     }
 
-    public function load_admin() {
-        parent::load_admin();
-
-        // Load admin-only classes
-        $this->autoload($this->path . 'include/_admin');
+    // Runs only in wp-admin (non-ajax)
+    public function boot_admin () {
+        My_Admin_Feature::get_instance();
     }
+
+    // Runs only on REST requests
+    public function boot_rest () {
+        My_Route::get_instance();
+    }
+
+    // Runs only on WP-CLI
+    public function boot_cli () {
+        My_CLI_Command::register();
+    }
+
+    // Hook database migrations
+    public function ensure_schema () {
+        (new \Digitalis\DB\Migration_Runner(
+            new \Digitalis\DB\Table_Registry(),
+            new \Digitalis\DB\Option_Migration_Logger()
+        ))->migrate_module(My_Schema::class);
+    }
+
 }
 ```
 
@@ -622,44 +651,95 @@ Request
 │  Plugin Init    │
 │  (load.php)     │
 └────────┬────────┘
-         │
+         │  plugins_loaded
          ▼
-┌─────────────────┐
-│  App Bootstrap  │
-│  (Autoloader)   │
-└────────┬────────┘
+┌─────────────────────────────────────┐
+│  App::boot()                        │
+│  ├── load()          (autoload)     │
+│  ├── ensure_schema() (migrations)   │
+│  └── boot_shared()                  │
+└────────┬────────────────────────────┘
+         │
+    ┌────┴──────────────────────────────┐
+    │  context branch                   │
+    ▼          ▼        ▼       ▼       ▼
+ [CLI]      [Cron]   [Ajax]  [REST] [Admin/Front]
+    │          │        │       │       │
+    ▼          ▼        ▼       ▼       ▼
+ boot_cli  boot_cron boot_ajax boot_rest boot_admin
+                                        boot_front
          │
     ┌────┴────┐
     │         │
     ▼         ▼
-┌───────┐ ┌──────────┐
-│Models │ │Features/ │
-│       │ │Integrations│
-└───┬───┘ └────┬─────┘
-    │          │
-    │    ┌─────┴─────┐
-    │    │           │
-    ▼    ▼           ▼
-┌──────────┐   ┌─────────┐
-│ WP Hooks │   │  Views  │
-│(Actions/ │   │(Render) │
-│ Filters) │   │         │
-└──────────┘   └─────────┘
+┌───────┐ ┌──────────────┐
+│Models │ │Features/     │
+│       │ │Integrations  │
+└───┬───┘ └──────┬───────┘
+    │             │
+    ▼             ▼
+┌──────────┐  ┌─────────┐
+│ WP Hooks │  │  Views  │
+│(Actions/ │  │(Render) │
+│ Filters) │  │         │
+└──────────┘  └─────────┘
 ```
 
 ---
 
 ## Bootstrap Process
 
+### Framework load order (synchronous, before `plugins_loaded`)
+
 1. **Constants defined** in `load.php`
-2. **Core utilities** loaded (Call, List_Utility)
-3. **Patterns** loaded (Singleton, Factory)
+2. **Core utilities** loaded (`Call`, `List_Utility`)
+3. **Patterns** loaded (`Singleton`, `Factory`)
 4. **Traits** loaded (hooks, meta, models)
-5. **Core objects** loaded (Model, Service, App, View)
-6. **WordPress models** loaded (Post, User, Term)
+5. **Core objects** loaded (`Model`, `Service`, `App`, `View`)
+6. **WordPress models** loaded (`Post`, `User`, `Term`)
 7. **Views & components** loaded
-8. **WooCommerce** loaded (on `plugins_loaded` hook)
-9. **Features** loaded and initialized
+
+### App boot lifecycle (`plugins_loaded` hook)
+
+When your plugin calls `App::get_instance()` it schedules `boot()` on `plugins_loaded`. The boot sequence is:
+
+```
+boot()
+ ├── load()              # autoload() + Bricks elements — always runs
+ ├── ensure_schema()     # DB migrations — always runs
+ ├── boot_shared()       # always runs
+ │
+ ├── [WP_CLI]  → load_cli()  + boot_cli()   → return
+ ├── [cron]    → load_cron() + boot_cron()  → return
+ ├── [ajax]    → load_ajax() + boot_ajax()  (no return — may also hit REST below)
+ ├── [REST]    → load_rest() + boot_rest()  → return
+ ├── [admin]   → load_admin()+ boot_admin() → return
+ └── [front]   →               boot_front()
+```
+
+**Context detection order matters:**
+- Ajax requests do **not** return early — they fall through to the REST check, because ajax handlers may also need REST-registered functionality.
+- All other contexts return after their `boot_*` call.
+
+### Default directory conventions per context
+
+| Method | Autoloads |
+|---|---|
+| `load()` | Plugin root (respects `_` and `~` prefix rules) |
+| `load_admin()` | `_admin/` |
+| `load_cli()` | `_cli/` |
+| `load_cron()` | `_cron/` |
+| `load_ajax()` | `_ajax/` |
+| `load_rest()` | `_rest/` |
+
+### Public App accessors
+
+```php
+$app = My_Plugin::get_instance();
+
+$app->get_path(); // Absolute path to the plugin directory
+$app->get_url();  // URL to the plugin directory
+```
 
 ---
 
