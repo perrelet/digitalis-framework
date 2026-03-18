@@ -4,9 +4,8 @@ namespace Digitalis;
 
 class Attributes implements \ArrayAccess {
 
-    protected $attrs    = [];
-    protected $quote    = "'";
-    protected $encoding = 'UTF-8';
+    protected $attrs = [];
+    protected $quote = "'";
 
     protected $string   = null;
 
@@ -32,7 +31,9 @@ class Attributes implements \ArrayAccess {
 
             if (is_null($value)) continue;
 
-            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . esc_attr($value) . $this->quote;
+            $escaped = $this->sanitize_value($name, $value);
+
+            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . $this->escape_for_output($value) . $this->quote;
 
         }
 
@@ -60,7 +61,22 @@ class Attributes implements \ArrayAccess {
 
         }
 
-        return $this->escape_attr($value);
+        return $value;
+
+    }
+
+    protected function sanitize_value ($name, $value) {
+
+        return match (true) {
+            in_array($name, ['href', 'src', 'action', 'formaction', 'poster'], true) => esc_url_raw($value),
+            default => $value,
+        };
+
+    }
+
+    protected function escape_for_output ($value) {
+
+        return esc_attr($value);
 
     }
 
@@ -78,12 +94,6 @@ class Attributes implements \ArrayAccess {
         foreach ($styles as $property => $value) $css .= "{$property}: {$value};";
 
         return $css;
-
-    }
-
-    protected function escape_attr ($value) {
-
-        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, $this->encoding, false);
 
     }
 
