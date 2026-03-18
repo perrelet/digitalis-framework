@@ -193,7 +193,7 @@ trait Has_WP_Post {
 
     // Type
 
-    public function get_type () { // REFACTOR get_post_type()
+    public function get_post_type () {
 
         return $this->wp_post->post_type;
 
@@ -207,7 +207,7 @@ trait Has_WP_Post {
 
     public function get_post_type_object () {
 
-        return get_post_type_object($this->get_type());
+        return get_post_type_object($this->get_post_type());
 
     }
 
@@ -233,7 +233,7 @@ trait Has_WP_Post {
 
     public function get_archive_url () {
     
-        return get_post_type_archive_link($this->get_type());
+        return get_post_type_archive_link($this->get_post_type());
     
     }
 
