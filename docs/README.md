@@ -74,7 +74,7 @@ Deep technical analysis for understanding design decisions. Not required for day
 |----------|-------|
 | [CLASS_RESOLUTION_ANALYSIS.md](./CLASS_RESOLUTION_ANALYSIS.md) | Model resolution pros/cons/pitfalls |
 | [VIEW_SYSTEM_ANALYSIS.md](./VIEW_SYSTEM_ANALYSIS.md) | View system design analysis |
-| [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md) | Query_Vars & Digitalis_Query analysis |
+| [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md) | Query_Vars, Query_Manager & Query_Profile analysis |
 
 ---
 
@@ -112,7 +112,6 @@ Deep technical analysis for understanding design decisions. Not required for day
 
 ### Query Building
 - Query_Vars: [UTILITIES.md](./UTILITIES.md#query_vars)
-- Digitalis_Query: [UTILITIES.md](./UTILITIES.md#digitalis_query)
 - Deep analysis: [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md)
 - Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#queries)
 

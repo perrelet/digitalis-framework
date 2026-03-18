@@ -118,7 +118,7 @@ class Project extends Post {
 | `get_content($apply_filters)` | `string` | Post content |
 | `get_excerpt($force_trim)` | `string` | Post excerpt |
 | `get_status()` | `string` | Post status |
-| `get_type()` | `string` | Post type |
+| `get_post_type()` | `string` | Post type |
 | `get_guid()` | `string` | Post GUID |
 
 ### Basic Setters

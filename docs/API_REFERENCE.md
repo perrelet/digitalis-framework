@@ -357,25 +357,6 @@ abstract class Taxonomy extends Singleton
 
 ---
 
-### `Digitalis\Digitalis_Query` ⚠️ Deprecated
-
-> **Deprecated.** Use `Query_Vars::make_query()` + `Query_Manager::get_instance()->execute()` instead. `Digitalis_Query` is retained for backwards compatibility but will be removed.
-
-```php
-class Digitalis_Query extends WP_Query
-```
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `query()` | `public query(array $args = []): array` | Executes query |
-| `set_var()` | `public set_var(string $key, mixed $value): self` | Sets query var |
-| `get_var()` | `public get_var(string $key): mixed` | Gets query var |
-| `add_meta_query()` | `public add_meta_query(array $query): self` | Adds meta query |
-| `add_tax_query()` | `public add_tax_query(array $query): self` | Adds taxonomy query |
-| `merge()` | `public merge(array $args): self` | Merges query args |
-
----
-
 ### `Digitalis\Query_Vars`
 
 Fluent builder for `WP_Query` arguments. Implements `ArrayAccess`, `IteratorAggregate`, `JsonSerializable`, `Countable`. Supports property overloading.
@@ -1089,12 +1070,12 @@ namespace Digitalis;
 
 // API route that returns HTML for HTMX
 class Project_Status_Route extends Route {
-    protected static $route   = 'project/(?P<id>\d+)/status';
-    protected static $methods = 'POST';
-    protected static $view    = Project_Status_View::class;
+    protected $route      = 'project/(?P<id>\d+)/status';
+    protected $definition = ['methods' => 'POST'];
+    protected $view       = Project_Status_View::class;
 
-    public function permission_callback(): bool {
-        return User::current()?->can('edit_project', $this->get_param('id'));
+    public function permission(\WP_REST_Request $request): bool {
+        return User::current()?->can('edit_project', $request->get_param('id'));
     }
 
     public function handle(WP_REST_Request $request): mixed {
@@ -1104,7 +1085,7 @@ class Project_Status_Route extends Route {
         $project->set_meta('_status', $new_status);
 
         // Returns rendered HTML for HTMX swap
-        return static::$view::render([
+        return Project_Status_View::render([
             'project' => $project,
             'status'  => $new_status,
         ], false);

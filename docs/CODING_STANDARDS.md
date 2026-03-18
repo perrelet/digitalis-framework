@@ -285,13 +285,14 @@ if ($condition) {
 - Break long lines logically
 
 ```php
-// Long method chains - break at arrows
-$query = Post::query()
-    ->where('status', 'publish')
-    ->where('author', $user_id)
-    ->order_by('date', 'desc')
-    ->limit(10)
-    ->get();
+// Long arrays - break with one key per line
+$query = Post::query([
+    'post_status'    => 'publish',
+    'author'         => $user_id,
+    'orderby'        => 'date',
+    'order'          => 'DESC',
+    'posts_per_page' => 10,
+]);
 
 // Long arrays - one item per line
 $config = [

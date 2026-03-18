@@ -249,14 +249,14 @@ class Special_Project extends Project {
 }
 ```
 
-### Query Builder Resolution Overhead
+### Query Resolution Overhead
 
 ```php
 // Each result gets resolved individually
-$posts = Post::query()
-    ->where_in('post_type', ['project', 'document', 'invoice'])
-    ->limit(100)
-    ->get();
+$posts = Post::query([
+    'post_type'      => ['project', 'document', 'invoice'],
+    'posts_per_page' => 100,
+]);
 // 100 posts × resolution overhead = slow
 ```
 

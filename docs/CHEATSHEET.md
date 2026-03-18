@@ -64,9 +64,12 @@ class Account extends User {
     }
 
     public function get_projects(): array {
-        return Project::query()
-            ->where_meta('project_account', $this->get_id())
-            ->get();
+        return Project::query([
+            'meta_query' => [[
+                'key'   => 'project_account',
+                'value' => $this->get_id(),
+            ]],
+        ]);
     }
 
     public function can(string $cap, $object_id = null): bool {
@@ -93,9 +96,13 @@ class Project_Category extends Term {
     protected static $taxonomy = 'project_category';
 
     public function get_projects(): array {
-        return Project::query()
-            ->where_tax($this->taxonomy, $this->get_id())
-            ->get();
+        return Project::query([
+            'tax_query' => [[
+                'taxonomy' => $this->taxonomy,
+                'field'    => 'term_id',
+                'terms'    => $this->get_id(),
+            ]],
+        ]);
     }
 }
 ```
@@ -643,15 +650,14 @@ namespace Digitalis;
 
 class Projects_Route extends Route {
 
-    protected static $route  = 'projects';
-    protected static $method = 'GET';
+    protected $route = 'projects';
 
     public function permission(): bool {
         return User::inst()->can('view_projects');
     }
 
     public function callback(): array {
-        $projects = Project::query()->limit(20)->get();
+        $projects = Project::query(['posts_per_page' => 20]);
 
         return array_map(fn($p) => [
             'id'    => $p->get_id(),
@@ -670,8 +676,7 @@ namespace Digitalis;
 
 class Project_Route extends Route {
 
-    protected static $route  = 'projects/(?P<id>\d+)';
-    protected static $method = 'GET';
+    protected $route = 'projects/(?P<id>\d+)';
 
     protected function get_params() {
         return [
@@ -699,8 +704,8 @@ class Project_Route extends Route {
 ```php
 class Create_Project_Route extends Route {
 
-    protected static $route  = 'projects';
-    protected static $method = 'POST';
+    protected $route      = 'projects';
+    protected $definition = ['methods' => 'POST'];
 
     protected function get_params() {
         return [
@@ -810,49 +815,51 @@ class Invoice extends Order {
 
 ```php
 // Basic query
-$projects = Project::query()
-    ->where_status('publish')
-    ->limit(10)
-    ->get();
+$projects = Project::query(['post_status' => 'publish', 'posts_per_page' => 10]);
 
 // With meta
-$projects = Project::query()
-    ->where_meta('project_account', $account_id)
-    ->where_status('publish')
-    ->order_by('date', 'DESC')
-    ->get();
+$projects = Project::query([
+    'post_status' => 'publish',
+    'meta_query'  => [['key' => 'project_account', 'value' => $account_id]],
+    'orderby'     => 'date',
+    'order'       => 'DESC',
+]);
 
 // With taxonomy
-$projects = Project::query()
-    ->where_tax('project_category', $term_id)
-    ->get();
+$projects = Project::query([
+    'tax_query' => [[
+        'taxonomy' => 'project_category',
+        'field'    => 'term_id',
+        'terms'    => $term_id,
+    ]],
+]);
 
 // Complex query
-$projects = Project::query()
-    ->where_status(['publish', 'draft'])
-    ->where_meta_query([
+$projects = Project::query([
+    'post_status'    => ['publish', 'draft'],
+    'meta_query'     => [
         'relation' => 'AND',
         ['key' => 'project_account', 'value' => $account_id],
         ['key' => 'project_priority', 'value' => 'high'],
-    ])
-    ->limit(20)
-    ->offset(0)
-    ->get();
+    ],
+    'posts_per_page' => 20,
+    'offset'         => 0,
+]);
 ```
 
 ### User Queries
 
 ```php
-$accounts = Account::query()
-    ->where_role('account')
-    ->where_meta('company_name', 'Acme', 'LIKE')
-    ->get();
+// Role is applied automatically from $role property; pass extra args if needed
+$accounts = Account::query([
+    'meta_query' => [['key' => 'company_name', 'value' => 'Acme', 'compare' => 'LIKE']],
+]);
 ```
 
-### Direct WP_Query
+### Direct Query_Vars
 
 ```php
-$query = new Digitalis_Query([
+$qv = new \Digitalis\Query_Vars([
     'post_type'      => 'project',
     'posts_per_page' => 10,
     'meta_key'       => 'project_priority',
@@ -860,7 +867,7 @@ $query = new Digitalis_Query([
     'order'          => 'ASC',
 ]);
 
-$projects = $query->get_posts();
+$projects = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query());
 ```
 
 ---

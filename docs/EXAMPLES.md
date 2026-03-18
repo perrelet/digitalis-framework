@@ -887,10 +887,8 @@ use My_Plugin\Models\Event;
  */
 class Events_Route extends Route {
 
-    protected static $namespace = 'my-plugin';
-    protected static $version = 'v1';
-    protected static $route = '/events';
-    protected static $methods = 'GET';
+    protected $namespace = 'my-plugin/v1';
+    protected $route     = '/events';
 
     /**
      * Handle request
@@ -930,10 +928,10 @@ class Events_Route extends Route {
     }
 
     /**
-     * Permission callback
+     * Override permission() — public endpoint
      */
-    public function permission_callback(): bool {
-        return true; // Public endpoint
+    public function permission(\WP_REST_Request $request): bool {
+        return true;
     }
 }
 ```
@@ -951,10 +949,9 @@ use Digitalis\Route;
  */
 class User_Settings_Route extends Route {
 
-    protected static $namespace = 'my-plugin';
-    protected static $route = '/user/settings';
-    protected static $methods = ['GET', 'POST'];
-    protected static $require_nonce = true;
+    protected $namespace     = 'my-plugin/v1';
+    protected $route         = '/user/settings';
+    protected $require_nonce = true;
 
     public function handle(\WP_REST_Request $request): \WP_REST_Response {
         $user_id = get_current_user_id();
@@ -987,7 +984,7 @@ class User_Settings_Route extends Route {
         return new \WP_REST_Response(['success' => true]);
     }
 
-    public function permission_callback(): bool {
+    public function permission(\WP_REST_Request $request): bool {
         return is_user_logged_in();
     }
 }
@@ -1199,10 +1196,10 @@ use Digitalis\ACF_Block;
  */
 class Testimonial_Block extends ACF_Block {
 
-    protected static $slug = 'testimonial';
-    protected static $view = \My_Plugin\Views\Testimonial::class;
+    protected $slug = 'testimonial';
+    protected $view = \My_Plugin\Views\Testimonial::class;
 
-    protected static $block = [
+    protected $block = [
         'title'       => 'Testimonial',
         'description' => 'Display a customer testimonial',
         'category'    => 'common',
@@ -1210,12 +1207,12 @@ class Testimonial_Block extends ACF_Block {
         'keywords'    => ['quote', 'review', 'testimonial'],
     ];
 
-    protected static $defaults = [
-        'quote'       => '',
-        'author_name' => '',
-        'author_role' => '',
+    protected $defaults = [
+        'quote'        => '',
+        'author_name'  => '',
+        'author_role'  => '',
         'author_image' => null,
-        'rating'      => 5,
+        'rating'       => 5,
     ];
 
     /**
@@ -1553,14 +1550,14 @@ namespace Digitalis;
  */
 class Approve_Estimate_Route extends Route {
 
-    protected static $namespace = 'digitalis';
-    protected static $route     = 'estimate/(?P<id>\d+)/approve';
-    protected static $methods   = 'POST';
-    protected static $view      = Order_Status_Badge::class;
+    protected $namespace  = 'digitalis/v1';
+    protected $route      = 'estimate/(?P<id>\d+)/approve';
+    protected $definition = ['methods' => 'POST'];
+    protected $view       = Order_Status_Badge::class;
 
-    public function permission_callback(): bool {
+    public function permission(\WP_REST_Request $request): bool {
         $user = User::current();
-        $order_id = $this->get_param('id');
+        $order_id = $request->get_param('id');
         return $user && $user->can('approve_estimate', $order_id);
     }
 

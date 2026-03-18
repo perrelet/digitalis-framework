@@ -87,8 +87,8 @@ class Dashboard_Page extends Admin_Page {
 
     private function get_stats() {
         return [
-            'projects' => Project::query(['posts_per_page' => -1])->found_posts,
-            'orders'   => Order::query(['limit' => -1])->total,
+            'projects' => count(Project::query(['posts_per_page' => -1])),
+            'orders'   => count(Order::query(['posts_per_page' => -1])),
         ];
     }
 }

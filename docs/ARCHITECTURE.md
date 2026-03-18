@@ -47,7 +47,7 @@ framework/
 │   │   ├── Term.class.php
 │   │   ├── Post_Type.abstract.php
 │   │   ├── Taxonomy.abstract.php
-│   │   └── Digitalis_Query.class.php
+│   │   └── Query_Vars.class.php
 │   │
 │   ├── woocommerce/       # WooCommerce integration
 │   │   ├── Customer.class.php
@@ -186,7 +186,7 @@ Design_Pattern
 - Instance caching per class/ID
 - Dirty state tracking
 - Automatic validation via static properties
-- Query builders via `Digitalis_Query`
+- Query building via `Query_Vars` + `Query_Manager`
 
 ### Views
 
@@ -330,8 +330,6 @@ $posts    = Query_Manager::get_instance()->execute($wp_query);
 ```
 
 > **Full documentation:** See [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md).
-
-`Digitalis_Query` (the old `WP_Query` subclass) is deprecated. Use `Query_Vars::make_query()` to produce a plain `WP_Query` instead.
 
 ---
 
@@ -923,17 +921,16 @@ class User extends \Digitalis\User {
 namespace Digitalis;
 
 class Invoice_Route extends Route {
-    protected static $route  = 'invoice/(?P<id>\d+)';
-    protected static $method = 'GET';
+    protected $route = 'invoice/(?P<id>\d+)';
 
-    public function permission_callback(): bool {
+    public function permission(\WP_REST_Request $request): bool {
         $user = User::current();
-        $order_id = $this->get_param('id');
+        $order_id = $request->get_param('id');
         return $user && $user->can('view_invoice', $order_id);
     }
 
-    public function callback(): \WP_REST_Response {
-        $order = Order::get_instance($this->get_param('id'));
+    public function callback(\WP_REST_Request $request): \WP_REST_Response {
+        $order = Order::get_instance($request->get_param('id'));
 
         return new \WP_REST_Response([
             'pdf_url' => $order->get_invoice_url(),
