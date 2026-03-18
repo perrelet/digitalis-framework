@@ -9,6 +9,14 @@ class Iterator_UI extends View {
 
     protected static $defaults = [
         'iterator' => null,
+        'before_description' => '',
+        'after_description'  => '',
+        'before_controls'    => '',
+        'after_controls'     => '',
+        'before_progress'    => '',
+        'after_progress'     => '',
+        'before_log'         => '',
+        'after_log'          => '',
     ];
 
     public function params (&$p) {

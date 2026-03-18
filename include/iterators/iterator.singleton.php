@@ -30,6 +30,8 @@ abstract class Iterator extends Singleton {
     protected $cron_run_action  = false;
     protected $cron_loop_action = false;
 
+    protected $ui_options = [];
+
     protected $labels = [
         'single'    => 'item',
         'plural'    => 'items',
@@ -256,9 +258,13 @@ abstract class Iterator extends Singleton {
     }
 
     protected function on_batch_complete ($count, $results) {
-    
-        $this->log("Batch complete - {$count} {$this->labels['plural']} processed (" . count($results['skipped']) . " skipped, "  . count($results['failed']) . " failed)", true);
-    
+
+        if ($this->batch_size > 1) {
+
+            $this->log("Batch complete - {$count} {$this->labels['plural']} processed (" . count($results['skipped']) . " skipped, "  . count($results['failed']) . " failed)", true);
+
+        }
+
     }
 
     protected function on_complete () {
@@ -301,6 +307,12 @@ abstract class Iterator extends Singleton {
 
     }
 
+    public function get_ui_options () {
+
+        return $this->ui_options;
+
+    }
+
     public function render_controller () {
 
         wp_enqueue_script('digitalis-iterator', DIGITALIS_FRAMEWORK_URI . 'assets/js/iterator.js', [], DIGITALIS_FRAMEWORK_VERSION, true);
@@ -317,9 +329,10 @@ abstract class Iterator extends Singleton {
             'labels'        => $this->labels,
         ]);
 
-        Iterator_UI::render([
-            'iterator' => $this,
-        ]);
+        $ui_options = $this->get_ui_options();
+        $ui_options['iterator'] = $this;
+
+        Iterator_UI::render($ui_options);
 
     }
 
@@ -364,11 +377,20 @@ abstract class Iterator extends Singleton {
 
     }
 
+    public function get_default_store () {
+
+        return $this->default_store;
+
+    }
+
     public function get_store () {
 
         if (is_null($this->store)) {
 
-            $this->store = get_option($this->get_option_key(), $this->default_store);
+            $store = get_option($this->get_option_key(), $this->get_default_store());
+            if (!is_array($store) || !array_key_exists('index', $store)) $store = $this->get_default_store();
+
+            $this->store = $store;
             $this->pre_get_store($this->store);
 
         }
@@ -459,7 +481,7 @@ abstract class Iterator extends Singleton {
 
     public function reset () {
 
-        $this->store = $this->default_store;
+        $this->store = $this->get_default_store();
         $this->index = 0;
 
         update_option($this->get_option_key(), $this->store, false);
@@ -468,8 +490,9 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function skip_item ($item) {
+    public function skip_item ($item = null) {
 
+        if (is_null($item)) $item = $this->index;
         $this->store['skip'][] = is_int($item) ? $item : $this->get_item_id($item);
 
     }
