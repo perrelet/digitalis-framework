@@ -23,12 +23,22 @@ class Order extends Model {
 
     }
 
-    public static function query ($args = []) {
+    public static function query ($args = [], &$results = null) {
     
-        $query = new WC_Order_Query($args);
-        $wc_orders = $query->get_orders();
+        $query   = new WC_Order_Query($args);
+        $results = $query->get_orders();
 
-        return static::get_instances($wc_orders);
+        if (is_array($results)) {
+
+            return static::get_instances($results);
+
+        } else {
+
+            // When 'paginate' is true, woo returns stdClass with orders, total, max_num_pages
+
+            return static::get_instances($results->orders);
+
+        }
     
     }
 
