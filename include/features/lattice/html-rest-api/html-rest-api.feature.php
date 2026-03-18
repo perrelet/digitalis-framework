@@ -43,8 +43,7 @@ class HTML_REST_API extends Feature {
         $path = isset($_SERVER['REQUEST_URI']) ? wp_parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
         $path = ltrim((string) $path, '/');
 
-        if (str_starts_with($path, $this->rest_prefix . '/'))                   return true;
-        if (strtolower((string) $request->get_header('HX-Request')) === 'true') return true; // HTMX request
+        if (str_starts_with($path, $this->rest_prefix . '/')) return true;
 
         return false;
 
