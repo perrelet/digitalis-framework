@@ -60,7 +60,11 @@ abstract class CSV_Iterator extends Iterator {
 
             if (($i == 0) && $this->has_header) {
 
-                $this->headers = $row;
+                $this->headers = array_map(
+                    fn($h) => strtolower(trim(preg_replace('/[^a-z0-9]+/i', '_', $h), '_')),
+                    $row
+                );
+
                 continue;
 
             }
@@ -141,60 +145,76 @@ abstract class CSV_Iterator extends Iterator {
     }
 
     public function maybe_upload_csv () {
+
+        if (!$csv = ($_FILES['csv'] ?? 0)) return;
+        if (!isset($csv['tmp_name']))      return;
     
-        if (($csv = ($_FILES['csv'] ?? 0)) && $csv['tmp_name']) {
+        //if (($csv = ($_FILES['csv'] ?? 0)) && $csv['tmp_name']) {
 
-            if ($csv['error'] ?? 0) {
+        $validation = $this->validate_fields();
 
-                $this->notice("📤 The following error occured while uploading: {$csv['error']}", 'error');
-                return;
+        if (is_string($validation)) {
+            $this->notice($validation);
+            return;
+        }
 
-            }
+        $this->upload_csv();
+    
+    }
 
-            $error = false;
+    protected function upload_csv () {
 
-            $temp_path = $csv['tmp_name'];
-            $file_size = filesize($temp_path);
-            $file_info = finfo_open(FILEINFO_MIME_TYPE);
-            $file_type = finfo_file($file_info, $temp_path);
+        $csv = $_FILES['csv'];
+    
+        if ($csv['error'] ?? 0) {
 
-            if (!current_user_can($this->capability))     $error = '🔒 You do not have permission to perform this action.';
-            if (!$nonce = $_POST['nonce'] ?? 0)           $error = '🤡 No funny business please.';
-            if (!wp_verify_nonce($nonce, $this->key))     $error = '🕒 This page has expired, please refresh and try again.';
-            if (!$file_size)                              $error = '👻 The uploaded file is empty.';
-            if (!in_array($file_type, $this->mime_types)) $error = '📄 Please upload a valid .csv file.';
- 
-            if ($error) {
-
-                $this->notice($error, 'error');
-                return;
-
-            }
-
-            $file_name = $this->key . '.csv';
-            $file_path = trailingslashit($this->upload_dir) . $file_name;
-
-            if (move_uploaded_file($temp_path, $file_path)) {
-
-                $this->notice("✔️ Successfully uploaded '{$csv['name']}'.", 'updated');
-
-            } else {
-
-                $this->notice('📤 An unexpected error occured while uploading the file.', 'error');
-                return;
-
-            }
-
-            chmod($file_path, 0644);
-
-            $this->get_store();
-            $this->store['file'] = [
-                'name' => $csv['name'],
-                'path' => $file_path,
-            ];
-            $this->update_store();
+            $this->notice("📤 The following error occured while uploading: {$csv['error']}", 'error');
+            return;
 
         }
+
+        $error = false;
+
+        $temp_path = $csv['tmp_name'];
+        $file_size = filesize($temp_path);
+        $file_info = finfo_open(FILEINFO_MIME_TYPE);
+        $file_type = finfo_file($file_info, $temp_path);
+
+        if (!current_user_can($this->capability))     $error = '🔒 You do not have permission to perform this action.';
+        if (!$nonce = $_POST['nonce'] ?? 0)           $error = '🤡 No funny business please.';
+        if (!wp_verify_nonce($nonce, $this->key))     $error = '🕒 This page has expired, please refresh and try again.';
+        if (!$file_size)                              $error = '👻 The uploaded file is empty.';
+        if (!in_array($file_type, $this->mime_types)) $error = '📄 Please upload a valid .csv file.';
+
+        if ($error) {
+
+            $this->notice($error, 'error');
+            return;
+
+        }
+
+        $file_name = $this->key . '.csv';
+        $file_path = trailingslashit($this->upload_dir) . $file_name;
+
+        if (move_uploaded_file($temp_path, $file_path)) {
+
+            $this->notice("✔️ Successfully uploaded '{$csv['name']}'.", 'updated');
+
+        } else {
+
+            $this->notice('📤 An unexpected error occured while uploading the file.', 'error');
+            return;
+
+        }
+
+        chmod($file_path, 0644);
+
+        $this->get_store();
+        $this->store['file'] = [
+            'name' => $csv['name'],
+            'path' => $file_path,
+        ];
+        $this->update_store();
     
     }
 
@@ -211,26 +231,36 @@ abstract class CSV_Iterator extends Iterator {
 
     }
 
-    protected function get_fields () {
+    public function get_fields () {
 
         return [
-            [
-                'field'  => Field\Hidden::class,
-                'key'    => 'nonce',
+            new Field\Hidden([
+                'name'   => 'nonce',
                 'value'  => wp_create_nonce($this->key),
-            ],
-            [
-                'field'  => Field\File::class,
+            ]),
+            new Field\File([
+                'name'   => 'csv',
                 'label'  => 'Select CSV File',
-                'key'    => 'csv',
                 'accept' => '.csv',
-            ],
-            [
-                'field' => Field\Submit::class,
-                'text'  => 'Upload',
-            ],
+            ]),
         ];
 
+    }
+
+    public function get_submit_field () {
+    
+        return new Field\Submit([
+            'text' => 'Upload',
+        ]);
+    
+    }
+
+    public function validate_fields () {
+
+        if (!($_FILES['csv'] ?? 0) || !$_FILES['csv']['size']) return "Please select a .csv file to continue";
+
+        return true;
+    
     }
 
     public function render_controller () {
@@ -239,6 +269,9 @@ abstract class CSV_Iterator extends Iterator {
 
             echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css') . "</style>";
 
+            $fields   = $this->get_fields();
+            $fields[] = $this->get_submit_field();
+
             Form::render([
                 'classes' => ['iterator-panel', 'intake'],
                 'action'  => $_SERVER['REQUEST_URI'],
@@ -246,7 +279,7 @@ abstract class CSV_Iterator extends Iterator {
                 'attributes' => [
                     'enctype' => 'multipart/form-data',
                 ],
-                'fields' => $this->get_fields(),
+                'fields' => $fields,
             ]);
 
         } else {
