@@ -42,6 +42,21 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 | `User_Role` | `Singleton` | Custom user role + capabilities | yes |
 | `Woo_Account_Page` | `Factory` | WC `/my-account/` endpoint | yes |
 
+### Theme & Misc Objects
+
+| Class | Extends | Purpose | Auto |
+|-------|---------|---------|:----:|
+| `Theme` | — | Front-end hook registrar; auto-wires `style()` → `wp_enqueue_scripts`, `theme_supports()` → `after_setup_theme`, `init()` on construct | yes |
+| `Service` | `Factory` | Instantiable service/value object; auto-instantiation off by default | |
+| `Options` | `Factory` | WordPress options proxy with ACF support; `Options::get()`, `add()`, `update()`; `$prefix`/`$acf_prefix` for namespacing | yes |
+
+### Utilities
+
+| Class | Extends | Purpose |
+|-------|---------|---------|
+| `Utility` | — | Abstract pure-static base; cannot be instantiated or cloned |
+| `List_Utility` | `Utility` | Static key→label list with null option; `$list`, `$null_option`, `$null_key`, `get_primary_keys()` |
+
 ### Views & Rendering
 
 | Class | Extends | Purpose | Auto |
@@ -49,11 +64,14 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 | `View` | — | Renderable component; template or inline `view()` | |
 | `Component` | `View` | View with typed sub-elements and attributes | |
 | `Field` | `Component` | Form field base | |
+| `Field_Group` | `Component` | Group of fields | |
 | `Archive` | `Component` | Post/term archive with pagination | |
 | `Post_Archive` | `Archive` | `WP_Query`-based archive | |
 | `Term_Archive` | `Archive` | `WP_Term_Query`-based archive | |
 | `Query_Filters` | `Field_Group` | Filter form for archives | |
 | `Iterator_UI` | `View` | Batch processor progress/controls UI | |
+| `Component\HTMX` | `Component` | HTMX element factory; maps `url`, `method`, `trigger`, `target`, `swap`, `confirm`, `push_url` etc. to `hx-*` attributes | |
+| `ACF_AJAX_Form` | `View` | ACF `acf_form()` wrapper with AJAX submission support | |
 
 ### Admin
 
@@ -74,6 +92,7 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 | `Feature` | `Factory` | Hook registrar via `get_hooks()` | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin | yes |
+| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF post-object fields in sync across post types; configure via `$key_1`, `$key_2`, `$post_type_1/2`, `$limit_1/2`, `$allow_self`, `$force_add` | yes |
 
 ### REST, Blocks & Shortcodes
 
@@ -321,6 +340,28 @@ Defining the class is not enough — call `My_Profile::get_instance()` during pl
 
 **Keep `validate_id()` cheap — it runs on every registered subclass.**
 One `get_post_type()` call is fine. Multiple queries or model instantiation are not.
+
+---
+
+## Commit Convention
+
+Framework commits follow this format:
+
+```
+type: Short description with backtick `Class::method` references 🎭🎪🎠
+```
+
+**Types:** `feat`, `fix`, `docs`, `break`
+
+**The 3 emojis** are required and must be humorous, playful, and clever — they tell a little visual story about the change, not just decorate it.
+
+Examples:
+- `fix: \`Route\` default \`$format = null\` 💾👉⚫`
+- `feat: \`$skip_inject\` View var 🦘💉🖼️`
+- `fix: \`View::set_param\` handle null keys 🖐🕳️🗝️`
+- `feat: Store all inherited props in single cache 💾🧬🧺`
+- `feat: \`Oxygen\Remove_Woo_Styles\` 🗑️🛒🎨`
+- `fix: Element whitespace 🛠️💎⚪`
 
 ---
 
