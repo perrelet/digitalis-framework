@@ -1,6 +1,6 @@
 # Docs Sync Status
 
-Last synced: `19a4d4856b4f3a5481ca548c3c258142d6cf9f14`
+Last synced: `ef0498039beb8f7e661bb6b6cc5af7993a15ee84`
 Date: 2026-03-18
 
 ## Usage

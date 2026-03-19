@@ -1,3 +1,5 @@
+> **Human reference only.** Design rationale, trade-off analysis, and improvement candidates. Not required for day-to-day coding — actionable antipatterns have been extracted to [ANTIPATTERNS.md](../ANTIPATTERNS.md).
+
 # Model Class Resolution: Comprehensive Analysis
 
 A detailed technical analysis of the Digitalis Framework's automatic model class resolution system.

@@ -703,13 +703,13 @@ class Customer extends User {
 
 ```php
 // Bad - N+1 query problem
-$posts = Post::query(['limit' => 100]);
+$posts = Post::query(['posts_per_page' => 100]);
 foreach ($posts as $post) {
     $author = User::get_instance($post->post_author); // 100 queries!
 }
 
 // Good - Eager load authors
-$posts = Post::query(['limit' => 100]);
+$posts = Post::query(['posts_per_page' => 100]);
 $author_ids = array_unique(wp_list_pluck($posts, 'post_author'));
 $authors = User::get_instances($author_ids); // 1 query
 

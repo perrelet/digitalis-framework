@@ -262,6 +262,8 @@ The `write()` method creates the directory automatically via `wp_mkdir_p()` if i
 
 ## Query_Vars
 
+> **Non-obvious:** `merge()` does smart array-combining — use `overwrite()` for unconditional replacement. Always call `make_query()` before passing to `Query_Manager::execute()`. Paths returned by `find_*_path()` are invalidated if you structurally change the query array after retrieving them.
+
 Fluent builder for WordPress query arguments with smart merging and WP quirk handling.
 
 **Location:** `framework/include/objects/query-vars.class.php`

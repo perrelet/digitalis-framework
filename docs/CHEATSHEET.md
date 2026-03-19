@@ -130,6 +130,8 @@ $post = Post::get_instance($id, false);
 
 ## Views
 
+> **Non-obvious:** `$merge` keys do **not** accumulate across subclasses — child views must re-list all parent merge keys. Class-name values in `$defaults` are DI-resolved automatically; add to `$skip_inject` to prevent it. Always call `parent::params($p)` when overriding `params()`.
+
 ### Basic View with DI
 
 **File:** `include/views/invoice.view.php`
@@ -641,6 +643,8 @@ class Projects_Table extends Posts_Table {
 
 ## REST Routes
 
+> **Non-obvious:** All configuring properties (`$route`, `$namespace`, `$definition`) must be **non-static** instance properties. Override `permission(WP_REST_Request $request)`, not `permission_callback()`. For non-GET routes use `$definition = ['methods' => 'POST']` — there is no `$method` property. `$namespace` includes the version: `'my-plugin/v1'`.
+
 ### Basic Route
 
 **File:** `include/rest/projects.route.php`
@@ -810,6 +814,8 @@ class Invoice extends Order {
 ---
 
 ## Queries
+
+> **Non-obvious:** `Post::query()` / `User::query()` / `Term::query()` return a plain `array` — there is no fluent builder, no `->where_meta()`, no `->limit()`, no `->get()`. Pass `&$wp_query` as the second argument to access `found_posts` for pagination.
 
 ### Post Queries
 

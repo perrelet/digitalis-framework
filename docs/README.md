@@ -8,7 +8,9 @@ Quick navigation to all framework documentation.
 
 | Document | Use When |
 |----------|----------|
+| [../AGENTS.md](../AGENTS.md) | Starting an AI-assisted session - full framework primer |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Making commits - emoji selection guide |
+| [ANTIPATTERNS.md](./ANTIPATTERNS.md) | Patterns that look right but aren't - read before writing framework code |
 | [CHEATSHEET.md](./CHEATSHEET.md) | Writing code - copy-paste patterns |
 | [MODELS.md](./MODELS.md) | Model methods - Post, User, Term, Order |
 | [BUILTIN_VIEWS.md](./BUILTIN_VIEWS.md) | Finding the right component/field |
@@ -68,13 +70,13 @@ Reference for all 30+ built-in views:
 
 ## Analysis Documents
 
-Deep technical analysis for understanding design decisions. Not required for day-to-day coding.
+Design rationale and trade-off analysis. Human reference only — not required for day-to-day coding. Actionable antipatterns from these have been extracted to [ANTIPATTERNS.md](./ANTIPATTERNS.md).
 
 | Document | Topic |
 |----------|-------|
-| [CLASS_RESOLUTION_ANALYSIS.md](./CLASS_RESOLUTION_ANALYSIS.md) | Model resolution pros/cons/pitfalls |
-| [VIEW_SYSTEM_ANALYSIS.md](./VIEW_SYSTEM_ANALYSIS.md) | View system design analysis |
-| [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md) | Query_Vars, Query_Manager & Query_Profile analysis |
+| [analysis/CLASS_RESOLUTION_ANALYSIS.md](./analysis/CLASS_RESOLUTION_ANALYSIS.md) | Model resolution pros/cons/pitfalls |
+| [analysis/VIEW_SYSTEM_ANALYSIS.md](./analysis/VIEW_SYSTEM_ANALYSIS.md) | View system design analysis |
+| [analysis/QUERY_SYSTEM_ANALYSIS.md](./analysis/QUERY_SYSTEM_ANALYSIS.md) | Query_Vars, Query_Manager & Query_Profile analysis |
 
 ---
 
@@ -112,12 +114,21 @@ Deep technical analysis for understanding design decisions. Not required for day
 
 ### Query Building
 - Query_Vars: [UTILITIES.md](./UTILITIES.md#query_vars)
-- Deep analysis: [QUERY_SYSTEM_ANALYSIS.md](./QUERY_SYSTEM_ANALYSIS.md)
+- Deep analysis: [analysis/QUERY_SYSTEM_ANALYSIS.md](./analysis/QUERY_SYSTEM_ANALYSIS.md)
 - Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#queries)
 
 ### WooCommerce
 - Account pages: [CHEATSHEET.md](./CHEATSHEET.md#woocommerce)
 - Order model: [ARCHITECTURE.md](./ARCHITECTURE.md#woocommerce-integration)
+
+### Iterators & Batch Processing
+- Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#iterators-batch-processing)
+
+### Shortcodes
+- Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#shortcodes)
+
+### Database (Custom Tables)
+- Schema, Migration, Table: [CHEATSHEET.md](./CHEATSHEET.md#database)
 
 ---
 
@@ -125,18 +136,25 @@ Deep technical analysis for understanding design decisions. Not required for day
 
 ```
 framework/
+├── AGENTS.md              # AI agent primer (start here for LLM sessions)
+├── CLAUDE.md              # Claude Code entry point → AGENTS.md
 ├── include/
-│   ├── objects/       # Core abstracts (Model, View, Factory)
-│   ├── patterns/      # Design patterns (Singleton, Factory)
-│   ├── traits/        # Reusable traits
-│   ├── wordpress/     # WP models (Post, User, Term)
-│   ├── woocommerce/   # WC models (Order, Customer)
-│   ├── views/         # Built-in views
+│   ├── objects/           # Core abstracts (Model, View, Factory, Route, Shortcode, …)
+│   ├── patterns/          # Design patterns (Singleton, Factory)
+│   ├── traits/            # Reusable traits
+│   ├── wordpress/         # WP models (Post, User, Term)
+│   ├── woocommerce/       # WC models (Order, Customer)
+│   ├── views/             # Built-in views
 │   │   ├── components/
 │   │   └── fields/
-│   └── admin/         # Admin classes
-├── templates/         # PHP templates
-└── docs/              # This documentation
+│   ├── admin/             # Admin classes
+│   ├── iterators/         # Batch processing
+│   ├── acf/               # ACF block + relationships
+│   └── db/                # Database schema + migrations
+├── templates/             # PHP templates
+└── docs/
+    ├── analysis/          # Human-only design rationale (not needed for coding)
+    └── *.md               # All other docs
 ```
 
 ```

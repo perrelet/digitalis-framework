@@ -984,6 +984,8 @@ class ACF_Config extends Feature {
 
 ## ACF Blocks
 
+> **Non-obvious:** All configuring properties (`$slug`, `$view`, `$block`, `$defaults`, `$fields`) must be **non-static** instance properties — same reason as `Route`: the framework reads them via `$this->$property`.
+
 Create Gutenberg blocks with ACF fields.
 
 ### Basic Block
