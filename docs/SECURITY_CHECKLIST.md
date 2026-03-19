@@ -246,7 +246,7 @@ class User extends \Digitalis\User {
 - [ ] Custom capabilities defined and checked
 - [ ] Failed auth returns proper error (not silent fail)
 - [ ] AJAX handlers verify user is logged in when required
-- [ ] REST endpoints have `permission_callback`
+- [ ] REST endpoints override `permission()` with proper checks
 
 ---
 
@@ -387,14 +387,14 @@ namespace Digitalis;
 
 class Secure_Route extends Route {
 
-    protected static $namespace = 'digitalis';
-    protected static $route     = 'sensitive/(?P<id>\d+)';
-    protected static $methods   = 'POST';
+    protected $namespace  = 'digitalis/v1';
+    protected $route      = 'sensitive/(?P<id>\d+)';
+    protected $definition = ['methods' => 'POST'];
 
     /**
-     * Permission callback - runs before handle()
+     * Permission check - runs before handle()
      */
-    public function permission_callback(): bool {
+    public function permission(\WP_REST_Request $request): bool {
         // Require authentication
         if (!is_user_logged_in()) {
             return false;
@@ -407,7 +407,7 @@ class Secure_Route extends Route {
 
         // Check capability
         $user = User::current();
-        return $user->can('edit_item', $this->get_param('id'));
+        return $user->can('edit_item', $request->get_param('id'));
     }
 
     /**
@@ -442,7 +442,7 @@ class Secure_Route extends Route {
 
 ### REST API Checklist
 
-- [ ] `permission_callback` implemented (never return `true` without checks)
+- [ ] `permission()` implemented (never return `true` without checks)
 - [ ] Parameters have `validate_callback` and `sanitize_callback`
 - [ ] Sensitive routes require authentication
 - [ ] Rate limiting considered for public endpoints

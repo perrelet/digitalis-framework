@@ -1,3 +1,5 @@
+> **Human reference only.** Design rationale, trade-off analysis, and improvement candidates. Not required for day-to-day coding — actionable antipatterns have been extracted to [ANTIPATTERNS.md](../ANTIPATTERNS.md).
+
 # Model Class Resolution: Comprehensive Analysis
 
 A detailed technical analysis of the Digitalis Framework's automatic model class resolution system.
@@ -249,14 +251,14 @@ class Special_Project extends Project {
 }
 ```
 
-### Query Builder Resolution Overhead
+### Query Resolution Overhead
 
 ```php
 // Each result gets resolved individually
-$posts = Post::query()
-    ->where_in('post_type', ['project', 'document', 'invoice'])
-    ->limit(100)
-    ->get();
+$posts = Post::query([
+    'post_type'      => ['project', 'document', 'invoice'],
+    'posts_per_page' => 100,
+]);
 // 100 posts × resolution overhead = slow
 ```
 

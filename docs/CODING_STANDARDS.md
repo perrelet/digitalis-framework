@@ -285,13 +285,14 @@ if ($condition) {
 - Break long lines logically
 
 ```php
-// Long method chains - break at arrows
-$query = Post::query()
-    ->where('status', 'publish')
-    ->where('author', $user_id)
-    ->order_by('date', 'desc')
-    ->limit(10)
-    ->get();
+// Long arrays - break with one key per line
+$query = Post::query([
+    'post_status'    => 'publish',
+    'author'         => $user_id,
+    'orderby'        => 'date',
+    'order'          => 'DESC',
+    'posts_per_page' => 10,
+]);
 
 // Long arrays - one item per line
 $config = [
@@ -702,13 +703,13 @@ class Customer extends User {
 
 ```php
 // Bad - N+1 query problem
-$posts = Post::query(['limit' => 100]);
+$posts = Post::query(['posts_per_page' => 100]);
 foreach ($posts as $post) {
     $author = User::get_instance($post->post_author); // 100 queries!
 }
 
 // Good - Eager load authors
-$posts = Post::query(['limit' => 100]);
+$posts = Post::query(['posts_per_page' => 100]);
 $author_ids = array_unique(wp_list_pluck($posts, 'post_author'));
 $authors = User::get_instances($author_ids); // 1 query
 

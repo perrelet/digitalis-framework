@@ -455,9 +455,12 @@ class Account extends User {
     protected static $role = 'account';
 
     public function get_projects() {
-        return Project::query()
-            ->where_meta('project_account', $this->get_id())
-            ->get();
+        return Project::query([
+            'meta_query' => [[
+                'key'   => 'project_account',
+                'value' => $this->get_id(),
+            ]],
+        ]);
     }
 
     public function get_orders() {
@@ -515,22 +518,18 @@ class Project_Card extends View {
 }
 ```
 
-### Query Builder Integration
+### Query Integration
 
 ```php
 // Get all projects (returns Project instances)
-$projects = Project::query()->get();
+$projects = Project::query();
 
 // Get from base class with resolution
-$posts = Post::query()
-    ->where('post_type', 'project')
-    ->get();
+$posts = Post::query(['post_type' => 'project']);
 // Each item is resolved to Project
 
 // Mixed query (resolution per item)
-$posts = Post::query()
-    ->where_in('post_type', ['project', 'document'])
-    ->get();
+$posts = Post::query(['post_type' => ['project', 'document']]);
 // Returns mix of Project and Document instances
 ```
 

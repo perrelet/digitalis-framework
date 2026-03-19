@@ -110,7 +110,7 @@ trait Has_WP_Hooks {
 
     public function add_actions ($actions) {
 
-        return $this->add_hooks($filters, 'action');
+        return $this->add_hooks($actions, 'action');
 
     }
 

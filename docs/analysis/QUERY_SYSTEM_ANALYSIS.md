@@ -1,3 +1,5 @@
+> **Human reference only.** Design rationale, trade-off analysis, and improvement candidates. Not required for day-to-day coding — actionable antipatterns have been extracted to [ANTIPATTERNS.md](../ANTIPATTERNS.md).
+
 # Query System Analysis: Query_Vars, Query_Manager & Query_Profile
 
 Deep technical analysis of the framework's query building and dispatch system.
