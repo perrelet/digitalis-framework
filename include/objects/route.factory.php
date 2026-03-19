@@ -34,7 +34,7 @@ class Route extends Factory {
 
     protected $namespace     = 'digitalis/v1';
     protected $route         = 'route';
-    protected $format        = 'json';
+    protected $format        = null;
     protected $wp_query      = false;
     protected $handler       = 'handle';
     protected $view          = false; /* View::class */
