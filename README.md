@@ -1,63 +1,105 @@
-# digitalis-framework
+# LatticeWP
 
-some abstract objects.
+A structuring layer for WordPress plugin development.
 
-## The WordPress Query Controller
+WordPress is an event system with a database attached. It is not a framework. LatticeWP gives it the shape of one — consistent entry points, typed abstractions over core entities, and a predictable execution model.
 
-```mermaid
-graph TB
+This is not a distance layer. You still write hooks, query posts, and work with the admin. LatticeWP makes the structure of that work explicit.
 
-    direction TB
+---
 
-    index(["index.php"]) -->
-    wp-blog-header(["wp-blog-header.php"])
+## What it provides
 
-    wp-blog-header
-    -- "wp()" --> wp
+**Entity models.** `Post`, `User`, `Term`, `Order` wrap WordPress objects. One instance per ID, resolved automatically to the most specific subclass. You work with typed objects, not arrays.
 
-    admin-edit(["wp-admin/edit.php"]) -->
-    prepare_items(["WP_Posts_List_Table::prepare_items()"]) -->
-    admin-posts(["wp_edit_posts_query()\nwp-admin/includes/post.php"])
-    -- "wp($query)" --> wp
+**A rendering system.** `View` classes separate markup from logic. Parameters are declared, validated, and optionally injected. Templates or inline methods — the rendering path is explicit either way.
 
-    wp(["wp($query_vars = '')\nfunctions.php"]) -->
-    main(["WP::main($query_vars = '')"])
+**Hook registration.** `Feature` classes declare hooks through a single method. No scattered `add_action` calls across files. The hook surface of a feature is readable in one place.
 
-    main --> parse_request(["WP::parse_request($query_vars = '')"])
-    main --> query_posts(["WP::query_posts()"])
-    main --> handle_404(["WP::handle_404()"])
-    main --> register_globals(["WP::register_globals()"])
-    main --> send_headers(["WP::send_headers()"])
+**REST routes, shortcodes, ACF blocks.** Each is a class with declared properties. One file, one responsibility, auto-instantiated.
+
+**An autoloader.** File names encode inheritance. `project.post.php` defines `Project extends Post`. Drop a file in the right directory; it loads in the correct order.
+
+---
+
+## Structure
 
 ```
-
-## The Digitalis Query Controller
-
-Digitalis Framework extends the functionality of WordPress queries rather than overwriting them.
-
-```mermaid
-graph TB
-
-    direction TB
-
-    ajax(["wp_ajax_query_{$post_type}"]) -->
-    parse-request("global $wp, $wp_query;\n$wp->parse_request();\n$wp_query->query_vars = $wp->query_vars;") -->
-    ajax-query("Post_Type::ajax_query") <--> query-args
-
-    pre-get(["pre_get_posts"]) -- "$wp_query" -->
-    is-main("Post_Type::is_main_query") -->
-    main-query("Post_Type::main_query") <-->
-    query-args("Post_Type::get_query_vars") -->
-    model-query("Model::query") -->
-    get-inst("Model::get_instances")
-
-    pre-get -- "$wp_query" -->
-    is-main-admin("Post_Type::is_main_admin_query") -->
-    admin-query("Post_Type::admin_query") <-->
-    admin-query-args("Post_Type::get_admin_query_vars") -->
-    model-query
-
-    
-
-
+your-plugin/
+├── plugin.php
+└── include/
+    ├── models/         # Post / User / Term subclasses
+    ├── post-types/     # CPT and taxonomy registration
+    ├── views/          # View classes and templates
+    ├── features/       # Hook-based behaviour
+    ├── routes/         # REST endpoints
+    └── admin/          # Admin pages and list tables
 ```
+
+---
+
+## Core patterns
+
+| Class | Extends | Purpose |
+|-------|---------|---------|
+| `Post`, `User`, `Term` | `WP_Model` | WordPress entity wrappers |
+| `Order`, `Customer` | `Post`, `User` | WooCommerce entity wrappers |
+| `View` | — | Renderable component |
+| `Component`, `Field` | `View` | UI components and form fields |
+| `Feature` | — | Declares and registers WordPress hooks |
+| `Integration` | `Singleton` | Conditional feature (checks plugin presence) |
+| `Route` | `Factory` | REST API endpoint |
+| `Shortcode` | `Factory` | WordPress shortcode |
+| `ACF_Block` | `Factory` | Gutenberg block via ACF |
+| `Post_Type`, `Taxonomy` | `Singleton` | Registration classes |
+| `Admin_Page` | `Factory` | Admin menu page |
+| `Posts_Table`, `Users_Table` | `Screen_Table` | Admin list table columns |
+| `Post_Iterator`, `User_Iterator` | `Iterator` | Batch processing with admin UI |
+| `Query_Vars` | — | Composable `WP_Query` argument builder |
+| `Query_Profile` | `Factory` | Modify queries at dispatch time |
+| `Schema`, `Migration` | — | Custom database tables |
+
+Auto-instantiated classes (Feature, Route, Post_Type, etc.) require no manual bootstrap — the autoloader handles it.
+
+---
+
+## Getting started
+
+Require the framework and extend `App`:
+
+```php
+namespace My_Plugin;
+
+use Digitalis\App;
+
+require_once WP_PLUGIN_DIR . '/digitalis-co/framework/load.php';
+
+class Plugin extends App {
+
+    protected static $dir  = __DIR__;
+    protected static $name = 'my-plugin';
+
+    public function boot(): void {
+        $this->load(__DIR__ . '/include');
+    }
+
+}
+```
+
+Everything in `include/` loads automatically from that point. File naming drives load order and instantiation — see [`docs/AUTOLOADER.md`](./docs/AUTOLOADER.md).
+
+---
+
+## Documentation
+
+| File | Use when |
+|------|----------|
+| [`AGENTS.md`](./AGENTS.md) | Starting an AI-assisted session |
+| [`docs/CHEATSHEET.md`](./docs/CHEATSHEET.md) | Writing code — copy-paste patterns |
+| [`docs/ANTIPATTERNS.md`](./docs/ANTIPATTERNS.md) | Things that look right but aren't |
+| [`docs/MODELS.md`](./docs/MODELS.md) | Post, User, Term, Order method reference |
+| [`docs/VIEW_SYSTEM.md`](./docs/VIEW_SYSTEM.md) | View system in full |
+| [`docs/HOOKS.md`](./docs/HOOKS.md) | Feature, Integration, hook patterns |
+| [`docs/ADMIN.md`](./docs/ADMIN.md) | Admin pages, tables, ACF |
+| [`docs/UTILITIES.md`](./docs/UTILITIES.md) | Query_Vars, DI, batch processing |
+| [`docs/README.md`](./docs/README.md) | Full documentation index |
