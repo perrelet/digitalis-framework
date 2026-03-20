@@ -190,7 +190,7 @@ class Route extends Factory {
     protected $nonce_cache;
 
     public function get_nonce () {
-        
+
         if (is_null($this->nonce_cache)) $this->nonce_cache = wp_create_nonce('wp_rest');
 
         return $this->nonce_cache;
@@ -199,8 +199,9 @@ class Route extends Factory {
 
     public function check_nonce (WP_REST_Request $request) {
 
-        $nonce = $request->get_param('_wpnonce');
+        $nonce = $request->get_header('X-WP-Nonce');
         if (!$nonce) $nonce = $request->get_header('Nonce');
+        if (!$nonce) $nonce = $request->get_param('_wpnonce');
 
         if (is_null($nonce)) return new WP_Error(
             __NAMESPACE__ . '_rest_missing_nonce',

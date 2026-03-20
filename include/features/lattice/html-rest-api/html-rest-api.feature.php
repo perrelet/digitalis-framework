@@ -17,8 +17,9 @@ class HTML_REST_API extends Feature {
             return (new HTML_REST_URL($this->rest_prefix))->get_url("{$route->get_namespace()}/{$route->get_route()}");
         });
     
-        add_action('init',                   [$this, 'add_rewrite_rules']);
-        add_filter('rest_pre_serve_request', [$this, 'rest_pre_serve_request'], 10, 4);
+        add_action('init',                       [$this, 'add_rewrite_rules']);
+        add_filter('rest_authentication_errors', [$this, 'rest_authentication_errors'], 5);
+        add_filter('rest_pre_serve_request',     [$this, 'rest_pre_serve_request'], 10, 4);
 
     }
 
@@ -38,14 +39,43 @@ class HTML_REST_API extends Feature {
     
     }
 
-    protected function is_html_rest_request (WP_REST_Request $request)  {
+    public function rest_authentication_errors ($result) {
+
+        if (!empty($result))             return $result;
+        if (!$this->is_html_rest_path()) return $result;
+
+        // WordPress auth cookies are scoped to /wp-admin/ and /wp-content/plugins/,
+        // so standard REST cookie auth doesn't fire for wp-html/ requests.
+        // We authenticate manually using the logged_in cookie (path: /) instead.
+
+        $nonce = $_SERVER['HTTP_X_WP_NONCE'] ?? $_REQUEST['_wpnonce'] ?? null;
+        if (!$nonce) return $result;
+
+        $user_id = wp_validate_logged_in_cookie(false);
+        if (!$user_id) return $result;
+
+        wp_set_current_user($user_id);
+
+        if (!wp_verify_nonce($nonce, 'wp_rest')) {
+            return new \WP_Error('rest_cookie_invalid_nonce', __('Cookie check failed'), ['status' => 403]);
+        }
+
+        return true;
+
+    }
+
+    protected function is_html_rest_path (): bool {
 
         $path = isset($_SERVER['REQUEST_URI']) ? wp_parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
         $path = ltrim((string) $path, '/');
 
-        if (str_starts_with($path, $this->rest_prefix . '/')) return true;
+        return str_starts_with($path, $this->rest_prefix . '/');
 
-        return false;
+    }
+
+    protected function is_html_rest_request (WP_REST_Request $_request): bool {
+
+        return $this->is_html_rest_path();
 
     }
 
