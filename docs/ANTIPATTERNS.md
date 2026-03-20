@@ -416,6 +416,28 @@ $phone = $user->get_phone();
 
 ---
 
+## Post / User / Term — Saving
+
+### Use `$model->save()` — not `wp_update_post()`, `wp_update_user()`, or `wp_update_term()`
+
+The framework model's `save()` method wraps the underlying WP function. Calling WP update functions directly bypasses the model layer, requires manually passing the ID, and is inconsistent with how the rest of the codebase writes data.
+
+```php
+// ❌ Bypasses model layer; ID must be passed manually
+wp_update_post(['ID' => $org_id, 'post_status' => 'publish']);
+wp_update_post(['ID' => $post->ID, 'post_title' => 'New Title']);
+wp_update_user(['ID' => $user_id, 'display_name' => 'Jane']);
+wp_update_term($term_id, 'category', ['name' => 'New Name']);
+
+// ✅ Use the model — ID is implicit, hooks and framework lifecycle fire correctly
+$org->save(['post_status' => 'publish']);
+$post->save(['post_title' => 'New Title']);
+$user->save(['display_name' => 'Jane']);
+$term->save(['name' => 'New Name']);
+```
+
+---
+
 ## Post / User / Term — Querying
 
 ### Use framework `query()` methods, not bare WordPress query functions

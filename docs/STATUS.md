@@ -1,6 +1,6 @@
 # Docs Sync Status
 
-Last synced: `3890ce4e025fef3adec2dd93c616e3eb53912b0d`
+Last synced: `543905a0a05ddd36422d0da37e4c834f58bc24c0`
 Date: 2026-03-20
 
 ## Usage
@@ -8,7 +8,7 @@ Date: 2026-03-20
 To see what changed in source code since docs were last synced:
 
 ```bash
-git log 3890ce4e025fef3adec2dd93c616e3eb53912b0d..HEAD --oneline -- include/ js/ scss/
+git log 543905a0a05ddd36422d0da37e4c834f58bc24c0..HEAD --oneline -- include/ js/ scss/
 ```
 
 When updating docs, replace the hash and date above with the new HEAD:
