@@ -371,7 +371,100 @@ $posts = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query());
 
 ---
 
+## Post / User / Term — Model Methods
+
+### Wrap named data access in dedicated model methods
+
+The framework provides generic low-level accessors — `get_meta()`, `update_meta()`, `get_field()`, `update_field()` — that take raw string keys. These are implementation details and should stay inside the model. Call sites should work with named methods, not key strings.
+
+This applies to **any** raw-key accessor: WP meta, ACF fields, options, transients, etc. — including bare WordPress functions (`get_user_meta()`, `get_post_meta()`, `update_user_meta()`, etc.), which are subject to the same rule.
+
+The threshold is: if you'd grep for the key string tomorrow, it belongs in a method.
+
+```php
+// ❌ Raw key strings scattered across features, routes, and post-types
+if ($user->get_meta('mycelium_onboarding_source') === 'self_registered') { ... }
+$user->update_meta('mycelium_onboarding_source', 'invite');
+
+$phone = $user->get_field('phone');
+$org->update_field('location', $value);
+
+// ✅ Key strings live once, in the model — call sites are readable and key-string-free
+class User extends \Digitalis\User {
+
+    public function get_onboarding_source(): ?string {
+        return $this->get_meta('mycelium_onboarding_source');
+    }
+
+    public function set_onboarding_source(string $source): void {
+        $this->update_meta('mycelium_onboarding_source', $source);
+    }
+
+    public function get_phone(): ?string {
+        return $this->get_field('phone');
+    }
+
+}
+
+// Call sites
+if ($user->get_onboarding_source() === 'self_registered') { ... }
+$user->set_onboarding_source('invite');
+$phone = $user->get_phone();
+```
+
+**Exception:** keys that are internal implementation details of a single class — written and consumed entirely within that class as part of one flow (e.g. a short-lived token stored and verified inside `Email_Confirmation`) — may remain as raw calls. The test is: does the key represent a named concept on the model that other classes care about? If yes, wrap it. If it's private plumbing that never leaves the class, raw calls are fine.
+
+---
+
+## Post / User / Term — Querying
+
+### Use framework `query()` methods, not bare WordPress query functions
+
+`get_posts()`, `get_users()`, `get_terms()`, `WP_Query`, `WP_User_Query`, and `WP_Term_Query` return raw WordPress objects. Framework query methods return typed model instances, respect class resolution, and keep query logic consistent.
+
+```php
+// ❌ Returns WP_Post[] — bypasses model resolution and class hierarchy
+$posts = get_posts(['post_type' => 'project', 'posts_per_page' => 10]);
+$users = get_users(['role' => 'subscriber']);
+$terms = get_terms(['taxonomy' => 'category']);
+
+// ✅ Returns typed model instances
+$posts = Project::query(['posts_per_page' => 10]);
+$users = User::query(['role' => 'subscriber']);
+$terms = Category::query();
+```
+
+Valid exceptions: low-level utility code where raw IDs or WP objects are explicitly needed, or framework internals where model instantiation would be circular.
+
+---
+
 ## General PHP / Framework
+
+### Prefix vendor model variables — reserve short names for framework models
+
+Short variable names (`$user`, `$product`, `$order`) are reserved for framework model instances (`Mycelium\User`, `Digitalis\Order`, etc.). Variables holding vendor/WordPress/WooCommerce objects must carry a vendor prefix so the type is unambiguous at a glance.
+
+| Variable | Type |
+|----------|------|
+| `$wp_user` | `WP_User` |
+| `$wp_post` | `WP_Post` |
+| `$wp_term` | `WP_Term` |
+| `$wc_product` | `WC_Product` |
+| `$wc_order` | `WC_Order` |
+| `$user` | `Mycelium\User` / `Digitalis\User` |
+| `$post` | framework `Post` subclass |
+
+```php
+// ❌ $user suggests a framework model; $mycelium_user is noise in the other direction
+$user          = get_userdata($id);   // WP_User
+$mycelium_user = User::get_instance($id);
+
+// ✅
+$wp_user = get_userdata($id);         // WP_User — vendor prefix makes type clear
+$user    = User::get_instance($id);   // framework model gets the short name
+```
+
+---
 
 ### `self::` vs `static::` for inherited static calls
 

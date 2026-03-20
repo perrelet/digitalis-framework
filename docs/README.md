@@ -11,6 +11,7 @@ Quick navigation to all framework documentation.
 | [../AGENTS.md](../AGENTS.md) | Starting an AI-assisted session - full framework primer |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Making commits - emoji selection guide |
 | [ANTIPATTERNS.md](./ANTIPATTERNS.md) | Patterns that look right but aren't - read before writing framework code |
+| [CONVENTIONS.md](./CONVENTIONS.md) | Preferred syntax where multiple valid forms exist |
 | [CHEATSHEET.md](./CHEATSHEET.md) | Writing code - copy-paste patterns |
 | [MODELS.md](./MODELS.md) | Model methods - Post, User, Term, Order |
 | [BUILTIN_VIEWS.md](./BUILTIN_VIEWS.md) | Finding the right component/field |

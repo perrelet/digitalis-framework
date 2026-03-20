@@ -338,8 +338,29 @@ Defining the class is not enough — call `My_Profile::get_instance()` during pl
 **Use `static::` not `self::` for inherited static calls.**
 `self::` binds at definition time and breaks in subclasses.
 
+**Use framework `query()` methods, not bare WordPress query functions.**
+`get_posts()`, `get_users()`, `get_terms()`, `WP_Query`, etc. return raw WP objects — use `Post::query()`, `User::query()`, `Term::query()` instead to get typed model instances. Only use WP functions directly when raw IDs or WP objects are explicitly required.
+
+**Prefix vendor model variables — reserve short names for framework models.**
+`$user`, `$product`, `$order` mean framework instances. Vendor/WP/WC objects take a prefix: `$wp_user`, `$wp_post`, `$wc_product`, `$wc_order`. Never use a short name for a vendor type or a prefixed name like `$mycelium_user` for a framework instance.
+
+**Wrap named data access in dedicated model methods — never expose raw key strings at call sites.**
+This applies to all generic accessors: `get_meta()`, `update_meta()`, `get_field()`, `update_field()`, options, transients, etc. — and their bare WordPress equivalents (`get_user_meta()`, `get_post_meta()`, `update_user_meta()`, etc.), which are also off-limits at call sites for the same reason. If the key represents a named concept on the model, or is accessed from more than one class, add `get_x()` / `set_x()` to the model. Exception: keys that are internal plumbing of a single class (e.g. a short-lived token written and consumed entirely within one feature class) may stay as raw calls.
+
 **Keep `validate_id()` cheap — it runs on every registered subclass.**
 One `get_post_type()` call is fine. Multiple queries or model instantiation are not.
+
+---
+
+## Conventions
+
+Preferred patterns where more than one syntax is valid. Full details in [docs/CONVENTIONS.md](./docs/CONVENTIONS.md).
+
+**Instantiate views with `new` — don't call `View::render()` statically.**
+`View::render()` is supported but not preferred. Use `<?= new My_View([...]) ?>` for echoing and `(string) new My_View([...])` when a string is needed explicitly.
+
+**Instantiate `Field_Group` fields with `new` — don't use the array `'field'` shorthand.**
+`['field' => Input::class, 'name' => '...']` is supported but not preferred. Use `new \Digitalis\Field\Input(['name' => '...'])` directly.
 
 ---
 
@@ -382,3 +403,4 @@ Examples:
 | Copy-paste patterns | [docs/CHEATSHEET.md](./docs/CHEATSHEET.md) |
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
+| Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |
