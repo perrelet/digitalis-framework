@@ -416,6 +416,35 @@ $phone = $user->get_phone();
 
 ---
 
+## Has_WP_Post (Post model) — `save()` inside `wp_after_insert_post`
+
+### Don't call `save()` with full post data inside a `wp_after_insert_post` hook
+
+`save()` calls `cache_instance()` **after** `wp_update_post` returns, but `wp_after_insert_post` fires **synchronously inside** `wp_update_post`. Any hook that calls `get_instance()` during that window gets the pre-save cached state — with the old `post_status` (or other fields) still set. Passing a full `save()` from that hook silently reverts the fields that the original caller just changed.
+
+```php
+// ❌ Saves the full model — if the instance cache is stale (e.g. post_status is still
+//    'pending_review' from before the caller changed it to 'publish'), the full save
+//    will overwrite the DB with the old status.
+public function update_keywords () {
+    $this->set_excerpt($this->generate_keywords());
+    $this->save([], false);
+}
+
+// ✅ Target only the field being changed — leave all other post data untouched.
+public function update_keywords () {
+    $keywords = $this->generate_keywords();
+    $this->wp_post->post_excerpt = $keywords;
+    wp_update_post(['ID' => $this->get_id(), 'post_excerpt' => $keywords], false, false);
+}
+```
+
+**Why it happens:** `save()` pre-populates `$post_array` via `wp_parse_args([], get_object_vars($this->wp_post))`. If the instance was cached before the caller's status change took effect, `$this->wp_post->post_status` holds the old value. The targeted `wp_update_post` sidesteps this entirely by only touching the field you actually changed.
+
+**Rule of thumb:** Inside any `wp_after_insert_post` callback, only write targeted updates (`update_post_meta`, `wp_update_post` with specific fields, `update_field`). Never call `save()` with an empty or full array.
+
+---
+
 ## Post / User / Term — Saving
 
 ### Use `$model->save()` — not `wp_update_post()`, `wp_update_user()`, or `wp_update_term()`
