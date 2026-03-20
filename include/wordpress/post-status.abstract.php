@@ -5,7 +5,7 @@ namespace Digitalis;
 abstract class Post_Status extends Singleton {
 
     protected $slug        = 'post-status';
-    protected $post_types  = 'post';
+    protected $post_types  = ['post'];
 
     protected $singular    = 'Post Status';
     protected $plural      = 'Post Statuses';
@@ -146,10 +146,10 @@ abstract class Post_Status extends Singleton {
 
                 $js .= "let post_status_pos = $(`select#post_status option[value='{$this->get_position()}']`);";
                 $js .= "if (post_status_pos.length) {";
-                    if ($this->after) {
-                        $js .= "$(`{$option}`).insertAfter(post_status_pos);";
-                    } else {
+                    if ($this->before) {
                         $js .= "$(`{$option}`).insertBefore(post_status_pos);";
+                    } else {
+                        $js .= "$(`{$option}`).insertAfter(post_status_pos);";
                     }
                 $js .= "} else {";
                     $js .= "$(`select#post_status`).append(`{$option}`);";
