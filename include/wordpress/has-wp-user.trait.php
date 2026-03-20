@@ -367,7 +367,7 @@ trait Has_WP_User {
 
     public function send_new_user_notifications ($notify = 'both') {
     
-        return wp_send_new_user_notifications($this->wp_user->ID, null, $notify);
+        return wp_send_new_user_notifications($this->wp_user->ID, $notify);
     
     }
 
