@@ -2,14 +2,74 @@
 
 namespace Digitalis;
 
-abstract class Page_Builder extends Singleton implements Page_Builder_Interface {
+abstract class Editor extends Singleton implements Editor_Interface {
 
-    protected $slug = 'builder';
+    use Autoloader;
+
+    protected $slug = 'editor';
 
     public static function instance_condition () : bool {
     
         return true;
     
+    }
+
+    public function __construct () {
+
+        
+
+    }
+
+    public function get_slug () {
+
+        return $this->slug;
+
+    }
+
+    public function get_generator_class () {
+
+        // return Editor_Element_Generator::class;
+
+    }
+
+    public function get_control_mapper_class () {
+
+        // return Control_Mapper::class;
+
+    }
+
+    public function register_elements ($path) {
+
+        $path = realpath($path);
+        $path = rtrim($path, '/') . '/';
+
+        if (!is_dir($path)) return;
+
+        foreach ($files = glob($path . '*.php') as $file) {
+
+            $this->register_element($file);
+
+        }
+
+
+    }
+
+    public function register_element ($file) {
+
+        include $file;
+
+        $class_name = basename($file, '.' . pathinfo($file)['extension']);
+
+        if (doing_action('plugins_loaded')) {
+
+            new $class_name();
+
+        } else {
+
+            add_action('plugins_loaded', function () use ($class_name) { new $class_name(); });
+
+        }
+
     }
 
     public function is_backend () : bool {
@@ -32,7 +92,7 @@ abstract class Page_Builder extends Singleton implements Page_Builder_Interface 
 
     public function get_classes () : array {
     
-        // ..
+        // class Editor_CSS_Selector
     
     }
 
@@ -102,7 +162,7 @@ abstract class Page_Builder extends Singleton implements Page_Builder_Interface 
 
     public function add_colors ($colors, $args = []) {
 
-        // ..
+        // .. class Editor_Color
 
     }
 
@@ -114,7 +174,7 @@ abstract class Page_Builder extends Singleton implements Page_Builder_Interface 
 
     public function add_variables ($variables, $args = []) {
 
-        // ..
+        // .. class Editor_CSS_Variable
 
     }
 
@@ -144,10 +204,28 @@ abstract class Page_Builder extends Singleton implements Page_Builder_Interface 
 
     //
 
-    public function get_slug () {
+    public function register_component ($name, $args = []) {
 
-        return $this->slug;
+        // .. class Editor_Component
+        //      - Editor_Controls / Editor_Fields
+        //      - 
 
     }
+
+    public function get_component ($name) {
+
+        // ..
+
+    }
+
+    public function render_component ($name, $p = []) {
+
+        // ..
+
+    }
+
+    //
+
+
 
 }

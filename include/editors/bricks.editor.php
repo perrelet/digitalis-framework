@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-class Bricks extends Page_Builder {
+class Bricks extends Editor {
 
     protected $slug = 'bricks';
 
@@ -51,7 +51,7 @@ class Bricks extends Page_Builder {
                         'name' => $bricks_palette['name'],
                         'id'   => $bricks_palette['id'],
                     ],
-                    'builder' => $this->slug,
+                    'editor' => $this->slug,
                 ];
             
             }
@@ -215,10 +215,10 @@ class Bricks extends Page_Builder {
         if ($bricks_vars) foreach ($bricks_vars as $bricks_var) {
         
             $variable = [
-                'name'    => $bricks_var['name'],
-                'value'   => $bricks_var['value'],
-                'id'      => $bricks_var['id'],
-                'builder' => $this->slug,
+                'name'   => $bricks_var['name'],
+                'value'  => $bricks_var['value'],
+                'id'     => $bricks_var['id'],
+                'editor' => $this->slug,
             ];
 
             if (isset($bricks_var['category'])) $variable['folder'] = $bricks_var['category'];

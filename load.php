@@ -71,9 +71,13 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/element.class.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/page-builders/page-builder.interface.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/page-builders/page-builder-manager.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/page-builders/page-builder.singleton.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/control-mapper.interface.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/control-mapper.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor.interface.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor.singleton.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor-element-generator.interface.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor-element-generator.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor-manager.singleton.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/iterator.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/csv-iterator.iterator.php';

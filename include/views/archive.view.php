@@ -41,7 +41,7 @@ abstract class Archive extends Component {
 
         if (!$this['items_only']) {
 
-            if ($controls = $this->get_controls()) {
+            if ($controls = $this->get_archive_controls()) {
 
                 Field_Group::render([
                     'fields'    => $controls,
@@ -150,7 +150,7 @@ abstract class Archive extends Component {
     
     }
 
-    public function get_controls () {
+    public function get_archive_controls () {
     
         return $this['controls'];
     

@@ -18,17 +18,17 @@ abstract class Design_System extends Singleton {
         if (!$handle) $handle = __NAMESPACE__ . '-front';
 
         $this->maybe_enqueue_style(function () {
-            return !Page_Builder_Manager::get_instance()->is_backend_ui();
+            return !Editor_Manager::get_instance()->is_backend_ui();
         }, $src, $handle, $args);
     
     }
 
-    public function enqueue_builder_style ($src = '', $handle = null, $args = []) {
+    public function enqueue_editor_style ($src = '', $handle = null, $args = []) {
 
-        if (!$handle) $handle = __NAMESPACE__ . '-builder';
+        if (!$handle) $handle = __NAMESPACE__ . '-editor';
 
         $this->maybe_enqueue_style(function () {
-            return Page_Builder_Manager::get_instance()->is_backend_ui();
+            return Editor_Manager::get_instance()->is_backend_ui();
         }, $src, $handle, $args);
     
     }
@@ -62,7 +62,7 @@ abstract class Design_System extends Singleton {
     public function add_colors ($colors, $args = []) {
 
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
         ]);
 
         if ($colors) foreach ($colors as $value => &$color) {
@@ -77,14 +77,14 @@ abstract class Design_System extends Singleton {
 
         }
     
-        if ($args['builders']) Page_Builder_Manager::get_instance()->add_colors($colors, $args);
+        if ($args['editors']) Editor_Manager::get_instance()->add_colors($colors, $args);
     
     }
 
     public function remove_colors ($colors) {
     
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
         ]);
 
         if ($colors) foreach ($colors as $name) {
@@ -93,7 +93,7 @@ abstract class Design_System extends Singleton {
         
         }
 
-        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_colors($colors);
+        if ($args['editors']) Editor_Manager::get_instance()->remove_colors($colors);
     
     }
 
@@ -106,7 +106,7 @@ abstract class Design_System extends Singleton {
     public function add_classes ($classes, $args = []) {
     
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
         ]);
 
         if ($classes) foreach ($classes as $name => &$class) {
@@ -119,14 +119,14 @@ abstract class Design_System extends Singleton {
 
         }
 
-        if ($args['builders']) Page_Builder_Manager::get_instance()->add_classes($classes, $args);
+        if ($args['editors']) Editor_Manager::get_instance()->add_classes($classes, $args);
     
     }
 
     public function remove_classes ($classes) {
 
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
         ]);
 
         if ($classes) foreach ($classes as $name) {
@@ -135,7 +135,7 @@ abstract class Design_System extends Singleton {
         
         }
     
-        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_classes($classes);
+        if ($args['editors']) Editor_Manager::get_instance()->remove_classes($classes);
     
     }
 
@@ -148,7 +148,7 @@ abstract class Design_System extends Singleton {
     public function add_variables ($variables, $args = []) {
 
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
             'scss'     => true,
         ]);
 
@@ -163,7 +163,7 @@ abstract class Design_System extends Singleton {
 
         }
 
-        if ($args['builders']) Page_Builder_Manager::get_instance()->add_variables($variables, $args);
+        if ($args['editors']) Editor_Manager::get_instance()->add_variables($variables, $args);
 
         if ($args['scss']) add_filter('sassy-variables', function ($scss_vars) use ($variables) {
 
@@ -182,13 +182,13 @@ abstract class Design_System extends Singleton {
     public function remove_variables ($variables) {
 
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
             'scss'     => true,
         ]);
 
         if ($variables) foreach ($variables as $name) if (isset($this->variables[$name])) unset($this->variables[$name]);
 
-        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_variables($variables);
+        if ($args['editors']) Editor_Manager::get_instance()->remove_variables($variables);
 
         if ($args['scss']) add_filter('sassy-variables', function ($scss_vars) use ($variables) {
 
@@ -209,7 +209,7 @@ abstract class Design_System extends Singleton {
     public function add_variable_folders ($folders, $args = []) {
 
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
         ]);
 
         if ($folders) foreach ($folders as $name => &$folder) {
@@ -222,14 +222,14 @@ abstract class Design_System extends Singleton {
 
         }
 
-        if ($args['builders']) Page_Builder_Manager::get_instance()->add_variable_folders($folders, $args);
+        if ($args['editors']) Editor_Manager::get_instance()->add_variable_folders($folders, $args);
 
     }
 
     public function remove_variable_folders ($folders, $args = []) {
 
         $args = wp_parse_args($args, [
-            'builders' => true,
+            'editors' => true,
         ]);
 
         if ($folders) foreach ($folders as $name) {
@@ -238,7 +238,7 @@ abstract class Design_System extends Singleton {
 
         }
     
-        if ($args['builders']) Page_Builder_Manager::get_instance()->remove_variable_folders($folders, $args);
+        if ($args['editors']) Editor_Manager::get_instance()->remove_variable_folders($folders, $args);
     
     }
 

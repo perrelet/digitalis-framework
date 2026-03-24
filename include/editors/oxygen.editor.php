@@ -2,7 +2,7 @@
 
 namespace Digitalis;
 
-class Oxygen extends Page_Builder {
+class Oxygen extends Editor {
 
     protected $slug = 'oxygen';
 
@@ -10,6 +10,18 @@ class Oxygen extends Page_Builder {
     
         return is_plugin_active('oxygen/functions.php');
     
+    }
+
+    public function get_generator_class () {
+
+        return Oxygen_Element_Generator::class;
+
+    }
+
+    public function get_control_mapper_class () {
+
+        return Oxygen_Control_Mapper::class;
+
     }
 
     public function is_backend () : bool {
