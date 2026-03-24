@@ -356,7 +356,7 @@ export class Digitalis_Query {
         this.run_inner_html(this.elements.items, html);
 
         document.dispatchEvent(new CustomEvent('Digitalis/Query/Update_Items', {detail: {items: this.elements.items}}));
-        if (htmx) htmx.process(this.elements.items);
+        if (typeof htmx !== 'undefined') htmx.process(this.elements.items);
 
         this.find_elements();
         this.setup_pagination();
