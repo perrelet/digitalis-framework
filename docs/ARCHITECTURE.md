@@ -77,9 +77,14 @@ framework/
 │   │   ├── ACF_Block.factory.php
 │   │   └── Bidirectional_Relationship.feature.php
 │   │
-│   ├── page-builders/     # Page builder support
-│   │   ├── Page_Builder.abstract.php
-│   │   └── Page_Builder_Manager.singleton.php
+│   ├── editors/           # Page editor integrations
+│   │   ├── editor.interface.php
+│   │   ├── editor.singleton.php
+│   │   ├── editor-manager.singleton.php
+│   │   ├── bricks.editor.php
+│   │   ├── elementor.editor.php
+│   │   ├── oxygen.editor.php
+│   │   └── ...
 │   │
 │   └── features/          # Optional features
 │
