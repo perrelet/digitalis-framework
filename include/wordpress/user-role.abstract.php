@@ -32,12 +32,17 @@ abstract class User_Role extends Singleton {
 
     public function __construct () {
 
-        Task_Handler::get_instance()->add_task("add_role_{$this->slug}", [$this, 'register']);
+        Task_Handler::get_instance()->add_task(
+            "add_role_{$this->slug}",
+            [$this, 'register'],
+            crc32(serialize($this->get_caps()))
+        );
 
     }
 
     public function register () {
 
+        remove_role($this->slug);
         add_role($this->slug, $this->singular, $this->get_caps());
 
     }
