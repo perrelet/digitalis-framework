@@ -83,34 +83,42 @@ trait Has_WP_User {
 
     public function get_role () {
     
-        return ($roles = $this->get_roles()) ? $roles[0] : false;
+        return ($roles = $this->get_roles()) ? $roles[0] : null;
     
     }
 
     public function get_roles () {
 
-        return ($wp_user = $this->wp_user) ? $wp_user->roles : [];
+        return (array) $this->wp_user->roles;
 
     }
 
     public function has_role ($role) {
 
-        return ($roles = $this->get_roles()) ? (array_search($role, $roles) !== false) : false;
+        return ($roles = $this->get_roles()) ? (array_search((array) $role, $roles) !== false) : false;
 
     }
 
     public function set_roles ($roles) {
 
-        return $this->set_wp_model_prop('roles', (array) $roles);
+        $this->wp_user->set_role('');
+        foreach ((array) $roles as $role) $this->wp_user->add_role($role);
+        return $this;
 
     }
 
     public function add_role ($role) {
 
-        $roles = (array) $this->get_wp_model_prop('roles');
-        $roles[] = $role;
-        return $this->set_roles($roles);
-    
+        $this->wp_user->add_role($role);
+        return $this;
+
+    }
+
+    public function remove_role ($role) {
+
+        $this->wp_user->remove_role($role);
+        return $this;
+
     }
 
     public function get_username () {
