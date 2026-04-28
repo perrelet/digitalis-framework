@@ -10,13 +10,22 @@ class Task_Handler extends Singleton {
 
     public function __construct () {
 
-        add_action('current_screen', [$this, 'maybe_process_tasks']);
+        add_action('admin_init', [$this, 'process_tasks']);
 
     }
 
-    public function add_task ($slug, $callback) {
+    public function get_tasks () {
 
-        $this->tasks[$slug] = $callback;
+        return $this->tasks;
+
+    }
+
+    public function add_task ($slug, $callback, $version = 1) {
+
+        $this->tasks[$slug] = [
+            'callback' => $callback,
+            'version'  => $version,
+        ];
 
     }
 
@@ -28,35 +37,46 @@ class Task_Handler extends Singleton {
 
     //
 
-    public function maybe_process_tasks ($screen) {
-
-        if ($screen->id === 'plugins') $this->process_tasks();
-
-    }
-
     public function process_tasks () {
 
-        if ($history = get_option($this->option_name)) foreach ($history as $slug => $timestamp) {
-            
-            if (!isset($this->tasks[$slug])) unset($history[$slug]);
+        $history = get_option($this->option_name, []);
+        $dirty   = false;
+
+        // Prune tasks no longer registered
+
+        foreach ($history as $slug => $entry) {
+            if (!isset($this->tasks[$slug])) {
+                unset($history[$slug]);
+                $dirty = true;
+            }
+        }
+
+        // Run new or updated tasks
+
+        foreach ($this->tasks as $slug => $task) {
+
+            $stored_version = isset($history[$slug]) ? $history[$slug]['version'] : 0;
+
+            if ($stored_version >= $task['version']) continue;
+
+            try {
+                if (is_callable($task['callback'])) call_user_func($task['callback']);
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            $history[$slug] = [
+                'version' => $task['version'],
+                'time'    => time(),
+            ];
+            $dirty = true;
 
         }
 
-        if ($this->tasks) foreach ($this->tasks as $slug => $callback) {
-
-            if (isset($history[$slug]) && $history[$slug]) continue;
-
-            if (is_callable($callback)) call_user_func($callback);
-
-            $history[$slug] = time();
-
-        }
-
-        update_option($this->option_name, $history, false);
+        if ($dirty) update_option($this->option_name, $history, false);
 
     }
 
 }
 
 Task_Handler::get_instance();
-
