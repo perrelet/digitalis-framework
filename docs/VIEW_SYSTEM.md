@@ -377,6 +377,8 @@ public function params(&$p) {
 }
 ```
 
+`params()` is the prepare phase — for shaping data, not emitting markup. Markup belongs in `view()`, a template, or the `before*()` / `after*()` hooks. See [ANTIPATTERNS — Only render markup from the render phase](./ANTIPATTERNS.md#only-render-markup-from-the-render-phase).
+
 ---
 
 ## Template System

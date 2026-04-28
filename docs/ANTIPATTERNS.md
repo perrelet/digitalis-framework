@@ -352,6 +352,29 @@ $view_class = $this->view;
 $view_class::render([...]);
 ```
 
+### Only render markup from the render phase
+
+Rendering belongs in `view()` (or a `$template`) plus the `before_first()` / `before()` / `after()` / `after_first()` hooks. Don't emit markup from `params()`, `condition()`, `permission()`, `required()`, or any other prepare / validate method — they run before `validate()` decides whether to render, so side effects fire even when the view is suppressed and the output sits outside the lifecycle hooks.
+
+```php
+// ❌ Render side effect in a prepare/validate method (same applies to condition(), permission(), required())
+public function params (&$p) {
+    ob_start();
+    ?><div class="x"><?= $p['title'] ?></div><?php
+    $p['content'] = ob_get_clean();
+}
+
+// ✅ Template
+protected static $template = 'my-view';
+
+// ✅ Inline view() — stubs or branchy markup only
+public function view () {
+    ?><div class="x"><?= esc_html($this['title']) ?></div><?php
+}
+```
+
+For `Component` subclasses (whose template renders `$content` as HTML), assigning a string or stringified sub-view to `$p['content']` from `params()` is data, not a render side effect — see [CONVENTIONS](./CONVENTIONS.md#populate-content-via-sub-view-instantiation-in-component-subclasses).
+
 ---
 
 ## Query_Manager / Digitalis_Query
