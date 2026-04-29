@@ -14,6 +14,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/auto-instantiate.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/is-stashable.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/traits/resolvable.trait.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';
@@ -49,6 +50,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/log.service.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/visitor.service.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/objects/request-resolver.singleton.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
@@ -156,6 +158,12 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/radio-buttons.field.php
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/range.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select.field.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select-nice.field.php';
+
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/header.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/footer.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/modals.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/layout.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/page-view.view.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/archive.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/post-archive.archive.php';

@@ -4,9 +4,11 @@ namespace Digitalis;
 
 use ReflectionClass;
 
-abstract class App extends Singleton {
+abstract class App extends Factory {
 
     use Autoloader;
+
+    protected static $cache_group = self::class;
 
     protected $reflection;
     protected $path;
@@ -143,8 +145,36 @@ abstract class App extends Singleton {
             $path  = $this->path . '_bricks-elements';
             $names = $this->get_file_names($path);
             if ($names) foreach ($names as $name) \Bricks\Elements::register_element("{$path}/{$name}");
-        
+
         }, 11);
+
+    }
+
+    // Layout System
+
+    public static function render () {
+
+        $apps = static::get_apps();
+        if (!$apps) return;
+
+        foreach ($apps as $app) {
+            $app->render_app();
+        }
+
+        $resolver     = Request_Resolver::get_instance();
+        $layout_class = $resolver->resolve_layout() ?? Layout::class;
+        $page         = $resolver->resolve_page();
+        $overrides    = $page ? $page::get_layout_overrides() : [];
+
+        echo new $layout_class(['body' => $page] + $overrides);
+
+    }
+
+    public function render_app () {}
+
+    public static function get_apps () {
+
+        return static::get_group_instances();
 
     }
 

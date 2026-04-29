@@ -104,6 +104,8 @@ View (abstract, ArrayAccess)
 │       ├── Date_Picker
 │       └── (more field types...)
 │
+├── Layout             # Page shell — uses Resolvable trait
+├── Page_View          # Request body — uses Resolvable trait
 └── [Application Views]
     ├── Widget
     ├── Invoice_View

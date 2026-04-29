@@ -63,3 +63,27 @@ new \Digitalis\Field\Input([
 ```
 
 Direct instantiation makes the type explicit, is consistent with how views are instantiated, and avoids the indirection of a string class reference inside an array.
+
+---
+
+## Layout & Page_View
+
+### Let auto-specificity handle resolution order — don't set `$priority` unless breaking a tie
+
+`$priority` defaults to `null`, which means specificity is auto-calculated from `$context` and `$post_type` (+10 each). Only set `$priority` when two candidates share the same config and you need one to win (e.g. a condition-narrowed variant).
+
+### Use `$layout` overrides to control shell parts — don't subclass Layout for minor changes
+
+If a Page_View only needs to hide the header or swap the footer, use `$layout` overrides rather than creating a dedicated Layout subclass.
+
+```php
+// Preferred — layout override on the Page_View
+class Fullscreen_Page extends Page_View {
+    protected static $layout = ['header' => false, 'footer' => false];
+}
+
+// Reserve Layout subclasses for structurally different shells
+class Dashboard_Layout extends Layout {
+    protected static $defaults = ['sidebar' => Sidebar::class, 'body' => null];
+}
+```

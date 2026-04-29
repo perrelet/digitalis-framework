@@ -512,6 +512,55 @@ Valid exceptions: low-level utility code where raw IDs or WP objects are explici
 
 ---
 
+## Layout System
+
+### Don't put shell logic in Page_View
+
+Page_View owns the body content. Shell structure (header, footer, navigation chrome) belongs in Layout. Page_View can suppress or swap shell parts via `$layout` overrides, but should not render them.
+
+```php
+// ❌ Page_View rendering its own header
+class My_Page extends Page_View {
+    public function view (): void {
+        echo new Header();
+        // body content
+        echo new Footer();
+    }
+}
+
+// ✅ Page_View renders body only; Layout handles shell
+class My_Page extends Page_View {
+    public function view (): void {
+        // body content only
+    }
+}
+```
+
+### Don't set `$context` or `$post_type` on regular Views
+
+`Resolvable` properties are only meaningful on `Layout` and `Page_View` subclasses — the `Request_Resolver` only considers those two class families. Setting `$context` on a plain `View` or `Component` has no effect.
+
+### Don't set `$priority` when auto-specificity is sufficient
+
+`$priority = null` (the default) calculates specificity from context weight (10–40) + 10 per `$post_type`/`$taxonomy`/`$term`. Only set `$priority` when two candidates share the same config and you need to break the tie (e.g. a condition-narrowed variant).
+
+```php
+// ❌ Redundant — auto-specificity is single (20) + post_type (10) = 30
+class Product_Page extends Page_View {
+    protected static $context   = 'single';
+    protected static $post_type = 'product';
+    protected static $priority  = 30;
+}
+
+// ✅ Auto-specificity handles it
+class Product_Page extends Page_View {
+    protected static $context   = 'single';
+    protected static $post_type = 'product';
+}
+```
+
+---
+
 ## General PHP / Framework
 
 ### Prefix vendor model variables — reserve short names for framework models

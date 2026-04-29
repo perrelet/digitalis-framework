@@ -7,6 +7,12 @@ Complete documentation of all views, components, and fields shipped with the Dig
 ## Table of Contents
 
 - [Overview](#overview)
+- [Layout System Components](#layout-system-components)
+  - [Layout](#layout)
+  - [Page_View](#page_view)
+  - [Header](#header)
+  - [Footer](#footer)
+  - [Modals](#modals)
 - [Built-in Features](#built-in-features)
   - [Turn_Off_Emojicons](#turn_off_emojicons)
 - [Core Views](#core-views)
@@ -54,11 +60,71 @@ The framework provides a comprehensive library of pre-built views organized into
 
 | Category | Purpose | Examples |
 |----------|---------|----------|
+| **Layout System** | Page shell and body rendering | `Layout`, `Page_View`, `Header`, `Footer`, `Modals` |
 | **Core Views** | Debugging, archives, iterators | `Debug`, `Archive`, `Iterator_UI` |
 | **Components** | Reusable UI elements | `Table`, `Menu`, `Form`, `HTMX` |
 | **Fields** | Form inputs | `Input`, `Select`, `Checkbox`, `Date_Picker` |
 
 All built-in views follow the same patterns documented in [VIEW_SYSTEM.md](./VIEW_SYSTEM.md).
+
+---
+
+## Layout System Components
+
+### Layout
+
+**Namespace:** `Digitalis\Layout`
+**File:** `include/views/layout.view.php`
+**Extends:** `View` (uses `Resolvable` trait)
+
+Page shell view. Owns the HTML document structure. Shell parts are class strings in `$defaults` — `params()` instantiates any class string param before render.
+
+```php
+protected static $defaults = [
+    'header' => Header::class,
+    'body'   => null,
+    'footer' => Footer::class,
+    'modals' => Modals::class,
+];
+```
+
+Subclass for different shell structures. Override shell parts via Page_View `$layout` overrides or by passing params directly.
+
+### Page_View
+
+**Namespace:** `Digitalis\Page_View`
+**File:** `include/views/page-view.view.php`
+**Extends:** `View` (uses `Resolvable` trait)
+
+Abstract base for request-specific body content. Declares request context via `Resolvable` static properties (`$context`, `$post_type`, `$priority`). File suffix: `.page-view.php`.
+
+```php
+protected static $layout = [];  // optional layout overrides, e.g. ['header' => false]
+```
+
+### Header
+
+**Namespace:** `Digitalis\Header`
+**File:** `include/views/header.component.php`
+**Extends:** `Component`
+
+Default header shell part. Renders a `<header>` element.
+
+### Footer
+
+**Namespace:** `Digitalis\Footer`
+**File:** `include/views/footer.component.php`
+**Extends:** `Component`
+
+Default footer shell part. Renders a `<footer>` element.
+
+### Modals
+
+**Namespace:** `Digitalis\Modals`
+**File:** `include/views/modals.component.php`
+**Extends:** `Component`
+
+Default modals container. Renders a `<div class="modals">` element.
 
 ---
 

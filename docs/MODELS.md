@@ -140,6 +140,7 @@ class Project extends Post {
 | `get_permalink()` | `string` | Permalink (alias) |
 | `get_edit_url()` | `string` | Admin edit URL |
 | `get_archive_url()` | `string` | Post type archive URL |
+| `get_template_slug()` | `string` | WordPress page template slug |
 
 ### Dates
 

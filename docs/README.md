@@ -59,10 +59,11 @@ Admin area: Admin_Page, Admin_Sub_Page, Posts_Table, Users_Table, Meta_Box, ACF 
 ### [VIEW_SYSTEM.md](./VIEW_SYSTEM.md)
 Complete View system documentation: static properties, inheritance, rendering, lifecycle hooks, validation, Components, Elements, Attributes.
 
-**Key classes:** `View` → `Component` → `Field`
+**Key classes:** `View` → `Component` → `Field` | `Layout`, `Page_View`
 
 ### [BUILTIN_VIEWS.md](./BUILTIN_VIEWS.md)
-Reference for all 30+ built-in views:
+Reference for all built-in views:
+- **Layout System:** Layout, Page_View, Header, Footer, Modals
 - **Core:** Debug, Archive, Iterator_UI, Query_Filters
 - **Components:** Form, Table, Link, Menu, HTMX
 - **Fields:** Input, Select, Checkbox, Radio, Date_Picker, etc.
@@ -88,6 +89,12 @@ Design rationale and trade-off analysis. Human reference only — not required f
 - File naming: [AUTOLOADER.md](./AUTOLOADER.md)
 - Class resolution: [CLASS_RESOLUTION.md](./CLASS_RESOLUTION.md)
 - Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#models)
+
+### Creating Layouts & Page Views
+- Architecture: [ARCHITECTURE.md](./ARCHITECTURE.md#layout-system)
+- Built-in components: [BUILTIN_VIEWS.md](./BUILTIN_VIEWS.md#layout-system-components)
+- Antipatterns: [ANTIPATTERNS.md](./ANTIPATTERNS.md#layout-system)
+- Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#layouts)
 
 ### Creating Views
 - Full docs: [VIEW_SYSTEM.md](./VIEW_SYSTEM.md)

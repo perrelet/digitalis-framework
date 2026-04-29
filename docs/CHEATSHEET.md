@@ -14,6 +14,7 @@ Copy-paste patterns for common tasks.
 - [Admin](#admin)
 - [REST Routes](#rest-routes)
 - [WooCommerce](#woocommerce)
+- [Layouts](#layouts)
 - [Queries](#queries)
 - [Hooks](#hooks)
 
@@ -807,6 +808,96 @@ class Invoice extends Order {
             'order_id' => $this->get_id(),
             'nonce'    => wp_create_nonce('invoice_' . $this->get_id()),
         ], admin_url('admin-ajax.php'));
+    }
+}
+```
+
+---
+
+## Layouts
+
+### Basic Page_View
+
+**File:** `include/views/product-page.page-view.php`
+
+```php
+namespace Digitalis;
+
+class Product_Page extends Page_View {
+    protected static $context   = 'single';
+    protected static $post_type = 'product';
+
+    public function view (): void {
+        // render product page body
+    }
+}
+```
+
+### Page_View with Layout Overrides
+
+**File:** `include/views/fullscreen-page.page-view.php`
+
+```php
+namespace Digitalis;
+
+class Fullscreen_Page extends Page_View {
+    protected static $context = 'page';
+
+    protected static $layout = [
+        'header' => false,
+        'footer' => false,
+    ];
+
+    public function condition (): bool {
+        return get_field('layout', get_the_ID()) === 'fullscreen';
+    }
+
+    public function view (): void {
+        // render fullscreen content
+    }
+}
+```
+
+### Custom Layout
+
+**File:** `include/views/dashboard-layout.layout.php`
+
+```php
+namespace Digitalis;
+
+class Dashboard_Layout extends Layout {
+    protected static $context = 'page';
+
+    protected static $defaults = [
+        'sidebar' => Sidebar::class,
+        'body'    => null,
+    ];
+
+    public function condition (): bool {
+        return current_user_can('manage_options');
+    }
+
+    public function view (): void { ?>
+        <div class="dashboard">
+            <?php if ($this['sidebar']) echo $this['sidebar']; ?>
+            <main><?php if ($this['body']) echo $this['body']; ?></main>
+        </div>
+    <?php }
+}
+```
+
+### 404 Fallback
+
+**File:** `include/views/not-found.page-view.php`
+
+```php
+namespace Digitalis;
+
+class Not_Found extends Page_View {
+    protected static $context = '404';
+
+    public function view (): void {
+        echo '<h1>Page not found</h1>';
     }
 }
 ```

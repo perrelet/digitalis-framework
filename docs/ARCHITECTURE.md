@@ -21,7 +21,8 @@ framework/
 │   │   ├── Service.abstract.php
 │   │   ├── Feature.abstract.php
 │   │   ├── Integration.abstract.php
-│   │   └── App.abstract.php
+│   │   ├── App.abstract.php
+│   │   └── Request_Resolver.singleton.php
 │   │
 │   ├── patterns/          # Design pattern implementations
 │   │   ├── Design_Pattern.abstract.php
@@ -33,7 +34,8 @@ framework/
 │   │   ├── Has_WP_Hooks.trait.php
 │   │   ├── Has_Meta.trait.php
 │   │   ├── Has_Models.trait.php
-│   │   └── Dependency_Injection.trait.php
+│   │   ├── Dependency_Injection.trait.php
+│   │   └── Resolvable.trait.php
 │   │
 │   ├── utils/             # Utility classes
 │   │   ├── Utility.abstract.php
@@ -58,6 +60,11 @@ framework/
 │   ├── views/             # View rendering system
 │   │   ├── View.abstract.php
 │   │   ├── Route.abstract.php
+│   │   ├── Layout.view.php
+│   │   ├── Page_View.view.php
+│   │   ├── Header.component.php
+│   │   ├── Footer.component.php
+│   │   ├── Modals.component.php
 │   │   ├── components/    # UI components
 │   │   └── fields/        # Form field classes
 │   │
@@ -144,10 +151,14 @@ abstract class Factory extends Design_Pattern {
     public static function get_instance_map() {
         // Returns ['group' => ['key' => ClassName]] map of all cached instances
     }
+
+    public static function get_group_instances($group = null) {
+        // Returns all instances in a cache group (used by App::get_apps())
+    }
 }
 ```
 
-`$cache_group` allows subclass families to share or isolate their instance caches. Override it to prevent cross-class cache collisions.
+`$cache_group` allows subclass families to share or isolate their instance caches. Override it to prevent cross-class cache collisions. `get_group_instances()` retrieves all instances registered under a group — used by `App` to discover all active plugin Apps.
 
 ### 3. Model Pattern
 
@@ -207,6 +218,8 @@ View (implements ArrayAccess)
 │   └── Field          # Form fields with validation
 │       ├── Input, Textarea, Select...
 │       └── (19+ field types)
+├── Layout             # Page shell (header/body/footer/modals) — uses Resolvable
+├── Page_View          # Request body — uses Resolvable
 └── [Custom Views]     # Application-specific views
 ```
 
@@ -297,6 +310,90 @@ Hooks are namespaced using the class name:
 $this->add_hook('my_event', 'handle_event');
 // Registers: digitalis.my_feature.my_event
 ```
+
+---
+
+## Layout System
+
+The Layout System makes Lattice the primary rendering layer for WordPress. WordPress provides content and request context; Lattice owns the application and rendering; the theme is a thin adapter.
+
+### Rendering Flow
+
+```
+WordPress Request
+    │
+Theme index.php → App::render()
+    │
+    ├── foreach App: render_app()     # context setup
+    │
+    ├── Request_Resolver
+    │   ├── resolve_layout() → Layout subclass (or default)
+    │   └── resolve_page()   → Page_View instance
+    │
+    └── Layout (View)
+        ├── Header
+        ├── Page_View (body)
+        ├── Footer
+        └── Modals
+```
+
+### App Coordination
+
+`App` extends `Factory` (not `Singleton`). All Apps share a single cache group (`protected static $cache_group = self::class`) so the base `Digitalis\App` can discover all active plugin Apps.
+
+`App::render()` is static — called from the theme. It iterates all registered Apps via `render_app()`, then resolves and renders the page:
+
+```php
+public static function render () {
+    $apps = static::get_apps();
+    if (!$apps) return;
+
+    foreach ($apps as $app) {
+        $app->render_app();
+    }
+
+    $resolver     = Request_Resolver::get_instance();
+    $layout_class = $resolver->resolve_layout() ?? Layout::class;
+    $page         = $resolver->resolve_page();
+    $overrides    = $page ? $page::get_layout_overrides() : [];
+
+    echo new $layout_class(['body' => $page] + $overrides);
+}
+```
+
+### Resolvable Trait
+
+Used by both `Layout` and `Page_View`. Declares static routing properties (`$context`, `$post_type`, `$taxonomy`, `$term`, `$priority`) and provides auto-specificity calculation.
+
+Auto-specificity sums: context weight + 10 per set `$post_type`/`$taxonomy`/`$term`. Context weights from `$context_weights`:
+
+| Context | Weight | Tier |
+|---------|--------|------|
+| `archive` | 10 | Broadest |
+| `single`, `home` | 20 | Broad |
+| `author`, `taxonomy`, `page`, `search` | 30 | Narrow |
+| `front_page`, `404` | 40 | Most specific |
+
+Specificity uses the best *matched* context weight — a view declaring `['home', 'archive']` that matches via `archive` gets weight 10, not 20. `$priority` defaults to `null` (auto-specificity). Setting it to any integer overrides auto-specificity entirely.
+
+All properties accept strings or arrays: `$context = ['home', 'archive']`, `$post_type = ['post', 'page']`.
+
+### Request_Resolver
+
+A `Singleton`. Discovers candidates via `View::get_loaded_views()`, pre-filters by context/post_type/taxonomy/term, sorts by specificity descending, instantiates each and calls `condition()` — first truthy match wins.
+
+- `resolve_layout()` — returns Layout subclass name or `null` (falls back to base `Layout`)
+- `resolve_page()` — returns Page_View instance or `null`
+
+`get_current_context()` returns an array of **all** matching WordPress contexts — a request can match multiple (e.g. `['front_page', 'home', 'archive']`). The `taxonomy` context covers `is_tax() || is_category() || is_tag()`. On taxonomy archives, post_type is resolved from the taxonomy's registered `object_type`.
+
+### Layout
+
+A `View` using `Resolvable`. Owns the page shell. Shell parts are class strings in `$defaults` — `params()` instantiates any class string param before render. Page_Views can override shell parts via `get_layout_overrides()`.
+
+### Page_View
+
+An abstract `View` using `Resolvable`. Owns the body content. Declares request context via static properties. File suffix: `.page-view.php`.
 
 ---
 
@@ -666,11 +763,10 @@ Request
     ┌────┴──────────────────────────────┐
     │  context branch                   │
     ▼          ▼        ▼       ▼       ▼
- [CLI]      [Cron]   [Ajax]  [REST] [Admin/Front]
-    │          │        │       │       │
-    ▼          ▼        ▼       ▼       ▼
- boot_cli  boot_cron boot_ajax boot_rest boot_admin
-                                        boot_front
+ [CLI]      [Cron]   [Ajax]  [REST] [Admin] [Front]
+    │          │        │       │      │       │
+    ▼          ▼        ▼       ▼      ▼       ▼
+ boot_cli  boot_cron boot_ajax boot_rest boot_admin boot_front
          │
     ┌────┴────┐
     │         │
@@ -686,6 +782,17 @@ Request
 │(Actions/ │  │(Render) │
 │ Filters) │  │         │
 └──────────┘  └─────────┘
+
+Front-end rendering (theme calls App::render()):
+
+┌──────────────────────────────────────────┐
+│ App::render()                            │
+│ ├── foreach App: render_app()            │
+│ ├── Request_Resolver                     │
+│ │   ├── resolve_layout() → Layout class  │
+│ │   └── resolve_page()   → Page_View     │
+│ └── echo Layout(body: Page_View)         │
+└──────────────────────────────────────────┘
 ```
 
 ---

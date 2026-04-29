@@ -14,7 +14,7 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `App` | `Singleton` | Base plugin class; provides autoloader entry point | yes |
+| `App` | `Factory` | Base plugin class; provides autoloader entry point and rendering coordination | yes |
 
 ### WordPress Models
 
@@ -56,6 +56,15 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 |-------|---------|---------|:----:|
 | `Editor` | `Singleton` | Abstract base for page editor integrations (Bricks, Elementor, Oxygen, …); override `instance_condition()`, `is_backend()`, `is_backend_content()`, `is_backend_ui()` | yes |
 | `Editor_Manager` | `Singleton` | Discovers all active `Editor` instances; proxies `add_colors()`, `add_variables()`, `add_classes()`, etc. to every active editor | yes |
+
+### Layout System
+
+| Class | Extends | Purpose | Auto |
+|-------|---------|---------|:----:|
+| `Layout` | `View` | Page shell (header/body/footer/modals); uses `Resolvable` | |
+| `Page_View` | `View` | Abstract request-specific body content; uses `Resolvable` | |
+| `Request_Resolver` | `Singleton` | Resolves Layout and Page_View from request context | yes |
+| `Resolvable` | Trait | Context/post_type/priority routing with auto-specificity | — |
 
 ### Utilities
 
@@ -169,6 +178,8 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 | `woo-account-page` | `Digitalis\Woo_Account_Page` |
 | `acf-block` | `Digitalis\ACF_Block` |
 | `shortcode` | `Digitalis\Shortcode` |
+| `layout` | `Digitalis\Layout` |
+| `page-view` | `Digitalis\Page_View` |
 | `iterator` | `Digitalis\Iterator` |
 | `post-iterator` | `Digitalis\Post_Iterator` |
 | `user-iterator` | `Digitalis\User_Iterator` |
@@ -226,6 +237,69 @@ protected static $name        = null;                   // display name in the e
 public function params(array &$p): void  // transform/add params before render; MUST call parent::params($p)
 public function condition(): bool        // return false to suppress all output
 public function view(): void             // inline markup (used when no $template)
+```
+
+### Resolvable (Trait)
+
+Used by `Layout` and `Page_View`. Provides routing properties and auto-specificity.
+
+```php
+protected static $context   = null;      // string|array: '404', 'search', 'front_page', 'home', 'page', 'single', 'taxonomy', 'author', 'archive'
+protected static $post_type = null;      // string|array: post type slug(s) or null for all
+protected static $taxonomy  = null;      // string|array: taxonomy slug(s) or null for all
+protected static $term      = null;      // string|array: term slug(s) or null for all
+protected static $priority  = null;      // null = auto-specificity; integer = absolute override
+
+Resolvable::get_context()
+Resolvable::get_post_type()
+Resolvable::get_taxonomy()
+Resolvable::get_term()
+Resolvable::get_priority()
+Resolvable::get_specificity($request_contexts)  // context weight (10–40) + 10 per post_type/taxonomy/term; or $priority if non-null
+```
+
+Context weights (from `$context_weights`): `archive` 10, `single`/`home` 20, `author`/`taxonomy`/`page`/`search` 30, `front_page`/`404` 40. Specificity uses the best matched context weight, not all declared contexts.
+
+### Layout
+
+```php
+class Layout extends View {
+    use Resolvable;
+
+    protected static $defaults = [
+        'header' => Header::class,       // class string → instantiated in params()
+        'body'   => null,                // Page_View instance from resolver
+        'footer' => Footer::class,
+        'modals' => Modals::class,
+    ];
+}
+```
+
+### Page_View
+
+```php
+abstract class Page_View extends View {
+    use Resolvable;
+
+    protected static $layout = [];       // layout override keys (e.g. ['header' => false])
+
+    Page_View::get_layout_overrides()    // returns static::$layout
+}
+```
+
+### Request_Resolver
+
+```php
+Request_Resolver::get_instance()->resolve_layout()   // returns Layout subclass name (string) or null
+Request_Resolver::get_instance()->resolve_page()     // returns Page_View instance or null
+```
+
+### App (Layout System)
+
+```php
+App::render()          // static; coordinates all apps, resolves layout + page, echoes output
+$app->render_app()     // override in plugin App subclasses to participate in rendering
+App::get_apps()        // returns all active App instances via Factory cache group
 ```
 
 ### Route
@@ -343,6 +417,9 @@ Skipping it silently drops any param transformations defined in parent classes.
 **`Query_Vars::merge()` combines arrays; `overwrite()` replaces unconditionally.**
 `merge(['post_status' => 'draft'])` on an existing `'publish'` produces `['publish', 'draft']`.
 
+**`Resolvable::$priority = null` means auto-specificity; an integer is an absolute override.**
+Auto-specificity sums: context weight (10–40 from `$context_weights`, using the best matched context) + 10 per set `$post_type`/`$taxonomy`/`$term`. Setting `$priority` to any integer (including `0`) bypasses auto-specificity entirely.
+
 **`Query_Profile` subclasses must be instantiated at boot to register.**
 Defining the class is not enough — call `My_Profile::get_instance()` during plugin initialisation.
 
@@ -404,7 +481,7 @@ Examples:
 
 | Need | File |
 |------|------|
-| Architecture, directory structure, design patterns | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
+| Architecture, directory structure, design patterns, layout system | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
 | File naming, load order, auto-instantiation | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) |
 | Post / User / Term / Order method reference | [docs/MODELS.md](./docs/MODELS.md) |
 | View system — full reference | [docs/VIEW_SYSTEM.md](./docs/VIEW_SYSTEM.md) |

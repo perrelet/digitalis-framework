@@ -51,6 +51,9 @@ your-plugin/
 | `Route` | `Factory` | REST API endpoint |
 | `Shortcode` | `Factory` | WordPress shortcode |
 | `ACF_Block` | `Factory` | Gutenberg block via ACF |
+| `Layout` | `View` | Page shell (header/body/footer/modals) |
+| `Page_View` | `View` | Request-specific body content |
+| `Request_Resolver` | `Singleton` | Layout/Page_View resolution from request context |
 | `Post_Type`, `Taxonomy` | `Singleton` | Registration classes |
 | `Admin_Page` | `Factory` | Admin menu page |
 | `Posts_Table`, `Users_Table` | `Screen_Table` | Admin list table columns |
@@ -102,4 +105,5 @@ Everything in `include/` loads automatically from that point. File naming drives
 | [`docs/HOOKS.md`](./docs/HOOKS.md) | Feature, Integration, hook patterns |
 | [`docs/ADMIN.md`](./docs/ADMIN.md) | Admin pages, tables, ACF |
 | [`docs/UTILITIES.md`](./docs/UTILITIES.md) | Query_Vars, DI, batch processing |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Architecture, layout system, design patterns |
 | [`docs/README.md`](./docs/README.md) | Full documentation index |
