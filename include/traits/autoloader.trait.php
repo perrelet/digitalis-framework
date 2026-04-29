@@ -18,9 +18,10 @@ trait Autoloader {
         if ($depth && basename($path)[0] == '_') return $objs;
 
         if ($names = $this->get_file_names($path, $ext)) foreach ($names as $name) {
-        
-            if ($obj = $this->load_class($path . '/' . $name)) $objs[] = $obj;
-        
+
+            $obj = $this->load_class($path . '/' . $name);
+            if (is_object($obj)) $objs[] = $obj;
+
         }
 
         if ($recursive) foreach (glob($path . '/*', GLOB_ONLYDIR) as $dir) {
@@ -107,7 +108,7 @@ trait Autoloader {
 
         if ($instantiation === false) {
 
-            return false;
+            return $class_name;
 
         } elseif ($instantiation === true) {
 

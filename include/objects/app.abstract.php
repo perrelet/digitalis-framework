@@ -126,11 +126,23 @@ abstract class App extends Factory {
 
     //
 
-    public function load_feature ($file, $instantiate = null) {
+    public function load_feature ($file, $options = []) {
 
-        if (is_null($instantiate)) $instantiate = 'get_instance';
+        $paths = apply_filters('lattice.feature.paths', [DIGITALIS_LIBRARY_PATH]);
+        $file  = ltrim($file, '/');
 
-        return $this->load_class(DIGITALIS_LIBRARY_PATH . $file, $instantiate);
+        foreach ($paths as $base) {
+
+            $path = realpath($base . $file);
+            if (!is_file($path)) continue;
+
+            $feature = $this->load_class($path, false);
+            if (class_exists($feature)) {
+                $feature::create($options);
+                return $feature;
+            }
+
+        }
 
     }
 
