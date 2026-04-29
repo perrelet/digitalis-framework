@@ -606,6 +606,14 @@ trait Has_WP_Post {
 
     }
 
+    // Templates
+
+    public function get_template_slug () {
+
+        return get_page_template_slug($this->wp_post);
+
+    }
+
     // Password Protection
 
     public function is_password_protected () {
