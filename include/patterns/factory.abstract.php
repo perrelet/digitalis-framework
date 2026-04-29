@@ -12,6 +12,13 @@ abstract class Factory extends Creational {
     protected static $cache_group = '__global__';
     protected static $cache_property = null;
 
+    public static function get_group_instances ($group = null) {
+
+        $group ??= static::$cache_group;
+        return self::$instances[$group] ?? [];
+
+    }
+
     public static function get_instance_map () {
 
         $map = [];
