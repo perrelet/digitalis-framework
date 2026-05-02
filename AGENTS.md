@@ -6,6 +6,20 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 
 ---
 
+## Before you write code
+
+This primer is a map, not the territory. Before adding files or editing framework internals, read these — in order — and treat them as required, not optional reference:
+
+| File | Why it's mandatory |
+|------|--------------------|
+| [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | File naming suffixes are load-bearing. Get them wrong and the autoloader silently skips your file — no error, no instance, just nothing. |
+| [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, `parent::params()` skips, etc.). |
+| [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. `new My_View([...])` over `My_View::render([...])`). |
+
+Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The three docs above are where the framework's failure modes live.
+
+---
+
 ## Class Hierarchy
 
 "Auto-instantiated" means the autoloader creates a singleton instance on load — no manual bootstrapping needed.
@@ -157,6 +171,8 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 ## File Naming
 
 `kebab-case-name.parent-identifier.php` — the parent identifier encodes the inheritance relationship for the autoloader's topological sort.
+
+> ⚠️ **Suffixes are load-bearing, not stylistic.** A file named `my-thing.app.php` is parsed as a subclass of `App`; renaming it to `my-thing-app.php` or `lattice-app.php` makes the autoloader silently ignore it — no error, no instance, no warning. If your class never seems to load, check the suffix first. See [docs/AUTOLOADER.md](./docs/AUTOLOADER.md).
 
 | Identifier | Framework class |
 |------------|----------------|
