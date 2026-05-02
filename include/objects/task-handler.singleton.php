@@ -62,6 +62,15 @@ class Task_Handler extends Singleton {
             try {
                 if (is_callable($task['callback'])) call_user_func($task['callback']);
             } catch (\Throwable $e) {
+                Log::w(sprintf(
+                    "[%s] %s: %s in %s:%d\n%s",
+                    $slug,
+                    get_class($e),
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine(),
+                    $e->getTraceAsString()
+                ), 'task-handler.log');
                 continue;
             }
 
