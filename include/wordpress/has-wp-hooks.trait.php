@@ -44,8 +44,10 @@ trait Has_WP_Hooks {
 
     public function build_hook_name (&$hook_name) {
 
-        if (is_array($hook_name)) $hook_name = implode($this->hook_delimiter, $hook_name);
-        $hook_name = $this->sanitize_hook_name($hook_name);
+        if (is_array($hook_name)) {
+            $hook_name = implode($this->hook_delimiter, $hook_name);
+            $hook_name = $this->sanitize_hook_name($hook_name);
+        }
 
     }
 
