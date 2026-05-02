@@ -7,6 +7,7 @@ The Digitalis Framework uses a custom inheritance-aware autoloader that automati
 ## Table of Contents
 
 - [Overview](#overview)
+- [Common Confusions](#common-confusions)
 - [File Naming Convention](#file-naming-convention)
 - [Inheritance Resolution](#inheritance-resolution)
 - [Directory Conventions](#directory-conventions)
@@ -36,6 +37,39 @@ The autoloader is implemented as the `Autoloader` trait, used by the `App` abstr
 | `Autoloader` trait | `include/traits/Autoloader.trait.php` | Main autoloading logic |
 | `App` abstract | `include/objects/App.abstract.php` | Base plugin class using trait |
 | `Auto_Instantiate` trait | `include/traits/auto-instantiate.trait.php` | Default instantiation behavior |
+
+---
+
+## Common Confusions
+
+Five behaviours the autoloader handles invisibly that an agent will get wrong on first contact. Each is a one-line "wrong assumption → reality."
+
+### `$this->path` is the App-subclass file's location, not the plugin root
+
+> **Wrong assumption:** `$this->path` resolves to the plugin root directory.
+> **Reality:** `App::__construct()` sets `$this->path = plugin_dir_path( (new ReflectionClass(static::class))->getFileName() )` — the directory of the App-subclass file itself.
+
+If `my-plugin.app.php` lives at `<plugin>/include/my-plugin.app.php`, `$this->path` is `<plugin>/include/`. The default `autoload()` recurses from that path, so the App-subclass file's location determines the autoload root.
+
+### `.parent.php` suffixes are load-bearing, not stylistic
+
+> **Wrong assumption:** `my-thing-app.php` and `my-thing.app.php` are equivalent.
+> **Reality:** The autoloader parses the dotted suffix to build the inheritance graph and topologically sort load order. A name without a parent identifier is not treated as a subclass definition — the file is silently skipped during inheritance-aware loading. No error, no warning.
+
+### `_dirname/` is skipped during recursive autoload
+
+> **Wrong assumption:** the leading underscore is naming flavour; files inside still load.
+> **Reality:** `autoload()` skips any directory whose name starts with `_`. Use it for code that must be loaded explicitly later (e.g. `_admin/` loaded by the default `load_admin()`, `_cli/` by `load_cli()`).
+
+### `~dirname/` loads only when the matching plugin is active
+
+> **Wrong assumption:** the leading tilde is naming flavour; the directory always loads.
+> **Reality:** The autoloader strips the `~` and matches the remainder against the directory names of active plugins (`get_plugins()` + `is_plugin_active()`). `~woocommerce/` loads only if WooCommerce is active; if the plugin is absent or deactivated, the entire directory is silently ignored — no fatal, no missing-class noise.
+
+### `hello()` and `static_init()` fire after include — no instance required
+
+> **Wrong assumption:** lifecycle hooks need an instance to run.
+> **Reality:** Immediately after `include_once`, the autoloader calls `ClassName::hello()` and then `ClassName::static_init()` if those static methods exist — before any instantiation, regardless of `get_auto_instantiation()`. Use them for static-time registration (`register_post_type()`, hooks bound to `[static::class, '…']`) that doesn't need an instance.
 
 ---
 
