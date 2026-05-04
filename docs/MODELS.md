@@ -6,6 +6,7 @@ Quick reference for model classes and their available methods.
 
 ## Table of Contents
 
+- [Common Confusions](#common-confusions)
 - [Model Hierarchy](#model-hierarchy)
 - [Getting Instances](#getting-instances)
 - [Post Model](#post-model)
@@ -19,6 +20,104 @@ Quick reference for model classes and their available methods.
 - [ACF Fields](#acf-fields)
 - [Meta Data](#meta-data)
 - [Extending Models](#extending-models)
+
+---
+
+## Common Confusions
+
+The traps that bite new agents most often when reaching for model methods. Each entry is a one-line "wrong assumption → reality" with a sketch — full code and rationale live in [ANTIPATTERNS.md](./ANTIPATTERNS.md).
+
+### `query()` returns a plain `static[]` — not a fluent builder
+
+**Wrong assumption:** `Post::query()` returns a chainable builder (`->where_meta()`, `->limit()`, `->get()`).
+**Reality:** It returns an array of model instances. Pass `WP_Query` args directly. Need `found_posts` after a paged query? Pass `&$wp_query` as the second argument.
+
+```php
+// ❌ Methods don't exist
+Post::query()->where_meta('status', 'active')->limit(10)->get();
+
+// ✅
+$posts = Post::query(['meta_query' => [['key' => 'status', 'value' => 'active']], 'posts_per_page' => 10]);
+
+// ✅ Capture the underlying WP_Query for found_posts
+$posts = Post::query(['posts_per_page' => 10], $wp_query);
+$total = $wp_query->found_posts;
+```
+
+### `$model->save()` — not `wp_update_post()` / `wp_update_user()` / `wp_update_term()`
+
+**Wrong assumption:** Bare WP update functions are interchangeable with the model's `save()`.
+**Reality:** `save()` wraps the WP function, threads the model's ID through, and keeps cached instance state coherent. Calling the WP function directly bypasses the model layer and forces the call site to manage the ID.
+
+```php
+// ❌ Bypasses the model — ID has to be passed manually
+wp_update_post(['ID' => $project->get_id(), 'post_status' => 'publish']);
+wp_update_user(['ID' => $user->get_id(), 'display_name' => 'Jane']);
+wp_update_term($term->get_id(), 'category', ['name' => 'Featured']);
+
+// ✅
+$project->save(['post_status' => 'publish']);
+$user->save(['display_name' => 'Jane']);
+$term->save(['name' => 'Featured']);
+```
+
+One narrow exception: inside a `wp_after_insert_post` callback, write only the field you're changing — see [the dedicated antipattern](./ANTIPATTERNS.md#has_wp_post-post-model--save-inside-wp_after_insert_post).
+
+### Meta and ACF — wrap named keys in model methods, never raw key strings at call sites
+
+**Wrong assumption:** `get_meta('foo')` and `get_field('bar')` are clean enough to call from anywhere.
+**Reality:** Generic accessors (`get_meta()`, `update_meta()`, `get_field()`, `update_field()`, options, transients) and their bare WP equivalents (`get_post_meta()`, `update_user_meta()`, etc.) are implementation details. Add named methods to the model so call sites work with concepts, not strings.
+
+```php
+// ❌ The same key string appears in features, routes, post types — every grep is brittle
+if ($user->get_meta('mycelium_onboarding_source') === 'self_registered') { ... }
+$user->update_meta('mycelium_onboarding_source', 'invite');
+$phone = $user->get_field('phone');
+
+// ✅ Key strings live once, on the model
+if ($user->get_onboarding_source() === 'self_registered') { ... }
+$user->set_onboarding_source('invite');
+$phone = $user->get_phone();
+```
+
+**Exception:** keys that are private plumbing of a single class — written and consumed entirely within that one flow (e.g. a short-lived token in `Email_Confirmation`) — may stay as raw calls. The test: would another class care about this key? If yes, wrap it.
+
+### Vendor-prefixed variable names — short names belong to framework models
+
+**Wrong assumption:** Variable naming is stylistic; `$user`, `$post`, `$order` can hold either a framework instance or a `WP_User` / `WP_Post` / `WC_Order`.
+**Reality:** Short names are reserved for framework model instances. Vendor objects take a prefix so the type is unambiguous at a glance.
+
+```php
+// ❌ Both directions wrong
+$user          = get_userdata($id);          // WP_User stored under a framework name
+$mycelium_user = User::get_instance($id);    // framework instance under a noisy prefix
+
+// ✅
+$wp_user = get_userdata($id);                // vendor prefix
+$user    = User::get_instance($id);          // framework model gets the short name
+```
+
+| Variable | Type |
+|----------|------|
+| `$wp_user` / `$wp_post` / `$wp_term` | `WP_User` / `WP_Post` / `WP_Term` |
+| `$wc_product` / `$wc_order` / `$wc_customer` | `WC_Product` / `WC_Order` / `WC_Customer` |
+| `$user` / `$post` / `$term` / `$order` | framework model instance |
+
+### `Post::get_instance($id)` auto-resolves to the most specific subclass
+
+**Wrong assumption:** `Post::get_instance($id)` returns a plain `Post` regardless of post type.
+**Reality:** Class resolution walks all registered subclasses and returns the most specific match (e.g. a `Project` instance for a post with `post_type = 'project'`). Pass `false` as the second argument to force the base class.
+
+```php
+// Auto-resolved
+$post = Post::get_instance($id);          // Project if post_type='project', else Post
+$user = User::get_instance($id);          // Account if role='account', else User
+
+// Force base class
+$post = Post::get_instance($id, false);   // Always Post, skips resolution
+```
+
+Resolution depends on subclass `validate_id()` — keep it cheap (one `get_post_type()` call is fine; nested queries multiply across every registered subclass).
 
 ---
 
