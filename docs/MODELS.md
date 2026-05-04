@@ -14,6 +14,7 @@ Quick reference for model classes and their available methods.
 - [Term Model](#term-model)
 - [Order Model](#order-model)
 - [Customer Model](#customer-model)
+- [ACF_Row Model](#acf_row-model)
 - [Shared Methods](#shared-methods)
 - [ACF Fields](#acf-fields)
 - [Meta Data](#meta-data)
@@ -38,7 +39,10 @@ Model
 │   └── Term          # WordPress terms
 │       └── [Custom]  # Project_Category, etc.
 │
-└── Order             # WooCommerce orders (not WP_Model)
+├── Order             # WooCommerce orders (not WP_Model)
+│
+└── ACF_Row           # ACF repeater rows (parent-attached, not WP_Model)
+    └── [Custom]      # Milestone, Phase, etc.
 ```
 
 ---
@@ -621,6 +625,91 @@ $orders = $customer->get_orders([
 
 ---
 
+## ACF_Row Model
+
+Wraps a single row of an ACF repeater field as a Model instance. Lets you attach typed methods to row data and persist changes through the framework rather than passing raw arrays around.
+
+Extends `Model` directly (not `WP_Model` — rows aren't WP entities). Parent can be any Post/User/Term instance.
+
+### Class Properties
+
+```php
+class Milestone extends ACF_Row {
+    protected static $repeater = 'milestones';   // Required for subclasses; ACF field name + auto-resolution discriminator
+
+    public function get_title ()  { return $this->get_field('title'); }
+    public function get_status () { return $this->get_field('status'); }
+    public function is_done ()    { return $this->get_status() === 'done'; }
+}
+```
+
+The base `ACF_Row` class is instantiable — use it directly for ad-hoc access without defining a subclass.
+
+### Getting Rows
+
+```php
+// Via the parent — preferred
+$rows = $project->get_field_rows('milestones', Milestone::class);
+$rows = $project->get_field_rows('milestones');                      // generic ACF_Row instances
+
+// Via the row class
+$rows = Milestone::query_for($project);
+$rows = Milestone::query_for($project, ['status' => 'open']);        // in-memory equality filter
+
+// Direct instantiation (uncommon)
+$row  = Milestone::get_instance(['parent' => $project, 'index' => 3]);
+$new  = Milestone::create(['parent' => $project, 'data' => [...]]);
+```
+
+### Field Access
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_field($key)` | `mixed` | Subfield value from in-memory row data |
+| `get_data()` | `array` | Full row data array |
+| `set_field($key, $value)` | `$this` | Stage a subfield change; mark dirty |
+| `set_fields($data)` | `$this` | Stage multiple subfield changes |
+| `update_field($key, $value)` | `$this\|false` | Stage + immediately `save()` |
+| `update_fields($data)` | `$this\|false` | Stage multiple + immediately `save()` |
+
+> **Naming convention:** `set_xxx` stages (matches `WP_Model::set_title` etc.); `update_xxx` writes immediately (matches `Has_ACF_Fields::update_field`). `update_field` flushes the entire row including any prior `set_field` changes.
+
+### Identity
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_parent()` | `Model` | Parent Post/User/Term instance |
+| `get_index()` | `int\|null` | 0-based row position; null until saved |
+| `get_selector()` | `string` | This row's repeater field name |
+
+### State
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `is_new()` | `bool` | Not yet saved to DB |
+| `is_dirty()` | `bool` | Has staged changes |
+| `is_saved()` | `bool` | Persisted and clean |
+
+### CRUD
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `save()` | `$this\|false` | Insert (`add_row`) or update (`update_row`) the row |
+| `delete()` | `bool` | Remove the row via `delete_row`; sibling indexes shift |
+| `reload()` | `$this` | Re-read row data from the parent |
+
+### ID Format
+
+Composite string: `acf:{type}:{selector}:{parent_id}:{index}` — e.g. `acf:post:milestones:42:3`. The parent type (`post`/`user`/`term`) is read from `$parent->get_wp_meta_type()` at compose time and used during hydration to look up the right framework class. No per-subclass `$parent_class` config needed.
+
+### Caveats
+
+- **Sibling staleness on delete:** `delete()` clears the deleted instance's cache slot, but cached siblings still point to indexes that have shifted. Re-query after deletion.
+- **Unsaved parents:** `save()` returns `false` if the parent's `get_acf_id()` returns null (i.e., parent isn't yet persisted). Save the parent first.
+- **In-memory criteria filter:** `query_for($parent, $criteria)` loads all rows then filters in PHP. No cross-parent query (would require `meta_query LIKE` on flat ACF subkeys).
+
+---
+
 ## Shared Methods
 
 Available on Post, User, and Term via `WP_Model`:
@@ -872,6 +961,45 @@ class Invoice extends Order {
 }
 ```
 
+### Custom ACF_Row Model
+
+```php
+namespace Digitalis;
+
+class Milestone extends ACF_Row {
+    protected static $repeater = 'milestones';
+
+    public function get_title (): string  { return $this->get_field('title') ?: ''; }
+    public function get_status (): string { return $this->get_field('status') ?: 'open'; }
+    public function get_due_date (): ?\DateTime {
+        $raw = $this->get_field('due_date');
+        return $raw ? new \DateTime($raw) : null;
+    }
+
+    public function is_overdue (): bool {
+        return $this->get_status() !== 'done'
+            && ($due = $this->get_due_date())
+            && $due < new \DateTime();
+    }
+
+    public function complete (): self {
+        return $this->update_fields([
+            'status'       => 'done',
+            'completed_at' => current_time('mysql'),
+        ]);
+    }
+}
+
+// Usage
+$open    = Milestone::query_for($project, ['status' => 'open']);
+$overdue = array_filter($open, fn ($m) => $m->is_overdue());
+
+Milestone::create([
+    'parent' => $project,
+    'data'   => ['title' => 'Phase 1', 'status' => 'open'],
+])->save();
+```
+
 ---
 
 ## Quick Reference Card
@@ -919,4 +1047,11 @@ $order->get_billing_email()
 $customer->get_orders()
 $customer->has_ordered($product_id)
 $customer->get_billing_address_1()
+
+// ACF_Row
+$rows = $post->get_field_rows('milestones', Milestone::class)
+$row->get_field('status')
+$row->set_field('status', 'done')->save()
+$row->update_field('status', 'done')   // stage + save in one call
+$row->delete()
 ```

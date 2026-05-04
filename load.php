@@ -73,6 +73,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/objects/element.class.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-row.model.php';
+
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/editors/control-mapper.interface.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/editors/control-mapper.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor.interface.php';

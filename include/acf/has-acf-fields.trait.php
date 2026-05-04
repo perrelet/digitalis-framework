@@ -46,6 +46,23 @@ trait Has_ACF_Fields {
 
     }
 
+    public function get_field_rows ($selector, $row_class = ACF_Row::class) {
+
+        $rows = $this->get_field($selector);
+        if (!is_array($rows)) return [];
+
+        $items = [];
+
+        foreach (array_values($rows) as $index => $_) {
+
+            $items[] = ['parent' => $this, 'selector' => $selector, 'index' => $index];
+
+        }
+
+        return $row_class::get_instances($items);
+
+    }
+
     public function update_field ($selector, $value) {
 
         return ($id = $this->get_acf_id()) ? update_field($selector, $value, $id) : null;
