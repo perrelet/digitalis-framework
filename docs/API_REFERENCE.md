@@ -886,7 +886,7 @@ WordPress hook management.
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `add_hook()` | `public add_hook(string $name, callable $callback, int $priority = 10, string $type = 'filter'): void` | Registers hook |
-| `get_hooks()` | `public get_hooks(): array` | Returns hooks array |
+| `get_hooks()` | `public get_hooks(): array` | Returns hook map; omit action/filter type unless explicit documentation is useful |
 | `remove_hook()` | `public remove_hook(string $name, callable $callback, int $priority = 10): void` | Removes hook |
 
 ### `Has_Meta`

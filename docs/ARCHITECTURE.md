@@ -287,7 +287,7 @@ trait Has_WP_Hooks {
     protected $hooks = [];
 
     public function add_hook($name, $callback, $priority = 10, $type = 'filter') {
-        // Registers WordPress filter or action
+        // Registers a WordPress hook callback
     }
 
     // Override to return hooks array
@@ -299,6 +299,10 @@ trait Has_WP_Hooks {
     }
 }
 ```
+
+Actions and filters share WordPress's hook registry. Prefer omitting hook type
+in hook maps; include `'action'` or `'filter'` only when the extra explicitness
+is useful documentation.
 
 ### Hook Naming Convention
 

@@ -122,7 +122,7 @@ Skimming the primer alone produces wrongly-named files, broken subclasses, and s
 | `Feature` | `Factory` | Hook registrar via `get_hooks()` | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin | yes |
-| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF post-object fields in sync across post types; configure via `$key_1`, `$key_2`, `$post_type_1/2`, `$limit_1/2`, `$allow_self`, `$force_add` | yes |
+| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add` | yes |
 
 ### REST, Blocks & Shortcodes
 
@@ -334,11 +334,14 @@ public function callback(\WP_REST_Request $request): mixed
 ```php
 public function get_hooks(): array {
     return [
-        'init'           => 'on_init',                    // method name
-        'save_post'      => ['on_save', 10, 2],           // [method, priority, accepted_args]
-        'the_content'    => ['filter_content', 10, 1],
+        'init'        => 'on_init',          // method name; priority 10
+        'save_post'   => ['on_save', 20],    // [method, priority]
+        'the_content' => 'filter_content',   // filters use the same format
     ];
 }
+// Actions and filters share WordPress's hook registry. Omit hook type in get_hooks()
+// unless explicit 'action' / 'filter' documentation is worth the extra ceremony.
+// accepted_args is derived via reflection on the callback — do not pass it.
 
 public function run(): void  // called immediately on instantiation (before hooks fire)
 ```

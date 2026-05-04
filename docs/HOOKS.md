@@ -96,6 +96,9 @@ $this->add_hooks([
     'the_content' => ['filter_content', 20],  // With priority
 ]);
 
+// Actions and filters share WordPress's hook registry. In hook maps, omit
+// the hook type unless the extra explicitness is genuinely helpful.
+
 // Batch actions
 $this->add_actions([
     'init'      => 'on_init',
@@ -234,8 +237,8 @@ public function get_hooks() {
         'init' => ['early_init', 5],
         'wp_loaded' => ['late_loaded', 99],
 
-        // [callback, priority, type]
-        'the_content' => ['filter_content', 10, 'filter'],
+        // Filters use the same hook map format
+        'the_content' => 'filter_content',
     ];
 }
 ```
@@ -691,8 +694,11 @@ class ACF_Customizations extends Feature {
 // With priority
 'hook_name' => ['method_name', 20]
 
-// With priority and type
+// With priority and explicit type, rarely needed
 'hook_name' => ['method_name', 20, 'filter']
+
+// Explicit action/filter type is supported for readability, but usually omitted
+'hook_name' => ['method_name', null, 'action']
 
 // Closure
 'hook_name' => function($arg) { return $arg; }
