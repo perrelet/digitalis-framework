@@ -174,6 +174,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/debug-code-block.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/iterator-ui.view.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-ajax-form.view.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-option-pages.singleton.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
 
