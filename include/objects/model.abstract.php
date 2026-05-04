@@ -117,18 +117,15 @@ class Model extends Factory {
     
     }
 
-    public static function create ($data = [], $auto_resolve = null) {
+    public static function create ($data = []) {
 
-        [$id, $class_name] = static::resolve_data($data, $auto_resolve);
+        static::prepare_data($data);
 
-        if (is_null($id))                 return null;
-        if ($class_name != static::class) return $class_name::create($data, false);
-
-        $instance = new $class_name($data);
+        $instance = new static($data);
         $instance->init($data);
 
         return $instance;
-    
+
     }
 
     public static function get_instance ($data = null, $auto_resolve = null) {
