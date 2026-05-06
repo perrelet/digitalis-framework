@@ -57,7 +57,7 @@ class Task_Handler extends Singleton {
 
             $stored_version = isset($history[$slug]) ? $history[$slug]['version'] : 0;
 
-            if ($stored_version >= $task['version']) continue;
+            if ($stored_version === $task['version']) continue;
 
             try {
                 if (is_callable($task['callback'])) call_user_func($task['callback']);
