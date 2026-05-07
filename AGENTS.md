@@ -468,6 +468,15 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
+**`App::$path` is the App-subclass file's directory, not the plugin root.**
+`App::__construct()` reflects `static::class` to derive `$this->path`. Move `my-plugin.app.php` from `<plugin>/` to `<plugin>/include/` and the autoload root shifts with it. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
+**File-name suffixes are load-bearing, not stylistic.**
+`my-thing.app.php` is parsed as a subclass of `App`; `my-thing-app.php` is silently skipped by the inheritance-aware loader — no error, no warning, no instance. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
+**`hello()` and `static_init()` self-fire after include — no instantiation needed.**
+The autoloader calls these static methods immediately after `include_once`, before any instantiation and regardless of `get_auto_instantiation()`. Use them for static-time registration (`register_post_type()`, hooks bound to `[static::class, '…']`) that doesn't need an instance. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
 ---
 
 ## Conventions
