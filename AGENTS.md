@@ -460,6 +460,14 @@ This applies to all generic accessors: `get_meta()`, `update_meta()`, `get_field
 **Keep `validate_id()` cheap — it runs on every registered subclass.**
 One `get_post_type()` call is fine. Multiple queries or model instantiation are not.
 
+**`Post::get_instance($id)` auto-resolves to the most specific registered subclass.**
+A post with `post_type='project'` returns a `Project` instance, not a base `Post`. Pass `false` as the second arg to force the base class when you specifically need it. See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+
+**Inside a `wp_after_insert_post` callback, never call `save()` with empty or full data.**
+The cached instance state may still hold pre-change values, and a full `save()` will silently overwrite the field the caller just changed. Write the targeted field only (`update_meta`, `update_field`, or `wp_update_post` with one specific field). See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+
+**Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+
 ---
 
 ## Conventions
