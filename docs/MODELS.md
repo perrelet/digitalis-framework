@@ -163,6 +163,10 @@ $post = Post::get_instance($id, false);
 $post = Post::get_instance();        // Current post in loop
 $user = User::get_instance();        // Current logged-in user
 $term = Term::get_instance();        // Current queried term
+
+// Shorter alias — proxies get_instance() with the same args
+$user = User::inst();
+$post = Post::inst($id);
 ```
 
 ### Multiple Instances
@@ -171,13 +175,6 @@ $term = Term::get_instance();        // Current queried term
 $posts = Post::get_instances([1, 2, 3]);
 $users = User::get_instances($user_ids);
 $terms = Term::get_instances($term_ids);
-```
-
-### Current User Shorthand
-
-```php
-$user = User::current();   // Alias for User::get_instance()
-$user = User::inst();      // Shorter alias
 ```
 
 ### Find by Field
@@ -1106,11 +1103,11 @@ Milestone::create([
 ### Instantiation
 
 ```php
-Post::get_instance($id)      // Auto-resolve
+Post::get_instance($id)        // Auto-resolve
 Post::get_instance($id, false) // Force base class
-Post::get_instances($ids)    // Multiple
-User::current()              // Current user
-User::inst()                 // Alias
+Post::get_instances($ids)      // Multiple
+User::get_instance()           // Current user (no args → get_global_id)
+User::inst()                   // Shorter alias for get_instance()
 ```
 
 ### Common Patterns
