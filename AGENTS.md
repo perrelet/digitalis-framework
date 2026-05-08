@@ -428,10 +428,13 @@ Full context and code examples for all of these are in [ANTIPATTERNS.md](./docs/
 `Post::query()->where_meta()` does not exist. Pass `&$wp_query` as the second argument to access `found_posts`.
 
 **`View::$merge` does not accumulate across subclasses.**
-Each child class must re-list all parent merge keys: `['classes', 'styles']`, not just `['styles']`.
+Each child class must re-list all parent merge keys: `['classes', 'styles']`, not just `['styles']`. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **Always call `parent::params($p)` when overriding `params()`.**
-Skipping it silently drops any param transformations defined in parent classes.
+Skipping it silently drops any param transformations defined in parent classes. Same rule for `__construct()` overrides — always call `parent::__construct($params)` first. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+
+**Class-string `$defaults` are auto-resolved as DI — opt out with `$skip_inject`.**
+Any `$defaults` value naming a class with `get_instance()` (e.g. `'order' => Order::class`) is treated as a DI signal: the framework calls `Order::get_instance($value)` and replaces the param with the instance. Want the class name to *stay* a literal string? Add the key to `$skip_inject`. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`Query_Vars::merge()` combines arrays; `overwrite()` replaces unconditionally.**
 `merge(['post_status' => 'draft'])` on an existing `'publish'` produces `['publish', 'draft']`.
@@ -467,6 +470,8 @@ A post with `post_type='project'` returns a `Project` instance, not a base `Post
 The cached instance state may still hold pre-change values, and a full `save()` will silently overwrite the field the caller just changed. Write the targeted field only (`update_meta`, `update_field`, or `wp_update_post` with one specific field). See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+
+**Quick reference for the five view-system traps** — `$merge` doesn't accumulate, `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`App::$path` is the App-subclass file's directory, not the plugin root.**
 `App::__construct()` reflects `static::class` to derive `$this->path`. Move `my-plugin.app.php` from `<plugin>/` to `<plugin>/include/` and the autoload root shifts with it. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).

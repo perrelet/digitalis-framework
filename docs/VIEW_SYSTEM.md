@@ -7,6 +7,7 @@ The Digitalis Framework provides a powerful view system for rendering UI compone
 ## Table of Contents
 
 - [Overview](#overview)
+- [Common Confusions](#common-confusions)
 - [Class Hierarchy](#class-hierarchy)
 - [Static Properties](#static-properties)
 - [Property Inheritance](#property-inheritance)
@@ -72,6 +73,103 @@ Invoice_View::render(['order' => 721, 'user' => 1]);
 - **Type-safe** - Dependency injection validates types
 - **Lifecycle-aware** - Hooks for before/after rendering
 - **Flexible** - Use inline `view()` or external templates
+
+---
+
+## Common Confusions
+
+The traps that bite new agents most often when reaching for the View system. Each entry is a one-line "wrong assumption → reality" with a sketch — full code and rationale live in [ANTIPATTERNS.md](./ANTIPATTERNS.md).
+
+### `$merge` does not accumulate across subclasses — re-list parent keys
+
+**Wrong assumption:** A child class's `$merge` declaration adds to the parent's; only listing new keys is enough.
+**Reality:** `$merge` is replaced wholesale by the child. A child that lists `['styles']` loses parent merging for `'classes'` — `'classes'` quietly becomes overwrite-on-inherit. Re-list every parent key the child still wants merged.
+
+```php
+// ❌ Parent merged 'classes'; child drops it by re-declaring $merge
+class Parent_View extends View {
+    protected static $merge = ['classes'];
+}
+class Child_View extends Parent_View {
+    protected static $merge = ['styles'];   // 'classes' is now overwrite-on-inherit
+}
+
+// ✅ Re-list every key that should keep merging
+class Child_View extends Parent_View {
+    protected static $merge = ['classes', 'styles'];
+}
+```
+
+`$defaults`, `$required`, and `$skip_inject` *do* accumulate up the chain via `Inherits_Props` — `$merge` is the asymmetric one. Full antipattern: [Child views must re-list parent merge keys](./ANTIPATTERNS.md#child-views-must-re-list-parent-merge-keys--they-dont-accumulate).
+
+### `params()` overrides must call `parent::params($p)`
+
+**Wrong assumption:** Overriding `params()` is a clean override; if you don't need parent behaviour you can skip the parent call.
+**Reality:** Parent `params()` is where the inheritance chain's transformations land — `Component` builds its `Element` objects there, intermediate classes set derived fields, etc. Skipping `parent::params($p)` silently drops all of it. There's no error; the view just renders with missing data.
+
+```php
+// ❌ Parent transformations never run
+public function params(&$p) {
+    $p['total'] = $p['order']->get_total();
+}
+
+// ✅
+public function params(&$p) {
+    $p['total'] = $p['order']->get_total();
+    parent::params($p);
+}
+```
+
+The same rule applies to overriding `__construct()` — always call `parent::__construct($params)` first or default-param initialisation never runs. Full antipattern: [Always call `parent::params($p)` when overriding `params()`](./ANTIPATTERNS.md#always-call-parentparamsp-when-overriding-params).
+
+### Class-string `$defaults` are auto-resolved as DI — there is no opt-in
+
+**Wrong assumption:** Setting a default to a class name (`Order::class`) is just a placeholder; the framework only resolves it if you explicitly opt in.
+**Reality:** Any value in `$defaults` that is a string naming a class with a `get_instance()` method is treated as a DI signal. When the caller passes an ID, the framework calls `Order::get_instance($id)` and replaces the param with the instance. This is invisible — there is no flag to flip; injection is the default for class-string defaults.
+
+```php
+// $defaults = ['order' => Order::class]
+new My_View(['order' => 721]);
+// ↓ Framework rewrites in inject_dependencies()
+// $params['order'] = Order::get_instance(721);
+```
+
+This is the feature, not a footgun — but it bites when you intended the class name to *stay* a string. See the next entry.
+
+### `$skip_inject` opts specific keys out of DI
+
+**Wrong assumption:** If a `$defaults` key holds a class name and you want it to remain a literal string (not be injected), there's no way to express that.
+**Reality:** Add the key to `$skip_inject`. Useful when the param is a class *name* the view will instantiate itself, not a model instance the view will read.
+
+```php
+// ❌ Framework calls Order::get_instance($value) — but you wanted a string
+protected static $defaults = [
+    'model_class' => Order::class,
+];
+
+// ✅ Stay a string — the view uses it as a class name, not an instance
+protected static $defaults    = ['model_class' => Order::class];
+protected static $skip_inject = ['model_class'];
+```
+
+`$skip_inject` accumulates up the inheritance chain (unlike `$merge`), so each subclass can add to it without re-listing parent entries. Full antipattern: [Class-name defaults are injected — add to `$skip_inject` to prevent it](./ANTIPATTERNS.md#class-name-defaults-are-injected--add-to-skip_inject-to-prevent-it).
+
+### Instantiate views with `new` — `View::render()` is the legacy static form
+
+**Wrong assumption:** `View::render([...])` is the canonical entry point for rendering a view.
+**Reality:** `View::render()` is supported but not preferred. The framework treats views as objects — instantiate directly with `new`. The `new` form composes uniformly whether you're echoing, casting to string, or storing the view as a value.
+
+```php
+// Supported, but not preferred
+View::render(['param' => 'value']);
+$html = View::render(['param' => 'value'], false);
+
+// ✅ Preferred
+<?= new My_View(['param' => 'value']) ?>
+$html = (string) new My_View(['param' => 'value']);
+```
+
+PHP's `__toString()` is invoked automatically when a view is echoed; the explicit `(string)` cast is only needed when the value is being assigned or passed where the type matters. See [CONVENTIONS — Instantiate views with `new`](./CONVENTIONS.md#instantiate-views-with-new--dont-call-viewrender-statically).
 
 ---
 
