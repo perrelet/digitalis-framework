@@ -661,7 +661,7 @@ Each model type calculates specificity based on its defining properties:
 
 | Model | Properties | Specificity Formula | Max Value |
 |-------|-----------|---------------------|-----------|
-| **Post** | `$post_type`, `$post_status`, `$term` | `(bool)type + (bool)status*10 + (bool)term*100` | 111 |
+| **Post** | `$post_type`, `$post_status`, `$term`, `$post_slug`, `$post_context` | `(bool)type + (bool)status*10 + (bool)term*100 + (bool)slug*1000 + (bool)context*10000` | 11111 |
 | **User** | `$role` | `(bool)role` | 1 |
 | **Term** | `$taxonomy` | `(bool)taxonomy` | 1 |
 

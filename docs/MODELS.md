@@ -201,12 +201,16 @@ $term = Term::get_by_name('Term Name');
 
 ```php
 class Project extends Post {
-    protected static $post_type   = 'project';      // Required for resolution
-    protected static $post_status = 'publish';      // Optional: filter by status
-    protected static $term        = 'featured';     // Optional: filter by term
-    protected static $taxonomy    = 'project_tag';  // Taxonomy for $term
+    protected static $post_type    = 'project';      // Filter by post_type
+    protected static $post_status  = 'publish';      // Filter by post_status
+    protected static $term         = 'featured';     // Filter by taxonomy term
+    protected static $taxonomy     = 'project_tag';  // Taxonomy for $term
+    protected static $post_slug    = 'about';        // Pin to a specific post_name (URL slug)
+    protected static $post_context = 'front_page';   // Pin to a WP option-referenced post
 }
 ```
+
+`$post_context` keys are defined in `Post::$context_options` (defaults: `front_page`, `posts`, `privacy`). Override `$context_options` in a subclass to add your own option-backed pins. See [CLASS_RESOLUTION.md](./CLASS_RESOLUTION.md#post-context).
 
 ### Basic Getters
 

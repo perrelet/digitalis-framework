@@ -140,34 +140,54 @@ Specificity determines which class "wins" when multiple classes could match an I
 
 ### Post Specificity
 
-Posts can be specific based on three criteria:
+Posts can be specific based on five criteria:
 
 | Property | Weight | Description |
 |----------|--------|-------------|
 | `$post_type` | 1 | Specific post type |
 | `$post_status` | 10 | Specific status(es) |
 | `$term` | 100 | Has specific term |
+| `$post_slug` | 1000 | Specific `post_name` (URL slug) |
+| `$post_context` | 10000 | Pinned to a WP option-referenced post (front page, blog page, privacy policy) |
 
 **Formula:**
 ```php
 public static function get_specificity() {
     return (int) (
-        ((bool) static::$post_type)   * 1   +
-        ((bool) static::$post_status) * 10  +
-        ((bool) static::$term)        * 100
+          ((bool) static::$post_type)
+        + ((bool) static::$post_status)  * 10
+        + ((bool) static::$term)         * 100
+        + ((bool) static::$post_slug)    * 1000
+        + ((bool) static::$post_context) * 10000
     );
 }
 ```
 
 **Examples:**
 
-| Class | post_type | post_status | term | Specificity |
-|-------|-----------|-------------|------|-------------|
-| `Post` | - | - | - | 0 |
-| `Project` | `project` | - | - | 1 |
-| `Draft_Project` | `project` | `draft` | - | 11 |
-| `Featured_Project` | `project` | - | `featured` | 101 |
-| `Featured_Draft` | `project` | `draft` | `featured` | 111 |
+| Class | post_type | post_status | term | slug | context | Specificity |
+|-------|-----------|-------------|------|------|---------|-------------|
+| `Post` | - | - | - | - | - | 0 |
+| `Project` | `project` | - | - | - | - | 1 |
+| `Draft_Project` | `project` | `draft` | - | - | - | 11 |
+| `Featured_Project` | `project` | - | `featured` | - | - | 101 |
+| `Featured_Draft` | `project` | `draft` | `featured` | - | - | 111 |
+| `About_Page` | `page` | - | - | `about` | - | 1001 |
+| `Front_Page` | `page` | - | - | - | `front_page` | 10001 |
+
+### Post Context
+
+`$post_context` pins a subclass to whatever post ID is stored in a named WP option — useful for the "special pages" WordPress maintains as settings rather than as DB-level discriminators. The default mapping is:
+
+```php
+protected static $context_options = [
+    'front_page' => 'page_on_front',
+    'posts'      => 'page_for_posts',
+    'privacy'    => 'wp_page_for_privacy_policy',
+];
+```
+
+Override `$context_options` in a subclass to register additional contexts. `validate_id()` checks `(int) $id === (int) get_option($key)` for the context's option, and `get_global_id()` is overridden so `Front_Page::inst()` (no args) returns the option-referenced instance regardless of the global `$post`.
 
 ### User Specificity
 
@@ -299,6 +319,20 @@ public static function validate_id($id) {
         if (!in_array(get_post_status($id), static::$post_status)) {
             return false;
         }
+    }
+
+    // Check slug
+    if (static::$post_slug && (get_post_field('post_name', $id) !== static::$post_slug)) {
+        return false;
+    }
+
+    // Check context (pin to WP option-referenced post)
+    if (static::$post_context) {
+        $key = static::$context_options[static::$post_context] ?? null;
+        if (!$key) return false;
+
+        $expected = (int) get_option($key);
+        if (!$expected || ((int) $id !== $expected)) return false;
     }
 
     return parent::validate_id($id);
@@ -693,6 +727,27 @@ class Featured_Project extends Project {
     protected static $taxonomy  = 'project_tag';
     // Specificity: 101
 }
+```
+
+### Defining a Slug-Pinned Model
+
+```php
+class About_Page extends Page {
+    protected static $post_slug = 'about';
+    // Specificity: 1001
+}
+```
+
+### Defining a Context-Pinned Model
+
+```php
+class Front_Page extends Page {
+    protected static $post_context = 'front_page';
+    // Specificity: 10001 — pinned to whichever page is set in Settings → Reading
+}
+
+// Front_Page::inst() returns the front-page instance regardless of which
+// request you're on (or null if no front page is set).
 ```
 
 ### Defining a Role-Specific User

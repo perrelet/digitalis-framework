@@ -14,15 +14,30 @@ class Post extends WP_Model {
     protected static $post_status     = false;       // string|bool|array - Validate by post_status. Leave false to allow any status.
     protected static $term            = false;       // string|bool|array - Validate by taxonomy term. Leave false to allow any term.
     protected static $taxonomy        = 'category';  // string            - Taxonomy to validate term against.
+    protected static $post_slug       = false;       // string            - Validate by post_name (URL slug).
+    protected static $post_context    = false;       // string            - One of $context_options keys (e.g. 'front_page', 'posts', 'privacy').
+
+    protected static $context_options = [
+        'front_page' => 'page_on_front',
+        'posts'      => 'page_for_posts',
+        'privacy'    => 'wp_page_for_privacy_policy',
+    ];
 
     protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
 
     public static function get_global_id () {
-    
+
+        if (static::$post_context) {
+
+            $key = static::$context_options[static::$post_context] ?? null;
+            if ($key) return ((int) get_option($key)) ?: null;
+
+        }
+
         global $post;
 
         if ($post instanceof WP_Post) return $post->ID;
-    
+
     }
 
     public static function extract_id ($data = null) {
@@ -46,14 +61,32 @@ class Post extends WP_Model {
 
         }
 
+        if (static::$post_slug && (get_post_field('post_name', $id) !== static::$post_slug)) return false;
+
+        if (static::$post_context) {
+
+            $key = static::$context_options[static::$post_context] ?? null;
+            if (!$key) return false;
+
+            $expected = (int) get_option($key);
+            if (!$expected || ((int) $id !== $expected)) return false;
+
+        }
+
         return parent::validate_id($id);
 
     }
 
     public static function get_specificity () {
-    
-        return (int) (((bool) static::$post_type) + ((bool) static::$post_status) * 10 + ((bool) static::$term) * 100);
-    
+
+        return (int) (
+              ((bool) static::$post_type)
+            + ((bool) static::$post_status)  * 10
+            + ((bool) static::$term)         * 100
+            + ((bool) static::$post_slug)    * 1000
+            + ((bool) static::$post_context) * 10000
+        );
+
     }
 
     //

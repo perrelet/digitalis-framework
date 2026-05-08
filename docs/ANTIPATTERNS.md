@@ -160,6 +160,22 @@ class My_Post extends Post {
 }
 ```
 
+For Post subclasses where the discriminator isn't a DB column — e.g. "this is the page set as the front page" — use `$post_slug` or `$post_context` rather than overriding `validate_id()` with a manual specificity bump:
+
+```php
+// ❌ Custom validate_id without a specificity prop — may tie with parent and not resolve
+class Front_Page extends Page {
+    public static function validate_id ($id) {
+        return (int) $id === (int) get_option('page_on_front');
+    }
+}
+
+// ✅ Declarative — $post_context handles validate_id and bumps specificity (10001)
+class Front_Page extends Page {
+    protected static $post_context = 'front_page';
+}
+```
+
 ---
 
 ## Query_Vars

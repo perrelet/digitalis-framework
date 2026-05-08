@@ -11,7 +11,8 @@ class Term extends WP_Model {
 
     use Has_WP_Term;
 
-    protected static $taxonomy = null;
+    protected static $taxonomy  = null;
+    protected static $term_slug = false;       // string - Validate by term slug.
 
     public static function get_global_id () {
     
@@ -36,15 +37,19 @@ class Term extends WP_Model {
         if (!$wp_term = get_term($id, static::$taxonomy))                 return false;
         if ($wp_term instanceof WP_Error)                                 return false;
         if (static::$taxonomy && $wp_term->taxonomy != static::$taxonomy) return false;
+        if (static::$term_slug && $wp_term->slug != static::$term_slug)   return false;
 
         return parent::validate_id($id);
 
     }
 
     public static function get_specificity () {
-    
-        return (int) ((bool) static::$taxonomy);
-    
+
+        return (int) (
+              ((bool) static::$taxonomy)
+            + ((bool) static::$term_slug) * 10
+        );
+
     }
 
     public static function get_by ($field, $value) {
