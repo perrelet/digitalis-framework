@@ -18,6 +18,8 @@ This primer is a map, not the territory. Before adding files or editing framewor
 
 Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The three docs above are where the framework's failure modes live.
 
+For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` with `params()` override, `Route`, `Iterator`, `Admin_Page`, …) see [docs/CHEATSHEET.md](./docs/CHEATSHEET.md).
+
 ---
 
 ## Class Hierarchy
