@@ -134,6 +134,19 @@ abstract class App extends Factory {
         foreach ($paths as $base) {
 
             $path = realpath($base . $file);
+
+            // Directory shorthand: `foo/bar` → `foo/bar/bar.feature.php`.
+            if (is_dir($path)) {
+                $candidate = $path . '/' . basename($path) . '.feature.php';
+                if (is_file($candidate)) $path = $candidate;
+            }
+
+            // File shorthand: `foo/bar` → `foo/bar.feature.php`.
+            if (!is_file($path)) {
+                $candidate = realpath($base . $file . '.feature.php');
+                if ($candidate && is_file($candidate)) $path = $candidate;
+            }
+
             if (!is_file($path)) continue;
 
             $feature = $this->load_class($path, false);

@@ -399,8 +399,10 @@ class My_Plugin extends App {
     public function load() {
         parent::load();
 
-        // Plugin-specific loading
-        $this->load_feature('wp/custom-feature.feature.php');
+        // Three equivalent forms — pick whichever reads cleanest:
+        $this->load_feature('wp/custom-feature.feature.php');   // explicit
+        $this->load_feature('wp/custom-feature');               // file shorthand: appends `.feature.php`
+        $this->load_feature('lattice/excerpt-keywords');        // directory shorthand: resolves `{dir}/{dirname}.feature.php`
     }
 
     public function load_admin() {
