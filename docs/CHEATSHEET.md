@@ -7,15 +7,18 @@ Copy-paste patterns for common tasks.
 ## Table of Contents
 
 - [Models](#models)
+- [Post Types & Taxonomies](#post-types--taxonomies)
 - [Views](#views)
 - [Components](#components)
 - [Forms](#forms)
 - [Tables](#tables)
 - [Admin](#admin)
 - [REST Routes](#rest-routes)
+- [Shortcodes](#shortcodes)
 - [WooCommerce](#woocommerce)
 - [Layouts](#layouts)
 - [Queries](#queries)
+- [Iterators](#iterators)
 - [Hooks](#hooks)
 
 ---
@@ -129,6 +132,73 @@ $post = Post::get_instance($id, false);
 
 ---
 
+## Post Types & Taxonomies
+
+> **Non-obvious:** `Post_Type`, `Taxonomy`, `User_Role`, and `Post_Status` are `Singleton` subclasses — configuring properties (`$slug`, `$singular`, `$plural`, `$icon`, …) are **non-static instance properties**, not static. The framework instantiates them via `get_instance()` at boot; you don't `new` them yourself.
+
+### Custom Post Type
+
+**File:** `include/post-types/project.post-type.php`
+
+```php
+namespace Digitalis;
+
+class Project_Post_Type extends Post_Type {
+
+    protected $slug         = 'project';
+    protected $archive      = 'projects';
+    protected $icon         = 'dashicons-portfolio';
+    protected $singular     = 'Project';
+    protected $plural       = 'Projects';
+    protected $position     = 20;
+    protected $model_class  = Project::class;   // Auto-instantiate model on singular requests
+
+    // Optional: tighten registration args
+    protected function get_args ($args) {
+        $args['supports'] = ['title', 'editor', 'thumbnail', 'excerpt'];
+        return $args;
+    }
+}
+```
+
+### Custom Taxonomy
+
+**File:** `include/taxonomies/project-category.taxonomy.php`
+
+```php
+namespace Digitalis;
+
+class Project_Category_Taxonomy extends Taxonomy {
+
+    protected $slug       = 'project_category';
+    protected $singular   = 'Category';
+    protected $plural     = 'Categories';
+    protected $post_types = ['project'];   // attach to these post types
+}
+```
+
+### Custom User Role
+
+**File:** `include/user-roles/account.user-role.php`
+
+```php
+namespace Digitalis;
+
+class Account_Role extends User_Role {
+
+    protected $slug     = 'account';
+    protected $singular = 'Account';
+
+    protected $caps = [
+        'read'             => true,
+        'edit_projects'    => true,
+        'publish_projects' => true,
+    ];
+}
+```
+
+---
+
 ## Views
 
 > **Non-obvious:** `$merge` keys do **not** accumulate across subclasses — child views must re-list all parent merge keys. Class-name values in `$defaults` are DI-resolved automatically; add to `$skip_inject` to prevent it. Always call `parent::params($p)` when overriding `params()`.
@@ -194,7 +264,8 @@ class Project_Card extends View {
     protected static $required = ['project'];
 
     public function params(&$p) {
-        $p['account'] = $p['project']->get_account();
+        parent::params($p);  // Required — skipping it silently drops parent transforms.
+        $p['account']      = $p['project']->get_account();
         $p['status_class'] = 'status-' . $p['project']->get_status();
     }
 }
@@ -560,6 +631,8 @@ echo new Table([
 
 ## Admin
 
+> **Non-obvious:** `Admin_Page` configuring properties (`$slug`, `$title`, `$menu_title`, `$capability`, `$icon`, `$position`, `$parent`) must be **non-static instance properties** — same reason as `Route`. Override `callback()` to render the page body — the framework already wraps it in `<div class="wrap">`.
+
 ### Admin Page
 
 **File:** `include/admin/settings.admin-page.php`
@@ -569,19 +642,17 @@ namespace Digitalis;
 
 class Settings_Page extends Admin_Page {
 
-    protected static $slug       = 'my-settings';
-    protected static $page_title = 'Settings';
-    protected static $menu_title = 'Settings';
-    protected static $capability = 'manage_options';
-    protected static $icon       = 'dashicons-admin-settings';
-    protected static $position   = 30;
+    protected $slug       = 'my-settings';
+    protected $title      = 'Settings';
+    protected $menu_title = 'Settings';
+    protected $capability = 'manage_options';
+    protected $icon       = 'dashicons-admin-settings';
+    protected $position   = 30;
 
-    public function render() {
+    public function callback () {
         ?>
-        <div class="wrap">
-            <h1><?= esc_html(static::$page_title) ?></h1>
-            <!-- Page content -->
-        </div>
+        <h1><?= esc_html($this->title) ?></h1>
+        <!-- Page content -->
         <?php
     }
 }
@@ -596,12 +667,12 @@ namespace Digitalis;
 
 class Advanced_Settings extends Admin_Sub_Page {
 
-    protected static $parent     = Settings_Page::class;
-    protected static $slug       = 'advanced-settings';
-    protected static $page_title = 'Advanced Settings';
-    protected static $menu_title = 'Advanced';
+    protected $parent     = 'my-settings';        // Parent's $slug, not class string
+    protected $slug       = 'advanced-settings';
+    protected $title      = 'Advanced Settings';
+    protected $menu_title = 'Advanced';
 
-    public function render() {
+    public function callback () {
         // ...
     }
 }
@@ -618,14 +689,17 @@ class Projects_Table extends Posts_Table {
 
     protected $post_type = 'project';
 
-    protected function get_columns() {
-        return [
-            'account' => 'Account',
-            'status'  => 'Status',
-        ];
+    // Mutate the columns list by reference — no `get_columns()` method.
+    // Use insert_column / append_column / prepend_column / remove_column.
+    public function columns (&$columns) {
+        $this->insert_column(['account' => 'Account'], 'title');
+        $this->insert_column(['status'  => 'Status'],  'account');
+        $this->remove_column('date');
     }
 
-    public function column_account(Project $project) {
+    // Column renderer: `column_{key}`. Receives the WP post ID — type-hint
+    // the model and DI will resolve it.
+    public function column_account (Project $project) {
         $account = $project->get_account();
         if ($account) {
             echo "<a href='{$account->get_edit_url()}'>{$account->get_name()}</a>";
@@ -634,7 +708,7 @@ class Projects_Table extends Posts_Table {
         }
     }
 
-    public function column_status(Project $project) {
+    public function column_status (Project $project) {
         echo "<span class='status-badge'>{$project->get_status()}</span>";
     }
 }
@@ -730,12 +804,33 @@ class Create_Project_Route extends Route {
             'post_status' => 'publish',
         ]);
 
-        update_field('project_account', $request->get_param('account'), $project_id);
+        // Load the model and use a typed setter — keep raw `update_field`/key strings inside the model.
+        Project::get_instance($project_id)->set_account($request->get_param('account'));
 
         return ['id' => $project_id, 'success' => true];
     }
 }
 ```
+
+---
+
+## Shortcodes
+
+A `Shortcode` is a thin wrapper that hands `[slug atts]` off to a `View` — the view's `$defaults` become the accepted atts. No `render()` override needed.
+
+**File:** `include/shortcodes/project-card.shortcode.php`
+
+```php
+namespace Digitalis;
+
+class Project_Card_Shortcode extends Shortcode {
+
+    protected $slug = 'project-card';
+    protected $view = Project_Card::class;   // Atts validated against Project_Card::$defaults
+}
+```
+
+**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])`.
 
 ---
 
@@ -778,11 +873,19 @@ namespace Digitalis;
 
 class Order_Status_Estimate extends Order_Status {
 
-    protected static $slug       = 'wc-estimate';
-    protected static $label      = 'Estimate';
-    protected static $color      = '#f0ad4e';
-    protected static $valid_from = ['pending', 'on-hold'];
-    protected static $valid_to   = ['processing', 'cancelled'];
+    // The `wc-` prefix is added automatically if you omit it.
+    protected $slug     = 'estimate';
+    protected $singular = 'Estimate';
+    protected $plural   = 'Estimates';
+
+    // WC list positioning — index or slug to insert before/after.
+    protected $position = 'pending';
+    protected $before   = true;
+
+    // Label flows through $args — the framework wires it into WC's status list.
+    protected $args = [
+        'label' => 'Estimate',
+    ];
 }
 ```
 
@@ -969,6 +1072,84 @@ $projects = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query())
 
 ---
 
+## Iterators
+
+> **Non-obvious:** `Iterator` is a `Singleton` — configuring properties (`$title`, `$key`, `$batch_size`, …) are **non-static instance properties**. `$key` must be unique across iterators — it keys the AJAX action and the option blob that tracks progress. The framework auto-registers an admin page under Tools by default.
+
+### Batch Process Posts
+
+**File:** `include/iterators/republish-projects.post-iterator.php`
+
+```php
+namespace Digitalis;
+
+class Republish_Projects extends Post_Iterator {
+
+    protected $title      = 'Republish Projects';
+    protected $key        = 'republish_projects';
+    protected $batch_size = 25;
+    protected $capability = 'manage_options';
+
+    // For Post_Iterator, get_items() defaults to a Project::query() — override
+    // to refine the query.
+    public function get_items () {
+        return Project::query(['post_status' => 'draft', 'posts_per_page' => -1]);
+    }
+
+    public function process_item ($project) {
+        $project->save(['post_status' => 'publish']);
+        return true;   // false marks the item as failed
+    }
+}
+```
+
+### CSV Import
+
+**File:** `include/iterators/import-accounts.csv-iterator.php`
+
+```php
+namespace Digitalis;
+
+class Import_Accounts extends CSV_Iterator {
+
+    protected $title      = 'Import Accounts';
+    protected $key        = 'import_accounts';
+    protected $batch_size = 50;
+
+    // CSV_Iterator yields one $row (array, keyed by header) per call.
+    public function process_item ($row) {
+        $user_id = wp_insert_user([
+            'user_login' => $row['email'],
+            'user_email' => $row['email'],
+            'role'       => 'account',
+        ]);
+
+        if (is_wp_error($user_id)) return false;
+
+        $user = User::get_instance($user_id);
+        $user->save(['display_name' => $row['name']]);
+        return true;
+    }
+}
+```
+
+### Scheduled (Cron-Driven) Iterator
+
+```php
+class Nightly_Sync extends Post_Iterator {
+
+    protected $title      = 'Nightly Sync';
+    protected $key        = 'nightly_sync';
+    protected $cron       = true;                // Enable cron scheduling
+    protected $cron_time  = '02:00:00';          // Local start time
+
+    public function get_items () { /* … */ }
+    public function process_item ($item) { /* … */ }
+}
+```
+
+---
+
 ## Hooks
 
 ### Feature with Hooks
@@ -1058,4 +1239,12 @@ add_action('digitalis/project/approved', function(Project $project) {
 | `name.feature.php` | Extends Feature | `emails.feature.php` |
 | `name.singleton.php` | Extends Singleton | `settings.singleton.php` |
 | `name.admin-page.php` | Extends Admin_Page | `dashboard.admin-page.php` |
+| `name.admin-sub-page.php` | Extends Admin_Sub_Page | `advanced.admin-sub-page.php` |
+| `name.post-type.php` | Extends Post_Type | `project.post-type.php` |
+| `name.taxonomy.php` | Extends Taxonomy | `project-category.taxonomy.php` |
+| `name.user-role.php` | Extends User_Role | `account.user-role.php` |
+| `name.shortcode.php` | Extends Shortcode | `project-card.shortcode.php` |
+| `name.post-iterator.php` | Extends Post_Iterator | `republish.post-iterator.php` |
+| `name.csv-iterator.php` | Extends CSV_Iterator | `import-accounts.csv-iterator.php` |
+| `name.order-status.php` | Extends Order_Status | `estimate.order-status.php` |
 | `name.woo-account-page.php` | Extends Woo_Account_Page | `projects.woo-account-page.php` |
