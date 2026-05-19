@@ -8,7 +8,7 @@ Patterns that look correct but are wrong in this framework. Each entry explains 
 
 ### Properties must be non-static instance properties
 
-`Factory::get_cache_key()` reads `$this->$property` (non-static). A `protected static` override in a subclass creates a separate static slot — `$this->route` still resolves to the parent's default `'route'`.
+`Factory::get_cache_key()` reads `$this->$property` (non-static). Static properties create separate slots; `$this->route` resolves to the parent's default.
 
 ```php
 // ❌
@@ -23,17 +23,17 @@ protected $namespace = 'my-plugin/v1';
 ### No `$method` or `$methods` property
 
 ```php
-// ❌ These properties don't exist on Route
+// ❌
 protected $method  = 'POST';
 protected $methods = 'POST';
 
-// ✅ Pass WP REST API route args via $definition. GET is the default — omit for GET-only routes.
+// ✅
 protected $definition = ['methods' => 'POST'];
 ```
 
 ### Override `permission()` and `callback()`, not `permission_callback()`
 
-`permission_callback` is a WP REST API internal concept. The framework wraps it — the override points are `permission()` and `callback()`, both receiving `WP_REST_Request`.
+Framework wraps `permission_callback` — override `permission()` and `callback()` instead.
 
 ```php
 // ❌
@@ -62,14 +62,13 @@ public function permission(\WP_REST_Request $request): bool {
 ### `$namespace` includes the version — no separate `$version` property
 
 ```php
-// ❌ $version does not exist on Route
+// ❌
 protected $namespace = 'my-plugin';
 protected $version   = 'v1';
 
 // ✅
 protected $namespace = 'my-plugin/v1';
 ```
-
 ---
 
 ## Post / User / Term — `query()`
@@ -77,7 +76,7 @@ protected $namespace = 'my-plugin/v1';
 ### `query()` returns an array, not a fluent builder
 
 ```php
-// ❌ None of these methods exist
+// ❌
 Post::query()->where_meta('status', 'active')->get();
 Post::query()->where_tax('category', 5)->limit(10)->get();
 User::query()->where_role('customer')->get();
@@ -91,25 +90,22 @@ User::query(['role' => 'customer']);
 ### The return value is an array — WP_Query properties don't apply to it
 
 ```php
-// ❌ query() returns Post[], not a WP_Query object
+// ❌
 $count = Project::query(['posts_per_page' => -1])->found_posts;
 $total = Order::query(['posts_per_page' => -1])->total;
 
-// ✅ Use count() for total of returned results
+// ✅
 $count = count(Project::query(['posts_per_page' => -1]));
-
-// ✅ Or pass &$query to get the underlying WP_Query (e.g. for found_posts with LIMIT)
 $posts = Project::query(['posts_per_page' => 10], $wp_query);
 $found = $wp_query->found_posts;
 ```
-
 ---
 
 ## ACF_Block
 
 ### Properties must be non-static instance properties
 
-Same reason as Route — the framework accesses these as instance properties.
+Framework accesses these as instance properties.
 
 ```php
 // ❌
@@ -124,23 +120,22 @@ protected $view     = Testimonial_View::class;
 protected $block    = ['title' => 'Testimonial', 'icon' => 'format-quote'];
 protected $defaults = ['quote' => '', 'author' => ''];
 ```
-
 ---
 
 ## Class Resolution
 
 ### Keep `validate_id()` cheap — no nested queries or model instantiation
 
-Resolution calls `validate_id()` on every registered subclass. Expensive implementations multiply fast.
+Called on every registered subclass — expensive implementations multiply fast.
 
 ```php
-// ❌ Multiple queries per call, run for every subclass
+// ❌
 public static function validate_id($id) {
-    $account = Account::get_instance($id); // ← also triggers resolution chain
+    $account = Account::get_instance($id);
     return $account->is_valid();
 }
 
-// ✅ One direct WP function only
+// ✅
 public static function validate_id($id) {
     return get_post_type($id) === 'project';
 }
@@ -148,33 +143,18 @@ public static function validate_id($id) {
 
 ### Set at least one specificity property in every subclass
 
-Without a specificity property, the subclass has the same score as its parent and may never be resolved.
+Without specificity properties, subclasses tie with their parent and may never resolve.
 
 ```php
-// ❌ Same specificity as Post — resolution order determines winner
+// ❌
 class My_Post extends Post {}
 
-// ✅ At least one property raises specificity above the parent
+// ✅
 class My_Post extends Post {
     protected static $post_type = 'my_post';
 }
 ```
 
-For Post subclasses where the discriminator isn't a DB column — e.g. "this is the page set as the front page" — use `$post_slug` or `$post_context` rather than overriding `validate_id()` with a manual specificity bump:
-
-```php
-// ❌ Custom validate_id without a specificity prop — may tie with parent and not resolve
-class Front_Page extends Page {
-    public static function validate_id ($id) {
-        return (int) $id === (int) get_option('page_on_front');
-    }
-}
-
-// ✅ Declarative — $post_context handles validate_id and bumps specificity (10001)
-class Front_Page extends Page {
-    protected static $post_context = 'front_page';
-}
-```
 
 ---
 
@@ -187,28 +167,27 @@ class Front_Page extends Page {
 $meta =& $qv->find_meta_query('status');
 $meta['value'] = 'active';
 
-// ✅ find_meta_query_path() returns a path (or null); get_meta_block() returns a reference
+// ✅
 $path = $qv->find_meta_query_path('status');
 if ($path !== null) {
-    $meta          =& $qv->get_meta_block($path);
-    $meta['value'] = 'active';
+    $qv->get_meta_block($path)['value'] = 'active';
 }
 ```
 
 ### Upsert is safer than find + modify for add-or-update
 
 ```php
-// ❌ Adds a duplicate clause if 'status' already exists
+// ❌
 $qv->add_meta_query(['key' => 'status', 'value' => 'active']);
 
-// ✅ Updates existing clause if found, appends if not
+// ✅
 $qv->upsert_meta_query('status', ['key' => 'status', 'value' => 'active']);
 ```
 
 ### `merge()` combines arrays — use `overwrite()` for unconditional replacement
 
 ```php
-// ❌ merge() on a scalar-keyed value appends, not replaces
+// ❌
 $qv->set('post_status', 'publish');
 $qv->merge(['post_status' => 'draft']); // Result: ['publish', 'draft']
 
@@ -219,17 +198,14 @@ $qv->overwrite(['post_status' => 'draft']); // Result: 'draft'
 ### Paths from `find_*_path()` are invalidated by structural changes
 
 ```php
-// ❌ Removing an earlier block shifts all indexes — path now points to wrong block
+// ❌
 $path = $qv->find_meta_query_path('status');
 array_splice($qv['meta_query'], 0, 1);
-$block =& $qv->get_meta_block($path); // Wrong block
-
-// ✅ Get a fresh path after any structural change
-$path  = $qv->find_meta_query_path('status');
 $block =& $qv->get_meta_block($path);
-$block['value'] = 'updated';
-```
 
+// ✅
+$qv->get_meta_block($qv->find_meta_query_path('status'))['value'] = 'updated';
+```
 ---
 
 ## Query_Profile
@@ -237,10 +213,10 @@ $block['value'] = 'updated';
 ### `Query_Profile` subclasses must be instantiated at boot to register
 
 ```php
-// ❌ Class defined but never instantiated — profile silently never runs
+// ❌
 class My_Profile extends Query_Profile {}
 
-// ✅ Call get_instance() during plugin boot
+// ✅
 My_Profile::get_instance();
 ```
 
@@ -249,30 +225,29 @@ My_Profile::get_instance();
 `execute()` stamps the query on first run and skips profiles on subsequent calls.
 
 ```php
-// ❌ Second call is a no-op
+// ❌
 $posts = Query_Manager::get_instance()->execute($wp_query);
-$posts = Query_Manager::get_instance()->execute($wp_query); // profiles not re-applied
+$posts = Query_Manager::get_instance()->execute($wp_query); // no-op
 
-// ✅ Build a fresh Query_Vars for each execution
+// ✅
 $posts = Query_Manager::get_instance()->execute((new Query_Vars([...]))->make_query());
 ```
 
 ### `_profiles` / `_suppress` are ignored on the main WordPress query
 
-`allow_profile_select` is `false` on the main query — use `execute()` for programmatic queries instead.
+`allow_profile_select` is `false` on the main query.
 
 ```php
-// ❌ Silently ignored
+// ❌
 add_action('pre_get_posts', function ($q) {
     $q->set('_profiles', [Featured_Profile::class]);
 });
 
-// ✅ Use execute() where profile selection is needed
+// ✅
 $qv = new Query_Vars(['post_type' => 'project']);
 $qv->set('_profiles', [Featured_Profile::class]);
 $posts = Query_Manager::get_instance()->execute($qv->make_query());
 ```
-
 ---
 
 ## Has_WP_Post (Post model)
@@ -280,13 +255,12 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 ### `get_type()` was removed — use `get_post_type()`
 
 ```php
-// ❌ Method no longer exists (removed in commit daaddfe)
+// ❌
 $type = $post->get_type();
 
 // ✅
 $type = $post->get_post_type();
 ```
-
 ---
 
 ## View
@@ -294,7 +268,7 @@ $type = $post->get_post_type();
 ### Always call `parent::params($p)` when overriding `params()`
 
 ```php
-// ❌ Breaks any param transformations defined in parent classes
+// ❌
 public function params(&$p) {
     $p['total'] = $p['order']->get_total();
 }
@@ -309,7 +283,7 @@ public function params(&$p) {
 ### Always call `parent::__construct()` when overriding the constructor
 
 ```php
-// ❌ Default parameter initialization never runs
+// ❌
 public function __construct($params = []) {
     $this->custom_setup();
 }
@@ -324,7 +298,7 @@ public function __construct($params = []) {
 ### Child views must re-list parent merge keys — they don't accumulate
 
 ```php
-// ❌ Child's $merge replaces parent's — 'classes' is lost
+// ❌
 class Parent_View extends View {
     protected static $merge = ['classes'];
 }
@@ -340,10 +314,10 @@ class Child_View extends Parent_View {
 
 ### Class-name defaults are injected — add to `$skip_inject` to prevent it
 
-Any string value in `$defaults` that maps to a class with `get_instance()` will be resolved as DI.
+String values mapping to classes with `get_instance()` are resolved as DI.
 
 ```php
-// ❌ Framework calls Order::get_instance($value) on this param
+// ❌
 protected static $defaults = [
     'model_class' => Order::class,
 ];
@@ -356,41 +330,30 @@ protected static $skip_inject = ['model_class'];
 ### Don't render views via a dynamically resolved class name stored in a static property
 
 ```php
-// ❌ static::$view resolves to the property value (a string), but chaining ::render()
-//    off it is fragile and doesn't work through the static resolution chain as expected
+// ❌
 static::$view::render([...]);
 
-// ✅ Use the concrete class name directly
+// ✅
 My_View::render([...]);
-
-// ✅ Or if you need dynamic dispatch, use a local variable
-$view_class = $this->view;
-$view_class::render([...]);
 ```
 
 ### Only render markup from the render phase
 
-Rendering belongs in `view()` (or a `$template`) plus the `before_first()` / `before()` / `after()` / `after_first()` hooks. Don't emit markup from `params()`, `condition()`, `permission()`, `required()`, or any other prepare / validate method — they run before `validate()` decides whether to render, so side effects fire even when the view is suppressed and the output sits outside the lifecycle hooks.
+Render in `view()` or lifecycle hooks, not `params()` or validate methods.
 
 ```php
-// ❌ Render side effect in a prepare/validate method (same applies to condition(), permission(), required())
+// ❌
 public function params (&$p) {
     ob_start();
     ?><div class="x"><?= $p['title'] ?></div><?php
     $p['content'] = ob_get_clean();
 }
 
-// ✅ Template
-protected static $template = 'my-view';
-
-// ✅ Inline view() — stubs or branchy markup only
+// ✅
 public function view () {
     ?><div class="x"><?= esc_html($this['title']) ?></div><?php
 }
 ```
-
-For `Component` subclasses (whose template renders `$content` as HTML), assigning a string or stringified sub-view to `$p['content']` from `params()` is data, not a render side effect — see [CONVENTIONS](./CONVENTIONS.md#populate-content-via-sub-view-instantiation-in-component-subclasses).
-
 ---
 
 ## Query_Manager / Digitalis_Query
@@ -398,7 +361,7 @@ For `Component` subclasses (whose template renders `$content` as HTML), assignin
 ### `Digitalis_Query` is removed — use `Query_Vars` + `Query_Manager`
 
 ```php
-// ❌ Digitalis_Query is gone
+// ❌
 $query = new Digitalis_Query(['post_type' => 'project']);
 $query->merge($args)->query();
 
@@ -407,51 +370,33 @@ $qv = new \Digitalis\Query_Vars(['post_type' => 'project']);
 $qv->merge($args);
 $posts = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query());
 ```
-
 ---
 
 ## Post / User / Term — Model Methods
 
 ### Wrap named data access in dedicated model methods
 
-The framework provides generic low-level accessors — `get_meta()`, `update_meta()`, `get_field()`, `update_field()` — that take raw string keys. These are implementation details and should stay inside the model. Call sites should work with named methods, not key strings.
-
-This applies to **any** raw-key accessor: WP meta, ACF fields, options, transients, etc. — including bare WordPress functions (`get_user_meta()`, `get_post_meta()`, `update_user_meta()`, etc.), which are subject to the same rule.
-
-The threshold is: if you'd grep for the key string tomorrow, it belongs in a method.
+Generic accessors take raw string keys. Keep keys inside the model; call sites use named methods.
 
 ```php
-// ❌ Raw key strings scattered across features, routes, and post-types
+// ❌
 if ($user->get_meta('mycelium_onboarding_source') === 'self_registered') { ... }
 $user->update_meta('mycelium_onboarding_source', 'invite');
-
 $phone = $user->get_field('phone');
-$org->update_field('location', $value);
 
-// ✅ Key strings live once, in the model — call sites are readable and key-string-free
+// ✅
 class User extends \Digitalis\User {
-
     public function get_onboarding_source(): ?string {
         return $this->get_meta('mycelium_onboarding_source');
     }
-
     public function set_onboarding_source(string $source): void {
         $this->update_meta('mycelium_onboarding_source', $source);
     }
-
-    public function get_phone(): ?string {
-        return $this->get_field('phone');
-    }
-
 }
-
-// Call sites
 if ($user->get_onboarding_source() === 'self_registered') { ... }
-$user->set_onboarding_source('invite');
-$phone = $user->get_phone();
 ```
 
-**Exception:** keys that are internal implementation details of a single class — written and consumed entirely within that class as part of one flow (e.g. a short-lived token stored and verified inside `Email_Confirmation`) — may remain as raw calls. The test is: does the key represent a named concept on the model that other classes care about? If yes, wrap it. If it's private plumbing that never leaves the class, raw calls are fine.
+**Exception:** keys internal to a single class may remain as raw calls.
 
 ---
 
@@ -459,92 +404,69 @@ $phone = $user->get_phone();
 
 ### Don't call `save()` with full post data inside a `wp_after_insert_post` hook
 
-`save()` calls `cache_instance()` **after** `wp_update_post` returns, but `wp_after_insert_post` fires **synchronously inside** `wp_update_post`. Any hook that calls `get_instance()` during that window gets the pre-save cached state — with the old `post_status` (or other fields) still set. Passing a full `save()` from that hook silently reverts the fields that the original caller just changed.
+Hook fires inside `wp_update_post`; cached instances may be stale. Full `save()` can revert recent changes.
 
 ```php
-// ❌ Saves the full model — if the instance cache is stale (e.g. post_status is still
-//    'pending_review' from before the caller changed it to 'publish'), the full save
-//    will overwrite the DB with the old status.
+// ❌
 public function update_keywords () {
     $this->set_excerpt($this->generate_keywords());
     $this->save([], false);
 }
 
-// ✅ Target only the field being changed — leave all other post data untouched.
+// ✅
 public function update_keywords () {
     $keywords = $this->generate_keywords();
     $this->wp_post->post_excerpt = $keywords;
     wp_update_post(['ID' => $this->get_id(), 'post_excerpt' => $keywords], false, false);
 }
 ```
-
-**Why it happens:** `save()` pre-populates `$post_array` via `wp_parse_args([], get_object_vars($this->wp_post))`. If the instance was cached before the caller's status change took effect, `$this->wp_post->post_status` holds the old value. The targeted `wp_update_post` sidesteps this entirely by only touching the field you actually changed.
-
-**Rule of thumb:** Inside any `wp_after_insert_post` callback, only write targeted updates (`update_post_meta`, `wp_update_post` with specific fields, `update_field`). Never call `save()` with an empty or full array.
-
 ---
 
 ## Post / User / Term — Saving
 
 ### Use `$model->save()` — not `wp_update_post()`, `wp_update_user()`, or `wp_update_term()`
 
-The framework model's `save()` method wraps the underlying WP function. Calling WP update functions directly bypasses the model layer, requires manually passing the ID, and is inconsistent with how the rest of the codebase writes data.
+Model's `save()` wraps WP functions. Direct WP calls bypass the model layer.
 
 ```php
-// ❌ Bypasses model layer; ID must be passed manually
+// ❌
 wp_update_post(['ID' => $org_id, 'post_status' => 'publish']);
-wp_update_post(['ID' => $post->ID, 'post_title' => 'New Title']);
-wp_update_user(['ID' => $user_id, 'display_name' => 'Jane']);
-wp_update_term($term_id, 'category', ['name' => 'New Name']);
 
-// ✅ Use the model — ID is implicit, hooks and framework lifecycle fire correctly
+// ✅
 $org->save(['post_status' => 'publish']);
-$post->save(['post_title' => 'New Title']);
-$user->save(['display_name' => 'Jane']);
-$term->save(['name' => 'New Name']);
 ```
-
 ---
 
 ## Post / User / Term — Querying
 
 ### Use framework `query()` methods, not bare WordPress query functions
 
-`get_posts()`, `get_users()`, `get_terms()`, `WP_Query`, `WP_User_Query`, and `WP_Term_Query` return raw WordPress objects. Framework query methods return typed model instances, respect class resolution, and keep query logic consistent.
+WP functions return raw objects. Framework methods return typed model instances.
 
 ```php
-// ❌ Returns WP_Post[] — bypasses model resolution and class hierarchy
-$posts = get_posts(['post_type' => 'project', 'posts_per_page' => 10]);
-$users = get_users(['role' => 'subscriber']);
-$terms = get_terms(['taxonomy' => 'category']);
+// ❌
+$posts = get_posts(['post_type' => 'project']);
 
-// ✅ Returns typed model instances
-$posts = Project::query(['posts_per_page' => 10]);
-$users = User::query(['role' => 'subscriber']);
-$terms = Category::query();
+// ✅
+$posts = Project::query();
 ```
-
-Valid exceptions: low-level utility code where raw IDs or WP objects are explicitly needed, or framework internals where model instantiation would be circular.
-
 ---
 
 ## Layout System
 
 ### Don't put shell logic in Page_View
 
-Page_View owns the body content. Shell structure (header, footer, navigation chrome) belongs in Layout. Page_View can suppress or swap shell parts via `$layout` overrides, but should not render them.
+Page_View renders body content. Shell structure belongs in Layout.
 
 ```php
-// ❌ Page_View rendering its own header
+// ❌
 class My_Page extends Page_View {
     public function view (): void {
-        echo new Header();
-        // body content
-        echo new Footer();
+        echo new Header(); // wrong
     }
 }
 
-// ✅ Page_View renders body only; Layout handles shell
+// ✅
 class My_Page extends Page_View {
     public function view (): void {
         // body content only
@@ -554,65 +476,42 @@ class My_Page extends Page_View {
 
 ### Don't set `$context` or `$post_type` on regular Views
 
-`Resolvable` properties are only meaningful on `Layout` and `Page_View` subclasses — the `Request_Resolver` only considers those two class families. Setting `$context` on a plain `View` or `Component` has no effect.
+`Resolvable` properties only work on `Layout` and `Page_View` subclasses.
 
 ### Don't set `$priority` when auto-specificity is sufficient
 
-`$priority = null` (the default) calculates specificity from context weight (10–40) + 10 per `$post_type`/`$taxonomy`/`$term`. Only set `$priority` when two candidates share the same config and you need to break the tie (e.g. a condition-narrowed variant).
+Auto-specificity calculates from context weight + properties. Only set `$priority` to break ties.
 
 ```php
-// ❌ Redundant — auto-specificity is single (20) + post_type (10) = 30
+// ❌
 class Product_Page extends Page_View {
     protected static $context   = 'single';
     protected static $post_type = 'product';
     protected static $priority  = 30;
 }
 
-// ✅ Auto-specificity handles it
+// ✅
 class Product_Page extends Page_View {
     protected static $context   = 'single';
     protected static $post_type = 'product';
 }
 ```
-
 ---
 
 ## General PHP / Framework
 
 ### Prefix vendor model variables — reserve short names for framework models
 
-Short variable names (`$user`, `$product`, `$order`) are reserved for framework model instances (`Mycelium\User`, `Digitalis\Order`, etc.). Variables holding vendor/WordPress/WooCommerce objects must carry a vendor prefix so the type is unambiguous at a glance.
-
-| Variable | Type |
-|----------|------|
-| `$wp_user` | `WP_User` |
-| `$wp_post` | `WP_Post` |
-| `$wp_term` | `WP_Term` |
-| `$wc_product` | `WC_Product` |
-| `$wc_order` | `WC_Order` |
-| `$user` | `Mycelium\User` / `Digitalis\User` |
-| `$post` | framework `Post` subclass |
-
-```php
-// ❌ $user suggests a framework model; $mycelium_user is noise in the other direction
-$user          = get_userdata($id);   // WP_User
-$mycelium_user = User::get_instance($id);
-
-// ✅
-$wp_user = get_userdata($id);         // WP_User — vendor prefix makes type clear
-$user    = User::get_instance($id);   // framework model gets the short name
-```
-
----
+Short names for framework models; vendor prefixes for WP/WC objects.
 
 ### `self::` vs `static::` for inherited static calls
 
 ```php
-// ❌ self:: binds at definition time — breaks in subclasses
+// ❌
 $defaults = self::get_defaults();
 $class    = self::class;
 
-// ✅ static:: uses late static binding
+// ✅
 $defaults = static::get_defaults();
 $class    = static::class;
 ```
