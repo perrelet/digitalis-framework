@@ -104,7 +104,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/admin/terms-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/attachment-table.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/wc-orders.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.abstract.php';
-
+require DIGITALIS_FRAMEWORK_PATH . 'include/admin/profile-section.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
