@@ -22,6 +22,41 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ---
 
+## Autoloader contract — inclusion is also instantiation
+
+**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly during `App::__construct() → autoload()` — every file loads and eligible classes get instances on every request.
+
+### What gets auto-included
+
+Files in `include/` and subdirectories (recursive), matched by the [suffix convention](./docs/AUTOLOADER.md#file-naming-convention). The autoloader resolves inheritance relationships from file names (`class-name.parent-class.php`) and loads in topological order — parents before children.
+
+### What fires on include
+
+Static methods `hello()` then `static_init()` fire immediately after `include_once`, before any instantiation. Use these for static-time registration (`register_post_type()`, hooks bound to `[static::class, '...']`) that doesn't need an instance.
+
+### What gets auto-instantiated
+
+Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `ClassName::get_instance()` by default (see [`get_auto_instantiation()`](./docs/AUTOLOADER.md#auto-instantiation)). The constructor runs. The instance exists for the request.
+
+### What opts out
+
+- **`abstract` keyword** on the class — loaded but not instantiated
+- **`.abstract.` in filename** — loaded but not instantiated  
+- **`_dirname/`** — directory entirely skipped (use for admin-only, CLI-only code)
+- **`~dirname/`** — directory skipped unless the named WP plugin is active
+
+### Critical DON'Ts for include/ files
+
+**DO NOT** manually `require` / `require_once` / `include` files in `include/` — the autoloader already loaded them; explicit include causes redeclaration errors.
+
+**DO NOT** `new ClassName()` for an auto-loaded class — it's already a singleton; `new` bypasses `get_instance()`, creating a second instance with duplicate hook registration. Use `ClassName::get_instance()` (idempotent — returns the cached singleton).
+
+**DO NOT** use `include/` for WIP / scratch classes — they'll auto-instantiate and run on every request. Use `_dirname/` (skipped entirely) for scratch, or `.abstract.` in the filename if you want the parent loaded but not instantiated.
+
+For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
+
+---
+
 ## Class Hierarchy
 
 "Auto-instantiated" means the autoloader creates a singleton instance on load — no manual bootstrapping needed.
@@ -483,6 +518,15 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 
 **`hello()` and `static_init()` self-fire after include — no instantiation needed.**
 The autoloader calls these static methods immediately after `include_once`, before any instantiation and regardless of `get_auto_instantiation()`. Use them for static-time registration (`register_post_type()`, hooks bound to `[static::class, '…']`) that doesn't need an instance. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
+**Never manually `require` files in `include/` — the autoloader already loaded them.**
+Explicit `include`/`require` on auto-loaded files causes redeclaration errors. The autoloader recursively includes all files during `App::__construct()`. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
+**Never `new ClassName()` for auto-loaded classes — use `ClassName::get_instance()`.**
+`new` bypasses the singleton, creating a second instance with duplicate hook registration. Auto-loaded classes are already singletons. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
+**Never put WIP classes in `include/` — they auto-instantiate on every request.**
+Any concrete class in `include/` gets instantiated during plugin bootstrap. Use `_dirname/` for scratch work or `.abstract.` suffix to prevent instantiation. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
 
 ---
 

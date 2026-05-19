@@ -42,7 +42,7 @@ The autoloader is implemented as the `Autoloader` trait, used by the `App` abstr
 
 ## Common Confusions
 
-Five behaviours the autoloader handles invisibly that an agent will get wrong on first contact. Each is a one-line "wrong assumption → reality."
+Eight behaviours the autoloader handles invisibly that an agent will get wrong on first contact. Each is a one-line "wrong assumption → reality."
 
 ### `$this->path` is the App-subclass file's location, not the plugin root
 
@@ -70,6 +70,21 @@ If `my-plugin.app.php` lives at `<plugin>/include/my-plugin.app.php`, `$this->pa
 
 > **Wrong assumption:** lifecycle hooks need an instance to run.
 > **Reality:** Immediately after `include_once`, the autoloader calls `ClassName::hello()` and then `ClassName::static_init()` if those static methods exist — before any instantiation, regardless of `get_auto_instantiation()`. Use them for static-time registration (`register_post_type()`, hooks bound to `[static::class, '…']`) that doesn't need an instance.
+
+### Manual `require` causes redeclaration errors
+
+> **Wrong assumption:** you need to manually `include` or `require` files in `include/` to use their classes.
+> **Reality:** The autoloader recursively includes all `.php` files during `App::__construct() → autoload()`. Explicitly including an already-loaded file triggers a "Cannot redeclare class" fatal error.
+
+### `new ClassName()` bypasses the singleton and creates duplicate instances
+
+> **Wrong assumption:** `new ClassName()` is equivalent to `ClassName::get_instance()`.
+> **Reality:** Auto-loaded classes are singletons. Using `new` creates a second instance with duplicate hook registration, separate cache slots, and potentially conflicting state. Always use `ClassName::get_instance()` for auto-loaded classes.
+
+### WIP classes in `include/` auto-instantiate and run on every request
+
+> **Wrong assumption:** dropping a work-in-progress class file in `include/` makes it "available for later use."
+> **Reality:** Concrete classes in `include/` get instantiated during plugin bootstrap — constructor runs, hooks register, the class is wired into the request lifecycle. Use `_dirname/` for scratch work (entirely skipped) or `.abstract.` suffix to load the class without instantiation.
 
 ---
 
