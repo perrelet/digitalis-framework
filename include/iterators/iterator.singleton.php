@@ -100,6 +100,11 @@ abstract class Iterator extends Singleton {
                 $date_string = (new DateTime)->format('Y-m-d') . ' ' . $this->cron_time;
                 $date_time = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
 
+                // If today's slot has already passed, push to tomorrow — otherwise wp_schedule_event
+                // accepts the past timestamp and WP-cron fires it immediately on the next poll, locking
+                // the first run to "now" instead of the intended time.
+                if ($date_time->getTimestamp() < time()) $date_time->modify('+1 day');
+
                 wp_schedule_event($date_time->getTimestamp(), $this->cron_schedule, $cron_action_start);
 
             }
