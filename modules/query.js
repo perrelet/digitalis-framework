@@ -1,3 +1,9 @@
+export default function boot (options) {
+
+    return new Digitalis_Query(options);
+
+}
+
 export class Digitalis_Query {
 
     static default_options = {

@@ -457,6 +457,64 @@ The script is rendered inline on every render of the view, not deferred through 
 | `get_script()` | Returns the full `<script>` `Element` (or `null` if no module URL). |
 | `get_script_attributes()` | Returns `Attributes` for the `<script>` tag. |
 
+#### Wiring Notes
+
+##### `module_url`: framework default vs. site-side boot module
+
+`query.js` exports both a `default` boot function (which instantiates a plain `Digitalis_Query`) and the named `Digitalis_Query` class. The PHP boot script emits `import boot from "..."` (default-import semantics), so two setups both work:
+
+**Simple — use the framework default.** Leave `module_url` at its default and the bundled boot function handles instantiation:
+
+```php
+class Product_Filters extends Query_Filters {
+    // module_url not set — framework default used
+}
+```
+
+**Customisable — ship a site-side boot module.** Import the named class, subclass it for project-wide overrides, and re-export `default`:
+
+```js
+// assets/js/post-query.js
+import { Digitalis_Query } from "../../lattice/modules/query.js";
+
+export default function boot (params) {
+
+    class Post_Query extends Digitalis_Query {}
+
+    new Post_Query(params);
+
+}
+```
+
+```php
+class Product_Filters extends Query_Filters {
+    protected static $defaults = [
+        'module_url'     => MY_PLUGIN_URI . 'assets/js/post-query.js',
+        'module_version' => MY_PLUGIN_VERSION,
+    ];
+}
+```
+
+The empty subclass is the customisation hook — override `success()`, `request_items()`, etc. on `Post_Query` to change ajax behaviour across every archive on the site without touching the framework. Use the site-side module when you anticipate that kind of override; the framework default is fine for vanilla cases.
+
+##### `child_classes['items']` must keep the `items` class
+
+The auto-generated `selectors.items` default is `#{$archive_id} .items` — it targets the `.items` class that `Archive::get_content()` writes around the rendered item list. If your `Post_Archive` subclass overrides `child_classes['items']` to add a layout class (e.g. `'news-grid'`), keep `items` in the class list or the AJAX swap silently misses the container:
+
+```php
+// ❌ Layout class only — Query_Filters can't find the swap target
+protected static $defaults = [
+    'child_classes' => ['items' => 'news-grid'],
+];
+
+// ✅ Both classes — framework selector matches, custom class drives styling
+protected static $defaults = [
+    'child_classes' => ['items' => 'items news-grid'],
+];
+```
+
+Alternatively, override `selectors.items` on the `Query_Filters` subclass to point at your custom class directly.
+
 ---
 
 ## Components
