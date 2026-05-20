@@ -6,6 +6,8 @@ Patterns that look correct but are wrong in this framework. Each entry explains 
 
 ## Route
 
+REST API endpoint class — property scoping, method/permission patterns, and param access.
+
 ### Properties must be non-static instance properties
 
 `Factory::get_cache_key()` reads `$this->$property` (non-static). Static properties create separate slots; `$this->route` resolves to the parent's default.
@@ -73,6 +75,8 @@ protected $namespace = 'my-plugin/v1';
 
 ## Post / User / Term — `query()`
 
+Model query methods — return type, fluent-chaining misconceptions, and `found_posts` access.
+
 ### `query()` returns an array, not a fluent builder
 
 ```php
@@ -103,6 +107,8 @@ $found = $wp_query->found_posts;
 
 ## ACF_Block
 
+Gutenberg ACF block class — property scoping mirrors Route; same static-vs-instance trap.
+
 ### Properties must be non-static instance properties
 
 Framework accesses these as instance properties.
@@ -123,6 +129,8 @@ protected $defaults = ['quote' => '', 'author' => ''];
 ---
 
 ## Class Resolution
+
+Model subclass resolution — `validate_id()` cost and specificity requirements.
 
 ### Keep `validate_id()` cheap — no nested queries or model instantiation
 
@@ -159,6 +167,8 @@ class My_Post extends Post {
 ---
 
 ## Query_Vars
+
+Fluent query-variable builder — find/modify patterns, merge vs overwrite semantics, and path invalidation.
 
 ### `find_meta_query()` does not exist — use the two-step path pattern
 
@@ -210,6 +220,8 @@ $qv->get_meta_block($qv->find_meta_query_path('status'))['value'] = 'updated';
 
 ## Query_Profile
 
+Query modifier system — instantiation at boot, `execute()` idempotency, and main-query restrictions.
+
 ### `Query_Profile` subclasses must be instantiated at boot to register
 
 ```php
@@ -252,6 +264,8 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 
 ## Has_WP_Post (Post model)
 
+Post model — removed methods and their current replacements.
+
 ### `get_type()` was removed — use `get_post_type()`
 
 ```php
@@ -264,6 +278,8 @@ $type = $post->get_post_type();
 ---
 
 ## View
+
+View-system pitfalls — merge keys, param overrides, constructor chaining, and render-phase boundaries.
 
 ### Always call `parent::params($p)` when overriding `params()`
 
@@ -358,6 +374,8 @@ public function view () {
 
 ## Query_Manager / Digitalis_Query
 
+Query execution system — removed `Digitalis_Query` and the `Query_Vars` + `Query_Manager` replacement.
+
 ### `Digitalis_Query` is removed — use `Query_Vars` + `Query_Manager`
 
 ```php
@@ -373,6 +391,8 @@ $posts = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query());
 ---
 
 ## Post / User / Term — Model Methods
+
+Model data access — wrapping raw key strings in named model methods instead of exposing them at call sites.
 
 ### Wrap named data access in dedicated model methods
 
@@ -402,6 +422,8 @@ if ($user->get_onboarding_source() === 'self_registered') { ... }
 
 ## Has_WP_Post (Post model) — `save()` inside `wp_after_insert_post`
 
+Post model save timing — full `save()` in a `wp_after_insert_post` hook can silently revert concurrent field changes.
+
 ### Don't call `save()` with full post data inside a `wp_after_insert_post` hook
 
 Hook fires inside `wp_update_post`; cached instances may be stale. Full `save()` can revert recent changes.
@@ -424,6 +446,8 @@ public function update_keywords () {
 
 ## Post / User / Term — Saving
 
+Model persistence — use `$model->save()` instead of bare WP update functions.
+
 ### Use `$model->save()` — not `wp_update_post()`, `wp_update_user()`, or `wp_update_term()`
 
 Model's `save()` wraps WP functions. Direct WP calls bypass the model layer.
@@ -439,6 +463,8 @@ $org->save(['post_status' => 'publish']);
 
 ## Post / User / Term — Querying
 
+Model querying — use typed `query()` methods instead of bare WordPress query functions.
+
 ### Use framework `query()` methods, not bare WordPress query functions
 
 WP functions return raw objects. Framework methods return typed model instances.
@@ -453,6 +479,8 @@ $posts = Project::query();
 ---
 
 ## Layout System
+
+Layout and Page_View system — shell logic separation, `Resolvable` property scope, and priority settings.
 
 ### Don't put shell logic in Page_View
 
@@ -499,6 +527,8 @@ class Product_Page extends Page_View {
 ---
 
 ## General PHP / Framework
+
+Cross-cutting PHP and framework patterns — variable naming conventions and static binding.
 
 ### Prefix vendor model variables — reserve short names for framework models
 
