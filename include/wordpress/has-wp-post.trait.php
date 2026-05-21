@@ -16,17 +16,27 @@ trait Has_WP_Post {
 
         if (is_int($data)) {
 
-            $this->set_wp_post(WP_Post::get_instance($data));
+            $wp_post = WP_Post::get_instance($data);
 
         } else if ($data instanceof WP_Post) {
 
-            $this->set_wp_post($data);
+            $wp_post = $data;
 
         } else {
 
-            $this->set_wp_post(new WP_Post((object) $data));
+            $wp_post = new WP_Post((object) $data);
 
         }
+
+        if ($wp_post instanceof WP_Post) $wp_post = $this->prepare_wp_post($wp_post);
+
+        $this->set_wp_post($wp_post);
+
+    }
+
+    protected function prepare_wp_post ($wp_post) {
+
+        return $wp_post;
 
     }
 

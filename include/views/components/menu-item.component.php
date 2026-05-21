@@ -7,106 +7,249 @@ class Menu_Item extends Component {
     protected static $template = 'menu-item';
 
     protected static $defaults = [
-        'text'          => 'Menu Item',
+
+        // Content
+        'text'          => '',
         'url'           => null,
-        'child'         => null,
-        'position'      => 'static', // static, relative, absolute, over, full-screen, left-screen, block-below, block-above,
-        'aria_label'    => null,
-        'role'          => 'menuitem',
-        'tag'           => 'li',
-        'triggers'      => ['click', 'hover', 'keys'],
-        'in_delay'      => 0,
-        'out_delay'     => 250,
-        'a_classes'     => ['menu-item'],
-        'menu_class'    => Menu::class,
-        'child_wrap_classes' => ['child-wrap'],
-        'close_button'  => null,     // null = auto
-        'close_tag'     => 'div',
-        'close_type'    => null,     // null = auto | 'all' | 'level'
-        'close_position' => 'beside top right', // over | top | bottom | left | right | beside | before | after
-        'close_classes' => ['close-menu-button'],
-        'close_attributes' => [
-            'aria-role'  => 'button',
-            'tabindex'   => 0,
-            'aria-label' => 'Close menu',
-        ],
-        'is_mobile' => false,
-        'level' => 0,
+        'submenu'       => null,
+        'content'       => null,   // mega-menu panel — stage 7
+        'divider'       => false,
+        'heading'       => null,
+        'heading_level' => 3,
+        'description'   => null,
+        'target'        => null,
+
+        // Active state
+        'is_current'  => null,  // null = pipeline decides; bool = explicit override
+        'is_ancestor' => null,
+        'object_id'   => null,
+        'object_type' => null,
+
+        // i18n
+        'toggle_label_format'   => 'Toggle %s submenu',  // set by parent Menu; default for standalone use
+        'external_label_format' => '%s (opens in new tab)',
+
+        // Behaviour (set by parent Menu)
+        'expand_ancestor' => false,
+
+        // Internal / coercion-time
+        'level'        => 1,
+        'item_index'   => 0,
+        'parent_ul_id' => null,
+        'menu_class'   => Menu::class,
+
+        // Source pass-through
+        'wp_post' => null,
+
+        // Component-base
+        'tag' => 'li',
+
     ];
 
-    protected static $elements = ['a', 'child_wrap', 'close'];
+    protected static $skip_inject = ['menu_class'];
 
     public function params (&$p) {
 
+        // Defensive coercion: only fires if this Menu_Item was instantiated standalone,
+        // outside a parent Menu's eager coercion. In normal nested usage this is a no-op.
+        if (is_array($p['submenu'])) {
+
+            $submenu_array             = $p['submenu'];
+            $submenu_array['level']    = $p['level'] + 1;
+            $submenu_array['landmark'] = false;
+
+            if (!isset($submenu_array['orientation'])) $submenu_array['orientation'] = 'vertical';
+
+            $menu_class   = $p['menu_class'];
+            $p['submenu'] = new $menu_class($submenu_array);
+
+        }
+
+        // Decide shape.
+        $p['shape'] = $this->decide_shape($p);
+
+        // Compute own <li> id.
+        $p['li_id'] = "{$p['parent_ul_id']}-item-{$p['item_index']}";
+
+        // Pass parent_li_id down to nested Menus (submenu and/or content-Menu).
+        if ($p['submenu'] instanceof Menu) $p['submenu']->parent_li_id = $p['li_id'];
+        if ($p['content'] instanceof Menu) $p['content']->parent_li_id = $p['li_id'];
+
+        // Derived flags.
+        $has_submenu    = $p['submenu'] instanceof Menu;
+        $has_panel      = ($p['content'] !== null) && !$has_submenu;
+        $has_link       = in_array($p['shape'], ['link', 'link_disclosure', 'link_mega'], true);
+        $has_button     = in_array($p['shape'], ['disclosure', 'link_disclosure', 'mega', 'link_mega'], true);
+        $button_visible = in_array($p['shape'], ['disclosure', 'mega'], true);
+
+        $p['has_submenu']           = $has_submenu;
+        $p['has_panel']             = $has_panel;
+        $p['button_visible_text']   = $button_visible;
+        $p['is_external']           = ($p['target'] === '_blank');
+        $p['describedby_on_link']   = ($p['description'] !== null) && $has_link;
+        $p['describedby_on_button'] = ($p['description'] !== null) && !$has_link && $has_button;
+
+        // <li> element setup.
         parent::params($p);
 
-        if (is_array($p['child'])) {
+        $p['element']['id'] = $p['li_id'];
 
-            $p['child']['menu_item_class'] = static::class;
-            $p['child'] = new $p['menu_class']($p['child']);
+        // Pre-init the rendered-element slots so the template can echo unconditionally.
+        $p['link']           = '';
+        $p['button']         = '';
+        $p['description_el'] = '';
+        $p['panel']          = '';
 
-        }
+        switch ($p['shape']) {
 
-        if ($p['child']) {
+            case 'divider':
 
-            if ($p['child'] instanceof View) {
+                $p['element']['role'] = 'separator';
+                $p['element']->add_class('menu-divider');
+                break;
 
-                $p['child']->set_param('level', $p['level'] + 1);
+            case 'heading':
 
-            }
+                $p['element']['role'] = 'presentation';
+                $p['element']->add_class('menu-heading');
+                break;
 
-            $p['a']['aria-haspopup']  = 'true';
-            $p['a']['aria-expanded']  = 'false';
-            $p['a']['data-in-delay']  = $p['in_delay'];
-            $p['a']['data-out-delay'] = $p['out_delay'];
+            default:
 
-            if ($p['aria_label']) $p['a']['aria-label'] = $p['aria_label'];
+                $p['element']->add_class('menu-item');
 
-            $p['fixed'] = in_array($p['position'], ['full-screen', 'left-screen']);
-            $p['child_wrap']['data-position']  = $p['position'];
-            $p['child_wrap']['data-fixed']     = $p['fixed'] ? 'true' : 'false';
-            $p['child_wrap']['data-level']     = $p['level'];
-            $p['child_wrap']['data-is-mobile'] = $p['is_mobile'] ? 'true' : 'false';
+                // expand_ancestor: open submenus on the path to current at initial paint.
+                $p['disclosure_open'] = ($has_submenu || $has_panel)
+                    && $p['expand_ancestor']
+                    && ($p['is_ancestor'] === true);
 
-        } else {
+                $p['element']['data-state'] = match (true) {
+                    !$has_submenu && !$has_panel => 'static',
+                    $p['disclosure_open']        => 'open',
+                    default                      => 'closed',
+                };
 
-            $p['fixed'] = false;
+                $p['element']['data-current']  = ($p['is_current']  === true) ? 'true' : 'false';
+                $p['element']['data-ancestor'] = ($p['is_ancestor'] === true) ? 'true' : 'false';
 
-        }
+                if ($has_submenu) $p['element']['data-has-submenu'] = 'true';
+                if ($has_panel)   $p['element']['data-has-panel']   = 'true';
 
-        $p['attributes']['role'] = 'presentation';
+                // Build interactive sub-elements.
+                if ($has_link)                   $p['link']           = $this->build_link($p);
+                if ($has_button)                 $p['button']         = $this->build_button($p);
+                if ($p['description'] !== null)  $p['description_el'] = $this->build_description($p);
+                if ($has_panel)                  $p['panel']          = $this->build_panel($p);
 
-        $p['a']->set_tag($p['url'] ? 'a' : 'span');
-        $p['a']->set_content($p['text']);
-        $p['a']['role']          = $p['role'];
-        $p['a']['tabindex']      = 0;
-        $p['a']['data-triggers'] = implode(' ', (array) $p['triggers']);
-
-        if ($p['url']) $p['a']['href'] = $p['url'];
-
-        if (is_null($p['close_button'])) $p['close_button'] = $p['fixed'];
-
-        if ($p['close_button']) {
-
-            if (is_null($p['close_type'])) $p['close_type'] = ($p['level'] == 1) ? 'all' : 'level';
-
-            if ($p['close_type'] == 'all') {
-
-                $close_js = "this.closest(`.child-wrap`).previousElementSibling.close();";
-
-            } else {
-
-                $close_js = "this.parentElement.previousElementSibling.close();";
-
-            }
-
-            $p['close']['onclick']    = $close_js;
-            $p['close']['onkeypress'] = "if (event.key == `Enter`) {$close_js}";
-
-            $p['child_wrap_attributes']['data-close-position'] = $p['close_position'];
+                break;
 
         }
-    
+
+    }
+
+    // ------------------------------------------------------------------
+    // Element builders
+    //
+    // Subclass Menu_Item and override these to inject icons, badges,
+    // extra attributes, etc. Each returns an Element that the template
+    // echoes verbatim.
+    // ------------------------------------------------------------------
+
+    protected function build_link ($p) {
+
+        $attrs = ['href' => $p['url']];
+
+        if ($p['is_current'] === true)  $attrs['aria-current']     = 'page';
+        if ($p['describedby_on_link'])  $attrs['aria-describedby'] = "{$p['li_id']}-desc";
+
+        if ($p['is_external']) {
+            $attrs['target']     = '_blank';
+            $attrs['rel']        = 'noopener noreferrer';
+            $attrs['aria-label'] = sprintf($p['external_label_format'], $p['text']);
+        }
+
+        return new Element('a', $attrs, esc_html($p['text']));
+
+    }
+
+    protected function build_button ($p) {
+
+        $controls_id = $p['has_panel'] ? "{$p['li_id']}-panel" : "{$p['li_id']}-submenu";
+
+        $content  = '';
+        if ($p['button_visible_text']) $content .= "<span>" . esc_html($p['text']) . "</span>";
+        $content .= "<span aria-hidden='true' class='chevron'></span>";
+
+        $attrs = [
+            'type'          => 'button',
+            'aria-expanded' => $p['disclosure_open'] ? 'true' : 'false',
+            'aria-controls' => $controls_id,
+        ];
+
+        if (!$p['button_visible_text']) {
+            $attrs['aria-label'] = sprintf($p['toggle_label_format'], $p['text']);
+        }
+
+        if ($p['describedby_on_button']) {
+            $attrs['aria-describedby'] = "{$p['li_id']}-desc";
+        }
+
+        return new Element('button', $attrs, $content);
+
+    }
+
+    protected function build_description ($p) {
+
+        return new Element('span', [
+            'class' => ['menu-item-description'],
+            'id'    => "{$p['li_id']}-desc",
+        ], esc_html($p['description']));
+
+    }
+
+    protected function build_panel ($p) {
+
+        return new Element('div', [
+            'role'       => 'region',
+            'id'         => "{$p['li_id']}-panel",
+            'aria-label' => $p['text'],
+        ], (string) $p['content']);
+
+    }
+
+    // ------------------------------------------------------------------
+    // Shape decision
+    // ------------------------------------------------------------------
+
+    protected function decide_shape ($p) {
+
+        if ($p['divider'])          return 'divider';
+        if ($p['heading'] !== null) return 'heading';
+
+        $has_url     = ($p['url'] !== null) && ($p['url'] !== '');
+        $has_submenu = $p['submenu'] instanceof Menu;
+        $has_content = ($p['content'] !== null) && !$has_submenu;
+
+        return match (true) {
+            $has_url && $has_submenu => 'link_disclosure',
+            $has_url && $has_content => 'link_mega',
+            $has_submenu             => 'disclosure',
+            $has_content             => 'mega',
+            $has_url                 => 'link',
+            default                  => 'link',  // empty; condition() filters
+        };
+
+    }
+
+    public function condition () {
+
+        if ($this['divider'])          return true;
+        if ($this['heading'] !== null) return true;
+        if ($this['content'] !== null) return true;
+        if (!empty($this['text']))     return true;
+
+        return false;
+
     }
 
 }

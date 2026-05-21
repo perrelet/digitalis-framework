@@ -29,6 +29,7 @@ Complete documentation of all views, components, and fields shipped with the Dig
   - [Table](#table)
   - [Menu](#menu)
   - [Menu_Item](#menu_item)
+  - [Menu_Drawer](#menu_drawer)
 - [Fields](#fields)
   - [Field (Base)](#field-base)
   - [Input](#input)
@@ -804,65 +805,89 @@ $table->print();
 
 **Namespace:** `Digitalis\Menu`
 **File:** `include/views/components/menu.component.php`
+**Full spec:** [`docs/specs/menu/SPEC.md`](specs/menu/SPEC.md) · **Active state:** [`docs/specs/menu/ACTIVE_STATE.md`](specs/menu/ACTIVE_STATE.md)
 
-Accessible navigation menu with mobile support.
+Accessible recursive nav-menu renderer. Emits `<nav><ul>` with disclosure-button submenus, configurable ARIA pattern (`disclosure` default, `menubar` opt-in), server-rendered active-state marking, and three item sources: hand-built arrays, WP nav menus, or arbitrary iterables via adapter.
+
+Asset enqueueing happens automatically via `before_first()` — `assets/css/menu.css` + `assets/js/menu.js`.
 
 #### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `id` | `string` | `'digitalis-menu'` | Menu ID |
-| `items` | `array` | `[]` | Menu items |
-| `aria_label` | `string` | `'Menu'` | Accessibility label |
-| `role` | `string` | `'menubar'` | ARIA role |
-| `direction` | `string` | `'row'` | Flex direction |
-| `mobile` | `bool` | `true` | Enable mobile menu |
-| `breakpoint` | `string` | `'1000px'` | Mobile breakpoint |
-| `hamburger_params` | `array` | (defaults) | Hamburger button config |
-| `mobile_menu_params` | `array` | (defaults) | Mobile menu config |
-| `mobile_item_params` | `array` | (defaults) | Mobile item config |
-| `menu_item_class` | `string` | `Menu_Item::class` | Item component class |
+| `items` | `array` | `[]` | Item arrays or `Menu_Item` instances. Coerced eagerly into the full tree before render. |
+| `source` | `string\|int\|null` | `null` | WP nav menu ID, slug, or name. Loaded via `Nav_Menu::get_instance($source)->get_items_tree()`. |
+| `adapter` | `callable\|null` | `null` | `fn($entry) => array` — applied to each item entry before coercion. *(Deferred — stage 5.)* |
+| `aria_label` | `string` | `'Menu'` | `aria-label` on the `<nav>` landmark (when `landmark=true`). |
+| `pattern` | `string` | `'disclosure'` | `'disclosure'` (site nav, default) or `'menubar'` (app toolbars; keyboard pattern deferred to stage 9). |
+| `orientation` | `string` | `'horizontal'` | `'horizontal'` or `'vertical'`. Submenus default to `'vertical'`. |
+| `trigger` | `array` | `['click']` | Subset of `['click', 'hover']` (hover JS deferred to stage 8). |
+| `multi_open` | `bool` | `false` | Allow multiple sibling submenus open at once. |
+| `landmark` | `bool` | `true` | Wrap level-1 in `<nav>` landmark. Set false when the parent is already a nav landmark. |
+| `expand_ancestor` | `bool` | `false` | Pre-open submenus on the path to current at initial paint. |
+| `ancestor_taxonomies` | `array\|null` | `null` | Restrict taxonomy-term ancestor matching to listed taxonomy slugs. `null` = all hierarchical taxonomies. |
+| `match_current` / `match_ancestor` | `bool` | `true` | Toggle pipeline steps (no-op when `false`). |
+| `toggle_label_format` | `string` | `'Toggle %s submenu'` | `sprintf` format for disclosure-button `aria-label` (only used when the button has no visible text). |
+| `id` | `string\|null` | `null` | DOM id of the root `<ul>`. Derived from `view_index` when null. |
+| `item_class` | `string` | `Menu_Item::class` | Class used to coerce array items. Subclass to extend. |
 
-#### Usage
+Inherited `Component` attribute params (`classes`, `attr`, `styles`) target the root `<ul>` (or the `<nav>` wrapper at level 1 with `landmark=true`).
+
+#### Usage — WP nav menu
 
 ```php
-Menu::render([
-    'id'    => 'main-nav',
-    'items' => [
-        ['text' => 'Home', 'url' => '/'],
-        ['text' => 'Products', 'url' => '/products', 'child' => [
-            'items' => [
-                ['text' => 'Widgets', 'url' => '/products/widgets'],
-                ['text' => 'Gadgets', 'url' => '/products/gadgets'],
-            ],
-        ]],
-        ['text' => 'About', 'url' => '/about'],
-        ['text' => 'Contact', 'url' => '/contact'],
-    ],
-    'breakpoint' => '768px',
+echo new Menu([
+    'source'     => 'primary',
+    'aria_label' => __('Primary navigation', 'my-plugin'),
 ]);
 ```
 
-#### Item Definition
+#### Usage — hand-built items
 
 ```php
-[
-    'text'     => 'Menu Item',     // Display text
-    'url'      => '/path',         // Link URL (null for non-link)
-    'child'    => [                // Submenu (optional)
-        'items' => [...],
+echo new Menu([
+    'aria_label' => 'Primary',
+    'items' => [
+        ['text' => 'Home',     'url' => '/'],
+        ['text' => 'Products', 'url' => '/products/', 'submenu' => [
+            'items' => [
+                ['text' => 'Widgets', 'url' => '/products/widgets/'],
+                ['divider' => true],
+                ['heading' => 'Coming soon'],
+                ['text' => 'Gizmos', 'url' => '/products/gizmos/'],
+            ],
+        ]],
+        ['text' => 'About', 'url' => '/about/'],
+        ['text' => 'Docs', 'url' => 'https://docs.example.com', 'target' => '_blank'],
     ],
-    'position' => 'static',        // Submenu position
-    'triggers' => ['click', 'hover', 'keys'],
-]
+]);
 ```
 
-#### Use Cases
-- Site navigation
-- Admin menus
-- Dropdown menus
-- Mobile hamburger menus
-- Mega menus
+#### Active state
+
+`Menu_Active_State::resolve()` runs once at the root (`level === 1`) and marks each item via a five-step pipeline:
+
+1. Object-ID match (post / term / archive)
+2. URL exact match
+3. Content-ancestor rules (singular-of-CPT, taxonomy-classified, term hierarchy)
+4. URL prefix
+5. Menu-tree bubble (post-order)
+
+Marks emit as `data-current='true'` / `data-ancestor='true'` on the `<li>` and `aria-current='page'` on the link. Consumers can pre-set `'is_current' => bool` or `'is_ancestor' => bool` on any item to override the pipeline for that item.
+
+#### Model layer
+
+`Digitalis\Nav_Menu` (wraps `nav_menu` term) and `Digitalis\Nav_Menu_Item` (wraps `nav_menu_item` post) provide the model layer. `Nav_Menu_Item::get_instance($id)` auto-decorates via `wp_setup_nav_menu_item()` through the `Has_WP_Post::prepare_wp_post()` hook. Subclass `Nav_Menu_Item` and override `as_menu_item_params()` to surface ACF / project-specific fields onto each item:
+
+```php
+class My_Nav_Menu_Item extends Digitalis\Nav_Menu_Item {
+    public function as_menu_item_params () {
+        $item = parent::as_menu_item_params();
+        $item['icon'] = $this->get_field('icon');
+        return $item;
+    }
+}
+```
 
 ---
 
@@ -871,35 +896,60 @@ Menu::render([
 **Namespace:** `Digitalis\Menu_Item`
 **File:** `include/views/components/menu-item.component.php`
 
-Individual menu item with submenu support.
+A single `<li>` whose interactive shape is decided from its params. Six shapes total: link, disclosure-only, link + disclosure, mega-menu, mega-link, plus structural `divider` and `heading`.
 
 #### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `text` | `string` | `'Menu Item'` | Item text |
-| `url` | `string\|null` | `null` | Item URL |
-| `child` | `array\|View\|null` | `null` | Submenu |
-| `position` | `string` | `'static'` | Submenu position |
-| `aria_label` | `string\|null` | `null` | Accessibility label |
-| `role` | `string` | `'menuitem'` | ARIA role |
-| `triggers` | `array` | `['click', 'hover', 'keys']` | Open triggers |
-| `in_delay` | `int` | `0` | Open delay (ms) |
-| `out_delay` | `int` | `250` | Close delay (ms) |
-| `close_button` | `bool\|null` | `null` | Show close button |
+| `text` | `string` | `''` | Visible label. Required for link / disclosure / heading shapes. |
+| `url` | `string\|null` | `null` | If set, renders `<a href>`. |
+| `submenu` | `array\|Menu\|null` | `null` | Nested submenu. Arrays are eagerly coerced into a `Menu` instance. |
+| `content` | `string\|View\|null` | `null` | Mega-menu panel content (renders inside `<div role='region'>`). |
+| `divider` | `bool` | `false` | Renders `<li role='separator'>`. |
+| `heading` | `string\|null` | `null` | Renders an `<h_>` inside a presentational `<li>`. |
+| `heading_level` | `int` | `3` | `<h2>` .. `<h6>` for heading items. |
+| `description` | `string\|null` | `null` | Supporting text rendered as `<span class='menu-item-description'>` after the interactive element. The link/button gets `aria-describedby` pointing to it. |
+| `target` | `string\|null` | `null` | `target` attribute. `'_blank'` adds `rel='noopener noreferrer'` and an "(opens in new tab)" aria-label suffix. |
+| `is_current` / `is_ancestor` | `bool\|null` | `null` | Explicit override (skips pipeline matching for this item). |
+| `object_id` / `object_type` | — | `null` | Used by the active-state pipeline. `object_type` ∈ `'post_type'`, `'taxonomy'`, `'post_type_archive'`, `'custom'`. |
+| `external_label_format` | `string` | `'%s (opens in new tab)'` | `sprintf` format for the external-link aria-label suffix. |
+| `menu_class` | `string` | `Menu::class` | Class used to coerce array submenus. Subclass to extend. |
+| `wp_post` | `WP_Post\|null` | `null` | Underlying menu-item post when loaded via `Nav_Menu` (for ACF / meta access in subclasses). |
 
-#### Position Options
+Inherited `Component` attribute params (`classes`, `attr`, `styles`) target the `<li>`.
 
-| Position | Description |
-|----------|-------------|
-| `static` | Normal flow |
-| `relative` | Relative to parent |
-| `absolute` | Absolute position |
-| `over` | Overlay parent |
-| `full-screen` | Full screen overlay |
-| `left-screen` | Slide from left |
-| `block-below` | Block below trigger |
-| `block-above` | Block above trigger |
+#### Item shapes
+
+| `url` | `submenu` | `content` | Shape | Markup summary |
+|---|---|---|---|---|
+| set | unset | unset | link only | `<a>` |
+| unset | set | unset | disclosure only | `<button>` + `<ul>` |
+| set | set | unset | link + disclosure | `<a>` + `<button>` + `<ul>` |
+| unset | unset | set | mega only | `<button>` + `<div role='region'>` |
+| set | unset | set | link + mega | `<a>` + `<button>` + `<div role='region'>` |
+| `divider: true` | — | — | divider | `<li role='separator'>` |
+| `heading: '...'` | — | — | heading | `<li role='presentation'><h_>` |
+
+#### Subclass extension points
+
+`Menu_Item` exposes four protected `build_*` methods that return `Element` instances — override to inject icons, badges, or extra attributes per item:
+
+- `build_link($p)` — the `<a>`
+- `build_button($p)` — the disclosure `<button>`
+- `build_description($p)` — the description `<span>`
+- `build_panel($p)` — the mega-menu `<div role='region'>`
+
+Pass `'item_class' => My_Menu_Item::class` to `Menu` to use a subclass throughout the tree.
+
+---
+
+### Menu_Drawer
+
+**Namespace:** `Digitalis\Menu_Drawer`
+**Status:** Deferred to stage 6 — not yet implemented. See [SPEC.md §3.3](specs/menu/SPEC.md).
+
+Composition wrapper for off-canvas / mobile drawer chrome — a toggle `<button>` + a `<div>` drawer containing a `Menu`. Will own focus trap, body scroll lock, Escape-close, click-outside-close, and breakpoint-based visibility. Composition over inheritance — not a `Menu` subclass.
 
 ---
 

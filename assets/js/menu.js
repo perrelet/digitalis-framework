@@ -1,237 +1,292 @@
-class DigitalisNav extends HTMLElement {
+/**
+ * Lattice Menu — disclosure pattern interaction.
+ * See lattice/docs/specs/menu/SPEC.md §7 for the JS contract.
+ *
+ * Owns: click toggle, Escape close, click-outside close, focus management,
+ *       Arrow / Home / End keyboard within submenus, single-open enforcement,
+ *       MutationObserver for dynamically-added menus.
+ *
+ * Does NOT own: hover trigger (stage 8), menubar pattern (stage 9),
+ *               collision flipping (stage 10), drawer (stage 6).
+ */
 
-    static tag = `digitalis-nav`;
+(function () {
+    'use strict';
 
-    parsedCallback () {
+    if (window.__lattice_menu_loaded__) return;
+    window.__lattice_menu_loaded__ = true;
 
-        this.hamburger = this.querySelector(`hamburger`);
-        this.items     = this.querySelectorAll(`.menu-item`);
+    var INITED   = '__lattice_menu_inited__';
+    var ROOT_SEL = 'ul[data-pattern]';
+    var BTN_SEL  = 'button[aria-controls]';
 
-        if (this.hamburger) this.hamburger.addEventListener(`click`, e => this.openMobile());
+    var outsideListenerAttached = false;
 
-        this.addEventListener('focusout', e => {
+    // ------------------------------------------------------------------
+    // Boot
+    // ------------------------------------------------------------------
 
-            // Works well until you have nested fixed children
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
-            /* const parentWrap = e.target.closest(`.child-wrap`);
-            if (!parentWrap || (parentWrap.getAttribute(`data-fixed`) != `true`)) return;
+    function init () {
 
-            if (e.relatedTarget) {
-                const relatedWrap = e.relatedTarget.closest(`.child-wrap`);
-                if (relatedWrap == parentWrap) return;
-            }
+        document.querySelectorAll(ROOT_SEL).forEach(initRoot);
+        observe();
 
-            if (!e.relatedTarget || (e.relatedTarget.compareDocumentPosition(e.target) == 2)) {
-                parentWrap.previousElementSibling.focusFirstChild();
-            } else {
-                parentWrap.previousElementSibling.focusLastChild();
-            } */
+    }
+
+    function initRoot (root) {
+
+        if (root.hasAttribute('data-no-observe')) return;
+        if (root[INITED]) return;
+        root[INITED] = true;
+
+        root.addEventListener('click',    function (e) { onClick(root, e); });
+        root.addEventListener('keydown',  function (e) { onKeydown(root, e); });
+        root.addEventListener('focusout', function (e) { onFocusOut(root, e); });
+
+    }
+
+    function observe () {
+
+        if (typeof MutationObserver === 'undefined') return;
+
+        var observer = new MutationObserver(function (mutations) {
+
+            mutations.forEach(function (m) {
+
+                m.addedNodes.forEach(function (node) {
+
+                    if (node.nodeType !== 1) return;
+                    if (node.matches && node.matches(ROOT_SEL)) initRoot(node);
+                    if (node.querySelectorAll) node.querySelectorAll(ROOT_SEL).forEach(initRoot);
+
+                });
+
+            });
 
         });
 
-        this.items.forEach((item) => {
+        observer.observe(document.body, { childList: true, subtree: true });
 
-            item.open = () => { if (item.hasChild()) {
-                item.setAttribute(`aria-expanded`, `true`);
-                item.child.setAttribute(`open`, ``);
-                if (item.child.getAttribute(`data-fixed`) == `true`) document.body.setAttribute(`lock-scroll`, ``);
-            }}; 
+    }
 
-            item.close = () => { if (item.hasChild()) {
-                item.setAttribute(`aria-expanded`, `false`);
-                item.child.removeAttribute(`open`);
-                if (item.child.getAttribute(`data-fixed`) == `true`) document.body.removeAttribute(`lock-scroll`);
-            }}; 
+    // ------------------------------------------------------------------
+    // Click
+    // ------------------------------------------------------------------
 
-            item.isOpen = ()            => item.getAttribute(`aria-expanded`) == `true`; 
-            item.toggle = ()            => item.isOpen() ? item.close() : item.open();
-            item.closeParent = ()       => item.hasParent() ? item.parentItem.close() : null;
+    function onClick (root, event) {
 
-            item.hasParent = ()         => item.parentItem !== null;
-            item.hasChild = ()          => item.child !== null;
-            item.getChildList = ()      => item.hasChild() && (item.child.children[0].tagName == `UL`) ? item.child.children[0] : null;
-            item.hasChildList = ()      => item.getChildList() !== null;
-            item.getChildItemWrap = (i) => item.hasChildList() ? item.getChildList().children[i] ?? null : null;
-            item.getChildItem = (i)     => item.getChildItemWrap(i) ? item.getChildItemWrap(i).getItem() : null;
-            item.getNext = ()           => item.wrap.nextElementSibling     ? item.wrap.nextElementSibling.getItem()     : item.list.firstElementChild.getItem();
-            item.getPrev = ()           => item.wrap.previousElementSibling ? item.wrap.previousElementSibling.getItem() : item.list.lastElementChild.getItem();
+        var button = event.target.closest(BTN_SEL);
+        if (!button || !root.contains(button)) return;
 
-            item.focusNext = ()         => item.getNext() ? item.getNext().focus() : null;
-            item.focusPrev = ()         => item.getPrev() ? item.getPrev().focus() : null;
-            item.focusFirst = ()        => item.list.firstElementChild.getItem().focus();
-            item.focusLast = ()         => item.list.lastElementChild.getItem().focus();
-            item.focusFirstChild = ()   => item.hasChildList() ? item.getChildList().firstElementChild.getItem().focus() : null;
-            item.focusLastChild = ()    => item.hasChildList() ? item.getChildList().lastElementChild.getItem().focus() : null;
-            
-            item.getTriggers = ()       => item.getAttribute(`data-triggers`);
-            item.hasTrigger = (trigger) => item.getTriggers() ? item.getTriggers().includes(trigger) : false;
-            item.getInDelay = ()        => parseInt(item.getAttribute(`data-in-delay`));
-            item.getOutDelay = ()       => parseInt(item.getAttribute(`data-out-delay`));
+        var expanded = button.getAttribute('aria-expanded') === 'true';
+        if (expanded) closeButton(button);
+        else          openButton(root, button);
 
-            item.childWrap  = item.parentElement.closest(`.child-wrap`);
-            item.parentItem = item.childWrap ? item.childWrap.previousElementSibling : null;
-            item.wrap       = item.parentElement;
-            item.list       = item.wrap.parentElement;
-            item.child      = item.nextElementSibling;
+        event.preventDefault();
 
-            item.wrap.getItem = () => item.wrap.firstElementChild;
+    }
 
-            if (item.hasChild() && item.hasTrigger(`click`)) {
+    // ------------------------------------------------------------------
+    // Keydown
+    // ------------------------------------------------------------------
 
-                item.addEventListener(`click`, e => item.open());
+    function onKeydown (root, event) {
 
-            }
+        switch (event.key) {
 
-            if (item.hasChild() && item.hasTrigger(`over`)) {
+            case 'Escape':       return onEscape(root, event);
+            case 'ArrowDown':    return onArrow(root, event, 'first');
+            case 'ArrowUp':      return onArrow(root, event, 'last');
+            case 'Home':         return onHomeEnd(root, event, 'first');
+            case 'End':          return onHomeEnd(root, event, 'last');
 
-                item.wrap.addEventListener(`mouseenter`, e => {
+        }
 
-                    item.timerIn = setTimeout(() => {
-                        //this.closeAllItems();
-                        this.closeAllSiblings(item);
-                        item.open();
-                    }, item.getInDelay());
+    }
 
-                    if (item.timerOut) clearTimeout(item.timerOut);
+    function onEscape (root, event) {
 
-                });
+        var focused = document.activeElement;
+        if (!focused || !root.contains(focused)) return;
 
-                item.wrap.addEventListener(`mouseleave`, e => {
+        var openLi = focused.closest('li[data-state="open"]');
+        if (!openLi) return;
 
-                    item.timerOut = setTimeout(() => item.close(), item.getOutDelay());
+        var trigger = openLi.querySelector(':scope > ' + BTN_SEL);
+        if (!trigger) return;
 
-                    if (item.timerIn) clearTimeout(item.timerIn);
+        closeButton(trigger);
+        trigger.focus();
+        event.preventDefault();
 
-                });
+    }
 
-            }
+    function onArrow (root, event, where) {
 
-            if (item.hasTrigger(`keys`)) {
+        // Only act when the disclosure button itself has focus — not when
+        // a link inside an open submenu does (its closest button would be
+        // the parent disclosure, which is not what arrow should target).
+        var button = (event.target.matches && event.target.matches(BTN_SEL)) ? event.target : null;
+        if (!button || !root.contains(button)) return;
 
-                item.addEventListener(`keydown`, e => {
+        var panel = panelFor(button);
+        if (!panel || panel.dataset.orientation !== 'vertical') return;
 
-                    if (e.code == `ArrowRight`) {
+        var li = button.closest('li');
+        if (li.dataset.state !== 'open') openButton(root, button);
 
-                        item.focusNext();
+        focusIn(panel, where);
+        event.preventDefault();
 
-                    } else if (e.code == `ArrowLeft`) {
+    }
 
-                        item.focusPrev();
+    function onHomeEnd (root, event, where) {
 
-                    } else if (e.code == `Home`) {
+        var focused = document.activeElement;
+        if (!focused || !root.contains(focused)) return;
 
-                        item.focusFirst();
+        // Only respond when focus is inside a submenu / panel (not on a root item).
+        var panel = focused.closest('ul:not([data-pattern]), [role="region"]');
+        if (!panel) return;
 
-                    } else if (e.code == `End`) {
+        focusIn(panel, where);
+        event.preventDefault();
 
-                        item.focusLast();
+    }
 
-                    }
+    // ------------------------------------------------------------------
+    // Focus-out — close the menu tree when focus leaves it entirely
+    // ------------------------------------------------------------------
 
-                    if (item.hasChild()) {
+    function onFocusOut (root, event) {
 
+        var next = event.relatedTarget;
+        if (next && root.contains(next)) return;
 
-                        if ([`Space`, `Enter`, `NumpadEnter`, `ArrowDown`].includes(e.code)) {
+        // Defer a tick so we don't fight a focus that's still in transit.
+        setTimeout(function () {
+            if (!root.contains(document.activeElement)) closeAll(root);
+        }, 0);
 
-                            item.open();
-                            item.focusFirstChild();
+    }
 
-                        } else if (e.code == `ArrowUp`) {
+    // ------------------------------------------------------------------
+    // Open / close primitives
+    // ------------------------------------------------------------------
 
-                            item.open();
-                            item.focusLastChild();
+    function openButton (root, button) {
 
-                        }
+        if (root.dataset.multiOpen !== 'true') closeSiblings(button);
 
-                    }
+        var li = button.closest('li');
+        button.setAttribute('aria-expanded', 'true');
+        if (li.dataset.state !== 'static') li.dataset.state = 'open';
 
-                });
+        syncOutsideListener();
 
-            }
+    }
 
-            if (item.parentItem && item.parentItem.hasTrigger(`keys`)) {
+    function closeButton (button) {
 
-                item.addEventListener(`keydown`, e => {
+        var li = button.closest('li');
 
-                    if (e.code == `Escape`) {
+        // Close any open descendants first.
+        li.querySelectorAll('[data-state="open"]').forEach(function (descLi) {
 
-                        item.parentItem.close();
-                        item.parentItem.focus();
+            var descBtn = descLi.querySelector(':scope > ' + BTN_SEL);
+            if (descBtn) descBtn.setAttribute('aria-expanded', 'false');
+            descLi.dataset.state = 'closed';
 
-                    }
+        });
 
-                });
+        button.setAttribute('aria-expanded', 'false');
+        if (li.dataset.state !== 'static') li.dataset.state = 'closed';
 
-            }
+        syncOutsideListener();
 
-            
+    }
+
+    function closeSiblings (button) {
+
+        var li     = button.closest('li');
+        var parent = li.parentElement;
+        if (!parent) return;
+
+        parent.querySelectorAll(':scope > li[data-state="open"]').forEach(function (sibling) {
+
+            if (sibling === li) return;
+            var sibBtn = sibling.querySelector(':scope > ' + BTN_SEL);
+            if (sibBtn) closeButton(sibBtn);
+
         });
 
     }
 
-    getMobile () {
+    function closeAll (root) {
 
-        return this.id.includes(`-mobile`) ? this : document.getElementById(this.id + `-mobile`);
+        root.querySelectorAll('[data-state="open"]').forEach(function (li) {
 
-    }
+            var btn = li.querySelector(':scope > ' + BTN_SEL);
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+            li.dataset.state = 'closed';
 
-    getDesktop () {
+        });
 
-        return this.id.includes(`-mobile`) ? document.getElementById(this.id.replace(`-mobile`, ``)) : this;
-
-    }
-
-    open () {
-
-        this.setAttribute(`aria-hidden`, `false`);
+        syncOutsideListener();
 
     }
 
-    close () {
+    // ------------------------------------------------------------------
+    // Document-level click-outside listener (lazy, single instance)
+    // ------------------------------------------------------------------
 
-        this.setAttribute(`aria-hidden`, `true`);
+    function syncOutsideListener () {
 
-    }
+        var anyOpen = !!document.querySelector(ROOT_SEL + ' [data-state="open"]');
 
-    openMobile () {
-
-        const mobile = this.getMobile();
-        if (!mobile) return;
-        mobile.open();
-
-    }
-
-    closeMobile () {
-
-        const mobile = this.getMobile();
-        if (!mobile) return;
-        mobile.close();
+        if (anyOpen && !outsideListenerAttached) {
+            document.addEventListener('click', onDocumentClick);
+            outsideListenerAttached = true;
+        } else if (!anyOpen && outsideListenerAttached) {
+            document.removeEventListener('click', onDocumentClick);
+            outsideListenerAttached = false;
+        }
 
     }
 
-    closeAllItems () {
+    function onDocumentClick (event) {
 
-        this.items.forEach((item) => { item.close() });
+        document.querySelectorAll(ROOT_SEL).forEach(function (root) {
 
-    }
+            if (!root.contains(event.target)) closeAll(root);
 
-    closeAllSiblings (item) {
-
-        Array.from(item.list.children).forEach(sibling => sibling.getItem().close());
+        });
 
     }
 
-}
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
 
-// https://github.com/WICG/webcomponents/issues/551
-// https://stackoverflow.com/questions/79060310/web-components-custom-parsedcallback-method-is-not-working
-// https://dev.to/dannyengelman/web-component-developers-do-not-connect-with-the-connectedcallback-yet-4jo7
+    function panelFor (button) {
 
-if(!customElements.get(`parsed-callback`)) customElements.define(`parsed-callback`, class extends HTMLElement { connectedCallback() {
+        var id = button.getAttribute('aria-controls');
+        return id ? document.getElementById(id) : null;
 
-    this.parentElement.parsedCallback();
-    this.remove();
+    }
 
-}});
+    function focusIn (container, where) {
 
-customElements.define(DigitalisNav.tag, DigitalisNav);
+        var items = container.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])');
+        if (!items.length) return;
+        (where === 'first' ? items[0] : items[items.length - 1]).focus();
+
+    }
+
+})();

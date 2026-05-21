@@ -1,12 +1,17 @@
-<<?= $tag ?> <?= $attributes ?>>
-    <?= $a ?>
-    <?php if ($child): ?>
-        <div <?= $child_wrap_attributes ?>>
-            <?= $child ?>
-            <?= $close_button ? $close : '' ?>
-        </div>
-    <?php endif; ?>
-    <?php if ($fixed): ?>
-        <fixed-menu-bg onclick='this.closest(`digitalis-nav`).closeAllItems();'></fixed-menu-bg>
-    <?php endif; ?>
-</<?= $tag ?>>
+<?php if ($shape === 'divider'): ?>
+    <<?= $tag ?> <?= $attributes ?>></<?= $tag ?>>
+
+<?php elseif ($shape === 'heading'): ?>
+    <<?= $tag ?> <?= $attributes ?>>
+        <h<?= (int) $heading_level ?>><?= esc_html($heading) ?></h<?= (int) $heading_level ?>>
+    </<?= $tag ?>>
+
+<?php else: ?>
+    <<?= $tag ?> <?= $attributes ?>>
+        <?= $link ?>
+        <?= $button ?>
+        <?= $description_el ?>
+        <?php if ($submenu instanceof \Digitalis\Menu) echo $submenu; ?>
+        <?= $panel ?>
+    </<?= $tag ?>>
+<?php endif; ?>

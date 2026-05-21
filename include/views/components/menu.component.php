@@ -7,206 +7,242 @@ class Menu extends Component {
     protected static $template = 'menu';
 
     protected static $defaults = [
-        'id'                 => 'digitalis-menu',
-        'items'              => [],
-        'aria_label'         => 'Menu',
-        'role'               => 'menubar',
-        'direction'          => 'row',
-        'z-index'            => 1,
-        'mobile'             => true,
-        'breakpoint'         => '1000px',
-        'hamburger_params' => [
-            'text'       => '<div></div><div></div><div></div>',
-            'position'   => 'full-screen',
-            'classes'    => ['hamburger'],
-            'role'       => 'button',
-            'aria_label' => null,
-            'child'      => null,
-            'attributes' => [
-                'data-hamburger' => 'true',
-            ],
-        ],
-        'mobile_menu_params' => [
-            'direction' => 'column',
-        ],
-        'mobile_item_params' => [
-            'triggers'   => ['click', 'keys'],
-        ],
-        'menu_item_class' => Menu_Item::class,
-        'tag'             => 'digitalis-nav',
-        'classes'         => ['digitalis-menu'],
-        'is_mobile'       => false,
-        'level'           => 1,
+
+        // Items / sources
+        'items'   => [],
+        'source'  => null,  // menu id / slug / name → Nav_Menu::get_instance()
+        'adapter' => null,  // stage 5 — callable
+
+        // Landmark + label
+        'aria_label' => 'Menu',
+        'landmark'   => true,
+
+        // Pattern + layout
+        'pattern'     => 'disclosure',  // 'disclosure' | 'menubar'
+        'orientation' => 'horizontal',  // 'horizontal' | 'vertical'
+
+        // Interaction (read by JS at stage 2)
+        'trigger'    => ['click'],
+        'multi_open' => false,
+
+        // Active state (computed at stage 3)
+        'expand_ancestor'     => false,
+        'ancestor_taxonomies' => null,
+        'match_current'       => true,
+        'match_ancestor'      => true,
+
+        // i18n
+        'toggle_label_format' => 'Toggle %s submenu',
+
+        // Internal / coercion-time
+        'id'           => null,
+        'level'        => 1,
+        'parent_li_id' => null,
+        'item_class'   => Menu_Item::class,
+        'menu_class'   => Menu::class,
+
+        // Component-base
+        'tag'      => 'ul',
+        'list_tag' => 'ul',
+
     ];
 
-    protected static $merge    = ['hamburger_params', 'mobile_menu_params', 'mobile_item_params']; 
-    protected static $elements = ['list'];
+    protected static $skip_inject = ['adapter', 'item_class', 'menu_class'];
+    protected static $elements    = ['list'];
 
-    protected static $mobile = false;
+    const PROPAGATING_PARAMS = [
+        'pattern', 'trigger', 'multi_open', 'expand_ancestor',
+        'ancestor_taxonomies', 'match_current', 'match_ancestor',
+        'toggle_label_format', 'item_class', 'menu_class',
+    ];
 
     public function params (&$p) {
 
-        parent::params($p);
+        // Step 1: source loading — load via Nav_Menu when 'source' is set and items is empty.
+        if ($p['source'] !== null && empty($p['items'])) {
+            $p['items'] = Nav_Menu::get_instance($p['source'])?->get_items_tree() ?? [];
+        }
 
-        if ($p['level'] == 1) {
+        // Step 2: adapter mapping — deferred to stage 5.
 
-            $p['items']                       = $this->get_items();
-            $p['mobile_menu_params']['items'] = $this->get_mobile_items();
+        // Step 3: Eagerly coerce the full tree.
+        foreach ($p['items'] as &$entry) {
+
+            if ($entry instanceof Menu_Item) continue;
+            if (!is_array($entry))           continue;
+
+            $entry = $this->coerce_item($entry, $p);
+
+        }
+        unset($entry);
+
+        // Step 4: Set each item's level.
+        foreach ($p['items'] as $item) {
+
+            if ($item instanceof Menu_Item) $item->level = $p['level'];
 
         }
 
-        if (($p['view_index'] > 1) || ($p['level'] > 1)) {
-            
-            $p['element']->set_id("{$p['id']}-{$p['view_index']}-{$p['level']}" . ($p['is_mobile'] ? '-mobile' : ''));
+        // Step 5: Active-state pipeline — root only.
+        if ($p['level'] === 1) {
+
+            Menu_Active_State::resolve($p['items'], [
+                'ancestor_taxonomies' => $p['ancestor_taxonomies'],
+                'match_current'       => $p['match_current'],
+                'match_ancestor'      => $p['match_ancestor'],
+            ]);
 
         }
 
-        $p['list']->add_style('--menu-breakpoint', $p['breakpoint']);
+        // Step 6: ID derivation.
+        if ($p['id'] === null) {
 
-        foreach ($p['items'] as $i => &$item) {
+            $p['id'] = ($p['level'] === 1)
+                ? "menu-" . $this->get_index()
+                : "{$p['parent_li_id']}-submenu";
 
-            if (is_array($item)) {
+        }
 
-                $item['menu_class'] = static::class;
-                $item = new $p['menu_item_class']($item);
+        // Pass per-child config to each Menu_Item.
+        foreach ($p['items'] as $i => $item) {
+
+            if ($item instanceof Menu_Item) {
+
+                $item->item_index          = $i;
+                $item->parent_ul_id        = $p['id'];
+                $item->toggle_label_format = $p['toggle_label_format'];
+                $item->expand_ancestor     = $p['expand_ancestor'];
 
             }
 
-            if (!($item instanceof View)) continue;
-
-            $item->set_param('level', $p['level']);
-
         }
 
-        $p['element']['aria-label']     = $p['aria_label'];
-        $p['element']['data-is-mobile'] = $p['is_mobile'] ? 'true' : 'false';
+        // Step 7: Element setup. Tag depends on landmark.
+        $is_landmark_root = ($p['level'] === 1) && $p['landmark'];
+        $p['tag']         = $is_landmark_root ? 'nav' : 'ul';
 
-        //$p['styles']['--z-index']          = $p['z_index'];
+        // When landmark is on, the <ul> (list element) carries the id — not the <nav>.
+        // Stash the id and null $p['id'] so Component::create_element doesn't put it on <nav>.
+        $list_id = $p['id'];
+        if ($is_landmark_root) $p['id'] = null;
 
-        $p['list']['data-level'] = $p['level'];
-        $p['list']['role']       = $p['role'];
+        parent::params($p);
 
-        if ($p['direction']) {
+        if ($is_landmark_root) {
 
-            $p['list']->add_style('--menu-direction', $p['direction']);
-            $p['list']['data-direction'] = $p['direction'];
+            // <nav class='menu' aria-label='...'> wraps <ul role='list' id data-*>
+            $p['element']->add_class('menu');
+            $p['element']['aria-label'] = $p['aria_label'];
 
-        }
+            $p['list']['role']             = 'list';
+            $p['list']['id']               = $list_id;
+            $p['list']['data-pattern']     = $p['pattern'];
+            $p['list']['data-orientation'] = $p['orientation'];
+            $p['list']['data-trigger']     = implode(' ', $p['trigger']);
+            $p['list']['data-multi-open']  = $p['multi_open'] ? 'true' : 'false';
 
-        if (!$p['is_mobile'] && ($p['level'] == 1)) {
-
-            echo "<link rel='stylesheet' href='" . DIGITALIS_FRAMEWORK_URI . "assets/css/menu.css?ver=" . DIGITALIS_FRAMEWORK_VERSION . "'>";
-            echo "<script src='" . DIGITALIS_FRAMEWORK_URI . "assets/js/menu.js?ver=" . DIGITALIS_FRAMEWORK_VERSION . "'></script>";
-
-        }
-
-        if (!$p['is_mobile'] && $p['mobile'] && ($p['level'] == 1)) {
-
-            $p['mobile_menu_params'] = wp_parse_args($p['mobile_menu_params'], $p);
-
-            $p['mobile_menu_params'] = $this->walk_menus($p['mobile_menu_params'],
-                function (&$menu) {
-                    $menu['is_mobile'] = true;
-                },
-                function (&$item) use ($p) {
-                    $item['is_mobile'] = true;
-                    foreach ($p['mobile_item_params'] as $key => $value) {
-                        $item[$key] = $value;
-                    }
-                }
-            );
-
-            $p['hamburger_params'] = wp_parse_args($p['mobile_item_params'], $p['hamburger_params']);
-
-            if (is_null($p['hamburger_params']['aria_label'])) $p['hamburger_params']['aria_label'] = 'Open mobile ' . $p['aria_label'];
-            if (is_null($p['hamburger_params']['child']))      $p['hamburger_params']['child'] = new static($p['mobile_menu_params']);
-
-            $p['hamburger_params']['a_attributes']['data-carat'] = 'false';
-            $p['hamburger_params']['level'] = $p['level'];
-
-            $p['items'][] = (new $p['menu_item_class']($p['hamburger_params']));
-
-            echo "<style>";
-                echo "@media only screen and (min-width: {$p['breakpoint']}) {";
-                    echo "#{$p['element']->get_id()} > ul > .hamburger { display: none; } ";
-                echo "}";
-                echo "@media only screen and (max-width: {$p['breakpoint']}) {";
-                    echo "#{$p['element']->get_id()} > ul > *:not(.hamburger) { display: none; } ";
-                echo "}";
-            echo "</style>";
-
-        }
-
-        $type = $p['is_mobile'] ? 'mobile' : 'desktop';
-
-        $methods = [
-            "menu",
-            "{$type}_menu",
-            "level_{$p['level']}_menu",
-            "{$type}_level_{$p['level']}_menu",
-        ];
-        foreach ($methods as $method) if (method_exists(static::class, $method)) (static::class)::$method($p);
-
-        foreach ($p['items'] as &$item) {
-
-            $type = ($p['is_mobile'] || ($item['attributes']['data-hamburger'] ?? false)) ? 'mobile' : 'desktop';
-
-            $methods = [
-                "item",
-                "{$type}_item",
-                "level_{$p['level']}_item",
-                "level_{$p['level']}_item_{$i}",
-                "{$type}_level_{$p['level']}_item",
-                "{$type}_level_{$p['level']}_item_{$i}",
-            ];
-            foreach ($methods as $method) if (method_exists(static::class, $method)) (static::class)::$method($item);
-
-        }
-    
-    }
-
-    protected function get_items () {
-    
-        return $this['items'];
-    
-    }
-
-    protected function get_mobile_items () {
-    
-        return $this['items'];
-    
-    }
-
-    protected function walk_menus ($menu_or_items, $menu_callback = null, $item_callback = null) {
-
-        if (isset($menu_or_items['items'])) {
-
-            if ($menu_callback) $menu_callback($menu_or_items);
-            $menu_or_items['items'] = $this->walk_menus($menu_or_items['items'], $menu_callback, $item_callback);
+            $p['id'] = $list_id;  // restore for downstream consumers
 
         } else {
 
-            if (is_array($menu_or_items) && array_is_list($menu_or_items)) foreach ($menu_or_items as &$item) {
+            // <ul> is the root or a nested submenu.
+            $p['element']['role'] = 'list';
+            $p['element']['id']   = $p['id'];
+            $p['element']['data-orientation'] = $p['orientation'];
 
-                if (isset($item['child'])) {
-    
-                    if ($item_callback) $item_callback($item);
-                    $item['child'] = $this->walk_menus($item['child'], $menu_callback, $item_callback);
-    
-                }
-    
+            if ($p['level'] === 1) {
+
+                // landmark off at level 1: <ul> carries pattern attrs + .menu class.
+                $p['element']->add_class('menu');
+                $p['element']['data-pattern']    = $p['pattern'];
+                $p['element']['data-trigger']    = implode(' ', $p['trigger']);
+                $p['element']['data-multi-open'] = $p['multi_open'] ? 'true' : 'false';
+
             }
+
+            // Nested (level > 1): only role, id, data-orientation. Done.
 
         }
 
-        return $menu_or_items;
-    
+    }
+
+    protected function coerce_item ($entry, $parent_params) {
+
+        // Recurse into the entry's submenu array if present.
+        if (isset($entry['submenu']) && is_array($entry['submenu'])) {
+
+            $submenu_array = $entry['submenu'];
+
+            // Coercion-time transformations.
+            $submenu_array['level']    = $parent_params['level'] + 1;
+            $submenu_array['landmark'] = false;
+
+            if (!isset($submenu_array['orientation'])) $submenu_array['orientation'] = 'vertical';
+
+            // Propagate tree-wide params (only when not overridden by the submenu array).
+            foreach (self::PROPAGATING_PARAMS as $key) {
+
+                if (!array_key_exists($key, $submenu_array) && array_key_exists($key, $parent_params)) {
+
+                    $submenu_array[$key] = $parent_params[$key];
+
+                }
+
+            }
+
+            // Eagerly coerce the nested Menu's items so the full tree is ready
+            // before the root's active-state pipeline runs.
+            if (isset($submenu_array['items']) && is_array($submenu_array['items'])) {
+
+                $coerced = [];
+
+                foreach ($submenu_array['items'] as $sub_entry) {
+
+                    if      ($sub_entry instanceof Menu_Item) $coerced[] = $sub_entry;
+                    else if (is_array($sub_entry))            $coerced[] = $this->coerce_item($sub_entry, $submenu_array);
+
+                }
+
+                $submenu_array['items'] = $coerced;
+
+            }
+
+            $menu_class       = $entry['menu_class'] ?? $parent_params['menu_class'];
+            $entry['submenu'] = new $menu_class($submenu_array);
+
+        }
+
+        $item_class    = $parent_params['item_class'];
+        $menu_item     = new $item_class($entry);
+        $menu_item->level = $parent_params['level'];
+
+        return $menu_item;
+
     }
 
     public function condition () {
-    
-        return $this->params['items'];
-    
+
+        return count($this['items']) > 0;
+
+    }
+
+    public function before_first () {
+
+        wp_enqueue_style(
+            'lattice-menu',
+            DIGITALIS_FRAMEWORK_URI . 'assets/css/menu.css',
+            [],
+            DIGITALIS_FRAMEWORK_VERSION
+        );
+
+        wp_enqueue_script(
+            'lattice-menu',
+            DIGITALIS_FRAMEWORK_URI . 'assets/js/menu.js',
+            [],
+            DIGITALIS_FRAMEWORK_VERSION,
+            ['in_footer' => true]
+        );
+
     }
 
 }
