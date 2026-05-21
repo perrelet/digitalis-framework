@@ -116,7 +116,9 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/page.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/revision.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/attachment.post.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/nav-menu-item.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/nav-menu.term.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.factory.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
@@ -139,6 +141,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/field-group.compone
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/form.field-group.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-item.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-active-state.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
 
