@@ -13,7 +13,6 @@ class Table extends \Digitalis\Component {
         'last_col'       => false,
         'last_row'       => false,
         'data_labels'    => false,
-        'data_titles'    => false,
         'row_classes'    => [],
         'row_atts'       => [],
         'col_classes'    => [],
@@ -27,6 +26,8 @@ class Table extends \Digitalis\Component {
     protected static $merge = ['row_classes', 'row_atts', 'col_classes', 'col_atts'];
 
     public function params (&$p) {
+
+        if (!empty($p['data_titles']) && empty($p['data_labels'])) $p['data_labels'] = $p['data_titles']; // Back-compat: `data_titles` was renamed to `data_labels`
 
         $this->generate_col_atts($p);
         $this->generate_row_atts($p);
@@ -53,25 +54,6 @@ class Table extends \Digitalis\Component {
     }
 
     public function generate_cell_atts (&$p) {
-
-        if ($p['data_labels']) {
-
-            $attribute = is_string($p['data_labels']) ? $p['data_labels'] : 'data-label';
-
-            foreach ($p['rows'] as $i => $row) {
-
-                if ($row) foreach ($row as $j => $cell) {
-
-                    if (!isset($p['cell_atts'][$i][$j])) $p['cell_atts'][$i][$j] = [];
-                    if (isset($p['cell_atts'][$i][$j][$attribute])) continue;
-
-                    $p['cell_atts'][$i][$j][$attribute] = trim(json_encode(strip_tags($cell)), '"');
-
-                }
-
-            }
-
-        }
 
         $atts = [];
 
@@ -117,9 +99,9 @@ class Table extends \Digitalis\Component {
         
         }
 
-        if ($p['rows'] && ($shelf == 'col') && $p['data_titles']) {
+        if ($p['rows'] && ($shelf == 'col') && $p['data_labels']) {
 
-            $attribute = is_string($p['data_titles']) ? $p['data_titles'] : 'data-title';
+            $attribute = is_string($p['data_labels']) ? $p['data_labels'] : 'data-label';
 
             foreach ($p['rows'][0] as $i => $cell) $p["{$shelf}_atts"][$i][$attribute] = trim(json_encode(strip_tags($cell)), '"');
 
