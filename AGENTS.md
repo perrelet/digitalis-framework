@@ -582,3 +582,4 @@ Examples:
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |
+| Minimal plugin bootstrap (header + App subclass + autoload root) | [docs/MINIMAL_CONSUMER.md](./docs/MINIMAL_CONSUMER.md) |
