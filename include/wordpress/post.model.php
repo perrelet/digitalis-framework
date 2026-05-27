@@ -13,6 +13,7 @@ class Post extends WP_Model {
     protected static $post_type       = false;       // string            - Validate by post_type. Leave false to allow any generic post type.
     protected static $post_status     = false;       // string|bool|array - Validate by post_status. Leave false to allow any status.
     protected static $term            = false;       // string|bool|array - Validate by taxonomy term. Leave false to allow any term.
+    protected static $term_children   = false;       // bool              - When true, $term also matches any descendant term (mirrors WP_Query tax_query include_children).
     protected static $taxonomy        = 'category';  // string            - Taxonomy to validate term against.
     protected static $post_slug       = false;       // string            - Validate by post_name (URL slug).
     protected static $post_context    = false;       // string            - One of $context_options keys (e.g. 'front_page', 'posts', 'privacy').
@@ -51,8 +52,17 @@ class Post extends WP_Model {
 
     public static function validate_id ($id) {
 
-        if (static::$post_type && (get_post_type($id) != static::$post_type))    return false;
-        if (static::$term && (!has_term(static::$term, static::$taxonomy, $id))) return false;
+        if (static::$post_type && (get_post_type($id) != static::$post_type)) return false;
+
+        if (static::$term) {
+
+            $terms = static::$term_children
+                ? static::resolve_term_set(static::$term, static::$taxonomy)
+                : static::$term;
+
+            if (!has_term($terms, static::$taxonomy, $id)) return false;
+
+        }
 
         if (static::$post_status) {
 
@@ -74,6 +84,30 @@ class Post extends WP_Model {
         }
 
         return parent::validate_id($id);
+
+    }
+
+    protected static function resolve_term_set ($term, $taxonomy) {
+
+        static $cache = [];
+        $key = $taxonomy . ':' . implode(',', (array) $term);
+        if (isset($cache[$key])) return $cache[$key];
+
+        $ids = [];
+
+        foreach ((array) $term as $slug) {
+
+            if (!$target = get_term_by('slug', $slug, $taxonomy)) continue;
+
+            $ids[] = (int) $target->term_id;
+
+            foreach ((array) get_term_children($target->term_id, $taxonomy) as $child_id) {
+                $ids[] = (int) $child_id;
+            }
+
+        }
+
+        return $cache[$key] = array_values(array_unique($ids));
 
     }
 
