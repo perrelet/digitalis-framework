@@ -2,6 +2,8 @@
 
 Patterns that look correct but are wrong in this framework. Each entry explains why, not just what.
 
+**Format:** Each entry follows `### <heading>` + short explanation + ❌ wrong block + ✅ fix block + brief "why" line when not obvious from the explanation.
+
 ---
 
 ## Route
@@ -154,7 +156,6 @@ class My_Post extends Post {
     protected static $post_type = 'my_post';
 }
 ```
-
 
 ---
 
@@ -478,6 +479,19 @@ class My_Page extends Page_View {
 
 `Resolvable` properties only work on `Layout` and `Page_View` subclasses.
 
+```php
+// ❌
+class My_Component extends Component {
+    protected static $context = 'single';   // no effect
+    protected static $post_type = 'product'; // no effect
+}
+
+// ✅
+class My_Component extends Component {
+    // no Resolvable properties — use on Layout/Page_View only
+}
+```
+
 ### Don't set `$priority` when auto-specificity is sufficient
 
 Auto-specificity calculates from context weight + properties. Only set `$priority` to break ties.
@@ -504,7 +518,19 @@ class Product_Page extends Page_View {
 
 Short names for framework models; vendor prefixes for WP/WC objects.
 
+```php
+// ❌
+$user = get_userdata($id);   // WP_User
+$mycelium_user = User::get_instance($id);
+
+// ✅
+$wp_user = get_userdata($id);         // WP_User — vendor prefix makes type clear
+$user    = User::get_instance($id);   // framework model gets the short name
+```
+
 ### `self::` vs `static::` for inherited static calls
+
+`self::` binds at definition time and breaks in subclasses.
 
 ```php
 // ❌
