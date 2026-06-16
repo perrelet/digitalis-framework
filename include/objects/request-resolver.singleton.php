@@ -25,11 +25,14 @@ class Request_Resolver extends Singleton {
         $term       = $is_tax && $queried ? $queried->slug     : null;
         $post_types = $is_tax && $taxonomy
             ? get_taxonomy($taxonomy)->object_type
-            : [(string) get_post_type(get_queried_object_id())];
+            : ($queried instanceof \WP_Post_Type
+                ? [$queried->name]
+                : [(string) get_post_type(get_queried_object_id())]);
 
         $candidates = array_filter(
             View::get_loaded_views(),
             fn ($class) => is_subclass_of($class, $base_class) && ($class !== $base_class)
+                && !(new \ReflectionClass($class))->isAbstract()
                 && (!$class::get_context()   || array_intersect((array) $class::get_context(), $contexts))
                 && (!$class::get_post_type() || array_intersect((array) $class::get_post_type(), $post_types))
                 && (!$class::get_taxonomy()  || in_array($taxonomy, (array) $class::get_taxonomy()))
