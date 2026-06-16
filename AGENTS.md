@@ -528,6 +528,15 @@ Explicit `include`/`require` on auto-loaded files causes redeclaration errors. T
 **Never put WIP classes in `include/` — they auto-instantiate on every request.**
 Any concrete class in `include/` gets instantiated during plugin bootstrap. Use `_dirname/` for scratch work or `.abstract.` suffix to prevent instantiation. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
 
+**Bootstrap the plugin's App class via `get_instance()` — never `new`.**
+`new` creates an instance outside the Factory cache; `App::get_apps()` won't find it and `App::render()` outputs nothing. See [Bootstrap section in ANTIPATTERNS.md](./docs/ANTIPATTERNS.md#bootstrap).
+
+**Register WP hooks in `boot_*()` — not directly in `App::__construct()`.**
+`__construct()` fires at require time before `plugins_loaded`; `boot_shared()`, `boot_front()`, `boot_admin()` etc. are the correct override points. See [Bootstrap section in ANTIPATTERNS.md](./docs/ANTIPATTERNS.md#bootstrap).
+
+**Always call `parent::__construct()` when overriding the `App` constructor.**
+Skipping it leaves `$this->path` and `$this->url` unset and `boot()` never hooked to `plugins_loaded` — autoloading silently breaks. See [Bootstrap section in ANTIPATTERNS.md](./docs/ANTIPATTERNS.md#bootstrap).
+
 ---
 
 ## Conventions
