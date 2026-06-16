@@ -309,9 +309,15 @@ class Post extends WP_Model {
     public function delete ($force_delete = false) {
 
         // TODO: delete this object? null the cache?
-    
+
         return wp_delete_post($this->wp_post->ID, $force_delete);
-    
+
+    }
+
+    public function get_parent () {
+
+        return ($parent_id = $this->get_parent_id()) ? Post::get_instance($parent_id) : null;
+
     }
 
 }

@@ -208,9 +208,15 @@ class Term extends WP_Model {
 
         $taxonomy;
         if (!$taxonomy = static::$taxonomy ? static::$taxonomy : ($args['taxonomy'] ?? false)) return; // TODO: HANDLE ERROR
-    
+
         return wp_delete_term($this->wp_term->term_id, $taxonomy, $args);
-    
+
+    }
+
+    public function get_parent () {
+
+        return ($parent_id = $this->get_parent_id()) ? Term::get_instance($parent_id) : null;
+
     }
 
 }

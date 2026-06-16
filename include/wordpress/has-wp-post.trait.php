@@ -460,16 +460,26 @@ trait Has_WP_Post {
 
     }
 
-    public function get_parent () {
-
-        return ($parent_id = $this->get_parent_id()) ? static::get_instance($parent_id) : null;
-
-    }
+    // get_parent() lives on the Post base class: it needs explicit
+    // Post::get_instance() dispatch (resets late static binding for the
+    // registry walker) — an explicit class ref doesn't belong in a mixin trait.
 
     public function set_parent ($post) {
 
         if (($post instanceof Post) && ($post_id = $post->get_id())) $this->set_parent_id($post_id);
         return $this;
+
+    }
+
+    public function get_ancestor_ids () {
+
+        return get_post_ancestors($this->wp_post);
+
+    }
+
+    public function get_ancestors () {
+
+        return static::get_instances($this->get_ancestor_ids());
 
     }
 

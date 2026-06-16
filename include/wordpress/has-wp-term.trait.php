@@ -160,11 +160,9 @@ trait Has_WP_Term {
 
     }
 
-    public function get_parent () {
-
-        return static::get_instance($this->get_parent_id());
-
-    }
+    // get_parent() lives on the Term base class: it needs explicit
+    // Term::get_instance() dispatch (resets late static binding for the
+    // registry walker) — an explicit class ref doesn't belong in a mixin trait.
 
     public function set_parent ($parent) {
 
