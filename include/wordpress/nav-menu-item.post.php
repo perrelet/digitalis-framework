@@ -55,9 +55,10 @@ class Nav_Menu_Item extends Post {
     public function get_object_type () {
 
         return match ($this->wp_post->type ?? null) {
-            'post_type' => 'post_type',
-            'taxonomy'  => 'taxonomy',
-            default     => 'custom',
+            'post_type'         => 'post_type',
+            'taxonomy'          => 'taxonomy',
+            'post_type_archive' => 'post_type_archive',
+            default             => 'custom',
         };
 
     }
@@ -89,6 +90,13 @@ class Nav_Menu_Item extends Post {
             'object_type' => $this->get_object_type(),
             'wp_post'     => $this->wp_post,
         ];
+
+        // Native WP archive items carry type='post_type_archive' with the
+        // post-type slug in ->object; active-state keys post_type_archive on
+        // that slug, not the numeric object_id.
+        if ($item['object_type'] === 'post_type_archive') {
+            $item['object_id'] = (string) ($this->wp_post->object ?? '');
+        }
 
         if (($target = $this->get_target()) !== null)           $item['target']      = $target;
         if (($description = $this->get_description()) !== null) $item['description'] = $description;

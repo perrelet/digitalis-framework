@@ -157,6 +157,13 @@ class Menu_Item extends Component {
 
     protected function build_link ($p) {
 
+        // Degenerate case: a text-only item (no url / submenu / content) lands
+        // on the 'link' shape with nothing to link to. Render the label as
+        // plain text rather than an <a> with no href.
+        if (($p['url'] === null) || ($p['url'] === '')) {
+            return new Element('span', [], esc_html($p['text']));
+        }
+
         $attrs = ['href' => $p['url']];
 
         if ($p['is_current'] === true)  $attrs['aria-current']     = 'page';
@@ -176,8 +183,14 @@ class Menu_Item extends Component {
 
         $controls_id = $p['has_panel'] ? "{$p['li_id']}-panel" : "{$p['li_id']}-submenu";
 
+        // Visible text only serves as the accessible name when the shape shows
+        // it AND the text is non-empty. A content-only mega item with no text
+        // would otherwise render a span-less, label-less button — no accessible
+        // name at all — so fall back to toggle_label_format in that case.
+        $has_visible_text = $p['button_visible_text'] && ($p['text'] !== '');
+
         $content  = '';
-        if ($p['button_visible_text']) $content .= "<span>" . esc_html($p['text']) . "</span>";
+        if ($has_visible_text) $content .= "<span>" . esc_html($p['text']) . "</span>";
         $content .= "<span aria-hidden='true' class='chevron'></span>";
 
         $attrs = [
@@ -186,7 +199,7 @@ class Menu_Item extends Component {
             'aria-controls' => $controls_id,
         ];
 
-        if (!$p['button_visible_text']) {
+        if (!$has_visible_text) {
             $attrs['aria-label'] = sprintf($p['toggle_label_format'], $p['text']);
         }
 
@@ -209,11 +222,17 @@ class Menu_Item extends Component {
 
     protected function build_panel ($p) {
 
-        return new Element('div', [
-            'role'       => 'region',
-            'id'         => "{$p['li_id']}-panel",
-            'aria-label' => $p['text'],
-        ], (string) $p['content']);
+        $attrs = [
+            'role' => 'region',
+            'id'   => "{$p['li_id']}-panel",
+        ];
+
+        // Only name the region when there's text to name it with — an empty
+        // aria-label leaves the region with no accessible name, which is worse
+        // than omitting the attribute entirely.
+        if ($p['text'] !== '') $attrs['aria-label'] = $p['text'];
+
+        return new Element('div', $attrs, (string) $p['content']);
 
     }
 

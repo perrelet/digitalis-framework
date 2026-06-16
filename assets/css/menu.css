@@ -52,10 +52,15 @@ ul[data-pattern] ul {
 
 /* ----------------------------------------------------------------------------
  * State visibility — closed submenus + panels are hidden
+ *
+ * Selector is anchored inside `ul[data-pattern]` to match the specificity of
+ * the `ul[data-pattern] ul { display: flex }` rule above (0,1,2). Without the
+ * anchor, the `display: none` rule lands at (0,1,1) and loses the cascade —
+ * closed submenus stay visible. With the anchor it lands at (0,2,2) and wins.
  */
 
-[data-state='closed'] > ul,
-[data-state='closed'] > [role='region'] {
+ul[data-pattern] [data-state='closed'] > ul,
+ul[data-pattern] [data-state='closed'] > [role='region'] {
     display: none;
 }
 
@@ -84,13 +89,15 @@ ul[data-pattern] ul {
 /* ----------------------------------------------------------------------------
  * No-JS keyboard reach
  *
- * When JS hasn't initialised, :focus-within reveals submenus on Tab focus.
- * When JS is loaded, data-state='open' is used instead — and the JS-set state
- * wins via the later cascade order (the 'open' selector comes after 'closed').
+ * Before JS init, :focus-within reveals submenus so keyboard users can reach
+ * them. JS writes [data-js-active] on the root; the :not() gate disables this
+ * once JS manages state — otherwise focus left on the disclosure button after
+ * a JS close keeps :focus-within true, and this rule's (0,4,1) specificity
+ * beats the closed-state (0,2,2) and silently re-opens it.
  */
 
-.menu-item[data-has-submenu][data-state='closed']:focus-within > ul,
-.menu-item[data-has-panel][data-state='closed']:focus-within   > [role='region'] {
+ul[data-pattern]:not([data-js-active]) .menu-item[data-has-submenu][data-state='closed']:focus-within > ul,
+ul[data-pattern]:not([data-js-active]) .menu-item[data-has-panel][data-state='closed']:focus-within   > [role='region'] {
     display: flex;
 }
 
@@ -122,8 +129,8 @@ ul[data-pattern] button {
         display: none;
     }
 
-    [data-state='closed'] > ul,
-    [data-state='closed'] > [role='region'] {
+    ul[data-pattern] [data-state='closed'] > ul,
+    ul[data-pattern] [data-state='closed'] > [role='region'] {
         display: block;
     }
 

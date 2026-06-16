@@ -1,0 +1,121 @@
+/*
+ * Lattice Menu_Drawer — structural styles only.
+ * See lattice/docs/specs/menu/SPEC.md §3.3 / §5.11 / §8 for the CSS
+ * contract.
+ *
+ * Owns: state-visibility mechanics ([hidden] / [inert] / data-state),
+ *       fixed positioning per data-position with logical-property insets
+ *       (RTL-safe), transform-based off-canvas offset while closed,
+ *       data-above-breakpoint hide-above.
+ *
+ * Does NOT own: drawer surface (background, border, padding, width/height),
+ *               toggle / close icon visuals (hamburger, X glyphs),
+ *               scrim, transition/animation specifics, focus rings.
+ */
+
+
+/* ----------------------------------------------------------------------------
+ * Toggle button — structural reset; project provides visual.
+ */
+
+.menu-drawer-toggle {
+    background: none;
+    border:     0;
+    padding:    0;
+    cursor:     pointer;
+    font:       inherit;
+    color:      inherit;
+    display:    inline-flex;
+    align-items: center;
+}
+
+.menu-drawer-toggle[data-above-breakpoint='true'] {
+    display: none;
+}
+
+
+/* ----------------------------------------------------------------------------
+ * Drawer container — fixed positioning, off-screen via inset when closed.
+ *
+ * Logical-property insets keep the slide direction correct under RTL.
+ * Project provides width/height; framework establishes the side and the
+ * closed-state offset.
+ */
+
+.menu-drawer {
+    position: fixed;
+    z-index:  1000;
+}
+
+.menu-drawer[hidden],
+.menu-drawer[data-above-breakpoint='true'] {
+    display: none;
+}
+
+/* Closed states slide via `transform` — percentages on transform are
+   relative to the element's own size, so the drawer travels exactly its
+   own width / height regardless of viewport. Inset positions are logical
+   for RTL safety; transform sign flips under [dir='rtl'] for inline-axis
+   positions only (block-axis is direction-agnostic). */
+
+/* inline-end (LTR: right edge / RTL: left edge) */
+.menu-drawer[data-position='inline-end'] {
+    inset-block:        0;
+    inset-inline-end:   0;
+    inset-inline-start: auto;
+}
+.menu-drawer[data-position='inline-end'][data-state='closed'] {
+    transform: translateX(100%);
+}
+[dir='rtl'] .menu-drawer[data-position='inline-end'][data-state='closed'] {
+    transform: translateX(-100%);
+}
+
+/* inline-start (LTR: left edge / RTL: right edge) */
+.menu-drawer[data-position='inline-start'] {
+    inset-block:        0;
+    inset-inline-start: 0;
+    inset-inline-end:   auto;
+}
+.menu-drawer[data-position='inline-start'][data-state='closed'] {
+    transform: translateX(-100%);
+}
+[dir='rtl'] .menu-drawer[data-position='inline-start'][data-state='closed'] {
+    transform: translateX(100%);
+}
+
+/* block-start (top) */
+.menu-drawer[data-position='block-start'] {
+    inset-block-start: 0;
+    inset-block-end:   auto;
+    inset-inline:      0;
+}
+.menu-drawer[data-position='block-start'][data-state='closed'] {
+    transform: translateY(-100%);
+}
+
+/* block-end (bottom) */
+.menu-drawer[data-position='block-end'] {
+    inset-block-end:   0;
+    inset-block-start: auto;
+    inset-inline:      0;
+}
+.menu-drawer[data-position='block-end'][data-state='closed'] {
+    transform: translateY(100%);
+}
+
+
+/* ----------------------------------------------------------------------------
+ * Close button — structural reset; project provides visual.
+ */
+
+.menu-drawer-close {
+    background: none;
+    border:     0;
+    padding:    0;
+    cursor:     pointer;
+    font:       inherit;
+    color:      inherit;
+    display:    inline-flex;
+    align-items: center;
+}

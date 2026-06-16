@@ -4,10 +4,10 @@
  *
  * Owns: click toggle, Escape close, click-outside close, focus management,
  *       Arrow / Home / End keyboard within submenus, single-open enforcement,
- *       MutationObserver for dynamically-added menus.
+ *       MutationObserver for dynamically-added menus, hover trigger.
  *
- * Does NOT own: hover trigger (stage 8), menubar pattern (stage 9),
- *               collision flipping (stage 10), drawer (stage 6).
+ * Does NOT own: menubar pattern (stage 9), collision flipping (stage 10),
+ *               drawer (stage 6).
  */
 
 (function () {
@@ -19,6 +19,15 @@
     var INITED   = '__lattice_menu_inited__';
     var ROOT_SEL = 'ul[data-pattern]';
     var BTN_SEL  = 'button[aria-controls]';
+    var LI_SEL   = 'li[data-has-submenu], li[data-has-panel]';
+
+    var HOVER_IN_TIMER  = '__lattice_menu_hover_in_timer__';
+    var HOVER_OUT_TIMER = '__lattice_menu_hover_out_timer__';
+
+    // Evaluated once at module load. Pointer-capability shift mid-session
+    // (e.g. docking a hybrid device) is out of scope for v1.
+    var POINTER_FINE = (typeof matchMedia === 'function')
+        && matchMedia('(pointer: fine)').matches;
 
     var outsideListenerAttached = false;
 
@@ -45,9 +54,17 @@
         if (root[INITED]) return;
         root[INITED] = true;
 
+        // Marker for menu.css to disable the no-JS :focus-within fallback.
+        // Without it, focus on a disclosure button after a JS-driven close
+        // keeps :focus-within true and re-shows the submenu via that rule
+        // (specificity (0,4,1) beats the closed-state rule's (0,2,2)).
+        root.setAttribute('data-js-active', '');
+
         root.addEventListener('click',    function (e) { onClick(root, e); });
         root.addEventListener('keydown',  function (e) { onKeydown(root, e); });
         root.addEventListener('focusout', function (e) { onFocusOut(root, e); });
+
+        hoverInitRoot(root);
 
     }
 
@@ -84,11 +101,97 @@
         var button = event.target.closest(BTN_SEL);
         if (!button || !root.contains(button)) return;
 
+        // Disclosure buttons live in the menu's own structure, never inside a
+        // mega-panel content region. A button[aria-controls] within a
+        // [role='region'] panel belongs to that content (possibly a nested
+        // Menu with its own handlers) — ignore it rather than hijack it.
+        if (button.closest('[role="region"]')) return;
+
         var expanded = button.getAttribute('aria-expanded') === 'true';
         if (expanded) closeButton(button);
         else          openButton(root, button);
 
         event.preventDefault();
+
+    }
+
+    // ------------------------------------------------------------------
+    // Hover (stage 8)
+    // ------------------------------------------------------------------
+    //
+    // Opt-in via 'trigger' => ['click','hover'] (emits data-trigger='click
+    // hover'). Two gates: data-trigger must contain 'hover', and
+    // matchMedia('(pointer: fine)') must match. Hybrid devices get listeners;
+    // the per-event pointerType check drops synthesized hover from taps so a
+    // tap-open doesn't immediately hover-close. Purely additive — click,
+    // keyboard, Escape, focusout, click-outside are unchanged. Delays read
+    // per-schedule from --menu-hover-{in,out}-delay (150/300ms default);
+    // reduced-motion zeros them.
+
+    function hoverInitRoot (root) {
+
+        if (!POINTER_FINE) return;
+
+        var trigger = (root.getAttribute('data-trigger') || '').split(/\s+/);
+        if (trigger.indexOf('hover') === -1) return;
+
+        root.addEventListener('pointerover', function (e) {
+
+            if (e.pointerType === 'touch') return;
+
+            var li = e.target.closest(LI_SEL);
+            if (!li || !root.contains(li))    return;
+            if (li.contains(e.relatedTarget)) return;
+
+            onLiEnter(root, li);
+
+        });
+
+        root.addEventListener('pointerout', function (e) {
+
+            if (e.pointerType === 'touch') return;
+
+            var li = e.target.closest(LI_SEL);
+            if (!li || !root.contains(li))    return;
+            if (li.contains(e.relatedTarget)) return;
+
+            onLiLeave(root, li);
+
+        });
+
+    }
+
+    function onLiEnter (root, li) {
+
+        clearTimeout(li[HOVER_OUT_TIMER]);
+        li[HOVER_OUT_TIMER] = null;
+
+        if (li.dataset.state === 'open') return;
+
+        var button = li.querySelector(':scope > ' + BTN_SEL);
+        if (!button) return;
+
+        li[HOVER_IN_TIMER] = setTimeout(function () {
+            li[HOVER_IN_TIMER] = null;
+            openButton(root, button);
+        }, getHoverDelay(root, 'in'));
+
+    }
+
+    function onLiLeave (root, li) {
+
+        clearTimeout(li[HOVER_IN_TIMER]);
+        li[HOVER_IN_TIMER] = null;
+
+        if (li.dataset.state !== 'open') return;
+
+        var button = li.querySelector(':scope > ' + BTN_SEL);
+        if (!button) return;
+
+        li[HOVER_OUT_TIMER] = setTimeout(function () {
+            li[HOVER_OUT_TIMER] = null;
+            closeButton(button);
+        }, getHoverDelay(root, 'out'));
 
     }
 
@@ -124,6 +227,9 @@
         closeButton(trigger);
         trigger.focus();
         event.preventDefault();
+        // Stop here so a containing Menu_Drawer's Escape handler doesn't also
+        // fire and close the whole drawer — Escape closes one level per press.
+        event.stopPropagation();
 
     }
 
@@ -185,6 +291,7 @@
         if (root.dataset.multiOpen !== 'true') closeSiblings(button);
 
         var li = button.closest('li');
+        cancelHoverTimers(li);
         button.setAttribute('aria-expanded', 'true');
         if (li.dataset.state !== 'static') li.dataset.state = 'open';
 
@@ -202,9 +309,11 @@
             var descBtn = descLi.querySelector(':scope > ' + BTN_SEL);
             if (descBtn) descBtn.setAttribute('aria-expanded', 'false');
             descLi.dataset.state = 'closed';
+            cancelHoverTimers(descLi);
 
         });
 
+        cancelHoverTimers(li);
         button.setAttribute('aria-expanded', 'false');
         if (li.dataset.state !== 'static') li.dataset.state = 'closed';
 
@@ -237,6 +346,12 @@
             li.dataset.state = 'closed';
 
         });
+
+        // Cancel hover timers on every disclosure-bearing <li> in the root —
+        // including ones currently closed but with a pending in-timer. Without
+        // this an Escape / click-outside / focusout can be silently undone by
+        // a hover-in firing milliseconds later.
+        root.querySelectorAll(LI_SEL).forEach(cancelHoverTimers);
 
         syncOutsideListener();
 
@@ -286,6 +401,39 @@
         var items = container.querySelectorAll('a, button, [tabindex]:not([tabindex="-1"])');
         if (!items.length) return;
         (where === 'first' ? items[0] : items[items.length - 1]).focus();
+
+    }
+
+    function cancelHoverTimers (li) {
+
+        clearTimeout(li[HOVER_IN_TIMER]);
+        clearTimeout(li[HOVER_OUT_TIMER]);
+        li[HOVER_IN_TIMER]  = null;
+        li[HOVER_OUT_TIMER] = null;
+
+    }
+
+    function getHoverDelay (root, kind) {
+
+        if (typeof matchMedia === 'function'
+            && matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+
+        var prop     = '--menu-hover-' + kind + '-delay';
+        var raw      = getComputedStyle(root).getPropertyValue(prop);
+        var fallback = (kind === 'in') ? 150 : 300;
+        return parseDelayMs(raw, fallback);
+
+    }
+
+    function parseDelayMs (value, fallback) {
+
+        var trimmed = (value || '').trim();
+        var n       = parseFloat(trimmed);
+        if (isNaN(n)) return fallback;
+
+        // '0.2s' → 200ms. 'ms' suffix or unitless → as-is.
+        var isSeconds = /s$/i.test(trimmed) && !/ms$/i.test(trimmed);
+        return isSeconds ? n * 1000 : n;
 
     }
 
