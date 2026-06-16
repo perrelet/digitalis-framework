@@ -45,9 +45,20 @@ class Model extends Factory {
     }
 
     public static function get_auto_resolve () {
-    
-        return !static::get_specificity();
-    
+
+        // Resolve to a subclass when one is more precise (higher specificity).
+        // Falling through: spec-0 resolves anyway (legacy; nothing more
+        // specific possible), else short-circuit — no resolution work to do.
+
+        $spec = static::get_specificity();
+        $map  = static::$class_map[static::class] ?? [];
+
+        foreach ($map as $sub_class => $sub_spec) {
+            if ($sub_spec > $spec) return true;
+        }
+
+        return !$spec;
+
     }
 
     public static function get_uuid_prefix () {
