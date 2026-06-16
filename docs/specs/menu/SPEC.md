@@ -85,11 +85,11 @@ If both `submenu` and `content` are set, `submenu` wins. Active-state matching d
 
 ### 3.3 Menu_Drawer
 
-**Status:** Deferred to stage 6 — not yet implemented.
-
-Extends `Component`. Renders a toggle `<button>` + a `<div>` drawer containing the wrapped `Menu`. Owns focus trap, scroll lock, Escape close, click-outside close. Hidden above its `breakpoint`.
+Extends `Component`. Renders a toggle `<button>` + a `<div>` drawer containing the wrapped `Menu`. Owns focus trap, scroll lock, Escape close, click-outside close, close-on-navigate, breakpoint-driven hide-above. Hidden above its `breakpoint`.
 
 Not a `Menu` subclass — composition over inheritance. The drawer toggle is always click-triggered; the drawer has no hover affordance.
+
+**Closed-state mechanism after JS init is the `inert` attribute.** The SSR markup includes both `hidden` (no-JS fallback) and `inert`; JS removes `hidden` on init and uses `inert` as the persistent closed signal. `inert` simultaneously removes the drawer from the accessibility tree, blocks focus from entering it, and allows visual rendering to continue (so close transitions run unimpeded). The drawer carries no `role` and no `aria-modal` — the inner `Menu` provides the `<nav>` landmark.
 
 ### 3.4 Nav_Menu / Nav_Menu_Item
 
@@ -148,8 +148,6 @@ Not a `Menu` subclass — composition over inheritance. The drawer toggle is alw
 Standard `Component` attribute params (`classes`, `attr`, `styles`, …) are inherited from the base class and target the `<li>`. They aren't re-declared here.
 
 ### 4.3 Menu_Drawer params
-
-**Status:** Deferred to stage 6.
 
 | Param | Type | Default | Effect |
 |---|---|---|---|
@@ -427,8 +425,6 @@ For any item with `target='_blank'`:
 
 ### 5.11 Menu_Drawer
 
-**Status:** Deferred to stage 6.
-
 ```html
 <button type='button'
         class='menu-drawer-toggle'
@@ -442,7 +438,7 @@ For any item with `target='_blank'`:
      data-state='closed'
      data-position='inline-end'
      style='--menu-drawer-breakpoint: 60rem'
-     hidden>
+     hidden inert>
   <button type='button'
           class='menu-drawer-close'
           aria-label='Close menu'>
@@ -452,7 +448,9 @@ For any item with `target='_blank'`:
 </div>
 ```
 
-When open: `data-state='open'`, `aria-expanded='true'`, `hidden` attribute removed.
+JS init removes `hidden` (no-JS fallback only) and retains `inert` as the persistent closed-state mechanism.
+
+When open: `inert` removed, `data-state='open'`, toggle `aria-expanded='true'`. When closed (after init): `inert` re-added, `data-state='closed'`, toggle `aria-expanded='false'`.
 
 ---
 
@@ -509,7 +507,7 @@ One file, enqueued via `Menu::before_first()`. Idempotent — safe to load multi
 
 ### 7.1 Initialisation
 
-On `DOMContentLoaded`, scan for `<ul>` elements carrying `[data-pattern]` (the menu root regardless of landmark wrapping). For each, attach delegated event listeners. New menus added later (HTMX, dynamic rendering) initialise via `MutationObserver` on the document body — opt-out via a `data-no-observe` attribute on the root if a consumer needs to manage initialisation themselves.
+On `DOMContentLoaded`, scan for `<ul>` elements carrying `[data-pattern]` (the menu root regardless of landmark wrapping). For each, attach delegated event listeners and write the `[data-js-active]` marker on the root (see §7.3 + §8.1 for the marker's role in suppressing the no-JS keyboard-reach fallback). New menus added later (HTMX, dynamic rendering) initialise via `MutationObserver` on the document body — opt-out via a `data-no-observe` attribute on the root if a consumer needs to manage initialisation themselves.
 
 ### 7.2 Attributes JS reads
 
@@ -530,6 +528,7 @@ Nested `<ul>`s do not carry `data-pattern` / `data-trigger` / `data-multi-open` 
 |---|---|---|
 | `aria-expanded` | disclosure button | `'true'` / `'false'` on toggle |
 | `data-state` | parent `<li>` (disclosure-bearing only) | `'open'` / `'closed'` |
+| `data-js-active` | root `<ul>` | empty (presence-only) — set once at `initRoot`. Marker for the framework CSS to disable the no-JS `:focus-within` fallback (§8.1). Without it, focus remaining on a disclosure button after a JS-driven close would re-show the submenu via the fallback's `(0,4,1)` specificity, which beats the closed-state rule's `(0,2,2)` regardless of source order. |
 | `data-collision` | parent `<li>` | `'start'` / `'end'` when submenu overflows viewport (set on open, recomputed on `ResizeObserver` tick). Reserved for stage 10 — attribute name reserved from stage 2, measurement implementation deferred. |
 
 JS never writes `data-state='static'`. That value is server-rendered for items without a submenu and remains untouched at runtime.
@@ -545,9 +544,11 @@ From the menu root's computed style:
 
 ### 7.5 Hover gating
 
-**Status:** Deferred to stage 8 — `'trigger' => ['click', 'hover']` is accepted by `Menu` and emitted as `data-trigger='click hover'`, but the JS hover listeners below are not yet attached.
-
 When `data-trigger` contains `hover`, the hover listeners only attach if `matchMedia('(pointer: fine)').matches`. Hybrid devices reporting both fine and coarse pointer get the click handler regardless; hover is purely additive when conditions allow.
+
+Implementation uses delegated `pointerover` / `pointerout` on the root `<ul>` with `event.pointerType !== 'touch'` filtering, so synthesized hover events from tap-equivalent clicks on hybrid devices don't fire the hover path and the menu can't auto-close 300 ms after a tap-open. Pen / stylus pointers (`pointerType === 'pen'`) get hover treatment alongside mouse.
+
+Timers live on each disclosure-bearing `<li>` as element properties. `openButton` and `closeButton` cancel their `<li>`'s pending timers; `closeButton` also cancels timers on the descendants it closes inline; `closeAll` cancels timers on every disclosure-bearing `<li>` in the root regardless of state, so Escape / click-outside / focusout dismissals can't be silently undone by a pending hover-in. When `prefers-reduced-motion: reduce` matches, both delays are zeroed at schedule time.
 
 ### 7.6 Single-open enforcement
 
@@ -581,18 +582,23 @@ One file, enqueued via `Menu::before_first()`. Layout-only — no project visual
 ### 8.1 What the framework CSS owns
 
 ```css
-[data-pattern]                     { /* layout reset on the root <ul> */ }
-[data-orientation='horizontal']    { display: flex; flex-direction: row; }
-[data-orientation='vertical']      { display: flex; flex-direction: column; }
-[data-state='closed'] > ul,
-[data-state='closed'] > [role='region'] { display: none; }
+[data-pattern]                                              { /* layout reset on the root <ul> */ }
+[data-orientation='horizontal']                             { display: flex; flex-direction: row; }
+[data-orientation='vertical']                               { display: flex; flex-direction: column; }
+ul[data-pattern] [data-state='closed'] > ul,
+ul[data-pattern] [data-state='closed'] > [role='region']    { display: none; }    /* anchored at (0,2,2) to beat the (0,1,2) general flex rule */
 [data-has-submenu] > ul,
-[data-has-panel] > [role='region'] { position: absolute; /* base positioning */ }
-:focus-within > ul                 { /* no-JS keyboard reach */ }
-@media (prefers-reduced-motion: reduce) { /* disable transitions */ }
+[data-has-panel] > [role='region']                          { position: absolute; /* base positioning */ }
+ul[data-pattern]:not([data-js-active]) ... :focus-within > ul   { display: flex; }    /* no-JS keyboard reach — disabled once JS writes [data-js-active] on the root */
+@media (prefers-reduced-motion: reduce)                     { /* disable transitions */ }
 ```
 
 Plus logical-property layout for RTL.
+
+**Specificity notes that bit us during stage 6 implementation:**
+
+- The closed-state rule has to be anchored inside `ul[data-pattern]` to land at `(0,2,2)`. Without the anchor it's `(0,1,1)` and loses to the general `ul[data-pattern] ul { display: flex }` reset at `(0,1,2)` — closed submenus stay visible.
+- The `:focus-within` no-JS keyboard-reach fallback has a naturally high specificity (`.menu-item[data-has-submenu][data-state='closed']:focus-within > ul` → `(0,4,1)`), which beats the closed-state rule's `(0,2,2)`. Once JS has focus on the disclosure button after a click-close, focus-within keeps the submenu visible and silently undoes the close. The `:not([data-js-active])` gate disables the fallback once JS has initialised — keyboard-reach behaviour is then JS's responsibility via `ArrowDown` / `ArrowUp` on the disclosure button (§6.1).
 
 ### 8.2 What the framework CSS does NOT own
 
@@ -757,7 +763,7 @@ Each stage independently shippable; later stages do not block earlier ones from 
 | 4 | `Nav_Menu` + `Nav_Menu_Item` models | **Done** | `prepare_wp_post` hook on `Has_WP_Post`, batched + single-item hydration, typed accessors, archive detection, tree assembly. `source` param wires up. |
 | 7 | Mega-menu (`content` slot) | **Done** | Implemented alongside stage 1 — `link_mega` / `mega` shapes, `build_panel()`, `<div role='region'>` rendering. (Built ahead of original schedule.) |
 | 5 | Custom adapter | Deferred | `adapter` callable on `Menu`. Param accepted; mapping step in `params()` is a no-op stub. |
-| 6 | `Menu_Drawer` | Deferred | Drawer chrome, focus trap, scroll lock, Escape, click-outside. |
-| 8 | Hover trigger | Deferred | Opt-in hover open with `(pointer: fine)` gating and CSS-variable delays. |
+| 6 | `Menu_Drawer` | **Done** | Drawer chrome, focus trap, scroll lock, Escape, click-outside. Closed-state via `inert` attribute. Breakpoint hide-above driven by JS reading `--menu-drawer-breakpoint`. |
+| 8 | Hover trigger | **Done** | Opt-in hover open with `(pointer: fine)` gating and CSS-variable delays. Delegated `pointerover` / `pointerout`, touch filter via `pointerType`, reduced-motion zeros delays. |
 | 9 | Menubar pattern | Deferred | Opt-in arrow-key navigation between top-level items. |
 | 10 | Collision flipping | Deferred | Submenu overflow → `data-collision`. Attribute name reserved from stage 2; measurement deferred. |

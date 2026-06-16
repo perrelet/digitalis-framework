@@ -8,20 +8,23 @@ abstract class Archive extends Component {
     protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/components/";
 
     protected static $defaults = [
-        'id'            => 'digitalis-archive',
-        'classes'       => ['digitalis-archive'],
-        'query_vars'    => [],
-        'skip_main'     => false,
-        'items_only'    => false,
-        'items'         => null,
-        'no_items'      => 'No items found.',
-        'pagination'    => true,
-        'paginate_args' => [],
-        'loader'        => 'sliding-dots.gif',
-        'loader_type'   => 'image',
-        'controls'      => [],
-        'item_model'    => null,
-        'child_classes' => [
+        'id'             => 'digitalis-archive',
+        'classes'        => ['digitalis-archive'],
+        'query_vars'     => [],
+        // null  → auto-detect via $item_model::main_query_is_archive()
+        // true  → force get_from_main_query() (use page's main loop)
+        // false → force query() (fresh query with our $query_vars)
+        'use_main_query' => null,
+        'items_only'     => false,
+        'items'          => null,
+        'no_items'       => 'No items found.',
+        'pagination'     => true,
+        'paginate_args'  => [],
+        'loader'         => 'sliding-dots.gif',
+        'loader_type'    => 'image',
+        'controls'       => [],
+        'item_model'     => null,
+        'child_classes'  => [
             'items' => 'items',
         ],
     ];
@@ -62,7 +65,7 @@ abstract class Archive extends Component {
 
         $query = null;
 
-        if (is_null($this['items'])) $this['items'] = $this->get_items($this['query_vars'], $query, $this['skip_main']);
+        if (is_null($this['items'])) $this['items'] = $this->get_items($this['query_vars'], $query);
 
         if ($this['items']) {
 
@@ -101,13 +104,27 @@ abstract class Archive extends Component {
 
     }
 
-    public function get_items ($query_vars, &$query, $skip_main) {
+    public function get_items ($query_vars, &$query) {
 
-        if ($this['item_model'] && ($call = [$this['item_model'], 'query']) && is_callable($call)) {
+        if (!$this['item_model']) return [];
 
-            return call_user_func_array($call, [$query_vars, &$query, $skip_main]);
+        $model = $this['item_model'];
 
+        $use_main = $this['use_main_query'];
+
+        if ($use_main === null) {
+            global $wp_query;
+            $use_main = is_callable([$model, 'main_query_is_archive'])
+                     && $model::main_query_is_archive($wp_query);
         }
+
+        if ($use_main && is_callable([$model, 'get_from_main_query'])) {
+            return $model::get_from_main_query($query);
+        }
+
+        return is_callable([$model, 'query'])
+            ? $model::query($query_vars, $query)
+            : [];
 
     }
 

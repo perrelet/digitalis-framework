@@ -44,6 +44,25 @@ $posts = Post::query(['posts_per_page' => 10], $wp_query);
 $total = $wp_query->found_posts;
 ```
 
+### `query()` is for fresh queries — use `get_from_main_query()` for the main loop's posts
+
+**Wrong assumption:** `Post::query()` with no args returns the current page's displayed posts.
+**Reality:** `query()` always runs a fresh DB query and honors `$args` (default: all of this post type, no orderby override). For the current page's main-loop posts (with its pagination/orderby state intact), call `get_from_main_query()` instead.
+
+```php
+// ❌ Won't reflect the archive's pagination or orderby
+$posts = Project::query();
+
+// ✅ Fresh query — pass the args you actually want
+$posts = Project::query(['posts_per_page' => 10, 'orderby' => 'date']);
+
+// ✅ Main-loop reuse — the page's currently-displayed posts as model instances
+$posts = Project::get_from_main_query($wp_query);
+$pages = $wp_query->max_num_pages;
+```
+
+The `Archive` view auto-dispatches between the two via `item_model::is_main_query($wp_query)`, so most archive consumers don't choose explicitly — set `'use_main_query' => true|false` on the Archive subclass only to override the auto-detect.
+
 ### `$model->save()` — not `wp_update_post()` / `wp_update_user()` / `wp_update_term()`
 
 **Wrong assumption:** Bare WP update functions are interchangeable with the model's `save()`.
@@ -339,7 +358,7 @@ class Project extends Post {
 ### Querying Posts
 
 ```php
-// Basic query
+// Basic query — args are always honored
 $posts = Post::query([
     'posts_per_page' => 10,
     'orderby'        => 'date',
@@ -352,10 +371,28 @@ $projects = Project::query([
     'orderby'    => 'meta_value',
 ]);
 
+// Capture the underlying WP_Query for found_posts / max_num_pages
+$posts = Post::query(['posts_per_page' => 10], $wp_query);
+$total = $wp_query->found_posts;
+
 // Returns array of model instances
 ```
 
 `Post::query()` builds args via `Query_Vars` and dispatches through `Query_Manager::execute()`, so registered `Query_Profile` instances will apply automatically.
+
+### Main-Query Reuse
+
+When the calling context is a post-type archive page and you want the *currently-displayed* posts (the main loop's slice, with pagination/orderby state intact), use `get_from_main_query()` instead of `query()`:
+
+```php
+// On a project archive page, give me the page's currently-displayed projects
+$projects = Project::get_from_main_query($wp_query);
+$pages    = $wp_query->max_num_pages;
+```
+
+Note the split: `query()` is always a fresh DB query that honors your args; `get_from_main_query()` always returns `$GLOBALS['wp_query']->posts` as model instances regardless of context. Don't ask `query()` for "the archive's posts" — it doesn't know about the page's loop and won't reflect its pagination.
+
+The `Archive` view auto-detects which to use based on `item_model::is_main_query($wp_query)` — most consumers should not need to choose explicitly.
 
 ### Static Query Helpers
 
@@ -364,6 +401,7 @@ $projects = Project::query([
 | `is_main_query(WP_Query $wp_query)` | `bool` | True if this is WordPress's main query |
 | `is_digitalis_ajax(WP_Query $wp_query)` | `bool` | True if this is a Digitalis AJAX request |
 | `query_is_post_type(WP_Query $wp_query)` | `bool` | True if the query is for this post type |
+| `get_from_main_query(&$wp_query)` | `static[]` | Wraps `$GLOBALS['wp_query']->posts` as model instances |
 
 ---
 
@@ -729,7 +767,7 @@ $orders = $customer->get_orders([
 
 Wraps a single row of an ACF repeater field as a Model instance. Lets you attach typed methods to row data and persist changes through the framework rather than passing raw arrays around.
 
-Extends `Model` directly (not `WP_Model` — rows aren't WP entities). Parent can be any Post/User/Term instance.
+Extends `Model` directly (not `WP_Model` — rows aren't WP entities). Parent can be any Post/User/Term instance, or `Options::get_instance()` for option-page repeaters (`get_wp_meta_type='option'` resolves to the `Options` singleton via `get_parent_class()`). IDs look like `acf:post:milestones:42:3` for a post parent and `acf:option:ctas:0:2` for an options parent.
 
 ### Class Properties
 

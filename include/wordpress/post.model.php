@@ -10,13 +10,14 @@ class Post extends WP_Model {
 
     use Has_WP_Post;
 
-    protected static $post_type       = false;       // string            - Validate by post_type. Leave false to allow any generic post type.
-    protected static $post_status     = false;       // string|bool|array - Validate by post_status. Leave false to allow any status.
-    protected static $term            = false;       // string|bool|array - Validate by taxonomy term. Leave false to allow any term.
-    protected static $term_children   = false;       // bool              - When true, $term also matches any descendant term (mirrors WP_Query tax_query include_children).
-    protected static $taxonomy        = 'category';  // string            - Taxonomy to validate term against.
-    protected static $post_slug       = false;       // string            - Validate by post_name (URL slug).
-    protected static $post_context    = false;       // string            - One of $context_options keys (e.g. 'front_page', 'posts', 'privacy').
+    protected static $post_type      = false;       // string            - Validate by post_type. Leave false to allow any generic post type.
+    protected static $post_status    = false;       // string|bool|array - Validate by post_status. Leave false to allow any status.
+    protected static $term           = false;       // string|bool|array - Validate by taxonomy term. Leave false to allow any term.
+    protected static $term_deep      = false;       // bool              - When true, $term also matches any descendant term (mirrors WP_Query tax_query include_children).
+    protected static $taxonomy       = 'category';  // string            - Taxonomy to validate term against.
+    protected static $post_slug      = false;       // string            - Validate by post_name (URL slug).
+    protected static $post_slug_deep = false;       // bool              - When true, $post_slug also matches any descendant post (mirrors $term / $term_deep).
+    protected static $post_context   = false;       // string            - One of $context_options keys (e.g. 'front_page', 'posts', 'privacy').
 
     protected static $context_options = [
         'front_page' => 'page_on_front',
@@ -56,7 +57,7 @@ class Post extends WP_Model {
 
         if (static::$term) {
 
-            $terms = static::$term_children
+            $terms = static::$term_deep
                 ? static::resolve_term_set(static::$term, static::$taxonomy)
                 : static::$term;
 
@@ -71,7 +72,14 @@ class Post extends WP_Model {
 
         }
 
-        if (static::$post_slug && (get_post_field('post_name', $id) !== static::$post_slug)) return false;
+        if (static::$post_slug && (get_post_field('post_name', $id) !== static::$post_slug)) {
+
+            if (!static::$post_slug_deep) return false;
+
+            $ancestor_slugs = array_map(fn ($aid) => get_post_field('post_name', $aid), get_post_ancestors($id));
+            if (!in_array(static::$post_slug, $ancestor_slugs, true)) return false;
+
+        }
 
         if (static::$post_context) {
 
@@ -165,57 +173,63 @@ class Post extends WP_Model {
     
     }
 
-    public static function query ($args = [], &$query = null, $skip_main = false) {
+    public static function query ($args = [], &$query = null) {
 
         global $wp_query;
 
-        $instances = [];
-        $posts     = [];
+        $qv = new Query_Vars;
 
-        if (!$skip_main && static::is_main_query($wp_query)) {
+        if (static::is_digitalis_ajax($wp_query)) $qv->merge($wp_query->query_vars);
 
-            // Use the existing global wp_query.
+        $qv->post_type = static::$post_type ?: 'any';
 
-            $query = $wp_query;
-            $posts = $wp_query->posts;
+        if (static::$post_status) $qv->post_status = static::$post_status;
 
-        } else {
+        if (static::$term) $qv->add_tax_query([
+            'taxonomy' => static::$taxonomy,
+            'field'    => is_int(static::$term) ? 'term_id' : 'slug',
+            'terms'    => static::$term,
+        ]);
 
-            // Build a fresh wp_query.
+        $qv->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
+        $qv->merge($args, true);
 
-            $qv = new Query_Vars;
+        $query = $qv->make_query();
 
-            if (static::is_digitalis_ajax($wp_query)) $qv->merge($wp_query->query_vars);
-
-            $qv->post_type = static::$post_type ?: 'any';
-
-            if (static::$post_status) $qv->post_status = static::$post_status;
-
-            if (static::$term) $qv->add_tax_query([
-                'taxonomy' => static::$taxonomy,
-                'field'    => is_int(static::$term) ? 'term_id' : 'slug',
-                'terms'    => static::$term,
-            ]);
-
-            $qv->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
-            $qv->merge($args, true);
-
-            $query = $qv->make_query();
-
-            $posts = Query_Manager::get_instance()->execute($query, [
-                'role' => 'programmatic',
-            ]);
-
-        }
+        $posts = Query_Manager::get_instance()->execute($query, [
+            'role' => 'programmatic',
+        ]);
 
         return static::get_instances($posts);
 
     }
 
+    /**
+     * Wraps the global $wp_query->posts as model instances — for consumers
+     * that want the page's current loop. Use query() for everything else.
+     */
+    public static function get_from_main_query (&$query = null) {
+
+        global $wp_query;
+
+        $query = $wp_query;
+        return static::get_instances($wp_query->posts ?? []);
+
+    }
+
     public static function is_main_query ($wp_query) {
-    
+
         return !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query);
-    
+
+    }
+
+    // Reuse-the-main-loop decision for Archive: true only when the main query is
+    // an actual *listing* of this post type. Singular pages pass is_main_query()
+    // (the page's one post is of this type) but are not a list to reuse.
+    public static function main_query_is_archive ($wp_query) {
+
+        return static::is_main_query($wp_query) && !$wp_query->is_singular();
+
     }
 
     public static function is_digitalis_ajax ($wp_query) {
