@@ -2,7 +2,7 @@
 
 if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.02');
+define('DIGITALIS_FRAMEWORK_VERSION',   '0.3.08');
 define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
 define('DIGITALIS_LIBRARY_PATH',        plugin_dir_path( __FILE__ ) . 'include/features/');
 define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
@@ -120,7 +120,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/nav-menu-item.post.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/nav-menu.term.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.factory.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.model.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
 
 \Digitalis\Post::static_init();
@@ -141,6 +141,7 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/field-group.compone
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/form.field-group.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-item.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu.component.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-drawer.component.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-active-state.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';

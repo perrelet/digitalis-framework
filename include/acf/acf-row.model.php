@@ -84,9 +84,10 @@ class ACF_Row extends Model {
     protected static function get_parent_class ($type) {
 
         return [
-            'post' => Post::class,
-            'user' => User::class,
-            'term' => Term::class,
+            'post'   => Post::class,
+            'user'   => User::class,
+            'term'   => Term::class,
+            'option' => Options::class,
         ][$type] ?? null;
 
     }
