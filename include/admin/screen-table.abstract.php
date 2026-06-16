@@ -138,7 +138,15 @@ abstract class Screen_Table extends Admin_Table {
 
         $call = [$this, "column_" . str_replace('-', '_', $column)];
 
-        return is_callable($call) ? static::inject($call, [$output, $object_id]) : $output;
+        if (!is_callable($call)) return $output;
+
+        // Row id in every slot but $output, so a DI-typed model param at any
+        // index resolves via get_instance($object_id) (else get_instance(null)).
+        $count   = (new \ReflectionMethod($this, $call[1]))->getNumberOfParameters();
+        $args    = array_fill(0, max(1, $count), $object_id);
+        $args[0] = $output;
+
+        return static::inject($call, $args);
 
     }
 
