@@ -212,15 +212,50 @@ class ACF_Block extends Factory {
 
         }
 
-        if ($is_preview) $html = str_replace("<a", "<a onclick='return false;'", $html);
+        if ($is_preview) {
+
+            $html = trim($html) === ''
+                ? $this->preview_empty_placeholder()
+                : $this->preview_neutralize_links($html);
+
+        }
 
         echo $html;
-        
+
     }
 
     public function view ($params = []) {
 
         return '';
+
+    }
+
+    // Make <a> inert in the editor preview by swapping href → data-href, which
+    // kills every navigation channel (onclick only stops plain left-click).
+    // Idempotent via the (?<!data-) lookbehind; safe to call on subclass $html.
+    protected function preview_neutralize_links ($html) {
+
+        return preg_replace('/(<a\b[^>]*?)(?<!data-)href=/i', '$1data-href=', $html);
+
+    }
+
+    // Editor-only placeholder so a View that renders nothing isn't a zero-height,
+    // unselectable void in the canvas. Frontend stays empty. Styled via
+    // .acf-block-empty-preview (+ -title / -hint children); slug on data-block.
+    protected function preview_empty_placeholder () {
+
+        $title = $this->block['title'] ?? $this->slug;
+
+        return sprintf(
+            '<div class="acf-block-empty-preview" data-block="%s" aria-label="%s">'
+            . '<span class="acf-block-empty-preview-title">%s</span>'
+            . '<span class="acf-block-empty-preview-hint">%s</span>'
+            . '</div>',
+            esc_attr($this->slug),
+            esc_attr(sprintf(__('%s — configure to preview', 'lattice'), $title)),
+            esc_html($title),
+            esc_html__('Configure to preview', 'lattice')
+        );
 
     }
 
