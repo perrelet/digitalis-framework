@@ -455,6 +455,15 @@ Query_Manager::get_instance()->execute(\WP_Query $q): array
 
 Full context and code examples for all of these are in [ANTIPATTERNS.md](./docs/ANTIPATTERNS.md).
 
+**App/Factory/Singleton subclasses are bootstrapped via `get_instance()`, never `new`.**
+`new` bypasses the Factory/Singleton cache — the instance is untracked and duplicate instantiation registers hooks twice. See [ANTIPATTERNS.md#bootstrap](./docs/ANTIPATTERNS.md#bootstrap).
+
+**Register static-time hooks in `hello()`/`static_init()`, not the constructor.**
+Those methods fire once, immediately after `include_once`, whether or not the class is ever instantiated — the constructor may not run at all, or may run more than once under an errant `new`. See [ANTIPATTERNS.md#bootstrap](./docs/ANTIPATTERNS.md#bootstrap).
+
+**Always call `parent::__construct()` when overriding App's constructor.**
+Skipping it drops `$this->path`/`$this->url` and the `plugins_loaded` → `boot()` hook — the subclass never autoloads. See [ANTIPATTERNS.md#bootstrap](./docs/ANTIPATTERNS.md#bootstrap).
+
 **Route and ACF_Block properties must be non-static instance properties.**
 `Factory::get_cache_key()` reads `$this->$property`. A `protected static` override creates a separate static slot that is never read.
 
