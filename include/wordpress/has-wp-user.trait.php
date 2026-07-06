@@ -95,7 +95,7 @@ trait Has_WP_User {
 
     public function has_role ($role) {
 
-        return ($roles = $this->get_roles()) ? (array_search((array) $role, $roles) !== false) : false;
+        return (bool) array_intersect((array) $role, $this->get_roles());
 
     }
 
