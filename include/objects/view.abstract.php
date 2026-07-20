@@ -121,6 +121,9 @@ abstract class View implements \ArrayAccess {
 
         $this->set_param('view_index', self::$indexes[static::class]);
         $this->inject_dependencies($this->params, static::get_defaults());
+
+        if (!$this->pre_validate()) return '';
+
         $this->params($this->params);
 
         if (!$this->validate()) return '';
@@ -172,6 +175,29 @@ abstract class View implements \ArrayAccess {
 
     public function params (&$p) {}
 
+    protected static function get_injected_class ($key, $defaults) {
+
+        $class_name = $defaults[$key] ?? null;
+
+        return (is_string($class_name) && class_exists($class_name)) ? $class_name : null;
+
+    }
+
+    public function pre_validate () {
+
+        $defaults = static::get_defaults();
+
+        foreach (static::get_required_keys() as $key) {
+
+            if (!($class_name = static::get_injected_class($key, $defaults))) continue;
+            if (!(($this[$key] ?? null) instanceof $class_name))             return false;
+
+        }
+
+        return true;
+
+    }
+
     public function validate () {
 
         if (!$this->required())   return false;
@@ -190,7 +216,7 @@ abstract class View implements \ArrayAccess {
 
             $value = $this[$key] ?? null;
 
-            if (($class_name = ($defaults[$key] ?? false)) && class_exists($class_name)) {
+            if ($class_name = static::get_injected_class($key, $defaults)) {
 
                 if (!($value instanceof $class_name)) return false;
 

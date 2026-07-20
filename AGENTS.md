@@ -278,7 +278,7 @@ My_View::render(array $params, bool $echo = true): string
 ```php
 // Inheritable static properties
 protected static $defaults    = ['key' => 'default'];  // class strings are DI-resolved automatically
-protected static $required    = ['key'];                // validated before render; fails silently if missing
+protected static $required    = ['key'];                // fails silently if missing; DI-backed keys gated before params(), others after
 protected static $merge       = ['classes'];            // these keys are array-merged, not overwritten
 protected static $skip_inject = ['key'];                // prevent DI resolution for specific keys
 protected static $template    = 'path/to/file.php';    // relative to templates/; alternative to view()
@@ -287,6 +287,7 @@ protected static $controls    = [];                     // UI controls exposed w
 protected static $name        = null;                   // display name in the editor; defaults to class name
 
 // Override points
+public function pre_validate(): bool     // input gate; runs BEFORE params(). Return true to opt out
 public function params(array &$p): void  // transform/add params before render; MUST call parent::params($p)
 public function condition(): bool        // return false to suppress all output
 public function view(): void             // inline markup (used when no $template)
@@ -472,6 +473,9 @@ Skipping it silently drops any param transformations defined in parent classes. 
 
 **Class-string `$defaults` are auto-resolved as DI — opt out with `$skip_inject`.**
 Any `$defaults` value naming a class with `get_instance()` (e.g. `'order' => Order::class`) is treated as a DI signal: the framework calls `Order::get_instance($value)` and replaces the param with the instance. Want the class name to *stay* a literal string? Add the key to `$skip_inject`. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+
+**`params()` may assume its DI-backed required params are valid — don't guard them.**
+`$required` keys whose default is a class string are gated by `pre_validate()`, which runs *before* `params()`; if the model didn't resolve, `params()` never runs. An `instanceof` guard on such a key is dead weight and erases the signal that a guard should carry — reserve guards for keys deliberately left *out* of `$required`. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`Query_Vars::merge()` combines arrays; `overwrite()` replaces unconditionally.**
 `merge(['post_status' => 'draft'])` on an existing `'publish'` produces `['publish', 'draft']`.

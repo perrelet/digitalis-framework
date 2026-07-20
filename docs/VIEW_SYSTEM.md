@@ -122,6 +122,33 @@ public function params(&$p) {
 
 The same rule applies to overriding `__construct()` — always call `parent::__construct($params)` first or default-param initialisation never runs. Full antipattern: [Always call `parent::params($p)` when overriding `params()`](./ANTIPATTERNS.md#always-call-parentparamsp-when-overriding-params).
 
+### `params()` may assume its DI-backed required params are valid
+
+**Wrong assumption:** `$required` is checked after `params()`, so `params()` has to defend itself against a model that didn't resolve — hence an `instanceof` guard around every dereference.
+**Reality:** Required keys whose default is a class string are gated by `pre_validate()`, which runs *before* `params()`. If the model didn't resolve, `params()` never runs and the view renders empty. The guard is dead weight.
+
+```php
+protected static $defaults = ['product' => Product::class];
+protected static $required = ['product'];
+
+// ❌ Redundant — pre_validate() already guaranteed this
+public function params(&$p) {
+    if (!($p['product'] instanceof Product)) { parent::params($p); return; }
+    $p['title'] = $p['product']->get_title();
+    parent::params($p);
+}
+
+// ✅
+public function params(&$p) {
+    $p['title'] = $p['product']->get_title();
+    parent::params($p);
+}
+```
+
+The guard is only meaningful when the key is **genuinely optional** — i.e. deliberately *not* in `$required`, because the view renders with or without it. Keeping guards on required keys erases that signal: a reader can no longer tell "this can legitimately be absent" from "I'm defending against the framework".
+
+Note the inverse still holds for required keys computed *inside* `params()` — those have no class-string default, so `pre_validate()` skips them and `validate()` checks them afterwards.
+
 ### Class-string `$defaults` are auto-resolved as DI — there is no opt-in
 
 **Wrong assumption:** Setting a default to a class name (`Order::class`) is just a placeholder; the framework only resolves it if you explicitly opt in.
@@ -237,7 +264,18 @@ Parameters that must be present (not null) after injection.
 protected static $required = ['order', 'user'];
 ```
 
-For DI parameters, `required()` checks if the injected value is an instance of the expected class.
+For DI parameters, the check is `instanceof` against the expected class rather than a null check.
+
+`$required` is enforced in **two places**, depending on the kind of key:
+
+| Key kind | Signal | Enforced by | When |
+|---|---|---|---|
+| DI-backed input | default is a class string (`Order::class`) | `pre_validate()` | **before** `params()` |
+| Anything else | default is a scalar, `null`, array… | `required()` inside `validate()` | after `params()` |
+
+The split exists because a DI-backed key's validity is fully known the moment injection completes, so it can gate `params()`. A key computed *inside* `params()` obviously cannot, so it stays on the post-params check.
+
+The practical consequence: **`params()` may assume its DI-backed required params are valid instances.** No defensive `instanceof` guard is needed — if the model didn't resolve, `params()` never runs. See [Common Confusions](#params-may-assume-its-di-backed-required-params-are-valid).
 
 ### `$merge`
 
@@ -545,8 +583,9 @@ class Simple_Alert extends View {
 print() called
     │
     ├── inject_dependencies()
+    ├── pre_validate()        ── input gate; bails before params()
     ├── params()
-    ├── validate()
+    ├── validate()            ── output gate; required() + permission() + condition()
     │
     ├── [If first render] before_first()
     ├── before()
@@ -556,6 +595,13 @@ print() called
     ├── [If first render] after_first()
     └── after()
 ```
+
+There are **two** gates, and the distinction matters:
+
+- `pre_validate()` validates *inputs*. It runs after injection but before `params()`, so `params()` can rely on its DI-backed required params being real instances.
+- `validate()` validates *outputs*. It runs after `params()`, so `condition()` can read anything `params()` derived.
+
+Both bail by returning an empty string — nothing renders, no error.
 
 ### `before_first()` and `after_first()`
 
@@ -636,6 +682,35 @@ public function validate() {
 ```
 
 If `validate()` returns false, nothing is rendered.
+
+### `pre_validate()` Method
+
+The input gate. Runs after `inject_dependencies()` and before `params()`:
+
+```php
+public function pre_validate() {
+    // For each required key whose default is a class string:
+    // - checks the injected value is an instance of that class
+    // Required keys with non-class defaults are skipped here —
+    // they may be computed in params(), so validate() checks them.
+    return true;
+}
+```
+
+Because it runs first, `params()` is entitled to assume its DI-backed required params resolved. Override and return `true` to opt a view out — e.g. a view that renders a placeholder when its model is absent:
+
+```php
+class Optional_Order_Widget extends View {
+    protected static $defaults = ['order' => Order::class];
+    protected static $required = ['order'];
+
+    public function pre_validate() {
+        return true;   // let params() run and handle the null itself
+    }
+}
+```
+
+A view that genuinely renders with-or-without a model should prefer simply leaving the key out of `$required`.
 
 ### `required()` Method
 
@@ -1422,6 +1497,7 @@ protected static $template_path = ''; // Template directory
 ### Lifecycle Methods
 
 ```php
+public function pre_validate() {}     // Input gate — runs BEFORE params()
 public function params(&$p) {}        // Transform params
 public function validate() {}         // Return bool
 public function required() {}         // Check required params
