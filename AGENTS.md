@@ -267,7 +267,10 @@ $post->update_meta(string $key, mixed $value): void
 $post->get_field(string $key): mixed          // ACF
 $post->update_field(string $key, mixed $value): void  // ACF
 $post->save(): void
+$post->duplicate(array $overrides = [], array $exclude_meta = []): static|WP_Error
 ```
+
+`duplicate()` copies columns, all postmeta (raw — no ACF hooks, so no relationship sync fires) and taxonomy terms. Slug and placement columns (`post_parent`, `menu_order`) are deliberately not copied; `post_status` defaults to `draft`. Keep a key off every copy via the `lattice.post.duplicate.exclude_meta` filter. See [MODELS.md#duplicating](./docs/MODELS.md#duplicating).
 
 ### View
 

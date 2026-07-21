@@ -352,8 +352,34 @@ class Project extends Post {
 | Method | Description |
 |--------|-------------|
 | `save($post_array)` | Insert or update post |
+| `duplicate($overrides, $exclude_meta)` | Copy this post — columns, meta, terms — returning the saved copy |
+
+On insert, `save()` re-reads the row before returning, so the model carries the columns WordPress computed rather than only the ones you supplied — `post_name`, `guid`, `post_date`. `$post->get_slug()` is therefore accurate immediately after creating a post. `Term::save()` does the same for `slug` and `term_taxonomy_id`. Updates keep the previous behaviour.
+
 | `delete($force)` | Delete post (trash or permanent) |
 | `reload()` | Refresh from database |
+
+### Duplicating
+
+`duplicate()` copies the content-bearing columns, every postmeta value and all taxonomy terms, returning the new instance (or the `WP_Error` from the insert). The featured image needs no special handling — `_thumbnail_id` is postmeta and rides along.
+
+```php
+$copy = $product->duplicate();                                    // draft copy
+$copy = $product->duplicate(['post_status' => 'publish']);        // straight to live
+$copy = $product->duplicate([], ['_my_plugin_pointer']);          // keep a key off the copy
+```
+
+Three properties are load-bearing:
+
+- **Meta is copied raw.** No ACF write happens, so nothing downstream of one fires — notably a `Bidirectional_Relationship` sync, which would otherwise wire the original's partners to the copy. A copy holds the original's relationship values one-way until its first real save.
+- **The slug is never copied.** A copy must not contend for the original's URL; WP assigns a fresh unique slug from the title.
+- **Placement columns are not copied.** `post_parent`, `menu_order` and friends stay out because whether a copy belongs in the same structural position depends on why it's being made. Pass them through `$overrides` when it matters.
+
+`post_status` defaults to `draft` so a copy can never go live by accident. Concerns that must keep their own pointer or state keys off *every* copy — rather than trusting each call site to remember — contribute to the exclusion list through the `lattice.post.duplicate.exclude_meta` filter:
+
+```php
+add_filter('lattice.post.duplicate.exclude_meta', fn ($keys) => [...$keys, '_proposal_for', '_has_proposal']);
+```
 
 ### Querying Posts
 
