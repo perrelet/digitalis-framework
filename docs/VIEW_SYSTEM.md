@@ -277,6 +277,28 @@ The split exists because a DI-backed key's validity is fully known the moment in
 
 The practical consequence: **`params()` may assume its DI-backed required params are valid instances.** No defensive `instanceof` guard is needed — if the model didn't resolve, `params()` never runs. See [Common Confusions](#params-may-assume-its-di-backed-required-params-are-valid).
 
+**The non-DI check is `is_null()`, nothing more.** That is deliberate: it is the only test meaning "absent" for every type. `empty()` would reject legitimate values — `0` for a count, `false` for a flag, `'0'`, `[]`.
+
+It has a consequence worth stating plainly, though: **a required key whose default is a non-null scalar can never fail.** The merged param is always non-null, so `required()` only bites if a caller explicitly passes `null`.
+
+```php
+// ❌ Inert. 'title' defaults to '', so required() always passes — including
+//    when an ACF text field or form input hands over an empty string.
+protected static $defaults = ['title' => ''];
+protected static $required = ['title'];
+
+// ✅ Default to null, so an omitted param actually fails the check
+protected static $defaults = ['title' => null];
+protected static $required = ['title'];
+
+// ✅ …and gate emptiness in condition(), which is where "has a usable value" lives
+public function condition (): bool {
+    return trim((string) $this['title']) !== '';
+}
+```
+
+This bites most with ACF and form input, which hand over `''` rather than `null` for an unfilled field.
+
 ### `$merge`
 
 Parameter keys whose values should be merged (not replaced) in inheritance.
