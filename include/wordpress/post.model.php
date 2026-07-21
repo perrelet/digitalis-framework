@@ -280,7 +280,9 @@ class Post extends WP_Model {
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
 
-        if ($this->is_new()) {
+        $was_new = $this->is_new();
+
+        if ($was_new) {
 
             if (isset($post_array['ID'])) unset($post_array['ID']);
             $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
@@ -301,7 +303,21 @@ class Post extends WP_Model {
         foreach ($post_array as $key => $value) $this->wp_post->$key = $value;
 
         $this->dirty = false;
-        $this->cache_wp_model();
+
+        // On insert, wp_insert_post computed columns we don't hold (post_name, guid,
+        // post_date) and left the cache clean. Caching our own object here would
+        // overwrite a correct entry with an incomplete one, so re-read instead.
+        if ($was_new) {
+
+            $this->clear_wp_model_cache();
+            $this->hydrate_instance();
+
+        } else {
+
+            $this->cache_wp_model();
+
+        }
+
         $this->cache_instance();
         $this->clear_content_cache();
         $this->unstash();
