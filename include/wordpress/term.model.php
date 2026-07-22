@@ -169,9 +169,7 @@ class Term extends WP_Model {
 
         $term_array = wp_parse_args($term_array, get_object_vars($this->wp_term));
 
-        $was_new = $this->is_new();
-
-        if ($was_new) {
+        if ($this->is_new()) {
 
             if (!$name = ($term_array['name'] ?? false)) return;
             unset($term_array['name']);
@@ -187,28 +185,14 @@ class Term extends WP_Model {
 
         $term_id = $result['term_id'];
 
-        $this->is_new           = false;
-        $this->wp_term->term_id = $term_id;
-        $this->id               = $term_id;
+        $this->is_new = false;
+        $this->id     = $term_id;
 
-        foreach ($term_array as $key => $value) $this->wp_term->$key = $value;
+        // Echoing $term_array back would leak field_input into the cache for a later save() to replay.
+        $this->clear_wp_model_cache();
+        $this->hydrate_instance();
 
         $this->dirty = false;
-
-        // On insert, wp_insert_term computed slug and term_taxonomy_id, and the name
-        // was unset above so it never made it back onto the object. Re-read rather
-        // than cache a model that disagrees with the row.
-        if ($was_new) {
-
-            $this->clear_wp_model_cache();
-            $this->hydrate_instance();
-
-        } else {
-
-            $this->cache_wp_model();
-
-        }
-
         $this->cache_instance();
         $this->unstash();
 

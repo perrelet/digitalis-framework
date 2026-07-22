@@ -280,9 +280,7 @@ class Post extends WP_Model {
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
 
-        $was_new = $this->is_new();
-
-        if ($was_new) {
+        if ($this->is_new()) {
 
             if (isset($post_array['ID'])) unset($post_array['ID']);
             $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
@@ -296,28 +294,14 @@ class Post extends WP_Model {
 
         if (is_wp_error($post_id)) return $post_id;
 
-        $this->is_new      = false;
-        $this->wp_post->ID = $post_id;
-        $this->id          = $post_id;
+        $this->is_new = false;
+        $this->id     = $post_id;
 
-        foreach ($post_array as $key => $value) $this->wp_post->$key = $value;
+        // Echoing $post_array back would leak meta_input/field_input into the cache for a later save() to replay.
+        $this->clear_wp_model_cache();
+        $this->hydrate_instance();
 
         $this->dirty = false;
-
-        // On insert, wp_insert_post computed columns we don't hold (post_name, guid,
-        // post_date) and left the cache clean. Caching our own object here would
-        // overwrite a correct entry with an incomplete one, so re-read instead.
-        if ($was_new) {
-
-            $this->clear_wp_model_cache();
-            $this->hydrate_instance();
-
-        } else {
-
-            $this->cache_wp_model();
-
-        }
-
         $this->cache_instance();
         $this->clear_content_cache();
         $this->unstash();
