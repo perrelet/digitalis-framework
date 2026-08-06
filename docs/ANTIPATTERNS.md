@@ -4,6 +4,58 @@ Patterns that look correct but are wrong in this framework. Each entry explains 
 
 ---
 
+## Bootstrap
+
+Bootstrap-time traps — how the App class is wired to WordPress, and what breaks when that wiring is wrong.
+
+### Bootstrap the App via `get_instance()` — not `new`
+
+```php
+// ❌ Bypasses the Factory cache — App::get_apps() returns empty, App::render() outputs nothing
+new My_Plugin();
+
+// ✅
+My_Plugin::get_instance();
+```
+
+`new` creates an instance but never registers it in the Factory cache. `App::get_apps()` queries that cache, so the layout system never finds the plugin and nothing renders.
+
+### Register hooks in `boot_*()` override points — not directly in `__construct()`
+
+```php
+// ❌ Fires at require time, before plugins_loaded — WP and other plugins aren't ready yet
+public function __construct () {
+    parent::__construct();
+    add_action('init', [$this, 'on_init']);
+}
+
+// ✅
+public function boot_shared (): void {
+    add_action('init', [$this, 'on_init']);
+}
+```
+
+`App::__construct()` hooks `boot()` on `plugins_loaded`. Adding WP hooks in `__construct()` fires them at require time before the WP stack is available. Use `boot_shared()`, `boot_front()`, `boot_admin()`, etc. for hook registration.
+
+### Always call `parent::__construct()` when overriding the App constructor
+
+```php
+// ❌ $this->path / $this->url never set; boot() never hooked to plugins_loaded
+public function __construct () {
+    $this->custom_setup();
+}
+
+// ✅
+public function __construct () {
+    parent::__construct();
+    $this->custom_setup();
+}
+```
+
+`App::__construct()` sets `$this->reflection`, `$this->path`, and `$this->url` (required by `autoload()`) and hooks `boot()` on `plugins_loaded`. Skipping the parent call silently breaks autoloading and prevents boot from ever firing.
+
+---
+
 ## Route
 
 ### Properties must be non-static instance properties
