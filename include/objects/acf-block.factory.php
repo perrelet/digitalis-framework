@@ -202,6 +202,8 @@ class ACF_Block extends Factory {
 
         }
 
+        $this->params($params);
+
         if ($this->view) {
 
             $html = call_user_func("{$this->view}::render", $params, false);
@@ -223,6 +225,8 @@ class ACF_Block extends Factory {
         echo $html;
 
     }
+
+    public function params (&$params) {}
 
     public function view ($params = []) {
 
