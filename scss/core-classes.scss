@@ -8,14 +8,20 @@
 .ct-section.stretch-section > .ct-section-inner-wrap { align-items: stretch; }
 .ct-section.relative-section > .ct-section-inner-wrap { position: relative; }
 
+// Baseline section rhythm. A custom property so a template can retune every section at once, and so
+// `.merge` halves whatever that template chose rather than a fixed $sec-py.
+.ct-section > .ct-section-inner-wrap {
+    padding-block: var(--section-py, #{$sec-py});
+}
+
 .ct-section.merge {
-    
+
     > .ct-section-inner-wrap {
-        padding-bottom: $sec-py * 0.5;
+        padding-bottom: calc(var(--section-py, #{$sec-py}) / 2);
     }
 
     + .ct-section .ct-section-inner-wrap {
-        padding-top: $sec-py * 0.5;
+        padding-top: calc(var(--section-py, #{$sec-py}) / 2);
     }
 
     &.cols-2 {
@@ -23,11 +29,11 @@
         @include media ("<=tablet") {
 
             > .ct-section-inner-wrap {
-                padding-bottom: $sec-py * 0.25;
+                padding-bottom: calc(var(--section-py, #{$sec-py}) / 4);
             }
-        
+
             + .ct-section .ct-section-inner-wrap {
-                padding-top: $sec-py * 0.25;
+                padding-top: calc(var(--section-py, #{$sec-py}) / 4);
             }
 
         }
