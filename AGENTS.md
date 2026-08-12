@@ -15,8 +15,10 @@ This primer is a map, not the territory. Before adding files or editing framewor
 | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | File naming suffixes are load-bearing. Get them wrong and the autoloader silently skips your file — no error, no instance, just nothing. |
 | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, `parent::params()` skips, etc.). |
 | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. `new My_View([...])` over `My_View::render([...])`). |
+| [docs/VIEW_SYSTEM.md](./docs/VIEW_SYSTEM.md) | Most application code is Views. Read its **Common Confusions** — `$merge` doesn't accumulate, `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected. |
+| [docs/MODELS.md](./docs/MODELS.md) | Read its **Common Confusions** — `query()` returns a plain array not a builder, `$model->save()` over `wp_update_*`, wrap named keys in model methods. |
 
-Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The three docs above are where the framework's failure modes live.
+Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The docs above are where the framework's failure modes live.
 
 For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` with `params()` override, `Route`, `Iterator`, `Admin_Page`, …) see [docs/CHEATSHEET.md](./docs/CHEATSHEET.md).
 
