@@ -507,6 +507,12 @@ Auto-specificity sums: context weight (10–40 from `$context_weights`, using th
 **`Query_Profile` subclasses must be instantiated at boot to register.**
 Defining the class is not enough — call `My_Profile::get_instance()` during plugin initialisation.
 
+**Section vertical rhythm is `--section-py`, not a fixed `$sec-py`.**
+`.ct-section > .ct-section-inner-wrap { padding-block: var(--section-py, $sec-py) }` (`scss/core-classes.scss`). Because it's a custom property it cascades, so a template retunes every section with one declaration on its wrapper, and any single section can override it. `.merge` divides *whatever the template chose* rather than a constant — without that, a template with a tighter baseline would find `.merge` widening its gaps. Defaults to `$sec-py`, so untouched sections are unchanged. Note Oxygen writes per-section padding as `#section-X-Y > .ct-section-inner-wrap` (specificity 1,0,1,0), which still wins over this baseline.
+
+**`.merge` describes the join, not the section — it reaches forward.**
+`.ct-section.merge` halves its own `padding-bottom` *and* the `padding-top` of the next `.ct-section`, via `.merge + .ct-section .ct-section-inner-wrap` — whatever classes that next section carries. So tagging one section affects two, and a section following a merged one is pulled in whether it wants to be or not. Note the second selector is a **descendant**, so a nested `.ct-section-inner-wrap` inside the following section is also hit.
+
 **Use `static::` not `self::` for inherited static calls.**
 `self::` binds at definition time and breaks in subclasses.
 
