@@ -95,13 +95,21 @@ class ACF_Block extends Factory {
             'label' => $field,
         ];
 
-        $name          = $field['name'] ?? $key;
+        $name          = $this->resolve_field_name($key, $field);
         $full_path     = $path ? "{$path}__{$name}" : $name;
         $generated_key = "digitalis_{$this->slug}_" . sanitize_key($full_path);
-        //$generated_key = "field_dummy-{$key}";
 
         $this->field_key_map[$name]      = $this->field_key_map[$name] ?? $generated_key;
         $this->field_key_map[$full_path] = $generated_key;
+
+        // A caller-supplied key that isn't a real ACF key is a local alias, not a field key.
+        // Keep it addressable in conditional logic, but never let it reach ACF's global store.
+        if (isset($field['key']) && !acf_is_field_key($field['key'])) {
+
+            $this->field_key_map[$field['key']] = $this->field_key_map[$field['key']] ?? $generated_key;
+            unset($field['key']);
+
+        }
 
         $field = wp_parse_args($field, [
             'key'               => $generated_key,
@@ -126,8 +134,7 @@ class ACF_Block extends Factory {
 
         if (isset($field['sub_fields']) && is_array($field['sub_fields'])) {
             foreach ($field['sub_fields'] as $sub_key => &$sub_field) {
-                $sub_name = is_array($sub_field) ? ($sub_field['name'] ?? $sub_key) : $sub_key;
-                $this->prepare_field($sub_name, $sub_field, $full_path);
+                $this->prepare_field($sub_key, $sub_field, $full_path);
             }
         }
 
@@ -136,12 +143,21 @@ class ACF_Block extends Factory {
                 $layout_name = is_array($layout) ? ($layout['name'] ?? $layout_key) : $layout_key;
                 if (isset($layout['sub_fields']) && is_array($layout['sub_fields'])) {
                     foreach ($layout['sub_fields'] as $sub_key => &$sub_field) {
-                        $sub_name = is_array($sub_field) ? ($sub_field['name'] ?? $sub_key) : $sub_key;
-                        $this->prepare_field($sub_name, $sub_field, "{$full_path}__layout_{$layout_name}");
+                        $this->prepare_field($sub_key, $sub_field, "{$full_path}__layout_{$layout_name}");
                     }
                 }
             }
         }
+
+    }
+
+    protected function resolve_field_name ($key, $field) {
+
+        if (isset($field['name']))                                    return $field['name'];
+        if (is_string($key))                                          return $key;
+        if (isset($field['key']) && !acf_is_field_key($field['key'])) return $field['key'];
+
+        return $key;
 
     }
 
