@@ -294,14 +294,14 @@ class Post extends WP_Model {
 
         if (is_wp_error($post_id)) return $post_id;
 
-        $this->is_new      = false;
-        $this->wp_post->ID = $post_id;
-        $this->id          = $post_id;
+        $this->is_new = false;
+        $this->id     = $post_id;
 
-        foreach ($post_array as $key => $value) $this->wp_post->$key = $value;
+        // Echoing $post_array back would leak meta_input/field_input into the cache for a later save() to replay.
+        $this->clear_wp_model_cache();
+        $this->hydrate_instance();
 
         $this->dirty = false;
-        $this->cache_wp_model();
         $this->cache_instance();
         $this->clear_content_cache();
         $this->unstash();
@@ -317,6 +317,59 @@ class Post extends WP_Model {
         // TODO: Add to cache
 
         return $this;
+
+    }
+
+    public function duplicate ($overrides = [], $exclude_meta = []) {
+
+        $wp_post = $this->get_wp_post();
+
+        kses_remove_filters(); // Preserve block delimiters for users without unfiltered_html.
+
+        try {
+
+            $duplicate = static::create(wp_parse_args($overrides, [
+                'post_type'    => $wp_post->post_type,
+                'post_status'  => 'draft',
+                'post_title'   => $wp_post->post_title,
+                'post_content' => $wp_post->post_content,
+                'post_excerpt' => $wp_post->post_excerpt,
+                'post_author'  => $wp_post->post_author,
+            ]));
+
+            $result = $duplicate->save();
+
+        } finally {
+
+            kses_init_filters();
+
+        }
+
+        if (is_wp_error($result)) return $result;
+
+        $excluded = array_merge(
+            ['_edit_lock', '_edit_last', '_wp_old_slug'],
+            (array) $exclude_meta,
+            (array) apply_filters('lattice.post.duplicate.exclude_meta', [], $this)
+        );
+
+        foreach (get_post_meta($this->get_id()) as $key => $values) {
+
+            if (in_array($key, $excluded, true)) continue;
+
+            foreach ($values as $value) $duplicate->add_meta($key, maybe_unserialize($value));
+
+        }
+
+        foreach (get_object_taxonomies($wp_post->post_type) as $taxonomy) {
+
+            $term_ids = wp_get_object_terms($this->get_id(), $taxonomy, ['fields' => 'ids']);
+
+            if (!is_wp_error($term_ids) && $term_ids) wp_set_object_terms($duplicate->get_id(), $term_ids, $taxonomy);
+
+        }
+
+        return $duplicate;
 
     }
 

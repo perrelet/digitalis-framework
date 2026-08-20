@@ -185,14 +185,14 @@ class Term extends WP_Model {
 
         $term_id = $result['term_id'];
 
-        $this->is_new           = false;
-        $this->wp_term->term_id = $term_id;
-        $this->id               = $term_id;
+        $this->is_new = false;
+        $this->id     = $term_id;
 
-        foreach ($term_array as $key => $value) $this->wp_term->$key = $value;
+        // Echoing $term_array back would leak field_input into the cache for a later save() to replay.
+        $this->clear_wp_model_cache();
+        $this->hydrate_instance();
 
         $this->dirty = false;
-        $this->cache_wp_model();
         $this->cache_instance();
         $this->unstash();
 

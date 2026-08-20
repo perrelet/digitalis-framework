@@ -312,6 +312,50 @@ class Child_View extends Parent_View {
 }
 ```
 
+### `$required` on a non-null default is inert — it is a null check, not an "is filled" check
+
+For a non-DI key, `required()` tests `is_null()` only. A default of `''` (or `0`, `[]`) is never null, so the check can only fail when a caller explicitly passes `null`. Reach for `condition()` when the view means "must have a usable value" — the case that bites is ACF and form input, which yield `''` for an unfilled field, not `null`.
+
+```php
+// ❌ Never fires. An empty ACF text field renders an empty heading.
+protected static $defaults = ['name' => ''];
+protected static $required = ['name'];
+
+// ✅ Gate emptiness where it belongs
+protected static $defaults = ['name' => ''];
+
+public function condition (): bool {
+    return trim((string) $this['name']) !== '';
+}
+```
+
+The `is_null()` check is deliberate — `empty()` would reject a legitimate `0`, `false` or `'0'`. See [VIEW_SYSTEM.md#required](./VIEW_SYSTEM.md#required).
+
+### Don't guard a DI-backed required param with `instanceof`
+
+`$required` keys whose default is a class string are gated by `pre_validate()`, which runs *before* `params()`. If the model didn't resolve, `params()` never runs. The guard is dead code, and worse, it erases the signal a guard should carry: a reader can no longer tell "this may legitimately be absent" from "I'm defending against the framework".
+
+```php
+protected static $defaults = ['product' => Product::class];
+protected static $required = ['product'];
+
+// ❌ pre_validate() already guaranteed this
+public function params (&$p) {
+    if ($p['product'] instanceof Product) {
+        $p['title'] = $p['product']->get_title();
+    }
+    parent::params($p);
+}
+
+// ✅
+public function params (&$p) {
+    $p['title'] = $p['product']->get_title();
+    parent::params($p);
+}
+```
+
+Keep the guard only when it narrows to a **subtype** of the declared default (`default => Product::class`, guard `instanceof Ion_Source`) — that is a real type test, not a framework defence.
+
 ### Class-name defaults are injected — add to `$skip_inject` to prevent it
 
 String values mapping to classes with `get_instance()` are resolved as DI.

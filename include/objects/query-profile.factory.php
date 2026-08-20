@@ -8,8 +8,8 @@ class Query_Profile extends Factory {
     protected $priority = 10;
     protected $post_type;
     protected $post_status;
-    protected $role;
-    protected $context;
+    protected $role;     // '!' prefix negates, e.g. ['!programmatic']
+    protected $context;  // '!' prefix negates, e.g. ['!admin']
 
     public function __construct () {
 
@@ -119,11 +119,30 @@ class Query_Profile extends Factory {
 
         }
 
-        if ($this->role    && !in_array($this->get_role($wp_query),    $this->role,    true)) return false;
-        if ($this->context && !in_array($this->get_context($wp_query), $this->context, true)) return false;
+        if (!$this->matches_set($this->get_role($wp_query),    $this->role))    return false;
+        if (!$this->matches_set($this->get_context($wp_query), $this->context)) return false;
 
         return true;
-    
+
+    }
+
+    protected function matches_set ($value, $rules) {
+
+        if (!$rules) return true;
+
+        $include = [];
+        $exclude = [];
+
+        foreach ($rules as $rule) {
+            if (is_string($rule) && str_starts_with($rule, '!')) $exclude[] = substr($rule, 1);
+            else                                                 $include[] = $rule;
+        }
+
+        if ($exclude && in_array($value, $exclude, true))  return false;
+        if ($include && !in_array($value, $include, true)) return false;
+
+        return true;
+
     }
 
     protected function is_selected ($wp_query) {
