@@ -301,11 +301,18 @@ class Project extends Post {
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `get_terms($taxonomy)` | `array` | Terms for taxonomy |
+| `get_terms($tax_or_term)` | `WP_Term[]\|Term[]` | Terms for a taxonomy — **return type depends on the argument**, see below |
 | `has_term($term, $tax)` | `bool` | Has specific term |
 | `set_terms($terms, $tax)` | `array\|WP_Error` | Replace terms |
 | `add_terms($terms, $tax)` | `array\|WP_Error` | Add terms |
 | `remove_terms($terms, $tax)` | `bool\|WP_Error` | Remove terms |
+
+> ⚠️ A slug returns raw `WP_Term` objects (`->name`); a `Term` subclass name returns model instances (`->get_name()`). Legacy artifact, awaiting a breaking change to always return models.
+>
+> ```php
+> $wp_terms = $post->get_terms('project_category');         // WP_Term[]
+> $terms    = $post->get_terms(Project_Category::class);    // Term[]
+> ```
 
 ### Parent/Hierarchy
 
