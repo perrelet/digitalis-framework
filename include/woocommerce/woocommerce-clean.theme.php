@@ -178,8 +178,6 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     public function quantity_input_type ($type) {
 
-        if ($type == 'hidden') echo "&nbsp";
-
         return $type;
 
     }
