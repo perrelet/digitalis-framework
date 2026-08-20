@@ -268,12 +268,15 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
             $update = 'update_post_meta';
         }
 
-        $like = '%' . $wpdb->esc_like('"' . $deleted_id . '"') . '%';
-        $eq   = (string) $deleted_id;
+        // Serialised ids read as "123" from ACF and i:123; from anything else. This only
+        // narrows candidates — the loop below is what decides.
+        $like_string = '%' . $wpdb->esc_like('"' . $deleted_id . '"') . '%';
+        $like_int    = '%' . $wpdb->esc_like('i:' . $deleted_id . ';') . '%';
+        $eq          = (string) $deleted_id;
 
         $partner_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT {$col_id} FROM {$table} WHERE meta_key = %s AND (meta_value = %s OR meta_value LIKE %s)",
-            $key, $eq, $like
+            "SELECT {$col_id} FROM {$table} WHERE meta_key = %s AND (meta_value = %s OR meta_value LIKE %s OR meta_value LIKE %s)",
+            $key, $eq, $like_string, $like_int
         ));
 
         if (!$partner_ids) return;
