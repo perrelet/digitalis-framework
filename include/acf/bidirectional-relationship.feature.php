@@ -3,6 +3,7 @@
 namespace Digitalis\ACF;
 
 use Digitalis\Log;
+use Digitalis\Order;
 use WP_Term;
 
 abstract class Bidirectional_Relationship extends \Digitalis\Feature {
@@ -41,6 +42,11 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
         if (in_array('post', $types, true)) $hooks['deleted_post'] = ['on_post_deleted', 10, 'action'];
         if (in_array('user', $types, true)) $hooks['deleted_user'] = ['on_user_deleted', 10, 'action'];
         if (in_array('term', $types, true)) $hooks['delete_term']  = ['on_term_deleted', 10, 'action'];
+
+        // HPOS orders are 'post' sides that never fire deleted_post.
+        if (in_array('post', $types, true) && function_exists('wc_get_order')) {
+            $hooks['woocommerce_before_delete_order'] = ['on_order_deleted', 10, 'action'];
+        }
 
         return $hooks;
 
@@ -188,6 +194,12 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
     public function on_post_deleted ($post_id, $post = null) {
 
         $this->cleanup_for('post', $post_id, ['post_type' => $post ? $post->post_type : null]);
+
+    }
+
+    public function on_order_deleted ($order_id, $order = null) {
+
+        $this->cleanup_for('post', $order_id, ['post_type' => $order ? $order->get_type() : null]);
 
     }
 
@@ -426,7 +438,23 @@ class Object_Type {
 
         }
 
-        return in_array(get_post_type($id), $this->filter, true);
+        return in_array($this->resolve_post_type($id), $this->filter, true);
+
+    }
+
+    protected function resolve_post_type ($id) {
+
+        $post_type = get_post_type($id);
+
+        if ($post_type && $post_type !== 'shop_order_placehold') return $post_type;
+
+        return ($order = $this->get_order($id)) ? $order->get_type() : $post_type;
+
+    }
+
+    protected function get_order ($id) {
+
+        return function_exists('wc_get_order') ? Order::get_instance($id) : null;
 
     }
 
@@ -437,7 +465,9 @@ class Object_Type {
         if ($this->type === 'user') return ($u = get_user_by('id', $id)) ? $u->user_nicename : 'Unknown User';
         if ($this->type === 'term') return ($t = get_term($id)) instanceof WP_Term ? $t->name : 'Unknown Term';
 
-        return get_the_title($id) ?: 'Unknown Post';
+        if ($title = get_the_title($id)) return $title;
+
+        return ($order = $this->get_order($id)) ? '#' . $order->get_order_number() : 'Unknown Post';
 
     }
 
