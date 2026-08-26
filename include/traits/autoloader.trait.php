@@ -235,6 +235,7 @@ trait Autoloader {
         // fix: $class = $tokens[$i+2][1];         ---> if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];                      Avoids 'Uninitialized string offset 1' when using 'static::class'
         // fix: if ($tokens[$j][0] === T_STRING) { ---> if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NAME_QUALIFIED) {    Handle files with sub-namespaces (T_NAME_QUALIFIED PHP 8.0.0+)
         // fix: add: if ($tokens[$j] === ';') break;                                                                                 Class declarations can't contain a semicolon. Bailing early speeds things up and prevents confusing lines containing '::class' with the class declaration. 
+        // fix: add: if ($j == count($tokens)) break;                                                                                $i persists across reads. Holds it on a declaration split by a read boundary, which was otherwise skipped for good.
 
         $fp = fopen($file, 'r');
         $class = $namespace = $buffer = '';
@@ -265,8 +266,11 @@ trait Autoloader {
                         if ($tokens[$j] === ';') break;
                         if ($tokens[$j] === '{') {
                             if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];
+                            break;
                         }
                     }
+
+                    if ($j == count($tokens)) break; // Neither arrived: declaration split across reads, so hold $i or it's skipped for good.
                 }
             }
         }
