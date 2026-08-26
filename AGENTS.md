@@ -427,6 +427,24 @@ protected $view = My_View::class;  // View class; its $defaults become the short
 // render() is handled automatically — no override needed
 ```
 
+### ACF_Block
+
+```php
+protected $slug   = 'my-block';        // non-static (Factory reads $this->$property)
+protected $view   = My_View::class;
+protected $block  = ['title' => 'My Block', 'category' => 'common'];
+protected $fields = ['heading' => 'Heading'];   // field name → view param, 1:1
+
+// Override points
+public function get_fields (): array    // computed field config (dynamic choices)
+public function params (&$params)       // computed params; runs before the view renders
+public function view ($params): string  // inline markup when $view is unset
+```
+
+Override `params()`, not `render()`, for computed params — `render()` owns the
+`$is_preview` placeholder and link-neutralising, and reimplementing it loses both.
+See [ADMIN.md — ACF Blocks](./docs/ADMIN.md#acf-blocks).
+
 ### Schema / Migration (Namespace: `Digitalis\DB`)
 
 ```php

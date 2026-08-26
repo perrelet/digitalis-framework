@@ -1063,6 +1063,39 @@ class CTA_Block extends ACF_Block {
 }
 ```
 
+### Block with Computed Params
+
+`render()` collects each field into `$params` (keyed by field name), then calls
+`params(&$params)` before handing them to the view. Override `params()`
+rather than `render()` whenever the block needs a value the editor didn't type —
+a model resolved from something other than the picker, a derived label, a param
+the view expects under a different name.
+
+```php
+class Latest_Post_Block extends ACF_Block {
+
+    protected $view   = Post_Card::class;
+    protected $fields = [
+        'source' => ['type' => 'button_group', 'choices' => ['pick' => 'Choose', 'latest' => 'Most recent']],
+        'post'   => ['type' => 'post_object', 'return_format' => 'id'],
+    ];
+
+    public function params (&$params) {
+
+        if (($params['source'] ?? '') !== 'latest') return;
+
+        $params['post'] = Post::query(['posts_per_page' => 1])[0] ?? 0;
+
+    }
+}
+```
+
+**Never assign `null` to a param whose view default is a model class string.**
+DI reads `null` as "resolve from context" (`get_global_id()`), so a block that
+resolved nothing would render whatever post the page is currently showing. Use
+`0` — it fails `validate_id()`, the param lands `null` after injection, and
+`pre_validate()` suppresses the view cleanly.
+
 ### Block Properties
 
 | Property | Description |
@@ -1072,6 +1105,15 @@ class CTA_Block extends ACF_Block {
 | `$block` | Block registration args |
 | `$fields` | ACF field definitions |
 | `$defaults` | Default values for view params |
+
+### Block Override Points
+
+| Method | When it runs | Use for |
+|--------|--------------|---------|
+| `get_fields()` | Field registration | Fields whose config is computed (dynamic `choices`) |
+| `params(&$params)` | After field collection, before render | Computed / resolved params |
+| `view($params)` | Render, when `$view` is unset | Inline markup |
+| `render(...)` | Whole render | Last resort: you own `preview_empty_placeholder()` / `preview_neutralize_links()` |
 
 ---
 

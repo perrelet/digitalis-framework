@@ -295,6 +295,25 @@ public function __construct($params = []) {
 }
 ```
 
+### Always call `parent::static_init()` when overriding it
+
+`View::static_init()` registers the class in `$loaded_views`. Skip it and the
+view is never registered — for a `Page_View`, the resolver silently stops
+selecting it and some other view renders instead.
+
+```php
+// ❌ View unregisters itself
+public static function static_init () {
+    add_action('template_redirect', [static::class, 'do_thing']);
+}
+
+// ✅
+public static function static_init () {
+    parent::static_init();
+    add_action('template_redirect', [static::class, 'do_thing']);
+}
+```
+
 ### Child views must re-list parent merge keys — they don't accumulate
 
 ```php
