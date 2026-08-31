@@ -87,19 +87,15 @@ class HTML_REST_API extends Feature {
 
     }
 
-    protected function is_html_rest_request (WP_REST_Request $_request): bool {
-
-        return $this->is_html_rest_path();
-
-    }
-
     public function rest_pre_serve_request ($served, $result, $request, $wp_rest_server) {
 
-        if (!$this->is_html_rest_request($request)) return $served;
+        if (!$this->is_html_rest_path()) return $served;
 
         if (is_wp_error($result)) {
 
-            $status = (int) $result->get_error_data('status');
+            $data   = $result->get_error_data();
+            $status = (int) (is_array($data) ? ($data['status'] ?? 0) : 0);
+
             if ($status < 400) $status = 500;
 
             status_header($status);
