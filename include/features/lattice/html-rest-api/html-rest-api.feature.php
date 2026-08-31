@@ -9,12 +9,16 @@ class HTML_REST_API extends Feature {
 
     protected $rest_prefix = 'wp-html';
 
+    protected $url_builder;
+
     public function __construct () {
 
         include 'html-rest-url.class.php';
 
+        $this->url_builder = new HTML_REST_URL($this->rest_prefix);
+
         REST_URL_Builder::get_instance()->register_format('html', function (Route $route) {
-            return (new HTML_REST_URL($this->rest_prefix))->get_url("{$route->get_namespace()}/{$route->get_route()}");
+            return $this->url_builder->get_url("{$route->get_namespace()}/{$route->get_route()}");
         });
     
         add_action('init',                       [$this, 'add_rewrite_rules']);
@@ -64,12 +68,22 @@ class HTML_REST_API extends Feature {
 
     }
 
+    protected function get_base_path () {
+
+        // Mirrors add_rewrite_rules(): patterns are relative to the home path, so on a
+        // subdirectory install the prefix does not sit at the root.
+
+        $home = (string) (wp_parse_url(home_url('/'), PHP_URL_PATH) ?: '/');
+
+        return rtrim($home, '/') . '/' . trim($this->rest_prefix, '/') . '/';
+
+    }
+
     protected function is_html_rest_path (): bool {
 
-        $path = isset($_SERVER['REQUEST_URI']) ? wp_parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) : '';
-        $path = ltrim((string) $path, '/');
+        $path = (string) (wp_parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '');
 
-        return str_starts_with($path, $this->rest_prefix . '/');
+        return str_starts_with('/' . ltrim($path, '/'), $this->get_base_path());
 
     }
 
@@ -151,51 +165,14 @@ class HTML_REST_API extends Feature {
     }
 
     public function get_path ($path = '') {
-    
-        $url   = $this->get_url($path);
-        $parts = wp_parse_url($url);
-        $path  = $parts['path'] ?? '';
 
-        if (!empty($parts['query']))    $path .= '?' . $parts['query'];
-        if (!empty($parts['fragment'])) $path .= '#' . $parts['fragment'];
+        return $this->url_builder->get_path($path);
 
-        return $path;
-    
     }
 
     public function get_url ($path = '', $blog_id = null, $scheme = 'rest') {
 
-        $url = get_rest_url($blog_id, $path, $scheme);
-
-        $rest_prefix = trim(rest_get_url_prefix(), '/');
-        $html_prefix = trim($this->rest_prefix, '/');
-
-        if (!($parts = wp_parse_url($url)) || empty($parts['path'])) return $url;
-
-        $parts['path'] = preg_replace(
-            '#/' . preg_quote($rest_prefix, '#') . '/#',
-            '/' . $html_prefix . '/',
-            $parts['path'],
-            1
-        );
-
-        return $this->unparse_url($parts);
-
-    }
-
-    protected function unparse_url ($parts) {
-
-        $scheme   = isset($parts['scheme']) ? $parts['scheme'] . '://' : '';
-        $user     = $parts['user'] ?? '';
-        $pass     = isset($parts['pass']) ? ':' . $parts['pass'] : '';
-        $auth     = ($user !== '' || $pass !== '') ? $user . $pass . '@' : '';
-        $host     = $parts['host'] ?? '';
-        $port     = isset($parts['port']) ? ':' . $parts['port'] : '';
-        $path     = $parts['path'] ?? '';
-        $query    = isset($parts['query']) ? '?' . $parts['query'] : '';
-        $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';
-
-        return $scheme . $auth . $host . $port . $path . $query . $fragment;
+        return $this->url_builder->get_url($path, $blog_id, $scheme);
 
     }
 
