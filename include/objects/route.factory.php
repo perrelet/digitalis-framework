@@ -82,6 +82,12 @@ class Route extends Factory {
 
     }
 
+    public function get_rest_path () {
+
+        return '/' . trim($this->get_namespace(), '/') . '/' . ltrim($this->get_route(), '/');
+
+    }
+
     public function get_view () {
 
         return $this->view;
@@ -221,8 +227,7 @@ class Route extends Factory {
 
     public function is_this_route (WP_REST_Request $request) {
 
-        $route = '/' . trim($this->get_namespace(), '/') . '/' . ltrim($this->get_route(), '/');
-        if ($request->get_route() !== $route) return false;
+        if ($request->get_route() !== $this->get_rest_path()) return false;
 
         return true;
 

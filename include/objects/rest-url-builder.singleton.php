@@ -9,7 +9,7 @@ class REST_URL_Builder extends Singleton {
     public function __construct () {
 
         $this->register_format('json', function (Route $route) {
-            return get_rest_url(null, "{$route->get_namespace()}/{$route->get_route()}");
+            return get_rest_url(null, $route->get_rest_path());
         });
 
     }

@@ -18,7 +18,7 @@ class HTML_REST_API extends Feature {
         $this->url_builder = new HTML_REST_URL($this->rest_prefix);
 
         REST_URL_Builder::get_instance()->register_format('html', function (Route $route) {
-            return $this->url_builder->get_url("{$route->get_namespace()}/{$route->get_route()}");
+            return $this->url_builder->get_url($route->get_rest_path());
         });
     
         add_action('init',                       [$this, 'add_rewrite_rules']);
