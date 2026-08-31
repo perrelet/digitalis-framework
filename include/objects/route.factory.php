@@ -206,13 +206,13 @@ class Route extends Factory {
         if (is_null($nonce)) return new WP_Error(
             __NAMESPACE__ . '_rest_missing_nonce',
             'Missing the `Nonce` header or `_wpnonce` parameter. This endpoint requires a valid nonce.',
-            401,
+            ['status' => 401],
         );
 
         if (!wp_verify_nonce($nonce, 'wp_rest')) return new WP_Error(
             __NAMESPACE__ . '_rest_invalid_nonce',
             'Nonce is invalid.',
-            403,
+            ['status' => 403],
         );
 
         return true;
