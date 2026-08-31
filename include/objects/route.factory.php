@@ -23,7 +23,7 @@ class Route extends Factory {
     /**
      * @link /{$format}/{$namespace}/{$route}       JSON Response.
      * @var string       $namespace               The namespace and version.
-     * @var string       $route                   The endpoint for this route.
+     * @var ?string      $route                   The endpoint for this route. Null registers nothing, for base classes.
      * @var bool         $wp_query                Whether to emulate a normal WordPress query. Note: $wp isn't reset so repeat `rest_do_request` calls may result in unexpected behaviour. 
      * @var string       $handler                 The handler method name responsible for executing the route's primary application logic.
      * @var bool|string  $view                    The view class to render at the endpoint (view args are inherited from `WP_REST_Request`). Set `false` to turn off and use the `$handler`.
@@ -33,7 +33,7 @@ class Route extends Factory {
      */
 
     protected $namespace     = 'digitalis/v1';
-    protected $route         = 'route';
+    protected $route         = null;
     protected $format        = null;
     protected $wp_query      = false;
     protected $handler       = 'handle';
@@ -51,6 +51,8 @@ class Route extends Factory {
     }
 
     public function register_route () {
+
+        if (is_null($this->get_route())) return;
 
         register_rest_route($this->get_namespace(), $this->get_route(), $this->get_definition());
 
