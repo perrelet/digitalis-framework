@@ -5,26 +5,28 @@ namespace Digitalis\Component;
 class HTMX extends \Digitalis\Component {
 
     protected static $defaults = [
-        'tag'           => 'a',
-        'attributes'    => [
-            'href' => '#',
-        ],
-        'content'    => '',
-        'url'        => null,
-        'method'     => 'get',
-        'trigger'    => 'click',
-        'target'     => 'body',
-        'swap'       => 'innerHTML',
-        'swap_oob'   => null,
-        'select'     => null,
-        'select_oob' => null,
-        'vals'       => null,
-        'push_url'   => null,
-        'confirm'    => null,
-        '_'          => null,
+        'tag'         => 'a',
+        'attributes'  => [],
+        'content'     => '',
+        'url'         => null,
+        'method'      => 'get',
+        'trigger'     => 'click',
+        'target'      => 'body',
+        'swap'        => 'innerHTML',
+        'swap_oob'    => null,
+        'select'      => null,
+        'select_oob'  => null,
+        'vals'        => null,
+        'push_url'    => null,
+        'confirm'     => null,
+        '_'           => null,
     ];
 
     public function params (&$p) {
+
+        // `+=` yields to consumer values.
+        if ($p['tag'] == 'a')      $p['attributes'] += ['href' => '#'];
+        if ($p['tag'] == 'button') $p['attributes'] += ['type' => 'button'];
 
         if ($p['url'])        $p['attributes']['hx-' . $p['method']] = $p['url'];
         if ($p['trigger'])    $p['attributes']['hx-trigger']         = $p['trigger'];
