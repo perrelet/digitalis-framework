@@ -2,9 +2,9 @@
 
 // Redirect WordPress system emails (recovery mode, auto-updates) to a custom address.
 
-namespace Lattice;
+namespace Lattice\WP;
 
-class System_Emails extends Feature {
+class System_Emails extends \Lattice\Feature {
 
     protected $address = '';
 

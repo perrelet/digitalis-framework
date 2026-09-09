@@ -2,6 +2,8 @@
 
 namespace Lattice;
 
+use Lattice\Component\Field_Group;
+
 use Lattice\Field\Hidden;
 use Lattice\Field\Input;
 use Lattice\Field\Submit;

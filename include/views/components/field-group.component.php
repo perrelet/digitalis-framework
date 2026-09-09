@@ -1,10 +1,12 @@
 <?php
 
-namespace Lattice;
+namespace Lattice\Component;
+
+use Lattice\View;
 
 use Lattice\Field\Input;
 
-class Field_Group extends Component {
+class Field_Group extends \Lattice\Component {
 
     protected static $template = 'components/field-group';
     protected static $template_path = LATTICE_PATH . "/templates/digitalis/";

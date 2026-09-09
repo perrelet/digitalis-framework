@@ -1,6 +1,6 @@
 <?php
 
-namespace Lattice;
+namespace Lattice\Component;
 
 /**
  * Resolves is_current / is_ancestor on a coerced Menu_Item tree.
@@ -10,7 +10,7 @@ namespace Lattice;
  * untouched. The $explicit snapshot keeps that signal alive across matching
  * + bubble (the params themselves get overwritten during the passes).
  */
-class Menu_Active_State extends Utility {
+class Menu_Active_State extends \Lattice\Utility {
 
     // spl_object_id => ['is_current' => bool, 'is_ancestor' => bool]
     protected static $explicit = [];

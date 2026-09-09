@@ -2,6 +2,8 @@
 
 namespace Lattice;
 
+use Lattice\Component\Menu_Active_State;
+
 class Nav_Menu_Item extends Post {
 
     protected static $post_type = 'nav_menu_item';

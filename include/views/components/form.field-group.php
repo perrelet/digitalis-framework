@@ -1,6 +1,6 @@
 <?php
 
-namespace Lattice;
+namespace Lattice\Component;
 
 class Form extends Field_Group {
 

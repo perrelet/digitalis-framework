@@ -1,8 +1,10 @@
 <?php
 
-namespace Lattice;
+namespace Lattice\Component;
 
-class Menu_Item extends Component {
+use Lattice\Element;
+
+class Menu_Item extends \Lattice\Component {
 
     protected static $template = 'menu-item';
 

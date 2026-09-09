@@ -1,8 +1,8 @@
 <?php
 
-namespace Lattice;
+namespace Lattice\Component;
 
-class Menu_Drawer extends Component {
+class Menu_Drawer extends \Lattice\Component {
 
     protected static $template = 'menu-drawer';
 

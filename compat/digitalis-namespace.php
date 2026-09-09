@@ -8,10 +8,37 @@ define('DIGITALIS_FRAMEWORK_URI',     LATTICE_URI);
 // Traits cannot be aliased; consumers using framework traits must update the namespace.
 spl_autoload_register(function ($name) {
 
-    if (!str_starts_with($name, 'Digitalis\\')) return;
+    $sub_namespaces = ['Component', 'Field', 'DB', 'WP', 'Woo', 'ACF', 'Oxygen'];
 
-    $target = 'Lattice\\' . substr($name, 10);
+    if (str_starts_with($name, 'Digitalis\\')) {
 
-    if (class_exists($target) || interface_exists($target)) class_alias($target, $name);
+        $short = substr($name, 10);
+
+    } elseif (str_starts_with($name, 'Lattice\\') && !str_contains(substr($name, 8), '\\')) {
+
+        $short = substr($name, 8);
+
+    } else {
+
+        return;
+
+    }
+
+    $candidates = ["Lattice\\{$short}"];
+
+    foreach ($sub_namespaces as $sub) $candidates[] = "Lattice\\{$sub}\\{$short}";
+
+    foreach ($candidates as $target) {
+
+        if ($target === $name) continue;
+
+        if (class_exists($target) || interface_exists($target)) {
+
+            class_alias($target, $name);
+            return;
+
+        }
+
+    }
 
 });

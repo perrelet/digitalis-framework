@@ -2,6 +2,8 @@
 
 namespace Lattice;
 
+use Lattice\Component\Field_Group;
+
 abstract class Query_Filters extends Field_Group {
 
     protected static $defaults = [

@@ -2,7 +2,7 @@
 
 namespace Lattice;
 
-use Lattice\Field_Group;
+use Lattice\Component\Field_Group;
 use Lattice\Field\Number;
 use Lattice\Field\Submit;
 use Lattice\Field\Hidden;

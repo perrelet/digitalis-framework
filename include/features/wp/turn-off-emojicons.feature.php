@@ -1,8 +1,8 @@
 <?php
 
-namespace Lattice;
+namespace Lattice\WP;
 
-class Turn_Off_Emojicons extends Feature {
+class Turn_Off_Emojicons extends \Lattice\Feature {
 
     public function __construct () {
 

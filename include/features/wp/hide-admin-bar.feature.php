@@ -2,9 +2,9 @@
 
 // Hide the WP admin bar on the frontend, revealing on hover.
 
-namespace Lattice;
+namespace Lattice\WP;
 
-class Hide_Admin_Bar extends Feature {
+class Hide_Admin_Bar extends \Lattice\Feature {
 
     public function __construct () {
 

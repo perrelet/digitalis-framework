@@ -2,6 +2,8 @@
 
 namespace Lattice;
 
+use Lattice\Component\Form;
+
 use Lattice\Field;
 use Lattice\Component\Table;
 
