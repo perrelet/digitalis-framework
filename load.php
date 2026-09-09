@@ -4,7 +4,7 @@ if (defined('LATTICE_VERSION')) return;
 
 define('LATTICE_VERSION',       '0.4.0');
 define('LATTICE_PATH',          plugin_dir_path( __FILE__ ));
-define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/features/');
+define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/_features/');
 define('LATTICE_URI',           plugin_dir_url(__FILE__));
 
 require LATTICE_PATH . 'compat/digitalis-namespace.php';
@@ -133,8 +133,6 @@ require LATTICE_PATH . 'include/core/transients.utility.php';
 \Lattice\Revision::static_init();
 \Lattice\Attachment::static_init();
 
-//require LATTICE_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
-//require LATTICE_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
 
 require LATTICE_PATH . 'include/integrations/acf/bidirectional-relationship.feature.php';
 
