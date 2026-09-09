@@ -9,7 +9,7 @@ trait Autoloader {
 
     protected $path;
 
-    public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $depth = 0) {
+    public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $instantiation = null) {
 
         if (is_null($path)) $path = $this->path;
 
@@ -18,7 +18,7 @@ trait Autoloader {
 
         foreach ($this->sort_files($this->collect_files($path, $recursive, $ext), $ext) as $file) {
 
-            $obj = $this->load_class($file);
+            $obj = $this->load_class($file, $instantiation);
             if (is_object($obj)) $objs[] = $obj;
 
         }
@@ -124,9 +124,7 @@ trait Autoloader {
     
         if ($autoloads) foreach ($autoloads as $directory => $instantiation) {
 
-            if (is_null($instantiation)) $instantiation = 'get_instance';
-
-            $objs = array_merge($objs, $this->autoload($this->path . $directory));
+            $objs = array_merge($objs, $this->autoload($this->path . $directory, true, 'php', $objs, $instantiation));
 
         }
 
