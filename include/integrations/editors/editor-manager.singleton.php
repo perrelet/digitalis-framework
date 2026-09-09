@@ -34,8 +34,21 @@ class Editor_Manager extends Singleton {
 
         if ($editors = $this->autoload(__DIR__, true, 'editor.php')) foreach ($editors as $editor) {
 
-            $this->editors[$editor->get_slug()] = $editor;
-            
+            $slug = $editor->get_slug();
+
+            if (isset($this->editors[$slug])) {
+
+                _doing_it_wrong(__METHOD__, sprintf(
+                    'Editors %s and %s both declare the slug "%s".',
+                    get_class($this->editors[$slug]), get_class($editor), $slug
+                ), '1.0.0');
+
+                continue;
+
+            }
+
+            $this->editors[$slug] = $editor;
+
         }
 
         return $this->editors;
