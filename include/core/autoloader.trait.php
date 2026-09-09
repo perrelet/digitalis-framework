@@ -12,48 +12,112 @@ trait Autoloader {
     public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $depth = 0) {
 
         if (is_null($path)) $path = $this->path;
-        
-        if (is_array($path))                     return $this->autoload_multiple($path, $objs);
-        if (!is_dir($path = realpath($path)))    return $objs;
-        if ($depth && basename($path)[0] == '_') return $objs;
 
-        if ($names = $this->get_file_names($path, $ext)) foreach ($names as $name) {
+        if (is_array($path))                  return $this->autoload_multiple($path, $objs);
+        if (!is_dir($path = realpath($path))) return $objs;
 
-            $obj = $this->load_class($path . '/' . $name);
+        foreach ($this->sort_files($this->collect_files($path, $recursive, $ext), $ext) as $file) {
+
+            $obj = $this->load_class($file);
             if (is_object($obj)) $objs[] = $obj;
 
         }
 
+        return $objs;
+
+    }
+
+    public function autoload_order ($path, $recursive = true, $ext = 'php') {
+
+        return $this->sort_files($this->collect_files(realpath($path), $recursive, $ext), $ext);
+
+    }
+
+    protected function collect_files ($path, $recursive = true, $ext = 'php', $depth = 0) {
+
+        $files = [];
+
+        if ($depth && basename($path)[0] == '_') return $files;
+
+        foreach (glob($path . '/*.' . $ext) as $file) $files[] = $file;
+
         if ($recursive) foreach (glob($path . '/*', GLOB_ONLYDIR) as $dir) {
 
-            if (basename($dir)[0] == '~') {
+            if ((basename($dir)[0] == '~') && !$this->plugin_is_active(substr(basename($dir), 1))) continue;
 
-                // Refactor with array_any (PHP 8 >= 8.4.0)
-
-                $plugin_dir    = substr(basename($dir), 1);
-                $plugin_active = false;
-
-                foreach (get_plugins() as $plugin_name => $plugin) {
-
-                    if ((dirname($plugin_name) == $plugin_dir) && is_plugin_active($plugin_name)) {
-
-                        $plugin_active = true;
-                        break;
-
-                    }
-
-                }
-
-                if (!$plugin_active) continue;
-
-            }
-
-            $this->autoload($dir, $recursive, $ext, $objs, $depth + 1);
+            $files = array_merge($files, $this->collect_files($dir, $recursive, $ext, $depth + 1));
 
         }
 
-        return $objs;
-    
+        return $files;
+
+    }
+
+    protected function plugin_is_active ($plugin_dir) {
+
+        foreach (get_plugins() as $plugin_name => $plugin) {
+
+            if ((dirname($plugin_name) == $plugin_dir) && is_plugin_active($plugin_name)) return true;
+
+        }
+
+        return false;
+
+    }
+
+    // Sorts across the whole tree, so a child may live in a different directory to its parent.
+    // Keyed by path, not class name: those collide across directories (db/table vs components/table).
+    protected function sort_files ($files, $ext = 'php') {
+
+        $pending = [];
+        $by_name = [];
+
+        foreach ($files as $path) {
+
+            [$name, $parent] = $this->split_file_name(basename($path), $ext);
+
+            $pending[$path]   = $parent;
+            $by_name[$name][] = $path;
+
+        }
+
+        $sorted = [];
+
+        while ($pending) {
+
+            $progress = false;
+
+            foreach ($pending as $path => $parent) {
+
+                foreach ($by_name[$parent] ?? [] as $blocker) {
+                    if (($blocker !== $path) && isset($pending[$blocker])) continue 2;
+                }
+
+                $sorted[] = $path;
+                unset($pending[$path]);
+                $progress = true;
+
+            }
+
+            if ($progress) continue;
+
+            foreach ($pending as $path => $parent) $sorted[] = $path;
+            break;
+
+        }
+
+        return $sorted;
+
+    }
+
+    protected function split_file_name ($file_name, $ext = 'php') {
+
+        if ($pos = strpos($ext, '.')) $ext = substr($ext, $pos + 1);
+
+        $parts = explode('.', substr($file_name, 0, -(strlen($ext) + 1)));
+
+        return [$parts[0], count($parts) > 1 ? end($parts) : ''];
+
     }
 
     public function autoload_multiple ($autoloads, &$objs = []) {
