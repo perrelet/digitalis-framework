@@ -9,23 +9,23 @@ define('LATTICE_URI',           plugin_dir_url(__FILE__));
 
 require LATTICE_PATH . 'compat/digitalis-namespace.php';
 
-require LATTICE_PATH . 'include/utils/utility.abstract.php';
-require LATTICE_PATH . 'include/utils/hook.utility.php';
-require LATTICE_PATH . 'include/utils/call.utility.php';
-require LATTICE_PATH . 'include/utils/list-utility.utility.php';
+require LATTICE_PATH . 'include/core/utility.abstract.php';
+require LATTICE_PATH . 'include/core/hook.utility.php';
+require LATTICE_PATH . 'include/core/call.utility.php';
+require LATTICE_PATH . 'include/core/list-utility.utility.php';
 
 require LATTICE_PATH . 'compat/digitalis-hooks.php';
 
-require LATTICE_PATH . 'include/traits/autoloader.trait.php';
-require LATTICE_PATH . 'include/traits/auto-instantiate.trait.php';
-require LATTICE_PATH . 'include/traits/is-stashable.trait.php';
-require LATTICE_PATH . 'include/traits/resolvable.trait.php';
+require LATTICE_PATH . 'include/core/autoloader.trait.php';
+require LATTICE_PATH . 'include/core/auto-instantiate.trait.php';
+require LATTICE_PATH . 'include/core/is-stashable.trait.php';
+require LATTICE_PATH . 'include/core/resolvable.trait.php';
 
-require LATTICE_PATH . 'include/patterns/design-pattern.abstract.php';
-require LATTICE_PATH . 'include/patterns/creational.design-pattern.php';
-require LATTICE_PATH . 'include/patterns/dependency-injection.trait.php';
-require LATTICE_PATH . 'include/patterns/factory.abstract.php';
-require LATTICE_PATH . 'include/patterns/singleton.abstract.php';
+require LATTICE_PATH . 'include/core/design-pattern.abstract.php';
+require LATTICE_PATH . 'include/core/creational.design-pattern.php';
+require LATTICE_PATH . 'include/core/dependency-injection.trait.php';
+require LATTICE_PATH . 'include/core/factory.abstract.php';
+require LATTICE_PATH . 'include/core/singleton.abstract.php';
 
 require LATTICE_PATH . 'include/db/db-context.final.php';
 require LATTICE_PATH . 'include/db/column.final.php';
@@ -39,55 +39,55 @@ require LATTICE_PATH . 'include/db/option-migration-logger.migration-logger.php'
 require LATTICE_PATH . 'include/db/schema-context.final.php';
 require LATTICE_PATH . 'include/db/migration-runner.final.php';
 
-require LATTICE_PATH . 'include/acf/has-acf-fields.trait.php';
+require LATTICE_PATH . 'include/integrations/acf/has-acf-fields.trait.php';
 
-require LATTICE_PATH . 'include/wordpress/has-wp-hooks.trait.php';
-require LATTICE_PATH . 'include/wordpress/has-wp-meta.trait.php';
-require LATTICE_PATH . 'include/wordpress/has-wp-model.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-hooks.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-meta.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-model.trait.php';
 
-require LATTICE_PATH . 'include/wordpress/has-wp-comment.trait.php';
-require LATTICE_PATH . 'include/wordpress/has-wp-post.trait.php';
-require LATTICE_PATH . 'include/wordpress/has-wp-term.trait.php';
-require LATTICE_PATH . 'include/wordpress/has-wp-user.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-comment.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-post.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-term.trait.php';
+require LATTICE_PATH . 'include/models/has-wp-user.trait.php';
 
-require LATTICE_PATH . 'include/objects/inherit-props.trait.php';
-require LATTICE_PATH . 'include/objects/model.abstract.php';
-require LATTICE_PATH . 'include/objects/service.abstract.php';
-require LATTICE_PATH . 'include/objects/log.service.php';
-require LATTICE_PATH . 'include/objects/visitor.service.php';
-require LATTICE_PATH . 'include/objects/request-resolver.singleton.php';
-require LATTICE_PATH . 'include/objects/app.abstract.php';
-require LATTICE_PATH . 'include/objects/design-system.abstract.php';
-require LATTICE_PATH . 'include/objects/query.wp-query.php';
-require LATTICE_PATH . 'include/objects/query-vars.class.php';
-require LATTICE_PATH . 'include/objects/query-manager.singleton.php';
-require LATTICE_PATH . 'include/objects/query-profile.factory.php';
-require LATTICE_PATH . 'include/objects/rest-url-builder.singleton.php';
-require LATTICE_PATH . 'include/objects/route.factory.php';
-require LATTICE_PATH . 'include/objects/feature.abstract.php';
-require LATTICE_PATH . 'include/objects/integration.abstract.php';
-require LATTICE_PATH . 'include/objects/plugin-integration.abstract.php';
-require LATTICE_PATH . 'include/objects/theme.abstract.php';
-require LATTICE_PATH . 'include/objects/view.abstract.php';
-require LATTICE_PATH . 'include/objects/view-route.abstract.php';
-require LATTICE_PATH . 'include/objects/acf-block.factory.php';
-require LATTICE_PATH . 'include/objects/shortcode.abstract.php';
-require LATTICE_PATH . 'include/objects/attributes.class.php';
-require LATTICE_PATH . 'include/objects/element.class.php';
+require LATTICE_PATH . 'include/models/inherit-props.trait.php';
+require LATTICE_PATH . 'include/models/model.abstract.php';
+require LATTICE_PATH . 'include/services/service.abstract.php';
+require LATTICE_PATH . 'include/services/log.service.php';
+require LATTICE_PATH . 'include/services/visitor.service.php';
+require LATTICE_PATH . 'include/routing/request-resolver.singleton.php';
+require LATTICE_PATH . 'include/core/app.abstract.php';
+require LATTICE_PATH . 'include/views/design-system.abstract.php';
+require LATTICE_PATH . 'include/query/query.wp-query.php';
+require LATTICE_PATH . 'include/query/query-vars.class.php';
+require LATTICE_PATH . 'include/query/query-manager.singleton.php';
+require LATTICE_PATH . 'include/query/query-profile.factory.php';
+require LATTICE_PATH . 'include/routing/rest-url-builder.singleton.php';
+require LATTICE_PATH . 'include/routing/route.factory.php';
+require LATTICE_PATH . 'include/hooks/feature.abstract.php';
+require LATTICE_PATH . 'include/hooks/integration.abstract.php';
+require LATTICE_PATH . 'include/hooks/plugin-integration.abstract.php';
+require LATTICE_PATH . 'include/hooks/theme.abstract.php';
+require LATTICE_PATH . 'include/views/view.abstract.php';
+require LATTICE_PATH . 'include/routing/view-route.abstract.php';
+require LATTICE_PATH . 'include/views/acf-block.factory.php';
+require LATTICE_PATH . 'include/views/shortcode.abstract.php';
+require LATTICE_PATH . 'include/views/attributes.class.php';
+require LATTICE_PATH . 'include/views/element.class.php';
 
-require LATTICE_PATH . 'include/objects/cron-scheduler.abstract.php';
-require LATTICE_PATH . 'include/objects/task-handler.singleton.php';
+require LATTICE_PATH . 'include/services/cron-scheduler.abstract.php';
+require LATTICE_PATH . 'include/services/task-handler.singleton.php';
 
-require LATTICE_PATH . 'include/acf/acf-row.model.php';
+require LATTICE_PATH . 'include/integrations/acf/acf-row.model.php';
 
 
-require LATTICE_PATH . 'include/editors/control-mapper.interface.php';
-require LATTICE_PATH . 'include/editors/control-mapper.abstract.php';
-require LATTICE_PATH . 'include/editors/editor.interface.php';
-require LATTICE_PATH . 'include/editors/editor.singleton.php';
-require LATTICE_PATH . 'include/editors/editor-element-generator.interface.php';
-require LATTICE_PATH . 'include/editors/editor-element-generator.abstract.php';
-require LATTICE_PATH . 'include/editors/editor-manager.singleton.php';
+require LATTICE_PATH . 'include/integrations/editors/control-mapper.interface.php';
+require LATTICE_PATH . 'include/integrations/editors/control-mapper.abstract.php';
+require LATTICE_PATH . 'include/integrations/editors/editor.interface.php';
+require LATTICE_PATH . 'include/integrations/editors/editor.singleton.php';
+require LATTICE_PATH . 'include/integrations/editors/editor-element-generator.interface.php';
+require LATTICE_PATH . 'include/integrations/editors/editor-element-generator.abstract.php';
+require LATTICE_PATH . 'include/integrations/editors/editor-manager.singleton.php';
 
 require LATTICE_PATH . 'include/iterators/iterator.singleton.php';
 require LATTICE_PATH . 'include/iterators/csv-iterator.iterator.php';
@@ -110,23 +110,23 @@ require LATTICE_PATH . 'include/admin/attachment-table.abstract.php';
 require LATTICE_PATH . 'include/admin/wc-orders.abstract.php';
 require LATTICE_PATH . 'include/admin/meta-box.abstract.php';
 require LATTICE_PATH . 'include/admin/profile-section.abstract.php';
-require LATTICE_PATH . 'include/wordpress/post-type.abstract.php';
-require LATTICE_PATH . 'include/wordpress/post-status.abstract.php';
-require LATTICE_PATH . 'include/wordpress/taxonomy.abstract.php';
-require LATTICE_PATH . 'include/wordpress/user-taxonomy.abstract.php';
-require LATTICE_PATH . 'include/wordpress/user-role.abstract.php';
-require LATTICE_PATH . 'include/wordpress/wp-model.model.php';
-require LATTICE_PATH . 'include/wordpress/comment.model.php';
-require LATTICE_PATH . 'include/wordpress/post.model.php';
-require LATTICE_PATH . 'include/wordpress/page.post.php';
-require LATTICE_PATH . 'include/wordpress/revision.post.php';
-require LATTICE_PATH . 'include/wordpress/attachment.post.php';
-require LATTICE_PATH . 'include/wordpress/nav-menu-item.post.php';
-require LATTICE_PATH . 'include/wordpress/term.model.php';
-require LATTICE_PATH . 'include/wordpress/nav-menu.term.php';
-require LATTICE_PATH . 'include/wordpress/user.model.php';
-require LATTICE_PATH . 'include/wordpress/options.model.php';
-require LATTICE_PATH . 'include/wordpress/transients.utility.php';
+require LATTICE_PATH . 'include/registration/post-type.abstract.php';
+require LATTICE_PATH . 'include/registration/post-status.abstract.php';
+require LATTICE_PATH . 'include/registration/taxonomy.abstract.php';
+require LATTICE_PATH . 'include/registration/user-taxonomy.abstract.php';
+require LATTICE_PATH . 'include/registration/user-role.abstract.php';
+require LATTICE_PATH . 'include/models/wp-model.model.php';
+require LATTICE_PATH . 'include/models/comment.model.php';
+require LATTICE_PATH . 'include/models/post.model.php';
+require LATTICE_PATH . 'include/models/page.post.php';
+require LATTICE_PATH . 'include/models/revision.post.php';
+require LATTICE_PATH . 'include/models/attachment.post.php';
+require LATTICE_PATH . 'include/models/nav-menu-item.post.php';
+require LATTICE_PATH . 'include/models/term.model.php';
+require LATTICE_PATH . 'include/models/nav-menu.term.php';
+require LATTICE_PATH . 'include/models/user.model.php';
+require LATTICE_PATH . 'include/models/options.model.php';
+require LATTICE_PATH . 'include/core/transients.utility.php';
 
 \Lattice\Post::static_init();
 \Lattice\Page::static_init();
@@ -136,7 +136,7 @@ require LATTICE_PATH . 'include/wordpress/transients.utility.php';
 //require LATTICE_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
 //require LATTICE_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
 
-require LATTICE_PATH . 'include/acf/bidirectional-relationship.feature.php';
+require LATTICE_PATH . 'include/integrations/acf/bidirectional-relationship.feature.php';
 
 require LATTICE_PATH . 'include/views/component.view.php';
 require LATTICE_PATH . 'include/views/components/htmx.component.php';
@@ -186,29 +186,29 @@ require LATTICE_PATH . 'include/views/debug.view.php';
 require LATTICE_PATH . 'include/views/debug-code-block.view.php';
 require LATTICE_PATH . 'include/views/iterator-ui.view.php';
 
-require LATTICE_PATH . 'include/acf/acf-ajax-form.view.php';
-require LATTICE_PATH . 'include/acf/acf-option-pages.singleton.php';
+require LATTICE_PATH . 'include/integrations/acf/acf-ajax-form.view.php';
+require LATTICE_PATH . 'include/integrations/acf/acf-option-pages.singleton.php';
 
 require LATTICE_PATH . 'include/functions.php';
 
 add_action('plugins_loaded', function () {
 //add_action('woocommerce_loaded', function () {
 
-    require LATTICE_PATH . 'include/woocommerce/is-woo-customer.trait.php';
-    require LATTICE_PATH . 'include/woocommerce/customer.user.php';
-    require LATTICE_PATH . 'include/woocommerce/order-item.model.php';
-    require LATTICE_PATH . 'include/woocommerce/order-status.post-status.php';
-    require LATTICE_PATH . 'include/woocommerce/order.abstract.php';
-    require LATTICE_PATH . 'include/woocommerce/product-type.abstract.php';
-    require LATTICE_PATH . 'include/woocommerce/woo-account-page.factory.php';
-    require LATTICE_PATH . 'include/woocommerce/woocommerce.theme.php';
-    require LATTICE_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/is-woo-customer.trait.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/customer.user.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/order-item.model.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/order-status.post-status.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/order.abstract.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/product-type.abstract.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/woo-account-page.factory.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/woocommerce.theme.php';
+    require LATTICE_PATH . 'include/integrations/woocommerce/woocommerce-clean.theme.php';
 
 }, 0);
 
 add_action('init', function () {
 
-    if (defined('BRICKS_VERSION')) require LATTICE_PATH . 'include/objects/bricks-element.abstract.php';
+    if (defined('BRICKS_VERSION')) require LATTICE_PATH . 'include/integrations/editors/bricks-element.abstract.php';
 
 }, 11);
 
