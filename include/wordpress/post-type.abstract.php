@@ -81,7 +81,7 @@ abstract class Post_Type extends Singleton {
 
         $this->filter_args($args);
 
-        $args = apply_filters("Digitalis/Post_Type/" . static::class . "/Args", $args);
+        $args = Hook::filter(['lattice', 'post_type', static::class, 'args'], $args);
 
         $this->post_type = register_post_type(
             $this->slug,
@@ -177,7 +177,7 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_rewrite () {
 
-        return apply_filters("Digitalis/Post_Type/" . static::class . "/Rewrite",
+        return Hook::filter(['lattice', 'post_type', static::class, 'rewrite'],
         [
             'slug'          => $this->archive,
             'with_front'    => false,
@@ -189,7 +189,7 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_supports () {
 
-        return apply_filters("Digitalis/Post_Type/" . static::class . "/Supports",
+        return Hook::filter(['lattice', 'post_type', static::class, 'supports'],
         [
             'title',
             'editor',
@@ -203,7 +203,7 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_labels () {
 
-        return apply_filters("Digitalis/Post_Type/" . static::class . "/Labels",
+        return Hook::filter(['lattice', 'post_type', static::class, 'labels'],
         [
             'name'               => __( $this->plural(),                        $this->text_domain ),
             'singular_name'      => __( $this->singular,                        $this->text_domain ),

@@ -34,7 +34,7 @@ abstract class Taxonomy extends Singleton {
         $args['rewrite'] = $this->get_rewrite($this->get_default_rewrite());
         $args['labels']  = $this->get_labels($this->get_default_labels());
 
-        $args = apply_filters("Digitalis/Taxonomy/" . str_replace('\\', '/', ltrim(static::class, '\\')) . "/Args", $args);
+        $args = Hook::filter(['lattice', 'taxonomy', static::class, 'args'], $args);
 
         $this->taxonomy = register_taxonomy(
             $this->slug,

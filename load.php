@@ -10,8 +10,11 @@ define('LATTICE_URI',           plugin_dir_url(__FILE__));
 require LATTICE_PATH . 'compat/digitalis-namespace.php';
 
 require LATTICE_PATH . 'include/utils/utility.abstract.php';
+require LATTICE_PATH . 'include/utils/hook.utility.php';
 require LATTICE_PATH . 'include/utils/call.utility.php';
 require LATTICE_PATH . 'include/utils/list-utility.utility.php';
+
+require LATTICE_PATH . 'compat/digitalis-hooks.php';
 
 require LATTICE_PATH . 'include/traits/autoloader.trait.php';
 require LATTICE_PATH . 'include/traits/auto-instantiate.trait.php';

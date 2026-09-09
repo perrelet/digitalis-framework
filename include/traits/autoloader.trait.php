@@ -97,8 +97,8 @@ trait Autoloader {
         if ($reflection->isAbstract())                                $instantiation = false;
         if ($path && strpos(basename($path), '.abstract.') !== false) $instantiation = false;
 
-        $instantiation = apply_filters('Digitalis/Instantiate/', $instantiation, $class_name, $path);
-        $instantiation = apply_filters('Digitalis/Instantiate/' . str_replace('\\', '/', ltrim($class_name, '\\')), $instantiation, $path);
+        $instantiation = Hook::filter('lattice.instantiate', $instantiation, $class_name, $path);
+        $instantiation = Hook::filter(['lattice', 'instantiate', $class_name], $instantiation, $path);
 
         return $instantiation;
 

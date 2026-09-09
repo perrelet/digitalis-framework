@@ -10,8 +10,6 @@ trait Has_WP_Hooks {
 
     use Dependency_Injection;
 
-    protected $hook_delimiter = '.';
-
     public function get_default_priority () {
 
         return 10;
@@ -33,21 +31,13 @@ trait Has_WP_Hooks {
 
     protected function sanitize_hook_name ($hook_name) {
 
-        $hook_name = str_replace('\\', $this->hook_delimiter, $hook_name);
-        $hook_name = preg_replace('/[^\w.]+/', $this->hook_delimiter, $hook_name);
-        $hook_name = strtolower(trim($hook_name, $this->hook_delimiter));
-        $hook_name = preg_replace('/[.]{2,}/', '.', $hook_name);
-
-        return $hook_name;
+        return Hook::sanitize($hook_name);
 
     }
 
     public function build_hook_name (&$hook_name) {
 
-        if (is_array($hook_name)) {
-            $hook_name = implode($this->hook_delimiter, $hook_name);
-            $hook_name = $this->sanitize_hook_name($hook_name);
-        }
+        if (!is_null($hook_name)) $hook_name = Hook::name($hook_name);
 
     }
 

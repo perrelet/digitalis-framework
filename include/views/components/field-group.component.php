@@ -38,7 +38,7 @@ class Field_Group extends Component {
                 'field' => Input::class,
             ]);
 
-            $field = apply_filters('Digitalis/Field_Group/Field', $field, $p, static::class);
+            $field = Hook::filter('lattice.field_group.field', $field, $p, static::class);
 
             if (isset($field['options'])) $field['options'] = $this->get_field_options($field['options'], $field);
 
