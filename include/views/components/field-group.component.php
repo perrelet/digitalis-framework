@@ -1,13 +1,13 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
-use Digitalis\Field\Input;
+use Lattice\Field\Input;
 
 class Field_Group extends Component {
 
     protected static $template = 'components/field-group';
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/";
+    protected static $template_path = LATTICE_PATH . "/templates/digitalis/";
 
     protected static $defaults = [
         'fields'        => [],
@@ -48,7 +48,7 @@ class Field_Group extends Component {
 
             $p['attributes']['data-field-condition'] = json_encode($p['condition']);
 
-            wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
+            wp_enqueue_script('digitalis-fields', LATTICE_URI . "assets/js/fields.js", [], LATTICE_VERSION, [
                 'in_footer' => true,
             ]);
 

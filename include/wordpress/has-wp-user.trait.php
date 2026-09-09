@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use DateTime;
 use WP_Error;

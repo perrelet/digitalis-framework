@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Admin_Sub_Page extends Admin_Page {
 

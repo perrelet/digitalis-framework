@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Attachment extends Post {
 

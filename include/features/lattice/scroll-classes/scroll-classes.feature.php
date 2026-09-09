@@ -2,7 +2,7 @@
 
 // Add scroll-aware body classes: 'scrolled', 'scroll-up', 'scroll-down'.
 
-namespace Digitalis;
+namespace Lattice;
 
 class Scroll_Classes extends Feature {
 

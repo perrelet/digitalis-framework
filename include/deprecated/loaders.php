@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 trait Can_Load {
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Meta_Box extends Feature {
 
@@ -8,7 +8,7 @@ abstract class Meta_Box extends Feature {
     protected static $cache_property = 'id';
 
     protected $id       = 'digitalis-metabox';
-    protected $title    = 'Digitalis Metabox';
+    protected $title    = 'Lattice Metabox';
     protected $screen   = null;
     protected $context  = 'advanced';
     protected $priority = 'default';

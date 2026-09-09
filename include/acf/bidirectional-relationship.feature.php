@@ -1,12 +1,12 @@
 <?php
 
-namespace Digitalis\ACF;
+namespace Lattice\ACF;
 
-use Digitalis\Log;
-use Digitalis\Order;
+use Lattice\Log;
+use Lattice\Order;
 use WP_Term;
 
-abstract class Bidirectional_Relationship extends \Digitalis\Feature {
+abstract class Bidirectional_Relationship extends \Lattice\Feature {
 
     protected $key_1 = 'field_1';
     protected $key_2 = 'field_2';

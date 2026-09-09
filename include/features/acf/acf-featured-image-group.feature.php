@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\ACF;
+namespace Lattice\ACF;
 
-use Digitalis\Feature;
+use Lattice\Feature;
 
 class Featured_Image_Group extends Feature {
 

@@ -1,216 +1,218 @@
 <?php
 
-if (defined('DIGITALIS_FRAMEWORK_VERSION')) return;
+if (defined('LATTICE_VERSION')) return;
 
-define('DIGITALIS_FRAMEWORK_VERSION',   '0.4.0');
-define('DIGITALIS_FRAMEWORK_PATH',      plugin_dir_path( __FILE__ ));
-define('DIGITALIS_LIBRARY_PATH',        plugin_dir_path( __FILE__ ) . 'include/features/');
-define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
+define('LATTICE_VERSION',       '0.4.0');
+define('LATTICE_PATH',          plugin_dir_path( __FILE__ ));
+define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/features/');
+define('LATTICE_URI',           plugin_dir_url(__FILE__));
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/utils/utility.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/utils/call.utility.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
+require LATTICE_PATH . 'compat/digitalis-namespace.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/traits/auto-instantiate.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/traits/is-stashable.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/traits/resolvable.trait.php';
+require LATTICE_PATH . 'include/utils/utility.abstract.php';
+require LATTICE_PATH . 'include/utils/call.utility.php';
+require LATTICE_PATH . 'include/utils/list-utility.utility.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/design-pattern.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/creational.design-pattern.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/dependency-injection.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/factory.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/patterns/singleton.abstract.php';
+require LATTICE_PATH . 'include/traits/autoloader.trait.php';
+require LATTICE_PATH . 'include/traits/auto-instantiate.trait.php';
+require LATTICE_PATH . 'include/traits/is-stashable.trait.php';
+require LATTICE_PATH . 'include/traits/resolvable.trait.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/db-context.final.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/column.final.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/index.final.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/table-registry.final.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/schema.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration-logger.class.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/option-migration-logger.migration-logger.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/schema-context.final.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/db/migration-runner.final.php';
+require LATTICE_PATH . 'include/patterns/design-pattern.abstract.php';
+require LATTICE_PATH . 'include/patterns/creational.design-pattern.php';
+require LATTICE_PATH . 'include/patterns/dependency-injection.trait.php';
+require LATTICE_PATH . 'include/patterns/factory.abstract.php';
+require LATTICE_PATH . 'include/patterns/singleton.abstract.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-acf-fields.trait.php';
+require LATTICE_PATH . 'include/db/db-context.final.php';
+require LATTICE_PATH . 'include/db/column.final.php';
+require LATTICE_PATH . 'include/db/index.final.php';
+require LATTICE_PATH . 'include/db/table.abstract.php';
+require LATTICE_PATH . 'include/db/table-registry.final.php';
+require LATTICE_PATH . 'include/db/schema.abstract.php';
+require LATTICE_PATH . 'include/db/migration.abstract.php';
+require LATTICE_PATH . 'include/db/migration-logger.class.php';
+require LATTICE_PATH . 'include/db/option-migration-logger.migration-logger.php';
+require LATTICE_PATH . 'include/db/schema-context.final.php';
+require LATTICE_PATH . 'include/db/migration-runner.final.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-hooks.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-meta.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-model.trait.php';
+require LATTICE_PATH . 'include/acf/has-acf-fields.trait.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-comment.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-post.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-term.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/has-wp-user.trait.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-hooks.trait.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-meta.trait.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-model.trait.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/inherit-props.trait.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/model.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/service.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/log.service.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/visitor.service.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/request-resolver.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/app.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/design-system.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query.wp-query.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-vars.class.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-manager.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/query-profile.factory.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/rest-url-builder.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/route.factory.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/feature.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/integration.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/plugin-integration.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/theme.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/view-route.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/acf-block.factory.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/shortcode.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/attributes.class.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/element.class.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-comment.trait.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-post.trait.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-term.trait.php';
+require LATTICE_PATH . 'include/wordpress/has-wp-user.trait.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/cron-scheduler.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/objects/task-handler.singleton.php';
+require LATTICE_PATH . 'include/objects/inherit-props.trait.php';
+require LATTICE_PATH . 'include/objects/model.abstract.php';
+require LATTICE_PATH . 'include/objects/service.abstract.php';
+require LATTICE_PATH . 'include/objects/log.service.php';
+require LATTICE_PATH . 'include/objects/visitor.service.php';
+require LATTICE_PATH . 'include/objects/request-resolver.singleton.php';
+require LATTICE_PATH . 'include/objects/app.abstract.php';
+require LATTICE_PATH . 'include/objects/design-system.abstract.php';
+require LATTICE_PATH . 'include/objects/query.wp-query.php';
+require LATTICE_PATH . 'include/objects/query-vars.class.php';
+require LATTICE_PATH . 'include/objects/query-manager.singleton.php';
+require LATTICE_PATH . 'include/objects/query-profile.factory.php';
+require LATTICE_PATH . 'include/objects/rest-url-builder.singleton.php';
+require LATTICE_PATH . 'include/objects/route.factory.php';
+require LATTICE_PATH . 'include/objects/feature.abstract.php';
+require LATTICE_PATH . 'include/objects/integration.abstract.php';
+require LATTICE_PATH . 'include/objects/plugin-integration.abstract.php';
+require LATTICE_PATH . 'include/objects/theme.abstract.php';
+require LATTICE_PATH . 'include/objects/view.abstract.php';
+require LATTICE_PATH . 'include/objects/view-route.abstract.php';
+require LATTICE_PATH . 'include/objects/acf-block.factory.php';
+require LATTICE_PATH . 'include/objects/shortcode.abstract.php';
+require LATTICE_PATH . 'include/objects/attributes.class.php';
+require LATTICE_PATH . 'include/objects/element.class.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-row.model.php';
+require LATTICE_PATH . 'include/objects/cron-scheduler.abstract.php';
+require LATTICE_PATH . 'include/objects/task-handler.singleton.php';
+
+require LATTICE_PATH . 'include/acf/acf-row.model.php';
 
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/control-mapper.interface.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/control-mapper.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor.interface.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor-element-generator.interface.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor-element-generator.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/editors/editor-manager.singleton.php';
+require LATTICE_PATH . 'include/editors/control-mapper.interface.php';
+require LATTICE_PATH . 'include/editors/control-mapper.abstract.php';
+require LATTICE_PATH . 'include/editors/editor.interface.php';
+require LATTICE_PATH . 'include/editors/editor.singleton.php';
+require LATTICE_PATH . 'include/editors/editor-element-generator.interface.php';
+require LATTICE_PATH . 'include/editors/editor-element-generator.abstract.php';
+require LATTICE_PATH . 'include/editors/editor-manager.singleton.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/iterator.singleton.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/csv-iterator.iterator.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/post-iterator.iterator.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/order-iterator.iterator.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/product-iterator.post-iterator.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/iterators/user-iterator.iterator.php';
+require LATTICE_PATH . 'include/iterators/iterator.singleton.php';
+require LATTICE_PATH . 'include/iterators/csv-iterator.iterator.php';
+require LATTICE_PATH . 'include/iterators/post-iterator.iterator.php';
+require LATTICE_PATH . 'include/iterators/order-iterator.iterator.php';
+require LATTICE_PATH . 'include/iterators/product-iterator.post-iterator.php';
+require LATTICE_PATH . 'include/iterators/user-iterator.iterator.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/updater.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-page.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-sub-page.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/commands-page.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/logs-page.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/admin-table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/screen-table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/posts-table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/users-table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/terms-table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/attachment-table.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/wc-orders.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/meta-box.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/admin/profile-section.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-type.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post-status.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/taxonomy.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-taxonomy.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user-role.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/wp-model.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/comment.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/post.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/page.post.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/revision.post.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/attachment.post.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/nav-menu-item.post.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/term.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/nav-menu.term.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/user.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/options.model.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/wordpress/transients.utility.php';
+require LATTICE_PATH . 'include/admin/updater.abstract.php';
+require LATTICE_PATH . 'include/admin/admin-page.abstract.php';
+require LATTICE_PATH . 'include/admin/admin-sub-page.abstract.php';
+require LATTICE_PATH . 'include/admin/commands-page.abstract.php';
+require LATTICE_PATH . 'include/admin/logs-page.abstract.php';
+require LATTICE_PATH . 'include/admin/admin-table.abstract.php';
+require LATTICE_PATH . 'include/admin/screen-table.abstract.php';
+require LATTICE_PATH . 'include/admin/posts-table.abstract.php';
+require LATTICE_PATH . 'include/admin/users-table.abstract.php';
+require LATTICE_PATH . 'include/admin/terms-table.abstract.php';
+require LATTICE_PATH . 'include/admin/attachment-table.abstract.php';
+require LATTICE_PATH . 'include/admin/wc-orders.abstract.php';
+require LATTICE_PATH . 'include/admin/meta-box.abstract.php';
+require LATTICE_PATH . 'include/admin/profile-section.abstract.php';
+require LATTICE_PATH . 'include/wordpress/post-type.abstract.php';
+require LATTICE_PATH . 'include/wordpress/post-status.abstract.php';
+require LATTICE_PATH . 'include/wordpress/taxonomy.abstract.php';
+require LATTICE_PATH . 'include/wordpress/user-taxonomy.abstract.php';
+require LATTICE_PATH . 'include/wordpress/user-role.abstract.php';
+require LATTICE_PATH . 'include/wordpress/wp-model.model.php';
+require LATTICE_PATH . 'include/wordpress/comment.model.php';
+require LATTICE_PATH . 'include/wordpress/post.model.php';
+require LATTICE_PATH . 'include/wordpress/page.post.php';
+require LATTICE_PATH . 'include/wordpress/revision.post.php';
+require LATTICE_PATH . 'include/wordpress/attachment.post.php';
+require LATTICE_PATH . 'include/wordpress/nav-menu-item.post.php';
+require LATTICE_PATH . 'include/wordpress/term.model.php';
+require LATTICE_PATH . 'include/wordpress/nav-menu.term.php';
+require LATTICE_PATH . 'include/wordpress/user.model.php';
+require LATTICE_PATH . 'include/wordpress/options.model.php';
+require LATTICE_PATH . 'include/wordpress/transients.utility.php';
 
-\Digitalis\Post::static_init();
-\Digitalis\Page::static_init();
-\Digitalis\Revision::static_init();
-\Digitalis\Attachment::static_init();
+\Lattice\Post::static_init();
+\Lattice\Page::static_init();
+\Lattice\Revision::static_init();
+\Lattice\Attachment::static_init();
 
-//require DIGITALIS_FRAMEWORK_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
-//require DIGITALIS_FRAMEWORK_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
+//require LATTICE_PATH . 'include/features/oxygen/remove-woo-styles.feature.php';
+//require LATTICE_PATH . 'include/features/woo/product-gallery-fallback.feature.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/bidirectional-relationship.feature.php';
+require LATTICE_PATH . 'include/acf/bidirectional-relationship.feature.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/component.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/htmx.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/link.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/table.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/field-group.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/form.field-group.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-item.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-drawer.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/components/menu-active-state.utility.php';
+require LATTICE_PATH . 'include/views/component.view.php';
+require LATTICE_PATH . 'include/views/components/htmx.component.php';
+require LATTICE_PATH . 'include/views/components/link.component.php';
+require LATTICE_PATH . 'include/views/components/table.component.php';
+require LATTICE_PATH . 'include/views/components/field-group.component.php';
+require LATTICE_PATH . 'include/views/components/form.field-group.php';
+require LATTICE_PATH . 'include/views/components/menu-item.component.php';
+require LATTICE_PATH . 'include/views/components/menu.component.php';
+require LATTICE_PATH . 'include/views/components/menu-drawer.component.php';
+require LATTICE_PATH . 'include/views/components/menu-active-state.utility.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/field.view.php';
+require LATTICE_PATH . 'include/views/field.view.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/input.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/hidden.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/hidden-group.field-group.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/file.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/password.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/textarea.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/number.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/button.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/submit.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox-group.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/checkbox-buttons.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date-picker.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/date-range.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/radio.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/radio-buttons.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/range.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select.field.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/fields/select-nice.field.php';
+require LATTICE_PATH . 'include/views/fields/input.field.php';
+require LATTICE_PATH . 'include/views/fields/hidden.field.php';
+require LATTICE_PATH . 'include/views/fields/hidden-group.field-group.php';
+require LATTICE_PATH . 'include/views/fields/file.field.php';
+require LATTICE_PATH . 'include/views/fields/password.field.php';
+require LATTICE_PATH . 'include/views/fields/textarea.field.php';
+require LATTICE_PATH . 'include/views/fields/number.field.php';
+require LATTICE_PATH . 'include/views/fields/button.field.php';
+require LATTICE_PATH . 'include/views/fields/submit.field.php';
+require LATTICE_PATH . 'include/views/fields/checkbox.field.php';
+require LATTICE_PATH . 'include/views/fields/checkbox-group.field.php';
+require LATTICE_PATH . 'include/views/fields/checkbox-buttons.field.php';
+require LATTICE_PATH . 'include/views/fields/date.field.php';
+require LATTICE_PATH . 'include/views/fields/date-picker.field.php';
+require LATTICE_PATH . 'include/views/fields/date-range.field.php';
+require LATTICE_PATH . 'include/views/fields/radio.field.php';
+require LATTICE_PATH . 'include/views/fields/radio-buttons.field.php';
+require LATTICE_PATH . 'include/views/fields/range.field.php';
+require LATTICE_PATH . 'include/views/fields/select.field.php';
+require LATTICE_PATH . 'include/views/fields/select-nice.field.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/header.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/footer.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/modals.component.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/layout.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/page-view.view.php';
+require LATTICE_PATH . 'include/views/header.component.php';
+require LATTICE_PATH . 'include/views/footer.component.php';
+require LATTICE_PATH . 'include/views/modals.component.php';
+require LATTICE_PATH . 'include/views/layout.view.php';
+require LATTICE_PATH . 'include/views/page-view.view.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/archive.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/post-archive.archive.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/term-archive.archive.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/query-filters.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/debug.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/debug-code-block.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/views/iterator-ui.view.php';
+require LATTICE_PATH . 'include/views/archive.view.php';
+require LATTICE_PATH . 'include/views/post-archive.archive.php';
+require LATTICE_PATH . 'include/views/term-archive.archive.php';
+require LATTICE_PATH . 'include/views/query-filters.view.php';
+require LATTICE_PATH . 'include/views/debug.view.php';
+require LATTICE_PATH . 'include/views/debug-code-block.view.php';
+require LATTICE_PATH . 'include/views/iterator-ui.view.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-ajax-form.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-option-pages.singleton.php';
+require LATTICE_PATH . 'include/acf/acf-ajax-form.view.php';
+require LATTICE_PATH . 'include/acf/acf-option-pages.singleton.php';
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
+require LATTICE_PATH . 'include/functions.php';
 
 add_action('plugins_loaded', function () {
 //add_action('woocommerce_loaded', function () {
 
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/is-woo-customer.trait.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/customer.user.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-item.model.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order-status.post-status.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/order.abstract.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/product-type.abstract.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woo-account-page.factory.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce.theme.php';
-    require DIGITALIS_FRAMEWORK_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
+    require LATTICE_PATH . 'include/woocommerce/is-woo-customer.trait.php';
+    require LATTICE_PATH . 'include/woocommerce/customer.user.php';
+    require LATTICE_PATH . 'include/woocommerce/order-item.model.php';
+    require LATTICE_PATH . 'include/woocommerce/order-status.post-status.php';
+    require LATTICE_PATH . 'include/woocommerce/order.abstract.php';
+    require LATTICE_PATH . 'include/woocommerce/product-type.abstract.php';
+    require LATTICE_PATH . 'include/woocommerce/woo-account-page.factory.php';
+    require LATTICE_PATH . 'include/woocommerce/woocommerce.theme.php';
+    require LATTICE_PATH . 'include/woocommerce/woocommerce-clean.theme.php';
 
 }, 0);
 
 add_action('init', function () {
 
-    if (defined('BRICKS_VERSION')) require DIGITALIS_FRAMEWORK_PATH . 'include/objects/bricks-element.abstract.php';
+    if (defined('BRICKS_VERSION')) require LATTICE_PATH . 'include/objects/bricks-element.abstract.php';
 
 }, 11);
 
 add_filter('sassy-variables', function ($variables) {
 
-    $variables['digitalis_path'] = '"' . str_replace('\\', '/', DIGITALIS_FRAMEWORK_PATH) . '"';
-    $variables['digitalis_uri'] = '"' . str_replace('\\', '/', DIGITALIS_FRAMEWORK_URI) . '"';
+    $variables['digitalis_path'] = '"' . str_replace('\\', '/', LATTICE_PATH) . '"';
+    $variables['digitalis_uri'] = '"' . str_replace('\\', '/', LATTICE_URI) . '"';
 
     return $variables;
 
@@ -218,7 +220,7 @@ add_filter('sassy-variables', function ($variables) {
 
 //
 
-require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/loaders.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/view.abstract.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/component.view.php';
-require DIGITALIS_FRAMEWORK_PATH . 'include/deprecated/route.factory.php';
+require LATTICE_PATH . 'include/deprecated/loaders.php';
+require LATTICE_PATH . 'include/deprecated/view.abstract.php';
+require LATTICE_PATH . 'include/deprecated/component.view.php';
+require LATTICE_PATH . 'include/deprecated/route.factory.php';

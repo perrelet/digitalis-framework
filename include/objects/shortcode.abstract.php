@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Shortcode extends Factory {
 
@@ -18,7 +18,7 @@ abstract class Shortcode extends Factory {
 
     public function render ($atts) {
 
-        if (!is_subclass_of($this->view, View::class)) return "Error: \$view must be a subclass of \Digitalis\View, '{$this->view}' provided.";
+        if (!is_subclass_of($this->view, View::class)) return "Error: \$view must be a subclass of \Lattice\View, '{$this->view}' provided.";
 
         $defaults = call_user_func("{$this->view}::get_defaults");
         $atts     = shortcode_atts($defaults, $atts, $this->slug);

@@ -30,7 +30,7 @@
             </code>
         </div>
         <?php foreach ($values as $i => $value) {
-            Digitalis\Debug_Code_Block::render([
+            Lattice\Debug_Code_Block::render([
                 'label' => $arg_names[$i] ?? false,
                 'code'  => $value,
             ]);

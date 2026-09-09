@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use DateTime;
 use DateTimeZone;
@@ -320,7 +320,7 @@ abstract class Iterator extends Singleton {
 
     public function render_controller () {
 
-        wp_enqueue_script('digitalis-iterator', DIGITALIS_FRAMEWORK_URI . 'assets/js/iterator.js', [], DIGITALIS_FRAMEWORK_VERSION, true);
+        wp_enqueue_script('digitalis-iterator', LATTICE_URI . 'assets/js/iterator.js', [], LATTICE_VERSION, true);
         wp_localize_script('digitalis-iterator', 'iterator_params', [
             'ajax_url'      => admin_url('admin-ajax.php'),
             'nonce'         => wp_create_nonce("iterator_{$this->key}"),

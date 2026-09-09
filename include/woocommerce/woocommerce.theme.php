@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Woocommerce_Theme extends Theme {
 

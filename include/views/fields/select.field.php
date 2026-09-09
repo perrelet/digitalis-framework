@@ -1,10 +1,10 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
-use Digitalis\Attributes;
+use Lattice\Attributes;
 
-class Select extends \Digitalis\Field {
+class Select extends \Lattice\Field {
 
     protected static $template = 'select';
 

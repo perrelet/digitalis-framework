@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
-use Digitalis\Attributes;
+use Lattice\Attributes;
 
 class Radio extends Input {
 

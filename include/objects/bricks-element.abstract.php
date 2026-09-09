@@ -1,6 +1,6 @@
 <?php 
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Bricks_Element extends \Bricks\Element {
 

@@ -2,7 +2,7 @@
 
 // Redirect WordPress system emails (recovery mode, auto-updates) to a custom address.
 
-namespace Digitalis;
+namespace Lattice;
 
 class System_Emails extends Feature {
 

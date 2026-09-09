@@ -1,9 +1,9 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
-use Digitalis\Field;
-use Digitalis\Attributes;
+use Lattice\Field;
+use Lattice\Attributes;
 
 class Checkbox_Group extends Input {
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
 class Radio_Buttons extends Radio {
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\WP;
+namespace Lattice\WP;
 
-class Disable_Comments extends \Digitalis\Feature {
+class Disable_Comments extends \Lattice\Feature {
 
     public function __construct () {
     

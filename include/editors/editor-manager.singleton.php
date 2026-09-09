@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use RuntimeException;
 use RecursiveIteratorIterator;
@@ -256,7 +256,7 @@ class Editor_Manager extends Singleton {
 
     public function get_utility_classes () {
 
-        return include DIGITALIS_FRAMEWORK_PATH . 'scss/utilities.php';
+        return include LATTICE_PATH . 'scss/utilities.php';
 
     }
 

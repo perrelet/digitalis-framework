@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use \WC_Order_Item;
 use \WC_Order_Item_Product;

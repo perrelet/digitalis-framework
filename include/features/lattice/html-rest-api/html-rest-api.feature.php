@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use WP_REST_Request;
 use WP_REST_Response;

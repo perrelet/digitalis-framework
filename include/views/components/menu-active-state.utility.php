@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Resolves is_current / is_ancestor on a coerced Menu_Item tree.

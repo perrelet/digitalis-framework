@@ -11,7 +11,7 @@
         <?= $link ?>
         <?= $button ?>
         <?= $description_el ?>
-        <?php if ($submenu instanceof \Digitalis\Menu) echo $submenu; ?>
+        <?php if ($submenu instanceof \Lattice\Menu) echo $submenu; ?>
         <?= $panel ?>
     </<?= $tag ?>>
 <?php endif; ?>

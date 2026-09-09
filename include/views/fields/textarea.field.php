@@ -1,11 +1,11 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
-class Textarea extends \Digitalis\Field {
+class Textarea extends \Lattice\Field {
 
     protected static $template      = 'textarea';
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
+    protected static $template_path = LATTICE_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
         'rows'       => null,

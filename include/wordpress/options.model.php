@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 // Has_ACF_Fields so the instance can act as the ACF parent for ACF_Row subclasses on an options-page repeater.
 

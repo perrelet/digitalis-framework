@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Query_Filters extends Field_Group {
 
@@ -12,8 +12,8 @@ abstract class Query_Filters extends Field_Group {
             'controls' => null,
             'form'     => null,
         ],
-        'module_version'    => DIGITALIS_FRAMEWORK_VERSION,
-        'module_url'        => DIGITALIS_FRAMEWORK_URI . 'modules/query.js',
+        'module_version'    => LATTICE_VERSION,
+        'module_url'        => LATTICE_URI . 'modules/query.js',
         'action'            => 'query_[post_type]',
         'js_params_object'  => 'query_params',
         'classes'           => ['digitalis-filters'],

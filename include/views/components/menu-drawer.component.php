@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Menu_Drawer extends Component {
 
@@ -53,16 +53,16 @@ class Menu_Drawer extends Component {
 
         wp_enqueue_style(
             'lattice-menu-drawer',
-            DIGITALIS_FRAMEWORK_URI . 'assets/css/menu-drawer.css',
+            LATTICE_URI . 'assets/css/menu-drawer.css',
             [],
-            DIGITALIS_FRAMEWORK_VERSION
+            LATTICE_VERSION
         );
 
         wp_enqueue_script(
             'lattice-menu-drawer',
-            DIGITALIS_FRAMEWORK_URI . 'assets/js/menu-drawer.js',
+            LATTICE_URI . 'assets/js/menu-drawer.js',
             [],
-            DIGITALIS_FRAMEWORK_VERSION,
+            LATTICE_VERSION,
             ['in_footer' => true]
         );
 

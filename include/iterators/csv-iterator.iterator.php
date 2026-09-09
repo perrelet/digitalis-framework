@@ -1,9 +1,9 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
-use Digitalis\Field;
-use Digitalis\Component\Table;
+use Lattice\Field;
+use Lattice\Component\Table;
 
 abstract class CSV_Iterator extends Iterator {
 
@@ -267,7 +267,7 @@ abstract class CSV_Iterator extends Iterator {
 
         if (!$this->file) {
 
-            echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css') . "</style>";
+            echo "<style>" . file_get_contents(LATTICE_PATH . '/assets/css/iterator.css') . "</style>";
 
             $fields   = $this->get_fields();
             $fields[] = $this->get_submit_field();

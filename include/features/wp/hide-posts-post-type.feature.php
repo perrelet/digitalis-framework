@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\WP;
+namespace Lattice\WP;
 
-class Hide_Posts_Post_Type extends \Digitalis\Feature {
+class Hide_Posts_Post_Type extends \Lattice\Feature {
 
     public function get_default_priority () {
 

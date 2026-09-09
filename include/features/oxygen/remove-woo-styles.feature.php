@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Oxygen;
+namespace Lattice\Oxygen;
 
-use Digitalis\Feature;
+use Lattice\Feature;
 
 class Remove_Woo_Styles extends Feature {
 

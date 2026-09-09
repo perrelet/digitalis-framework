@@ -1,11 +1,11 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
-use Digitalis\Field\Hidden;
-use Digitalis\Field\Input;
-use Digitalis\Field\Submit;
-use Digitalis\Component\Table;
+use Lattice\Field\Hidden;
+use Lattice\Field\Input;
+use Lattice\Field\Submit;
+use Lattice\Component\Table;
 
 abstract class Commands_Page extends Admin_Sub_Page {
 
@@ -157,7 +157,7 @@ abstract class Commands_Page extends Admin_Sub_Page {
             'first_col' => true,
         ]);
 
-        ?><style><?= file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/commands.css');?></style><?php
+        ?><style><?= file_get_contents(LATTICE_PATH . '/assets/css/commands.css');?></style><?php
     
     }
 

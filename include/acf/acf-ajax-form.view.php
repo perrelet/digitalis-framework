@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class ACF_AJAX_Form extends View {
 
@@ -8,7 +8,7 @@ class ACF_AJAX_Form extends View {
         'id'                  => 'acf_form',
         'acf_form'            => [],
         'acf_ajax_options'    => [],
-        'featured_image'      => false,        // Requires \Digitalis\ACF\Featured_Image_Group::load();
+        'featured_image'      => false,        // Requires \Lattice\ACF\Featured_Image_Group::load();
         'dynamically_load'    => true,
         'extra_fields_before' => [],           // Validation must be handled by `acf/validate_save_post`. Use `acf_add_validation_error` to throw errors.
         'extra_fields_after'  => [],
@@ -57,7 +57,7 @@ class ACF_AJAX_Form extends View {
 
     public function before_first () {
 
-        echo "<script src='" . DIGITALIS_FRAMEWORK_URI . "assets/js/acf-ajax.class.js?" . DIGITALIS_FRAMEWORK_VERSION . "'></script>";
+        echo "<script src='" . LATTICE_URI . "assets/js/acf-ajax.class.js?" . LATTICE_VERSION . "'></script>";
 
     }
 

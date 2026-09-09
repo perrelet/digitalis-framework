@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use WP_REST_Request;
 use WP_Error;
@@ -9,8 +9,8 @@ use WP_Error;
  * They found themselves standing on the very edge of the Wild Wood. 
  * Rocks and brambles and tree-roots behind them, confusedly heaped and tangled; in front, a great space of quiet fields, hemmed by lines of hedges black on the snow, and, far ahead, a glint of the familiar old river, while the wintry sun hung red and low on the horizon.
  * @api
- * @author Digitalis Web Build Co. <jamie@digitalis.ca>
- * @copyright 2023 Digitalis Web Build Co.
+ * @author Digitalis Web Corp <jamie@digitalis.ca>
+ * @copyright 2023 Digitalis Web Corp
  */
 
 class Deprecated_Route extends Factory {
@@ -155,7 +155,7 @@ class Deprecated_Route extends Factory {
 
         if ($view = $this->get_view()) {
 
-            if (!is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Digitalis\View, '{$view}' provided."));
+            if (!is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', "\$view must be a subclass of \Lattice\View, '{$view}' provided."));
 
             $params = [];
             

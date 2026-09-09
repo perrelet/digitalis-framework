@@ -1,11 +1,11 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Field extends Component {
 
     protected static $template = 'input';
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "/templates/digitalis/fields/";
+    protected static $template_path = LATTICE_PATH . "/templates/digitalis/fields/";
 
     protected static $defaults = [
         'name'              => null,
@@ -105,7 +105,7 @@ class Field extends Component {
 
             $attributes['data-field-condition'] = json_encode($this->condition);
 
-            wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
+            wp_enqueue_script('digitalis-fields', LATTICE_URI . "assets/js/fields.js", [], LATTICE_VERSION, [
                 'in_footer' => true,
             ]);
 
@@ -117,7 +117,7 @@ class Field extends Component {
 
     public function get_class_slug () {
     
-        return strtolower(str_replace(['_', '\\'], '-', str_replace('Digitalis\\Field\\', '', static::class)));
+        return strtolower(str_replace(['_', '\\'], '-', str_replace('Lattice\\Field\\', '', static::class)));
     
     }
 

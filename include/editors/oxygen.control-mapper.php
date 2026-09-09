@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Oxygen_Control_Mapper extends Control_Mapper {
 

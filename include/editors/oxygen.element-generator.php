@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Oxygen_Element_Generator extends Editor_Element_Generator {
 

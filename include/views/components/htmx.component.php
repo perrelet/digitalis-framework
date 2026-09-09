@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Component;
+namespace Lattice\Component;
 
-class HTMX extends \Digitalis\Component {
+class HTMX extends \Lattice\Component {
 
     protected static $defaults = [
         'tag'         => 'a',

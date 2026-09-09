@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Component;
+namespace Lattice\Component;
 
-class Link extends \Digitalis\Component {
+class Link extends \Lattice\Component {
 
     protected static $defaults = [
         'tag'  => 'a',

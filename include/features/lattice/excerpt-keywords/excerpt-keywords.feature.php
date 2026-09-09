@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 require_once __DIR__ . '/has-keywords.trait.php';
 

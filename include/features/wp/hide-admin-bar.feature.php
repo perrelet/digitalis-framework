@@ -2,7 +2,7 @@
 
 // Hide the WP admin bar on the frontend, revealing on hover.
 
-namespace Digitalis;
+namespace Lattice;
 
 class Hide_Admin_Bar extends Feature {
 

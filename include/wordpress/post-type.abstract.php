@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Post_Type extends Singleton {
 
@@ -34,7 +34,7 @@ abstract class Post_Type extends Singleton {
 
         // Admin Table
         // **Deprecated**
-        // Use the \Digitalis\Posts_Table feature instead.
+        // Use the \Lattice\Posts_Table feature instead.
 
         add_action('pre_get_posts', [$this, 'admin_query_wrap']);
 

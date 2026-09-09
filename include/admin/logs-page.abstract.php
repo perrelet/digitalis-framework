@@ -1,11 +1,11 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
-use Digitalis\Field_Group;
-use Digitalis\Field\Number;
-use Digitalis\Field\Submit;
-use Digitalis\Field\Hidden;
+use Lattice\Field_Group;
+use Lattice\Field\Number;
+use Lattice\Field\Submit;
+use Lattice\Field\Hidden;
 
 abstract class Logs_Page extends Admin_Sub_Page {
 

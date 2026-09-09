@@ -1,10 +1,10 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Design_System extends Singleton {
 
-    protected $version          = DIGITALIS_FRAMEWORK_VERSION;
+    protected $version          = LATTICE_VERSION;
 
     protected $colors           = [];
     protected $classes          = [];

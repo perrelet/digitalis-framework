@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
-use Digitalis\Field\Input;
+use Lattice\Field\Input;
 
 abstract class Admin_Table extends Feature {
 
@@ -302,7 +302,7 @@ abstract class Admin_Table extends Feature {
 
                 if ($terms) foreach ($terms as $term) $options[$term->term_id] = $term->name;
     
-                \Digitalis\Field\Select_Nice::render([
+                \Lattice\Field\Select_Nice::render([
                     'key'     => $filter['name'],
                     'wrap'    => false,
                     'options' => $options,

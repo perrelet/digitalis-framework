@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
-class Input extends \Digitalis\Field {
+class Input extends \Lattice\Field {
 
     protected static $defaults = [
         'type'      => 'text',

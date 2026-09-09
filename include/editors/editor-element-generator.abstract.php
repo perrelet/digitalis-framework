@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Editor_Element_Generator implements Editor_Element_Generator_Interface {
 

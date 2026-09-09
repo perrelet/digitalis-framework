@@ -1,11 +1,11 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Iterator_UI extends View {
 
     protected static $template = 'iterator';
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/ui/";
+    protected static $template_path = LATTICE_PATH . "templates/digitalis/ui/";
 
     protected static $defaults = [
         'iterator' => null,
@@ -39,7 +39,7 @@ class Iterator_UI extends View {
 
     public function before_first () {
 
-        echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . '/assets/css/iterator.css') . "</style>";
+        echo "<style>" . file_get_contents(LATTICE_PATH . '/assets/css/iterator.css') . "</style>";
 
     }
 

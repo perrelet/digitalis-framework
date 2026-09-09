@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Users_Table extends Screen_Table {
 
@@ -47,7 +47,7 @@ abstract class Users_Table extends Screen_Table {
 
     public function render_filter_submit () {
 
-        \Digitalis\Field\Input::render([
+        \Lattice\Field\Input::render([
             'type'    => 'submit',
             'value'   => 'Filter',
             'classes' => ['button'],
@@ -64,7 +64,7 @@ abstract class Users_Table extends Screen_Table {
 
         $filters = $this->get_filters();
 
-        $qv = new \Digitalis\Query_Vars();
+        $qv = new \Lattice\Query_Vars();
         $qv->merge($query->query_vars, true);
 
         if ($filters) foreach ($filters as $name => $filter) {

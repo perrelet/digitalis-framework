@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
@@ -45,7 +45,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     public function locate_clean_template ($template, $template_name, $template_path) {
 
-        if (in_array($template_name, $this->template_overrides)) return DIGITALIS_FRAMEWORK_PATH . 'templates/woocommerce-clean/' . $template_name;
+        if (in_array($template_name, $this->template_overrides)) return LATTICE_PATH . 'templates/woocommerce-clean/' . $template_name;
 
         return $template;
 
@@ -55,7 +55,7 @@ abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
 
     public function enqueue_woo_clean_scripts () {
 
-        if ($this->do_account_icons) wp_enqueue_script('woo-clean', DIGITALIS_FRAMEWORK_URI . 'assets/js/woo-clean.js', [], DIGITALIS_FRAMEWORK_VERSION);
+        if ($this->do_account_icons) wp_enqueue_script('woo-clean', LATTICE_URI . 'assets/js/woo-clean.js', [], LATTICE_VERSION);
 
     }
 

@@ -2,7 +2,7 @@
 
 // Display ACF field names next to labels in the admin, with click-to-copy.
 
-namespace Digitalis;
+namespace Lattice;
 
 class ACF_Names extends Feature {
 

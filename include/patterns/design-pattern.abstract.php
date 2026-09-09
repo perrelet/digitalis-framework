@@ -1,5 +1,5 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Design_Pattern {}

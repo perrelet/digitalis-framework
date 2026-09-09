@@ -1,11 +1,11 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Archive extends Component {
 
     protected static $template = 'archive';
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/components/";
+    protected static $template_path = LATTICE_PATH . "templates/digitalis/components/";
 
     protected static $defaults = [
         'id'             => 'digitalis-archive',
@@ -179,8 +179,8 @@ abstract class Archive extends Component {
 
             case "image":
 
-                $url = file_exists(DIGITALIS_FRAMEWORK_PATH . "assets/img/loaders/" . $this['loader']) ?
-                    DIGITALIS_FRAMEWORK_URI . "assets/img/loaders/" . $this['loader'] :
+                $url = file_exists(LATTICE_PATH . "assets/img/loaders/" . $this['loader']) ?
+                    LATTICE_URI . "assets/img/loaders/" . $this['loader'] :
                     $this['loader'];
 
                 return "<img role='progressbar' aria-valuetext='Loading' loading='lazy' alt='Loading Icon' src='{$url}'>";

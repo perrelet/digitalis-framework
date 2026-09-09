@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 use ReflectionClass;
 
@@ -128,7 +128,7 @@ abstract class App extends Factory {
 
     public function load_feature ($file, $options = []) {
 
-        $paths = apply_filters('lattice.feature.paths', [DIGITALIS_LIBRARY_PATH]);
+        $paths = apply_filters('lattice.feature.paths', [LATTICE_LIBRARY_PATH]);
         $file  = ltrim($file, '/');
 
         foreach ($paths as $base) {

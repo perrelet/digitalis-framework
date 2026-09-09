@@ -10,7 +10,7 @@
 // The two failsafes share the same `failsafe_speed` so timings agree whether
 // JS reaches us or not.
 
-namespace Digitalis;
+namespace Lattice;
 
 class Page_Loader extends Feature {
 

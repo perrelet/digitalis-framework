@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Woo;
+namespace Lattice\Woo;
 
-class Product_Gallery_Fallback extends \Digitalis\Feature {
+class Product_Gallery_Fallback extends \Lattice\Feature {
 
     public function run () {
 

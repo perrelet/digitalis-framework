@@ -1,10 +1,10 @@
 <?php
 
-namespace Digitalis {
+namespace Lattice {
 
     class Debug extends View {
 
-        protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/debug/";
+        protected static $template_path = LATTICE_PATH . "templates/digitalis/debug/";
 
         protected static $defaults = [
             'values'    => [],
@@ -103,8 +103,8 @@ namespace Digitalis {
 
                     if (!$debugger_rendered) {
 
-                        echo "<style>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . 'assets/css/debugger.css') . "</style>";
-                        echo "<script>" . file_get_contents(DIGITALIS_FRAMEWORK_PATH . 'assets/js/debugger.js') . "</script>";
+                        echo "<style>" . file_get_contents(LATTICE_PATH . 'assets/css/debugger.css') . "</style>";
+                        echo "<script>" . file_get_contents(LATTICE_PATH . 'assets/js/debugger.js') . "</script>";
 
                     } else if ($this['append']) {
 
@@ -133,7 +133,7 @@ namespace Digitalis {
             foreach ($p['backtrace'] as $i => $frame) {
 
                 if (!isset($frame['file'])) continue;
-                if (strpos($frame['file'], DIGITALIS_FRAMEWORK_PATH) !== false) continue;
+                if (strpos($frame['file'], LATTICE_PATH) !== false) continue;
 
                 $offset = $i;
                 break;
@@ -432,7 +432,7 @@ namespace {
 
             function dump (...$values) {
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
+                Lattice\Call::static_array(Lattice\Debug::class, 'write', $values);
         
             }
 
@@ -442,11 +442,11 @@ namespace {
     
             function damp (...$values) {
 
-                $values[] = new Digitalis\Debug_Options([
+                $values[] = new Lattice\Debug_Options([
                     'append' => true,
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
+                Lattice\Call::static_array(Lattice\Debug::class, 'write', $values);
         
             }
     
@@ -456,13 +456,13 @@ namespace {
     
             function dd (...$values) {
 
-                $values[] = new Digitalis\Debug_Options([
+                $values[] = new Lattice\Debug_Options([
                     'open'       => true,
                     'closable'   => false,
                     'die'        => true,
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
+                Lattice\Call::static_array(Lattice\Debug::class, 'write', $values);
         
             }
     
@@ -472,11 +472,11 @@ namespace {
 
             function dprint (...$values) {
 
-                $values[] = new Digitalis\Debug_Options([
+                $values[] = new Lattice\Debug_Options([
                     'view' => 'inline',
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
+                Lattice\Call::static_array(Lattice\Debug::class, 'write', $values);
         
             }
 
@@ -486,11 +486,11 @@ namespace {
 
             function dexp (...$values) {
 
-                $values[] = new Digitalis\Debug_Options([
+                $values[] = new Lattice\Debug_Options([
                     'expand' => 'var_export',
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
+                Lattice\Call::static_array(Lattice\Debug::class, 'write', $values);
         
             }
 
@@ -500,11 +500,11 @@ namespace {
 
             function js_log (...$values) {
 
-                $values[] = new Digitalis\Debug_Options([
+                $values[] = new Lattice\Debug_Options([
                     'view' => 'js',
                 ]);
     
-                Digitalis\Call::static_array(Digitalis\Debug::class, 'write', $values);
+                Lattice\Call::static_array(Lattice\Debug::class, 'write', $values);
         
             }
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Component;
+namespace Lattice\Component;
 
-class Table extends \Digitalis\Component {
+class Table extends \Lattice\Component {
 
     protected static $template = 'table';
 

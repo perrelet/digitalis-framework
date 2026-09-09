@@ -1,12 +1,12 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 class Component extends View {
 
     protected static $template = 'component';
 
-    protected static $template_path = DIGITALIS_FRAMEWORK_PATH . "templates/digitalis/components/";
+    protected static $template_path = LATTICE_PATH . "templates/digitalis/components/";
 
     protected static $defaults = [
         'tag'     => 'div',

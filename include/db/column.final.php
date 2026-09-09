@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis\DB;
+namespace Lattice\DB;
 
 final class Column {
 

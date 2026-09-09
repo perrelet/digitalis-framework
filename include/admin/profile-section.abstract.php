@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
-use Digitalis\Component\Table;
+use Lattice\Component\Table;
 
 abstract class Profile_Section extends Feature {
 
@@ -10,7 +10,7 @@ abstract class Profile_Section extends Feature {
     protected static $cache_property = 'id';
 
     protected $id       = 'digitalis-profile-section';
-    protected $title    = 'Digitalis Profile Section';
+    protected $title    = 'Lattice Profile Section';
     protected $priority = 10;
     protected $view     = null;
     protected $callback = null;

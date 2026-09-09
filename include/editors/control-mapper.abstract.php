@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Control_Mapper implements Control_Mapper_Interface {
 

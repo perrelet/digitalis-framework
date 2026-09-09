@@ -1,6 +1,6 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
 class Checkbox_Buttons extends Checkbox_Group {
 

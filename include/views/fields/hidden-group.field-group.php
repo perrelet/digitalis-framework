@@ -1,8 +1,8 @@
 <?php
 
-namespace Digitalis\Field;
+namespace Lattice\Field;
 
-class Hidden_Group extends \Digitalis\Field_Group {
+class Hidden_Group extends \Lattice\Field_Group {
 
     protected static $defaults = [
         'data'    => [],
