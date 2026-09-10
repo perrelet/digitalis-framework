@@ -205,19 +205,46 @@ class Route extends Factory {
 
     }
 
+    // `$_REQUEST` and `WP_REST_Request::get_param()` both prefer the body, so a `wp_nonce_field()`
+    // in a surrounding form shadows the nonce `nonce_url()` puts in the query string.
+    public static function collect_nonce_candidates ($request = null) {
+
+        $candidates = [
+            $_SERVER['HTTP_X_WP_NONCE'] ?? null,
+            $_SERVER['HTTP_NONCE']      ?? null,
+            $_GET['_wpnonce']           ?? null,
+            $_POST['_wpnonce']          ?? null,
+        ];
+
+        if ($request instanceof WP_REST_Request) $candidates[] = $request->get_param('_wpnonce');
+
+        $candidates = array_filter($candidates, fn ($nonce) => is_string($nonce) && ($nonce !== ''));
+
+        return array_values(array_unique($candidates));
+
+    }
+
+    // Separate from collection: verification depends on the current user, so callers that
+    // authenticate manually must verify after `wp_set_current_user()`.
+    public static function find_valid_nonce (array $candidates, $action = 'wp_rest') {
+
+        foreach ($candidates as $nonce) if (wp_verify_nonce($nonce, $action)) return $nonce;
+
+        return null;
+
+    }
+
     public function check_nonce (WP_REST_Request $request) {
 
-        $nonce = $request->get_header('X-WP-Nonce');
-        if (!$nonce) $nonce = $request->get_header('Nonce');
-        if (!$nonce) $nonce = $request->get_param('_wpnonce');
+        $candidates = static::collect_nonce_candidates($request);
 
-        if (is_null($nonce)) return new WP_Error(
+        if (!$candidates) return new WP_Error(
             __NAMESPACE__ . '_rest_missing_nonce',
             'Missing the `Nonce` header or `_wpnonce` parameter. This endpoint requires a valid nonce.',
             ['status' => 401],
         );
 
-        if (!wp_verify_nonce($nonce, 'wp_rest')) return new WP_Error(
+        if (!static::find_valid_nonce($candidates)) return new WP_Error(
             __NAMESPACE__ . '_rest_invalid_nonce',
             'Nonce is invalid.',
             ['status' => 403],

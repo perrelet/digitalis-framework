@@ -52,15 +52,15 @@ class HTML_REST_API extends Feature {
         // so standard REST cookie auth doesn't fire for wp-html/ requests.
         // We authenticate manually using the logged_in cookie (path: /) instead.
 
-        $nonce = $_SERVER['HTTP_X_WP_NONCE'] ?? $_REQUEST['_wpnonce'] ?? null;
-        if (!$nonce) return $result;
+        $candidates = Route::collect_nonce_candidates();
+        if (!$candidates) return $result;
 
         $user_id = wp_validate_logged_in_cookie(false);
         if (!$user_id) return $result;
 
         wp_set_current_user($user_id);
 
-        if (!wp_verify_nonce($nonce, 'wp_rest')) {
+        if (!Route::find_valid_nonce($candidates)) {
             return new \WP_Error('rest_cookie_invalid_nonce', __('Cookie check failed'), ['status' => 403]);
         }
 
