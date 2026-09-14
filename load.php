@@ -14,7 +14,8 @@ require LATTICE_PATH . 'include/core/utility.abstract.php';
 require LATTICE_PATH . 'include/core/hook.utility.php';
 require LATTICE_PATH . 'include/core/autoloader.trait.php';
 require LATTICE_PATH . 'include/core/classmap.final.php';
-
+require LATTICE_PATH . 'include/core/strict.final.php';
+require LATTICE_PATH . 'include/core/strict-violation.logic-exception.php';
 require LATTICE_PATH . 'compat/digitalis-hooks.php';
 
 // Declared, not instantiated: the framework is a library of base classes, unlike a consuming plugin.

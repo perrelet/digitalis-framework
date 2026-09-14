@@ -45,6 +45,10 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 - **`_dirname/`** — directory entirely skipped (use for admin-only, CLI-only code)
 - **`~dirname/`** — directory skipped unless the named WP plugin is active
 
+### Strict mode
+
+`LATTICE_STRICT` (default: `WP_DEBUG`) makes the framework throw `Strict_Violation` at the moment a documented mistake is made. The message names the class, the file, the problem and the fix. A violation is an instruction to follow, not an error to route around; load-time audits list every problem in a walk at once, runtime checks throw at the offending call.
+
 ### Critical DON'Ts for include/ files
 
 **DO NOT** manually `require` / `require_once` / `include` files in `include/` — the autoloader already loaded them; explicit include causes redeclaration errors.

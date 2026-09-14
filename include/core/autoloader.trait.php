@@ -25,10 +25,23 @@ trait Autoloader {
         $this->map_files($files, $this->classmap?->key($path, $recursive, $ext));
         $this->register_autoloader();
 
-        foreach ($files as $file) {
+        Strict::begin_walk();
+        $completed = false;
 
-            $obj = $this->load_class($file, $instantiation);
-            if (is_object($obj)) $objs[] = $obj;
+        try {
+
+            foreach ($files as $file) {
+
+                $obj = $this->load_class($file, $instantiation);
+                if (is_object($obj)) $objs[] = $obj;
+
+            }
+
+            $completed = true;
+
+        } finally {
+
+            Strict::end_walk($completed);
 
         }
 
@@ -142,6 +155,8 @@ trait Autoloader {
 
         if (!$class_name = $this->autoload_declarations[$path][0] ?? '') return false;
         if (!class_exists($class_name))                                  return false;
+
+        Strict::audit($class_name);
 
         if (method_exists($class_name, 'hello'))       call_user_func([$class_name, 'hello']);
         if (method_exists($class_name, 'static_init')) call_user_func([$class_name, 'static_init']);
