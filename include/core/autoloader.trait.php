@@ -291,53 +291,82 @@ trait Autoloader {
 
     //
 
-    protected function extract_class_name ($file, $buffer_bytes = 512) {
+    protected function extract_class_name ($file) {
 
-        // https://stackoverflow.com/questions/7153000/get-class-name-from-file
-        // fix: $class = $tokens[$i+2][1];         ---> if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];                      Avoids 'Uninitialized string offset 1' when using 'static::class'
-        // fix: if ($tokens[$j][0] === T_STRING) { ---> if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NAME_QUALIFIED) {    Handle files with sub-namespaces (T_NAME_QUALIFIED PHP 8.0.0+)
-        // fix: add: if ($tokens[$j] === ';') break;                                                                                 Class declarations can't contain a semicolon. Bailing early speeds things up and prevents confusing lines containing '::class' with the class declaration. 
-        // fix: add: if ($j == count($tokens)) break;                                                                                $i persists across reads. Holds it on a declaration split by a read boundary, which was otherwise skipped for good.
+        return $this->extract_declarations($file)[0] ?? '';
 
-        $fp = fopen($file, 'r');
-        $class = $namespace = $buffer = '';
-        $i = 0;
-        while (!$class) {
-            if (feof($fp)) break;
+    }
 
-            $buffer .= fread($fp, $buffer_bytes);
-            $tokens = token_get_all($buffer);
+    // Reads the whole file: a second declaration can sit anywhere, e.g. Debug_Options at line 406 of debug.view.php.
+    protected function extract_declarations ($file) {
 
-            // echo str_replace("php", "php-->", $buffer) . "\n";
+        $tokens    = token_get_all(file_get_contents($file));
+        $count     = count($tokens);
+        $namespace = '';
+        $names     = [];
+        $keywords  = [T_CLASS, T_TRAIT, T_INTERFACE];
 
-            if (strpos($buffer, '{') === false) continue;
+        if (defined('T_ENUM')) $keywords[] = T_ENUM;
 
-            for (;$i<count($tokens);$i++) {
-                if ($tokens[$i][0] === T_NAMESPACE) {
-                    for ($j=$i+1;$j<count($tokens); $j++) {
-                        if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NAME_QUALIFIED) {
-                            $namespace .= '\\'.$tokens[$j][1];
-                        } else if ($tokens[$j] === '{' || $tokens[$j] === ';') {
-                            break;
-                        }
-                    }
+        for ($i = 0; $i < $count; $i++) {
+
+            if (!is_array($tokens[$i])) continue;
+
+            if ($tokens[$i][0] === T_NAMESPACE) {
+
+                $namespace = '';
+
+                for ($j = $i + 1; $j < $count; $j++) {
+
+                    if (is_array($tokens[$j]) && in_array($tokens[$j][0], [T_STRING, T_NAME_QUALIFIED])) $namespace = $tokens[$j][1];
+                    if ($tokens[$j] === ';' || $tokens[$j] === '{') break;
+
                 }
 
-                if ($tokens[$i][0] === T_CLASS) {
-                    for ($j=$i+1;$j<count($tokens);$j++) {
-                        if ($tokens[$j] === ';') break;
-                        if ($tokens[$j] === '{') {
-                            if (is_array($tokens[$i+2])) $class = $tokens[$i+2][1];
-                            break;
-                        }
-                    }
+                continue;
 
-                    if ($j == count($tokens)) break; // Neither arrived: declaration split across reads, so hold $i or it's skipped for good.
-                }
             }
+
+            if (!in_array($tokens[$i][0], $keywords))                 continue;
+            if ($this->is_anonymous_or_constant_class($tokens, $i))    continue;
+            if (!$name = $this->declared_name($tokens, $i))            continue;
+
+            $names[] = $namespace ? "{$namespace}\\{$name}" : $name;
+
         }
 
-        return $namespace ? $namespace . "\\" . $class : $class;
+        return $names;
+
+    }
+
+    protected function is_anonymous_or_constant_class ($tokens, $i) {
+
+        $previous = $this->adjacent_token($tokens, $i, -1);
+
+        return $previous && in_array($previous[0], [T_NEW, T_DOUBLE_COLON]);
+
+    }
+
+    protected function declared_name ($tokens, $i) {
+
+        $next = $this->adjacent_token($tokens, $i, 1);
+
+        return ($next && $next[0] === T_STRING) ? $next[1] : null;
+
+    }
+
+    protected function adjacent_token ($tokens, $i, $direction) {
+
+        $count = count($tokens);
+
+        for ($j = $i + $direction; $j >= 0 && $j < $count; $j += $direction) {
+
+            if (!is_array($tokens[$j])) return null;
+            if (!in_array($tokens[$j][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT])) return $tokens[$j];
+
+        }
+
+        return null;
 
     }
 
