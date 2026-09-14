@@ -793,13 +793,13 @@ Front-end rendering (theme calls App::render()):
 
 ### Framework load order (synchronous, before `plugins_loaded`)
 
-1. **Constants defined** in `load.php`
-2. **Core utilities** loaded (`Call`, `List_Utility`)
-3. **Patterns** loaded (`Singleton`, `Factory`)
-4. **Traits** loaded (hooks, meta, models)
-5. **Core objects** loaded (`Model`, `Service`, `App`, `View`)
-6. **WordPress models** loaded (`Post`, `User`, `Term`)
-7. **Views & components** loaded
+`load.php` is short and does not list classes:
+
+1. **Constants** defined (`LATTICE_VERSION`, `LATTICE_PATH`, `LATTICE_LIBRARY_PATH`, `LATTICE_URI`)
+2. **Compatibility shim** loaded (`compat/digitalis-namespace.php`: legacy constants and a lazy `Digitalis\` alias loader)
+3. **Bootstrap** required explicitly: `Utility`, `Hook`, the `Autoloader` trait and `Classmap`, the four things `autoload()` reaches for before a sweep can run
+4. **One sweep** of `include/` with instantiation off: every declaration is read (or taken from `.classmap.php` when present and current), a lazy loader is registered, and each file is included once. The framework is a library of base classes, so nothing is constructed; singletons come up on first `get_instance()`
+5. **Deferred**: the WooCommerce models are required on `plugins_loaded` from `integrations/_woocommerce/`, and `Bricks_Element` on `init` only when `BRICKS_VERSION` is defined, from `integrations/_bricks/`. Both directories carry the `_` prefix so the sweep never reaches them: the first because `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`; the second because it extends a Bricks class
 
 ### App boot lifecycle (`plugins_loaded` hook)
 

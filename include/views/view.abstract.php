@@ -29,6 +29,8 @@ abstract class View implements \ArrayAccess {
 
     public static function static_init () {
 
+        if ((new \ReflectionClass(static::class))->isAbstract()) return;
+
         self::$loaded_views[] = static::class;
 
     }
