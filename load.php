@@ -17,6 +17,7 @@ require LATTICE_PATH . 'include/core/list-utility.utility.php';
 require LATTICE_PATH . 'compat/digitalis-hooks.php';
 
 require LATTICE_PATH . 'include/core/autoloader.trait.php';
+require LATTICE_PATH . 'include/core/classmap.final.php';
 require LATTICE_PATH . 'include/core/auto-instantiate.trait.php';
 require LATTICE_PATH . 'include/core/is-stashable.trait.php';
 require LATTICE_PATH . 'include/core/resolvable.trait.php';
@@ -225,3 +226,10 @@ require LATTICE_PATH . 'include/deprecated/loaders.php';
 require LATTICE_PATH . 'include/deprecated/view.abstract.php';
 require LATTICE_PATH . 'include/deprecated/component.view.php';
 require LATTICE_PATH . 'include/deprecated/route.factory.php';
+
+if (defined('WP_CLI') && WP_CLI) {
+
+    require LATTICE_PATH . 'include/_cli/classmap-cli.php';
+    WP_CLI::add_command('lattice classmap', new Lattice\Classmap_CLI);
+
+}

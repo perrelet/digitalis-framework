@@ -11,6 +11,7 @@ trait Autoloader {
     protected $autoload_map          = [];
     protected $autoload_declarations = [];
     protected $autoloader_registered = false;
+    protected $classmap              = null;
 
     public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $instantiation = null) {
 
@@ -21,7 +22,7 @@ trait Autoloader {
 
         $files = $this->collect_files($path, $recursive, $ext);
 
-        $this->map_files($files);
+        $this->map_files($files, $this->classmap?->key($path, $recursive, $ext));
         $this->register_autoloader();
 
         foreach ($files as $file) {
@@ -35,17 +36,40 @@ trait Autoloader {
 
     }
 
-    protected function map_files ($files) {
+    public function use_classmap ($file) {
+
+        $this->classmap = new Classmap($file);
+
+        return $this;
+
+    }
+
+    protected function map_files ($files, $key = null) {
+
+        if ($key && ($cached = $this->classmap->read($key, $files))) {
+
+            foreach ($cached as $file => $names) $this->remember_declarations($file, $names);
+            return;
+
+        }
 
         foreach ($files as $file) {
 
             if (isset($this->autoload_declarations[$file])) continue;
 
-            $this->autoload_declarations[$file] = $this->extract_declarations($file);
-
-            foreach ($this->autoload_declarations[$file] as $name) $this->autoload_map[$name] = $file;
+            $this->remember_declarations($file, $this->extract_declarations($file));
 
         }
+
+        if ($key) $this->classmap->record($key, array_intersect_key($this->autoload_declarations, array_flip($files)));
+
+    }
+
+    protected function remember_declarations ($file, $names) {
+
+        $this->autoload_declarations[$file] = $names;
+
+        foreach ($names as $name) $this->autoload_map[$name] = $file;
 
     }
 

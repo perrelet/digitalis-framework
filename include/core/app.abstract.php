@@ -20,6 +20,8 @@ abstract class App extends Factory {
         $this->path       = plugin_dir_path($this->reflection->getFileName());
         $this->url        = plugin_dir_url($this->path);
 
+        $this->use_classmap($this->path . '.classmap.php');
+
         add_action('plugins_loaded', [$this, 'boot']);
 
     }
