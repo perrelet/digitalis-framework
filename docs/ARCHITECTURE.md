@@ -457,21 +457,9 @@ Files follow the format: `class-name.parent-class.php`
 | `name.trait.php` | Trait | `has-meta.trait.php` |
 | `name.class.php` | Standard class | `helper.class.php` |
 
-### Inheritance-Based Load Order
+### Lazy Parent Resolution
 
-The autoloader parses file names to determine inheritance and sorts accordingly:
-
-```
-Given files:
-  antique-book.book.php    → Antique_Book extends Book
-  book.post.php            → Book extends Post
-  post.post.php            → Post (base class)
-
-Load order becomes:
-  1. post.post.php         → Base loaded first
-  2. book.post.php         → Child loaded second
-  3. antique-book.book.php → Grandchild loaded last
-```
+The autoloader reads each file's declared class and registers a prepended `spl_autoload_register` closure over the result. Files are then walked in collection order; when a child is included before its parent, PHP asks the closure and the parent is included on demand. No inheritance graph is built and no order is computed, so the `.parent.` suffix carries no mechanism, only meaning for the reader.
 
 ### Directory Conventions
 

@@ -28,7 +28,7 @@ Quick navigation to all framework documentation.
 System overview, directory structure, design patterns, data flow. Start here to understand the framework.
 
 ### [AUTOLOADER.md](./AUTOLOADER.md)
-File naming conventions, inheritance-based load order, conditional loading, auto-instantiation.
+File naming conventions, lazy parent resolution, conditional loading, auto-instantiation.
 
 **Key patterns:**
 - `name.parent.php` - Class extends parent

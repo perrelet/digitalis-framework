@@ -89,7 +89,7 @@ class Plugin extends App {
 }
 ```
 
-Everything in `include/` loads automatically from that point. File naming drives load order and instantiation — see [`docs/AUTOLOADER.md`](./docs/AUTOLOADER.md).
+Everything in `include/` loads automatically from that point. File naming drives instantiation; parents load on demand. See [`docs/AUTOLOADER.md`](./docs/AUTOLOADER.md).
 
 ---
 

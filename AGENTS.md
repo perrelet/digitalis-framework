@@ -12,7 +12,7 @@ This primer is a map, not the territory. Before adding files or editing framewor
 
 | File | Why it's mandatory |
 |------|--------------------|
-| [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | File naming suffixes are load-bearing. Get them wrong and the autoloader silently skips your file — no error, no instance, just nothing. |
+| [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | Every `*.php` under `include/` is loaded and its class read from source. Two names change behaviour: `.abstract.` suppresses instantiation, `_dir/` skips the directory. Get those wrong and something you did not mean to run runs on every request, silently. |
 | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, `parent::params()` skips, etc.). |
 | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. `new My_View([...])` over `My_View::render([...])`). |
 
@@ -28,7 +28,7 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ### What gets auto-included
 
-Files in `include/` and subdirectories (recursive), matched by the [suffix convention](./docs/AUTOLOADER.md#file-naming-convention). The autoloader resolves inheritance relationships from file names (`class-name.parent-class.php`) and loads in topological order — parents before children.
+Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed.
 
 ### What fires on include
 
@@ -207,9 +207,9 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
 ## File Naming
 
-`kebab-case-name.parent-identifier.php` — the parent identifier encodes the inheritance relationship for the autoloader's topological sort.
+`kebab-case-name.parent-identifier.php`: the parent identifier documents what the class extends. The autoloader reads the real declaration from the file and resolves parents lazily, so the identifier is for the reader.
 
-> ⚠️ **Suffixes are load-bearing, not stylistic.** A file named `my-thing.app.php` is parsed as a subclass of `App`; renaming it to `my-thing-app.php` or `lattice-app.php` makes the autoloader silently ignore it — no error, no instance, no warning. If your class never seems to load, check the suffix first. See [docs/AUTOLOADER.md](./docs/AUTOLOADER.md).
+> ⚠️ **Three names are load-bearing.** `.abstract.` in a filename suppresses instantiation; `_dir/` is never collected; `~dir/` is collected only when that plugin is active. The parent identifier is not one of them: a misnamed parent still loads, it just misinforms whoever reads the tree.
 
 | Identifier | Framework class |
 |------------|----------------|
@@ -538,8 +538,8 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 **`App::$path` is the App-subclass file's directory, not the plugin root.**
 `App::__construct()` reflects `static::class` to derive `$this->path`. Move `my-plugin.app.php` from `<plugin>/` to `<plugin>/include/` and the autoload root shifts with it. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
 
-**File-name suffixes are load-bearing, not stylistic.**
-`my-thing.app.php` is parsed as a subclass of `App`; `my-thing-app.php` is silently skipped by the inheritance-aware loader — no error, no warning, no instance. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+**The parent suffix is documentation, not mechanism.**
+`my-thing.app.php` and `my-thing-app.php` both load, and both are read for the class they actually declare. What changes behaviour is `.abstract.` (no instance), `_dir/` (never collected) and `~dir/` (collected only when the plugin is active). See [AUTOLOADER.md](./docs/AUTOLOADER.md).
 
 **`hello()` and `static_init()` self-fire after include — no instantiation needed.**
 The autoloader calls these static methods immediately after `include_once`, before any instantiation and regardless of `get_auto_instantiation()`. Use them for static-time registration (`register_post_type()`, hooks bound to `[static::class, '…']`) that doesn't need an instance. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
@@ -594,7 +594,7 @@ Examples:
 | Need | File |
 |------|------|
 | Architecture, directory structure, design patterns, layout system | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
-| File naming, load order, auto-instantiation | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) |
+| File naming, lazy loading, auto-instantiation | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) |
 | Post / User / Term / Order method reference | [docs/MODELS.md](./docs/MODELS.md) |
 | View system — full reference | [docs/VIEW_SYSTEM.md](./docs/VIEW_SYSTEM.md) |
 | Built-in views, components, fields (30+ classes) | [docs/BUILTIN_VIEWS.md](./docs/BUILTIN_VIEWS.md) |

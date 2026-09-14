@@ -8,6 +8,9 @@ use ReflectionClass;
 trait Autoloader {
 
     protected $path;
+    protected $autoload_map          = [];
+    protected $autoload_declarations = [];
+    protected $autoloader_registered = false;
 
     public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $instantiation = null) {
 
@@ -16,7 +19,12 @@ trait Autoloader {
         if (is_array($path))                  return $this->autoload_multiple($path, $objs);
         if (!is_dir($path = realpath($path))) return $objs;
 
-        foreach ($this->sort_files($this->collect_files($path, $recursive, $ext), $ext) as $file) {
+        $files = $this->collect_files($path, $recursive, $ext);
+
+        $this->map_files($files);
+        $this->register_autoloader();
+
+        foreach ($files as $file) {
 
             $obj = $this->load_class($file, $instantiation);
             if (is_object($obj)) $objs[] = $obj;
@@ -27,9 +35,32 @@ trait Autoloader {
 
     }
 
-    public function autoload_order ($path, $recursive = true, $ext = 'php') {
+    protected function map_files ($files) {
 
-        return $this->sort_files($this->collect_files(realpath($path), $recursive, $ext), $ext);
+        foreach ($files as $file) {
+
+            if (isset($this->autoload_declarations[$file])) continue;
+
+            $this->autoload_declarations[$file] = $this->extract_declarations($file);
+
+            foreach ($this->autoload_declarations[$file] as $name) $this->autoload_map[$name] = $file;
+
+        }
+
+    }
+
+    // Prepended: answers before the compat shim probes sub-namespaces, and before every other autoloader on the site. One lookup, nothing else.
+    protected function register_autoloader () {
+
+        if ($this->autoloader_registered) return;
+
+        $this->autoloader_registered = true;
+
+        spl_autoload_register(function ($name) {
+
+            if (isset($this->autoload_map[$name])) include_once $this->autoload_map[$name];
+
+        }, true, true);
 
     }
 
@@ -65,61 +96,6 @@ trait Autoloader {
 
     }
 
-    // Sorts across the whole tree, so a child may live in a different directory to its parent.
-    // Keyed by path, not class name: those collide across directories (db/table vs components/table).
-    protected function sort_files ($files, $ext = 'php') {
-
-        $pending = [];
-        $by_name = [];
-
-        foreach ($files as $path) {
-
-            [$name, $parent] = $this->split_file_name(basename($path), $ext);
-
-            $pending[$path]   = $parent;
-            $by_name[$name][] = $path;
-
-        }
-
-        $sorted = [];
-
-        while ($pending) {
-
-            $progress = false;
-
-            foreach ($pending as $path => $parent) {
-
-                foreach ($by_name[$parent] ?? [] as $blocker) {
-                    if (($blocker !== $path) && isset($pending[$blocker])) continue 2;
-                }
-
-                $sorted[] = $path;
-                unset($pending[$path]);
-                $progress = true;
-
-            }
-
-            if ($progress) continue;
-
-            foreach ($pending as $path => $parent) $sorted[] = $path;
-            break;
-
-        }
-
-        return $sorted;
-
-    }
-
-    protected function split_file_name ($file_name, $ext = 'php') {
-
-        if ($pos = strpos($ext, '.')) $ext = substr($ext, $pos + 1);
-
-        $parts = explode('.', substr($file_name, 0, -(strlen($ext) + 1)));
-
-        return [$parts[0], count($parts) > 1 ? end($parts) : ''];
-
-    }
-
     public function autoload_multiple ($autoloads, &$objs = []) {
     
         if ($autoloads) foreach ($autoloads as $directory => $instantiation) {
@@ -133,13 +109,15 @@ trait Autoloader {
     }
 
     public function load_class ($path, $instantiation = null) {
-    
+
         if (!is_file($path)) return false;
+
+        $this->map_files([$path]);
 
         include_once $path;
 
-        if (!$class_name = $this->extract_class_name($path)) return false;
-        if (!class_exists($class_name))                      return false;
+        if (!$class_name = $this->autoload_declarations[$path][0] ?? '') return false;
+        if (!class_exists($class_name))                                  return false;
 
         if (method_exists($class_name, 'hello'))       call_user_func([$class_name, 'hello']);
         if (method_exists($class_name, 'static_init')) call_user_func([$class_name, 'static_init']);
@@ -147,7 +125,7 @@ trait Autoloader {
         if (is_null($instantiation)) $instantiation = $this->resolve_auto_instantiation($class_name, $path);
 
         return $this->instantiate_class($class_name, $instantiation);
-    
+
     }
 
     protected function resolve_auto_instantiation ($class_name, $path = '') {
@@ -191,105 +169,6 @@ trait Autoloader {
         return false;
 
     }
-
-    protected function get_file_names ($path, $ext = 'php') {
-    
-        $files    = glob($path . '/*.' . $ext);
-        $names    = $this->get_names($files);
-        $inherits = $this->get_inherits($names);
-        $inherits = $this->sort_inherits($inherits);
-        $names    = $this->rebuild_names($inherits, $ext);
-
-        return $names;
-    
-    }
-
-    protected function get_names ($files) {
-    
-        $paths = [];
-
-        if ($files) foreach ($files as $file) $paths[] = basename($file);
-
-        return $paths;
-    
-    }
-
-    protected function get_inherits ($file_names) {
-
-        $inherits = [];
-
-        if ($file_names) foreach ($file_names as $file_name) {
-        
-            $parts = explode('.', $file_name);
-
-            if (count($parts) == 1) continue;
-
-            if (count($parts) == 2) {
-
-                $parts = [
-                    $parts[0],
-                    '',
-                    $parts[1],
-                ];
-
-            } elseif (count($parts) > 3) {
-
-                $parts = [
-                    implode('.', array_slice($parts, 0, count($parts) - 2)),
-                    $parts[count($parts) - 2],
-                    $parts[count($parts) - 1],
-                ];
-
-            }
-
-            $inherits[$parts[0]] = $parts[1];
-        
-        }
-    
-        return $inherits;
-    
-    }
-
-    protected function sort_inherits ($inherits, $sorted = []) {
-
-        if ($priority = array_intersect($inherits, ['', 'trait', 'interface'])) foreach ($priority as $child => $parent) {
-
-            $sorted[$child] = $parent;
-            unset($inherits[$child]);
-
-        }
-
-        foreach ($inherits as $child => $parent) {
-        
-            if (!array_key_exists($parent, $inherits) || ($child == $parent)) {
-
-                $sorted[$child] = $parent;
-                unset($inherits[$child]);
-
-            }
-        
-        }
-
-        return $inherits ? $this->sort_inherits($inherits, $sorted) : $sorted;
-    
-    }
-
-    protected function rebuild_names ($inherits, $ext) {
-
-        $file_names = [];
-        if ($inherits) foreach ($inherits as $child => $parent) {
-
-            if ($pos = strpos($ext, '.')) $ext = substr($ext, $pos + 1);
-
-            $file_names[] = $parent ? "{$child}.{$parent}.{$ext}" : "{$child}.{$ext}";
-            
-        }
-
-        return $file_names;
-    
-    }
-
-    //
 
     protected function extract_class_name ($file) {
 

@@ -1,5 +1,7 @@
 # Digitalis Autoloader: Comprehensive Analysis
 
+> Describes the eager, filename-sorted loader used through 0.4. From v1 the autoloader reads declarations from source and resolves parents lazily; the sorting it analyses no longer exists. Kept as a record of that design. See [AUTOLOADER.md](./AUTOLOADER.md).
+
 A detailed technical analysis of the Digitalis Framework's inheritance-aware autoloading system.
 
 ---

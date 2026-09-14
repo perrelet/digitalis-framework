@@ -780,24 +780,7 @@ my-plugin/
 
 ### Load Order
 
-Files are sorted by inheritance:
-
-1. Traits (`.trait.php`)
-2. Interfaces (`.interface.php`)
-3. Base classes (no parent in filename)
-4. Child classes (sorted by inheritance depth)
-
-```
-# Files in directory:
-special-project.project.php   # Extends Project
-project.post.php              # Extends Post
-base.trait.php                # Trait
-
-# Load order:
-1. base.trait.php
-2. project.post.php
-3. special-project.project.php
-```
+There is none to reason about. Files are collected, their declarations are read, and a lazy autoloader resolves any parent the moment a child needs it. Walk order is collection order and it does not matter.
 
 ### Auto-Instantiation
 

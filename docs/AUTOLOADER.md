@@ -51,10 +51,10 @@ Eight behaviours the autoloader handles invisibly that an agent will get wrong o
 
 If `my-plugin.app.php` lives at `<plugin>/include/my-plugin.app.php`, `$this->path` is `<plugin>/include/`. The default `autoload()` recurses from that path, so the App-subclass file's location determines the autoload root.
 
-### `.parent.php` suffixes are load-bearing, not stylistic
+### `.parent.php` suffixes document inheritance; they do not drive load order
 
-> **Wrong assumption:** `my-thing-app.php` and `my-thing.app.php` are equivalent.
-> **Reality:** The autoloader parses the dotted suffix to build the inheritance graph and topologically sort load order. A name without a parent identifier is not treated as a subclass definition — the file is silently skipped during inheritance-aware loading. No error, no warning.
+> **Wrong assumption:** the autoloader needs the suffix to load parents before children.
+> **Reality:** every `*.php` file is collected, its declared class is read from the source, and a parent is resolved on demand through `spl_autoload_register` at the moment a child needs it. Two names still change behaviour: `.abstract.` suppresses instantiation, and `Editor_Manager` filters its own directory by suffix. The parent identifier itself is documentation for the reader, so keep it accurate for that reason.
 
 ### `_dirname/` is skipped during recursive autoload
 
@@ -142,36 +142,27 @@ Common parent class identifiers used in file names:
 
 ### How It Works
 
-The autoloader parses file names to build an inheritance graph, then topologically sorts to ensure parent classes load first.
+Loading is lazy; discovery is eager. Nothing computes a load order.
 
 ### Algorithm
 
-1. **Parse file names** - Extract class name and parent from each `.php` file
-2. **Build dependency graph** - Map each class to its parent
-3. **Prioritize primitives** - Traits, interfaces, and standalone classes first
-4. **Topological sort** - Order remaining classes by inheritance depth
-5. **Load in order** - Include files from most primitive to most derived
+1. **Collect** every `*.php` under the path, honouring `_dir/` and `~dir/`
+2. **Read declarations** from each file's tokens: every `class`, `trait`, `interface` and `enum`, with its namespace
+3. **Register** one `spl_autoload_register` closure per loader, prepended, mapping each name to its file
+4. **Walk** the collected files in any order, firing `hello()` and `static_init()` and instantiating as each is included
+
+When a child is included before its parent, PHP asks the closure for the parent and the closure includes it. The parent's own lifecycle fires later, when the walk reaches its file; the walk includes every file exactly once.
 
 ### Example
-
-Given these files in a directory:
 
 ```
 include/models/
 ├── antique-book.book.php      → Antique_Book extends Book
 ├── book.post.php              → Book extends Post
-├── rare-book.antique-book.php → Rare_Book extends Antique_Book
-└── post.post.php              → Post (references framework Post)
+└── rare-book.antique-book.php → Rare_Book extends Antique_Book
 ```
 
-**Load order:**
-
-```
-1. post.post.php              # No local parent dependency
-2. book.post.php              # Depends on post
-3. antique-book.book.php      # Depends on book
-4. rare-book.antique-book.php # Depends on antique-book
-```
+Walked alphabetically, `antique-book.book.php` comes first. Including it needs `Book`, so the closure includes `book.post.php`, which needs `Post`, which the framework's own loader already supplies. No file is ever included twice and no order is ever computed.
 
 ### Priority Rules
 
@@ -566,13 +557,14 @@ Plugin (loaded in order):
 // File should be: my-custom-post.post.php (if extends Post)
 ```
 
-#### Wrong Load Order
+#### Parent Not Found
 
-**Symptom:** `Class 'ParentClass' not found` when loading child
+**Symptom:** `Class 'ParentClass' not found` when a child is included
 
 **Causes:**
-- Parent file name doesn't indicate it's a base class
-- Circular dependency in naming
+- The parent's file is in a directory the loader never collects (`_dir/`, an inactive `~dir/`, or outside every autoloaded path)
+- The parent's declared name differs from what the child extends (namespace or spelling)
+- The parent lives in another loader's tree that has not run yet
 
 **Solution:**
 ```php
@@ -616,9 +608,9 @@ class My_Singleton extends Singleton {
 
 ```php
 // Temporarily add to autoload to debug load order
-public function autoload($path = null, $recursive = true, $ext = 'php', &$objs = [], $depth = 0) {
+public function autoload($path = null, $recursive = true, $ext = 'php', &$objs = [], $instantiation = null) {
     error_log("Autoloading: $path");
-    return parent::autoload($path, $recursive, $ext, $objs, $depth);
+    return parent::autoload($path, $recursive, $ext, $objs, $instantiation);
 }
 
 // Or filter to see what's being instantiated
