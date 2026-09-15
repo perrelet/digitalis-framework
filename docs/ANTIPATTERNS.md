@@ -145,6 +145,8 @@ public static function validate_id($id) {
 
 Without specificity properties, subclasses tie with their parent and may never resolve.
 
+A subclass that ties its parent still wins (`>=` in `Model::get_class_name`); the hazard is ties between *siblings*, where the last in map order takes it.
+
 ```php
 // ❌
 class My_Post extends Post {}
