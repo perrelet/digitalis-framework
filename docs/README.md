@@ -12,6 +12,7 @@ Quick navigation to all framework documentation.
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Making commits - emoji selection guide |
 | [ANTIPATTERNS.md](./ANTIPATTERNS.md) | Patterns that look right but aren't - read before writing framework code |
 | [CONVENTIONS.md](./CONVENTIONS.md) | Preferred syntax where multiple valid forms exist |
+| [UPGRADING.md](./UPGRADING.md) | Moving a consumer onto a new framework version - the first strict boot |
 | [CHEATSHEET.md](./CHEATSHEET.md) | Writing code - copy-paste patterns |
 | [MODELS.md](./MODELS.md) | Model methods - Post, User, Term, Order |
 | [BUILTIN_VIEWS.md](./BUILTIN_VIEWS.md) | Finding the right component/field |

@@ -13,7 +13,7 @@ This primer is a map, not the territory. Before adding files or editing framewor
 | File | Why it's mandatory |
 |------|--------------------|
 | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | Every `*.php` under `include/` is loaded and its class read from source. Two names change behaviour: `.abstract.` suppresses instantiation, `_dir/` skips the directory. Get those wrong and something you did not mean to run runs on every request, silently. |
-| [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, `parent::params()` skips, etc.). |
+| [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, markup emitted from `params()`, etc.). |
 | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. `new My_View([...])` over `My_View::render([...])`). |
 
 Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The three docs above are where the framework's failure modes live.
@@ -47,7 +47,7 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 ### Strict mode
 
-`LATTICE_STRICT` (default: `WP_DEBUG`) makes the framework throw `Strict_Violation` at the moment a documented mistake is made. The message names the class, the file, the problem and the fix. A violation is an instruction to follow, not an error to route around; load-time audits list every problem in a walk at once, runtime checks throw at the offending call.
+`LATTICE_STRICT` (default: `WP_DEBUG`) makes the framework throw `Strict_Violation` at the moment a documented mistake is made. The message names the class, the file, the problem and the fix. A violation is an instruction to follow, not an error to route around; load-time audits list every problem in a walk at once, runtime checks throw at the offending call. The View lifecycle checks are tabled at [VIEW_SYSTEM.md#strict-mode](./docs/VIEW_SYSTEM.md#strict-mode); a consumer's first strict boot is walked through in [docs/UPGRADING.md](./docs/UPGRADING.md).
 
 ### Critical DON'Ts for include/ files
 
@@ -490,11 +490,8 @@ Full context and code examples for all of these are in [ANTIPATTERNS.md](./docs/
 **`query()` returns a plain `static[]` array — no fluent builder.**
 `Post::query()->where_meta()` does not exist. Pass `&$wp_query` as the second argument to access `found_posts`.
 
-**`View::$merge` does not accumulate across subclasses.**
-Each child class must re-list all parent merge keys: `['classes', 'styles']`, not just `['styles']`. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
-
-**Always call `parent::params($p)` when overriding `params()`.**
-Skipping it silently drops any param transformations defined in parent classes. Same rule for `__construct()` overrides — always call `parent::__construct($params)` first. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+**Call the parent in `params()`, `__construct()` and `static_init()` overrides.**
+Strict mode throws when a `params()` or `static_init()` override skips its parent at boot, and when a `__construct()` skip reaches `print()`. See [VIEW_SYSTEM.md#strict-mode](./docs/VIEW_SYSTEM.md#strict-mode).
 
 **Class-string `$defaults` are auto-resolved as DI — opt out with `$skip_inject`.**
 Any `$defaults` value naming a class with `get_instance()` (e.g. `'order' => Order::class`) is treated as a DI signal: the framework calls `Order::get_instance($value)` and replaces the param with the instance. Want the class name to *stay* a literal string? Add the key to `$skip_inject`. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
@@ -537,7 +534,7 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
-**Quick reference for the five view-system traps** — `$merge` doesn't accumulate, `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+**Quick reference for the four view-system traps** — `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`App::$path` is the App-subclass file's directory, not the plugin root.**
 `App::__construct()` reflects `static::class` to derive `$this->path`. Move `my-plugin.app.php` from `<plugin>/` to `<plugin>/include/` and the autoload root shifts with it. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
@@ -611,3 +608,4 @@ Examples:
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |
+| Moving a consumer onto a new framework version, the first strict boot | [docs/UPGRADING.md](./docs/UPGRADING.md) |

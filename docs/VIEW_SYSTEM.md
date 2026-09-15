@@ -80,27 +80,19 @@ Invoice_View::render(['order' => 721, 'user' => 1]);
 
 The traps that bite new agents most often when reaching for the View system. Each entry is a one-line "wrong assumption → reality" with a sketch — full code and rationale live in [ANTIPATTERNS.md](./ANTIPATTERNS.md).
 
-### `$merge` does not accumulate across subclasses — re-list parent keys
+### `$merge` accumulates like every other inherited static
 
-**Wrong assumption:** A child class's `$merge` declaration adds to the parent's; only listing new keys is enough.
-**Reality:** `$merge` is replaced wholesale by the child. A child that lists `['styles']` loses parent merging for `'classes'` — `'classes'` quietly becomes overwrite-on-inherit. Re-list every parent key the child still wants merged.
+**Wrong assumption:** A child's `$merge` replaces the parent's, so parent keys must be re-listed.
+**Reality:** `Inherits_Props` merges `$defaults`, `$required`, `$merge` and `$skip_inject` up the chain alike. A child that lists `['styles']` keeps the parent's `'classes'` merging. `Component` adds element-prefixed keys (`link_class`, …) for its own merge keys only, not for keys a child adds.
 
 ```php
-// ❌ Parent merged 'classes'; child drops it by re-declaring $merge
 class Parent_View extends View {
     protected static $merge = ['classes'];
 }
 class Child_View extends Parent_View {
-    protected static $merge = ['styles'];   // 'classes' is now overwrite-on-inherit
-}
-
-// ✅ Re-list every key that should keep merging
-class Child_View extends Parent_View {
-    protected static $merge = ['classes', 'styles'];
+    protected static $merge = ['styles'];   // effective: ['classes', 'styles']
 }
 ```
-
-`$defaults`, `$required`, and `$skip_inject` *do* accumulate up the chain via `Inherits_Props` — `$merge` is the asymmetric one. Full antipattern: [Child views must re-list parent merge keys](./ANTIPATTERNS.md#child-views-must-re-list-parent-merge-keys--they-dont-accumulate).
 
 ### `params()` overrides must call `parent::params($p)`
 
@@ -120,7 +112,7 @@ public function params(&$p) {
 }
 ```
 
-The same rule applies to overriding `__construct()` — always call `parent::__construct($params)` first or default-param initialisation never runs. Full antipattern: [Always call `parent::params($p)` when overriding `params()`](./ANTIPATTERNS.md#always-call-parentparamsp-when-overriding-params).
+The same rule applies to `__construct()` (call `parent::__construct($params)` first) and `static_init()` (call `parent::static_init()` first). Strict mode throws `Strict_Violation` naming the class that skipped the call; see [Strict mode](#strict-mode). Full antipattern: [Call the parent in `params()`, `__construct()` and `static_init()` overrides](./ANTIPATTERNS.md#call-the-parent-in-params-__construct-and-static_init-overrides).
 
 ### `params()` may assume its DI-backed required params are valid
 
@@ -179,7 +171,7 @@ protected static $defaults    = ['model_class' => Order::class];
 protected static $skip_inject = ['model_class'];
 ```
 
-`$skip_inject` accumulates up the inheritance chain (unlike `$merge`), so each subclass can add to it without re-listing parent entries. Full antipattern: [Class-name defaults are injected — add to `$skip_inject` to prevent it](./ANTIPATTERNS.md#class-name-defaults-are-injected--add-to-skip_inject-to-prevent-it).
+`$skip_inject` accumulates up the inheritance chain, so each subclass can add to it without re-listing parent entries. Full antipattern: [Class-name defaults are injected — add to `$skip_inject` to prevent it](./ANTIPATTERNS.md#class-name-defaults-are-injected--add-to-skip_inject-to-prevent-it).
 
 ### Instantiate views with `new` — `View::render()` is the legacy static form
 
@@ -197,6 +189,22 @@ $html = (string) new My_View(['param' => 'value']);
 ```
 
 PHP's `__toString()` is invoked automatically when a view is echoed; the explicit `(string)` cast is only needed when the value is being assigned or passed where the type matters. See [CONVENTIONS — Instantiate views with `new`](./CONVENTIONS.md#instantiate-views-with-new--dont-call-viewrender-statically).
+
+### Strict mode
+
+Under `LATTICE_STRICT` (default `WP_DEBUG`) the View lifecycle is audited. Boot checks run once per view during the autoload walk and list every problem in one `Strict_Violation`; render checks throw at the offending `print()`. Messages read `Class (dir/file.php): problem. Fix.`
+
+| Check | When | Fix |
+|---|---|---|
+| `params()` override with no `parent::params($p)` while an ancestor other than `View` declares `params()` | boot | Call the parent, or extend its parent if its work is unwanted |
+| `static_init()` override that never calls `parent::static_init()`, so the view is absent from `get_loaded_views()` | boot | Call `parent::static_init()` first, in the class that declares the override |
+| `$required` key whose default is neither `null` nor a class string | boot | Default it to `null`, or test emptiness in `condition()` |
+| Static `$context`, `$post_type`, `$taxonomy`, `$term` or `$priority` outside `Layout` / `Page_View` | boot | Extend `Page_View`, or rename the property |
+| `__construct()` override that never reaches `View::__construct()` | first `print()` | Call `parent::__construct($params)` first |
+| Output emitted during `pre_validate()` / `params()` / `validate()` | `print()` | Move markup to `view()`, a template or `before()` / `after()` |
+| Output buffer opened and not closed, or closed and not opened, during that phase | `print()` | Balance `ob_start()` inside `params()` |
+
+Known holes: a `parent::params($p)` call that is present but skipped by an early return; `parent::params()` handed a different array; `validate()` / `pre_validate()` overrides that skip their parent; a balanced `ob_start()` … `ob_get_clean()` inside `params()`; a view constructed and never printed.
 
 ---
 
@@ -297,7 +305,7 @@ public function condition (): bool {
 }
 ```
 
-This bites most with ACF and form input, which hand over `''` rather than `null` for an unfilled field.
+This bites most with ACF and form input, which hand over `''` rather than `null` for an unfilled field. Strict mode flags the inert case at boot: a required key whose default is neither `null` nor a class string.
 
 ### `$merge`
 
@@ -537,7 +545,7 @@ public function params(&$p) {
 }
 ```
 
-`params()` is the prepare phase — for shaping data, not emitting markup. Markup belongs in `view()`, a template, or the `before*()` / `after*()` hooks. See [ANTIPATTERNS — Only render markup from the render phase](./ANTIPATTERNS.md#only-render-markup-from-the-render-phase).
+`params()` is the prepare phase — for shaping data, not emitting markup. Markup belongs in `view()`, a template, or the `before*()` / `after*()` hooks. Strict mode throws when the prepare phase emits output or leaves a buffer open. See [ANTIPATTERNS — Only render markup from the render phase](./ANTIPATTERNS.md#only-render-markup-from-the-render-phase).
 
 ---
 

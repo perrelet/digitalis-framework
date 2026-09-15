@@ -201,7 +201,7 @@ class Account_Role extends User_Role {
 
 ## Views
 
-> **Non-obvious:** `$merge` keys do **not** accumulate across subclasses — child views must re-list all parent merge keys. Class-name values in `$defaults` are DI-resolved automatically; add to `$skip_inject` to prevent it. Always call `parent::params($p)` when overriding `params()`.
+> **Non-obvious:** `$merge` accumulates up the chain like `$defaults`. Class-name values in `$defaults` are DI-resolved automatically; add to `$skip_inject` to prevent it. Always call `parent::params($p)` when overriding `params()`; strict mode throws at boot if you don't.
 
 ### Basic View with DI
 
@@ -264,7 +264,7 @@ class Project_Card extends View {
     protected static $required = ['project'];
 
     public function params(&$p) {
-        parent::params($p);  // Required — skipping it silently drops parent transforms.
+        parent::params($p);  // First here because nothing below feeds it; last when the parent reads params you set.
         $p['account']      = $p['project']->get_account();
         $p['status_class'] = 'status-' . $p['project']->get_status();
     }

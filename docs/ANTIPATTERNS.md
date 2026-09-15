@@ -265,90 +265,22 @@ $type = $post->get_post_type();
 
 ## View
 
-### Always call `parent::params($p)` when overriding `params()`
+### Call the parent in `params()`, `__construct()` and `static_init()` overrides
+
+Each parent does work the child depends on: `View::__construct()` sets the defaults, `Component::params()` builds the `Element` objects, `View::static_init()` registers the view in `$loaded_views` (skip it on a `Page_View` and the resolver silently stops selecting it). Strict mode throws for all three: a `params()` override with no `parent::params($p)` call and a `static_init()` skip at boot, a `__construct()` skip at first print. A `parent::params($p)` call that is present but skipped by an early return is the one case strict cannot see. Order matters for `params()`: call the parent last when it reads params you set, first when you use what it builds, and extend its parent instead if its work is unwanted.
 
 ```php
-// ❌
-public function params(&$p) {
+// ❌ Component::params() never runs, so the template has no element
+public function params (&$p) {
     $p['total'] = $p['order']->get_total();
 }
 
 // ✅
-public function params(&$p) {
+public function params (&$p) {
     $p['total'] = $p['order']->get_total();
     parent::params($p);
 }
 ```
-
-### Always call `parent::__construct()` when overriding the constructor
-
-```php
-// ❌
-public function __construct($params = []) {
-    $this->custom_setup();
-}
-
-// ✅
-public function __construct($params = []) {
-    parent::__construct($params);
-    $this->custom_setup();
-}
-```
-
-### Always call `parent::static_init()` when overriding it
-
-`View::static_init()` registers the class in `$loaded_views`. Skip it and the
-view is never registered — for a `Page_View`, the resolver silently stops
-selecting it and some other view renders instead.
-
-```php
-// ❌ View unregisters itself
-public static function static_init () {
-    add_action('template_redirect', [static::class, 'do_thing']);
-}
-
-// ✅
-public static function static_init () {
-    parent::static_init();
-    add_action('template_redirect', [static::class, 'do_thing']);
-}
-```
-
-### Child views must re-list parent merge keys — they don't accumulate
-
-```php
-// ❌
-class Parent_View extends View {
-    protected static $merge = ['classes'];
-}
-class Child_View extends Parent_View {
-    protected static $merge = ['styles'];
-}
-
-// ✅
-class Child_View extends Parent_View {
-    protected static $merge = ['classes', 'styles'];
-}
-```
-
-### `$required` on a non-null default is inert — it is a null check, not an "is filled" check
-
-For a non-DI key, `required()` tests `is_null()` only. A default of `''` (or `0`, `[]`) is never null, so the check can only fail when a caller explicitly passes `null`. Reach for `condition()` when the view means "must have a usable value" — the case that bites is ACF and form input, which yield `''` for an unfilled field, not `null`.
-
-```php
-// ❌ Never fires. An empty ACF text field renders an empty heading.
-protected static $defaults = ['name' => ''];
-protected static $required = ['name'];
-
-// ✅ Gate emptiness where it belongs
-protected static $defaults = ['name' => ''];
-
-public function condition (): bool {
-    return trim((string) $this['name']) !== '';
-}
-```
-
-The `is_null()` check is deliberate — `empty()` would reject a legitimate `0`, `false` or `'0'`. See [VIEW_SYSTEM.md#required](./VIEW_SYSTEM.md#required).
 
 ### Don't guard a DI-backed required param with `instanceof`
 
@@ -417,6 +349,8 @@ public function view () {
     ?><div class="x"><?= esc_html($this['title']) ?></div><?php
 }
 ```
+
+Strict mode throws when the prepare phase (`pre_validate()`, `params()`, `validate()`) emits output or leaves a buffer open. The balanced `ob_start()` … `ob_get_clean()` above is invisible to it, which is why this entry stays.
 ---
 
 ## Query_Manager / Digitalis_Query
@@ -536,10 +470,6 @@ class My_Page extends Page_View {
     }
 }
 ```
-
-### Don't set `$context` or `$post_type` on regular Views
-
-`Resolvable` properties only work on `Layout` and `Page_View` subclasses.
 
 ### Don't set `$priority` when auto-specificity is sufficient
 

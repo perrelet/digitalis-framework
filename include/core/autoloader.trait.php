@@ -156,10 +156,10 @@ trait Autoloader {
         if (!$class_name = $this->autoload_declarations[$path][0] ?? '') return false;
         if (!class_exists($class_name))                                  return false;
 
-        Strict::audit($class_name);
-
         if (method_exists($class_name, 'hello'))       call_user_func([$class_name, 'hello']);
         if (method_exists($class_name, 'static_init')) call_user_func([$class_name, 'static_init']);
+
+        Strict::audit($class_name); // After static_init, so audits can see what it registered.
 
         if (is_null($instantiation)) $instantiation = $this->resolve_auto_instantiation($class_name, $path);
 
