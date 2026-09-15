@@ -161,7 +161,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Feature` | `Factory` | Hook registrar via `get_hooks()` | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin | yes |
-| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order — HPOS orders resolve via `OrderUtil` rather than `get_post_type()`, and deletion is caught on `woocommerce_delete_order` | yes |
+| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order` | yes |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
 ### REST, Blocks & Shortcodes
