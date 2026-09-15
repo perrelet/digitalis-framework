@@ -502,8 +502,8 @@ Any `$defaults` value naming a class with `get_instance()` (e.g. `'order' => Ord
 **`Resolvable::$priority = null` means auto-specificity; an integer is an absolute override.**
 Auto-specificity sums: context weight (10–40 from `$context_weights`, using the best matched context) + 10 per set `$post_type`/`$taxonomy`/`$term`. Setting `$priority` to any integer (including `0`) bypasses auto-specificity entirely.
 
-**`Query_Profile` subclasses must be instantiated at boot to register.**
-Defining the class is not enough — call `My_Profile::get_instance()` during plugin initialisation.
+**`Query_Profile` subclasses register themselves when walked.**
+A concrete subclass in a directory the app walks is instantiated by the autoloader and registers; strict throws at `wp_loaded` for any declared subclass that has not (an `.abstract.`-named or `_dir/` file, a manual `require`). Strict also throws on `execute()` of an already-applied query and on `_profiles` / `_suppress` set on the main query.
 
 **Use `static::` not `self::` for inherited static calls.**
 `self::` binds at definition time and breaks in subclasses.

@@ -398,7 +398,7 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 | `get_tax_block()` | `public &get_tax_block(array $path): mixed` | Return reference to `tax_query` block at path. |
 | `upsert_meta_query()` | `public upsert_meta_query(mixed $match, array $new_block, string $key = 'key', string $compare = '='): static` | Update existing clause or append. |
 | `upsert_tax_query()` | `public upsert_tax_query(mixed $match, array $new_block, string $key = 'taxonomy', string $compare = '='): static` | Update existing clause or append. |
-| `get_stamp()` | `public get_stamp(): array` | Return `(array) $this->get('digitalis')` — the `Query_Manager` stamp. |
+| `get_stamp()` | `public get_stamp(): array` | Return the `digitalis` stamp written by `Query_Manager`, or `[]` when unstamped. |
 | `make_query()` | `public make_query(array $overrides = []): WP_Query` | Produce a bare `WP_Query` with `query_vars` set. No DB call. |
 | `count()` | `public count(): int` | Number of vars set. |
 | `getIterator()` | `public getIterator(): Traversable` | For `foreach`. |
@@ -419,7 +419,7 @@ class Query_Manager extends Singleton
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `register()` | `public register(Query_Profile $profile): static` | Add a profile to the registry. |
-| `apply()` | `public apply(WP_Query $wp_query): array` | Apply all matching profiles to a query. Returns `[$vars, $mods]`. Idempotent — skips if already stamped. |
+| `apply()` | `public apply(WP_Query $wp_query): array` | Apply all matching profiles to a query. Returns `[$vars, $mods]`. Idempotent: skips once the stamp carries `applied`; `execute()` throws under strict. |
 | `execute()` | `public execute(WP_Query $wp_query, array $stamp_merge = []): array` | Apply profiles and execute the query. Returns posts array. |
 | `get_context()` | `public get_context(): string` | Returns detected request context: `cli`, `cron`, `rest`, `ajax`, `admin`, `front`. |
 | `pre_get_posts()` | `public pre_get_posts(WP_Query $wp_query): void` | WordPress hook handler — stamps and applies profiles to the main query. |

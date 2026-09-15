@@ -262,11 +262,11 @@ The `write()` method creates the directory automatically via `wp_mkdir_p()` if i
 
 ## Query_Vars
 
-> **Non-obvious:** `merge()` does smart array-combining — use `overwrite()` for unconditional replacement. Always call `make_query()` before passing to `Query_Manager::execute()`. Paths returned by `find_*_path()` are invalidated if you structurally change the query array after retrieving them.
+> **Non-obvious:** `merge()` does smart array-combining — use `overwrite()` for unconditional replacement. Always call `make_query()` before passing to `Query_Manager::execute()`. Paths returned by `find_*_path()` are invalidated if you structurally change the query array after retrieving them. Strict mode throws on `execute()` of an already-applied query, on `_profiles` / `_suppress` on the main query, and on `find_meta_query()` / `find_tax_query()`.
 
 Fluent builder for WordPress query arguments with smart merging and WP quirk handling.
 
-**Location:** `framework/include/objects/query-vars.class.php`
+**Location:** `framework/include/query/query-vars.class.php`
 
 Implements `ArrayAccess`, `IteratorAggregate`, `JsonSerializable`, `Countable`.
 
@@ -505,7 +505,7 @@ $wp_query = $qv->make_query(['posts_per_page' => 5]);
 The `digitalis` query var is reserved for framework metadata. Read it as an array:
 
 ```php
-$stamp = $qv->get_stamp();  // (array) $qv->get('digitalis')
+$stamp = $qv->get_stamp();  // the 'digitalis' array, or [] when unstamped
 ```
 
 ### Real-World Usage Examples

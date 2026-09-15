@@ -23,6 +23,8 @@ require LATTICE_PATH . 'compat/digitalis-hooks.php';
     ->use_classmap(LATTICE_PATH . '.classmap.php')
     ->autoload(LATTICE_PATH . 'include', true, 'php', $lattice_loaded, false);
 
+if (Lattice\Strict::enabled()) Lattice\Query_Manager::strict_hooks();
+
 add_action('plugins_loaded', function () {
 //add_action('woocommerce_loaded', function () {
 

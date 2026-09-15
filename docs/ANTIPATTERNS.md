@@ -91,20 +91,6 @@ class My_Post extends Post {
 
 ## Query_Vars
 
-### `find_meta_query()` does not exist — use the two-step path pattern
-
-```php
-// ❌
-$meta =& $qv->find_meta_query('status');
-$meta['value'] = 'active';
-
-// ✅
-$path = $qv->find_meta_query_path('status');
-if ($path !== null) {
-    $qv->get_meta_block($path)['value'] = 'active';
-}
-```
-
 ### Upsert is safer than find + modify for add-or-update
 
 ```php
@@ -141,42 +127,17 @@ $qv->get_meta_block($qv->find_meta_query_path('status'))['value'] = 'updated';
 
 ## Query_Profile
 
-### `Query_Profile` subclasses must be instantiated at boot to register
+### Query dispatch has three strict checks
+
+A concrete `Query_Profile` subclass registers itself when the autoloader walks it (Factory subclasses are instantiated through `get_instance()`); at `wp_loaded` strict throws for any declared subclass that never registered (an `.abstract.`-named or `_dir/` file, a manual `require`, a `lattice.class` redirect, or a profile constructed after `wp_loaded`, the one false positive). `Query_Manager::execute()` throws when the query's stamp already carries `applied`: a second `execute()` on the same object, or `query_vars` copied from an executed query; drop the stamp after copying (`$qv->remove('digitalis')`) or build a fresh query with `make_query()`. `_profiles` / `_suppress` on the main query throw, because profile selection is disabled there: the main query takes ambient and baseline profiles only, so gate them in `condition()` and select or suppress on programmatic queries through `execute()`. `find_meta_query()` and `find_tax_query()` do not exist; the two-step path pattern is `find_meta_query_path()` then `get_meta_block($path)`, and strict says so at the call.
 
 ```php
-// ❌
-class My_Profile extends Query_Profile {}
+// ❌ The copied stamp says "applied", so no profile runs and strict throws
+$qv = new Query_Vars($wp_query->query_vars);
+$posts = Query_Manager::get_instance()->execute($qv->make_query());
 
 // ✅
-My_Profile::get_instance();
-```
-
-### Don't call `execute()` twice on the same `WP_Query` object
-
-`execute()` stamps the query on first run and skips profiles on subsequent calls.
-
-```php
-// ❌
-$posts = Query_Manager::get_instance()->execute($wp_query);
-$posts = Query_Manager::get_instance()->execute($wp_query); // no-op
-
-// ✅
-$posts = Query_Manager::get_instance()->execute((new Query_Vars([...]))->make_query());
-```
-
-### `_profiles` / `_suppress` are ignored on the main WordPress query
-
-`allow_profile_select` is `false` on the main query.
-
-```php
-// ❌
-add_action('pre_get_posts', function ($q) {
-    $q->set('_profiles', [Featured_Profile::class]);
-});
-
-// ✅
-$qv = new Query_Vars(['post_type' => 'project']);
-$qv->set('_profiles', [Featured_Profile::class]);
+$qv = (new Query_Vars($wp_query->query_vars))->remove('digitalis');
 $posts = Query_Manager::get_instance()->execute($qv->make_query());
 ```
 ---

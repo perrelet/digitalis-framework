@@ -25,8 +25,8 @@ This document outlines the coding standards and best practices for developing wi
 
 ### PHP Version
 
-- **Minimum:** PHP 7.4
-- **Recommended:** PHP 8.0+
+- **Minimum:** PHP 8.0 (`mixed`, `str_starts_with`, `array_is_list` polyfilled)
+- **Recommended:** PHP 8.2+
 
 ### PSR Compliance
 

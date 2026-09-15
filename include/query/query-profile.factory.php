@@ -176,7 +176,9 @@ class Query_Profile extends Factory {
 
     protected function get_stamp ($wp_query) {
 
-        return (array) $wp_query->get('digitalis');
+        $stamp = $wp_query->get('digitalis');
+
+        return is_array($stamp) ? $stamp : [];
 
     }
 

@@ -57,6 +57,8 @@ class Query_Manager extends Singleton {
 
         if (!$this->is_main($wp_query)) return;
 
+        if (Strict::enabled()) self::strict_main_selection($wp_query);
+
         $wp_query->set('_profiles', null);
         $wp_query->set('_suppress', null);
 
@@ -130,13 +132,21 @@ class Query_Manager extends Singleton {
 
         $this->mark_applied($wp_query, $applied);
 
-        foreach ($vars->to_array() as $key => $value) $wp_query->set($key, $value);
+        foreach ($vars->to_array() as $key => $value) {
+
+            if ($key === self::STAMP_KEY) continue; // $vars holds the pre-apply stamp; writing it back would erase `applied`.
+
+            $wp_query->set($key, $value);
+
+        }
 
         return [$vars, $mods];
 
     }
 
     public function execute (WP_Query $wp_query, $stamp_merge = []) {
+
+        if (Strict::enabled() && $this->is_applied($wp_query)) Strict::fail(static::class, 'execute() received a WP_Query whose stamp says profiles were already applied (a second execute() on the same object, or query_vars copied from an executed query), so this run skips every profile.', "Drop the stamp after copying vars from an executed query (\$qv->remove('digitalis') or unset(\$wp_query->query_vars['digitalis'])), or build a fresh query with make_query().");
 
         $id       = $this->ensure_query_id($wp_query);
         $explicit = (bool) $wp_query->get('_profiles') || (bool) $wp_query->get('_suppress');
@@ -174,7 +184,9 @@ class Query_Manager extends Singleton {
 
     protected function get_stamp ($wp_query) {
 
-        return (array) $wp_query->get(self::STAMP_KEY);
+        $stamp = $wp_query->get(self::STAMP_KEY);
+
+        return is_array($stamp) ? $stamp : [];
 
     }
 
@@ -211,8 +223,7 @@ class Query_Manager extends Singleton {
 
     protected function is_applied ($wp_query) {
 
-        $stamp = $this->get_stamp($wp_query);
-        return !empty($stamp['applied']);
+        return array_key_exists('applied', $this->get_stamp($wp_query)); // One apply per query object, even when no profile matched.
 
     }
 
@@ -251,6 +262,55 @@ class Query_Manager extends Singleton {
 
         return (bool) $wp_query->get(Post_Type::AJAX_Flag);
     
+    }
+
+    // Strict
+
+    // Registered by load.php, not the constructor: the manager is built lazily by the first profile, and a site whose profiles never register would never build it.
+    public static function strict_hooks () {
+
+        add_action('pre_get_posts', [self::class, 'strict_main_selection'], PHP_INT_MAX);
+        add_action('wp_loaded',     fn () => self::get_instance()->strict_audit_profiles());
+
+    }
+
+    public static function strict_main_selection ($wp_query) {
+
+        if (!$wp_query->is_main_query()) return;
+
+        $set = array_filter(['_profiles' => $wp_query->get('_profiles'), '_suppress' => $wp_query->get('_suppress')]);
+
+        if (!$set) return;
+
+        Strict::fail(self::class, 'the main query was given ' . json_encode($set) . ', but profile selection is disabled there, so it is ignored.', 'The main query takes ambient and baseline profiles only (gate them in condition()); select or suppress on programmatic queries through execute().');
+
+    }
+
+    // Registered profiles are in $this->profiles; anything declared but absent never applies. A profile registered after wp_loaded is the known false positive.
+    public function strict_audit_profiles () {
+
+        $registered = array_map(fn ($profile) => $profile::class, $this->profiles);
+
+        Strict::begin_walk();
+
+        try {
+
+            foreach (get_declared_classes() as $class) {
+
+                if (!is_subclass_of($class, Query_Profile::class))    continue;
+                if ((new \ReflectionClass($class))->isAbstract())      continue;
+                if (in_array($class, $registered, true))              continue;
+
+                Strict::violation($class, 'is declared but never registered with Query_Manager, so it never applies.', "Let the autoloader walk it (concrete, not .abstract., not under _dir/) or call {$class}::get_instance() at boot.");
+
+            }
+
+        } finally {
+
+            Strict::end_walk(true);
+
+        }
+
     }
 
 }

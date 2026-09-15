@@ -354,16 +354,10 @@ Profiles are sorted descending by `$priority` before application. Higher number 
 ## 7. Potential Pitfalls
 
 ### Profile not instantiated
-```php
-// Profile exists but was never constructed — Query_Manager never sees it
-class My_Profile extends Query_Profile { ... }
-
-// Fix: ensure it's created during boot
-My_Profile::get_instance();
-```
+A concrete subclass in a walked directory is instantiated by the autoloader and registers itself. One that is not walked (an `.abstract.`-named or `_dir/` file, a manual `require`) never reaches `Query_Manager`; strict throws for it at `wp_loaded`.
 
 ### Using execute() on a query that was already applied
-`Query_Manager::apply()` checks `is_applied()` and returns early if the stamp contains `applied`. Calling `execute()` twice on the same `WP_Query` object does not re-apply profiles.
+`Query_Manager::apply()` checks `is_applied()` and returns early once the stamp carries `applied` (persisted since v1; before that the write-back erased it and a second `execute()` re-applied and duplicated clauses). Calling `execute()` twice on the same `WP_Query` object, or on `query_vars` copied from an executed query, does not re-apply profiles and throws under strict; drop the stamp after copying.
 
 ### Forgetting make_query()
 ```php

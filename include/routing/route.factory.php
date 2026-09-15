@@ -329,16 +329,7 @@ class Route extends Factory {
 
         if ($name === 'get_param') Strict::fail(static::class, 'has no get_param(); the request does.', 'Read $request->get_param() from the WP_REST_Request handed to permission() and the handler.');
 
-        if (method_exists($this, $name)) {
-
-            $method = new \ReflectionMethod($this, $name);
-            $scope  = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] ?? null;
-
-            throw new \Error('Call to ' . ($method->isPrivate() ? 'private' : 'protected') . " method {$method->class}::{$name}() from " . ($scope ? "scope {$scope}" : 'global scope'));
-
-        }
-
-        throw new \Error('Call to undefined method ' . static::class . "::{$name}()");
+        Strict::undefined_method($this, $name);
 
     }
 

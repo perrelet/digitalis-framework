@@ -191,7 +191,24 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     public function get_stamp () {
 
-        return (array) $this->get('digitalis');
+        $stamp = $this->get('digitalis');
+
+        return is_array($stamp) ? $stamp : [];
+
+    }
+
+    // Falls through to PHP's own errors so a typo is never hidden. Note is_callable([$qv, x]) is now true for any x.
+    public function __call ($name, $args) {
+
+        if (in_array($name, ['find_meta_query', 'find_tax_query'], true)) {
+
+            $block = ($name === 'find_meta_query') ? 'meta' : 'tax';
+
+            Strict::fail(static::class, "has no {$name}(); a clause is reached in two steps.", "\$path = \$qv->{$name}_path(\$match); if (\$path !== null) \$qv->get_{$block}_block(\$path)['value'] = ...; or upsert_{$block}_query() to add-or-update.");
+
+        }
+
+        Strict::undefined_method($this, $name);
 
     }
 

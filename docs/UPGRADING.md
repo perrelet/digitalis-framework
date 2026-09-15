@@ -47,3 +47,22 @@ Measured on the live consumers before release:
 | study-hub | 2 routes | `Plan_Page_Route` and `Subscribe_Route` define `get_params()`, so their required arguments were never registered; `Plan_Page_Route` also carries `$rest_args` and `$html_prefix` and needs the html feature loaded |
 | courses | 1 | `Products_Route` declares a dead `$rest_args = []` |
 | d-pace, eventropy, mycelium, somm | 0 | |
+
+### Queries
+
+| Violation | Mechanical fix |
+|---|---|
+| A concrete `Query_Profile` subclass is declared but never registered (checked at `wp_loaded`) | Put it in a directory the app walks, or call `Its_Class::get_instance()` at boot |
+| `execute()` on a `WP_Query` whose stamp already carries `applied` (a second `execute()`, or `query_vars` copied from an executed query) | `$qv->remove('digitalis')` after copying the vars, or build a fresh query with `make_query()` |
+| `_profiles` / `_suppress` set on the main query | Gate ambient and baseline profiles in `condition()`; select or suppress on programmatic queries through `execute()` |
+| `find_meta_query()` / `find_tax_query()` (throw at the call) | `find_meta_query_path()` then `get_meta_block($path)`, or `upsert_meta_query()` |
+
+Behaviour change behind the second check: the `applied` stamp is now persisted, so a re-executed or stamp-copied query skips profiles instead of re-applying them and duplicating `meta_query` / `tax_query` blocks. Any `posts_clauses` mod a profile registered is not re-registered on the skipped run.
+
+Measured on the live consumers before release:
+
+| Plugin | Violations | What |
+|---|---|---|
+| mycelium | 1 | `Result::query()` copies the executed main query's vars, stamp included, on archive pages. Without `remove('digitalis')` the `Stories_Profile` star-first ordering (a `posts_clauses` mod) silently disappears on story archives, so the consumer change must ship with the framework bump |
+| eventropy | 1 | `Event::query()` copies the executed main query's vars the same way; its profile is vars-only, so only the strict throw is visible |
+| courses, d-pace, somm, study-hub | 0 | |

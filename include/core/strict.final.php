@@ -55,6 +55,22 @@ final class Strict {
 
     }
 
+    // For a __call fall-through: reproduces PHP's own text for an undefined, protected or private method so the magic hides nothing.
+    public static function undefined_method (object $object, string $name) : void {
+
+        if (method_exists($object, $name)) {
+
+            $method = new ReflectionMethod($object, $name);
+            $scope  = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3)[2]['class'] ?? null;
+
+            throw new \Error('Call to ' . ($method->isPrivate() ? 'private' : 'protected') . " method {$method->class}::{$name}() from " . ($scope ? "scope {$scope}" : 'global scope'));
+
+        }
+
+        throw new \Error('Call to undefined method ' . get_class($object) . "::{$name}()");
+
+    }
+
     public static function was_walked (string $class) : bool {
 
         return isset(self::$walked[$class]);
