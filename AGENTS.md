@@ -481,11 +481,8 @@ Query_Manager::get_instance()->execute(\WP_Query $q): array
 
 Full context and code examples for all of these are in [ANTIPATTERNS.md](./docs/ANTIPATTERNS.md).
 
-**Route and ACF_Block properties must be non-static instance properties.**
-`Factory::get_cache_key()` reads `$this->$property`. A `protected static` override creates a separate static slot that is never read.
-
-**Route: no `$method` property; override `permission()` not `permission_callback()`.**
-`$definition = ['methods' => 'POST']` is the correct way to set HTTP method. `$namespace` must include the version: `'my-plugin/v1'`.
+**Route: `$definition = ['methods' => 'POST']`, `$args` for the argument map, `$namespace` with the version (`'my-plugin/v1'`), override `permission()` not `permission_callback()`, read params from `$request`.**
+Strict mode throws at boot for a `$method` or `$version` property, `permission_callback()` and the old `get_params()` API, and at the call for `$this->get_param()`. Redeclaring a config property as static is a PHP compile error.
 
 **`query()` returns a plain `static[]` array — no fluent builder.**
 `Post::query()->where_meta()` does not exist. Pass `&$wp_query` as the second argument to access `found_posts`.

@@ -28,3 +28,22 @@ Measured on the live consumers before release:
 | eventropy, mycelium, somm | 0 | |
 
 The `Search_Item` and `Price_Boxes` fixes change rendered output because the parent's `params()` starts to apply. Check the page, and extend the grandparent instead if the parent's work is not wanted.
+
+### Routes
+
+| Violation | Mechanical fix |
+|---|---|
+| `$method` or `$methods` property | `$definition = ['methods' => 'POST']` |
+| `$version` property | Put it in `$namespace`: `'my-plugin/v1'` |
+| `permission_callback()` method | Rename it `permission(WP_REST_Request $request)` |
+| `get_params()`, `get_rest_args()` or `register_api_routes()` (the removed `Deprecated_Route` API) | Move the argument map to `protected $args`, or override public `get_args()` when computed; `$definition` for the rest of `register_rest_route`'s arguments |
+| `$rest_args` or `$html_prefix` property | Delete `$rest_args` (see above). HTML is served at `wp-html/` once the app loads the `lattice/html-rest-api` feature; `$format = 'html'` then points `get_url()` there |
+| `$this->get_param()` (throws at the call) | Read `$request->get_param()` from the request handed to `permission()` and the handler |
+
+Measured on the live consumers before release:
+
+| Plugin | Violations | What |
+|---|---|---|
+| study-hub | 2 routes | `Plan_Page_Route` and `Subscribe_Route` define `get_params()`, so their required arguments were never registered; `Plan_Page_Route` also carries `$rest_args` and `$html_prefix` and needs the html feature loaded |
+| courses | 1 | `Products_Route` declares a dead `$rest_args = []` |
+| d-pace, eventropy, mycelium, somm | 0 | |

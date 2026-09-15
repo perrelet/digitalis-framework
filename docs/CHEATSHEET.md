@@ -631,7 +631,7 @@ echo new Table([
 
 ## Admin
 
-> **Non-obvious:** `Admin_Page` configuring properties (`$slug`, `$title`, `$menu_title`, `$capability`, `$icon`, `$position`, `$parent`) must be **non-static instance properties** — same reason as `Route`. Override `callback()` to render the page body — the framework already wraps it in `<div class="wrap">`.
+> **Non-obvious:** `Admin_Page` configuring properties (`$slug`, `$title`, `$menu_title`, `$capability`, `$icon`, `$position`, `$parent`) must be **non-static instance properties**. Override `callback()` to render the page body — the framework already wraps it in `<div class="wrap">`.
 
 ### Admin Page
 
@@ -718,7 +718,7 @@ class Projects_Table extends Posts_Table {
 
 ## REST Routes
 
-> **Non-obvious:** All configuring properties (`$route`, `$namespace`, `$definition`) must be **non-static** instance properties. Override `permission(WP_REST_Request $request)`, not `permission_callback()`. For non-GET routes use `$definition = ['methods' => 'POST']` — there is no `$method` property. `$namespace` includes the version: `'my-plugin/v1'`.
+> **Non-obvious:** Override `permission(WP_REST_Request $request)`, not `permission_callback()`. For non-GET routes use `$definition = ['methods' => 'POST']` — there is no `$method` property. The argument map is `$args` (override public `get_args()` when computed); `get_params()` belongs to the removed `Deprecated_Route`. `$namespace` includes the version: `'my-plugin/v1'`. Strict mode throws at boot for each of these.
 
 ### Basic Route
 
@@ -731,11 +731,11 @@ class Projects_Route extends Route {
 
     protected $route = 'projects';
 
-    public function permission(): bool {
+    public function permission(\WP_REST_Request $request): bool {
         return User::inst()->can('view_projects');
     }
 
-    public function callback(): array {
+    public function callback(\WP_REST_Request $request): array {
         $projects = Project::query(['posts_per_page' => 20]);
 
         return array_map(fn($p) => [
@@ -757,22 +757,20 @@ class Project_Route extends Route {
 
     protected $route = 'projects/(?P<id>\d+)';
 
-    protected function get_params() {
-        return [
-            'id' => [
-                'required' => true,
-                'type'     => 'integer',
-                'class'    => Project::class,  // Enable DI
-            ],
-        ];
-    }
+    protected $args = [
+        'id' => [
+            'required' => true,
+            'type'     => 'integer',
+            'class'    => Project::class,  // Enable DI
+        ],
+    ];
 
     // $project injected from route param 'id'
-    public function permission(Project $project = null): bool {
+    public function permission(\WP_REST_Request $request, ?Project $project = null): bool {
         return $project && User::inst()->can('view_project', $project->get_id());
     }
 
-    public function callback(Project $project = null): array {
+    public function callback(\WP_REST_Request $request, ?Project $project = null): array {
         return $project->to_array();
     }
 }
@@ -786,14 +784,12 @@ class Create_Project_Route extends Route {
     protected $route      = 'projects';
     protected $definition = ['methods' => 'POST'];
 
-    protected function get_params() {
-        return [
-            'title'   => ['required' => true, 'type' => 'string'],
-            'account' => ['required' => true, 'type' => 'integer'],
-        ];
-    }
+    protected $args = [
+        'title'   => ['required' => true, 'type' => 'string'],
+        'account' => ['required' => true, 'type' => 'integer'],
+    ];
 
-    public function permission(): bool {
+    public function permission(\WP_REST_Request $request): bool {
         return User::inst()->can('create_projects');
     }
 

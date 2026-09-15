@@ -261,7 +261,7 @@ REST routes inject models into `permission()` and `callback()` methods.
 
 ### How It Works
 
-1. Define params with `'class'` key in `get_params()`
+1. Define args with a `'class'` key in `$args` (or public `get_args()` when computed)
 2. Type-hint method parameters
 3. Framework resolves via `request_inject()`
 
@@ -271,15 +271,13 @@ REST routes inject models into `permission()` and `callback()` methods.
 class Order_Route extends Route {
     protected $route = 'order/(?P<order>\d+)';
 
-    protected function get_params() {
-        return [
-            'order' => [
-                'required'          => true,
-                'sanitize_callback' => 'absint',
-                'class'             => Order::class,  // Enable injection
-            ],
-        ];
-    }
+    protected $args = [
+        'order' => [
+            'required'          => true,
+            'sanitize_callback' => 'absint',
+            'class'             => Order::class,  // Enable injection
+        ],
+    ];
 }
 ```
 
@@ -607,11 +605,9 @@ protected static $skip_inject = ['no_inject'];  // Disable for specific keys
 ### Route Injection
 
 ```php
-protected function get_params() {
-    return [
-        'param' => ['class' => Model::class],  // Enable injection
-    ];
-}
+protected $args = [
+    'param' => ['class' => Model::class],  // Enable injection
+];
 public function callback(Request $request, ?Model $model = null) {}
 ```
 

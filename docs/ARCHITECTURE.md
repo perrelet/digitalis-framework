@@ -578,14 +578,12 @@ $view['user'];   // User instance
 
 ```php
 class Order_Route extends Route {
-    protected function get_params() {
-        return [
-            'order' => [
-                'required' => true,
-                'class'    => Order::class,  // Enable injection
-            ],
-        ];
-    }
+    protected $args = [
+        'order' => [
+            'required' => true,
+            'class'    => Order::class,  // Enable injection
+        ],
+    ];
 
     // $order is automatically injected from request param
     public function permission(WP_REST_Request $request, ?Order $order = null) {

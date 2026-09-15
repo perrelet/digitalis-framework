@@ -6,68 +6,20 @@ Patterns that look correct but are wrong in this framework. Each entry explains 
 
 ## Route
 
-### Properties must be non-static instance properties
+### Route reads a fixed contract and strict mode enforces it
 
-`Factory::get_cache_key()` reads `$this->$property` (non-static). Static properties create separate slots; `$this->route` resolves to the parent's default.
-
-```php
-// ❌
-protected static $route     = 'projects';
-protected static $namespace = 'my-plugin/v1';
-
-// ✅
-protected $route     = 'projects';
-protected $namespace = 'my-plugin/v1';
-```
-
-### No `$method` or `$methods` property
+`Route` reads `$namespace` (with the version: `'my-plugin/v1'`), `$route`, `$definition` (the arguments to `register_rest_route`, `['methods' => 'POST']` for a non-GET route), `$args` (its `'args'` map; override public `get_args()` when computed), `$view`, `$format`, `$handler` and `$require_nonce`. It calls `permission(WP_REST_Request $request)` and the handler, `callback()` by default; params come from `$request->get_param()`. Strict mode throws at boot for a `$method`, `$methods` or `$version` property, a `permission_callback()` method and the old `Deprecated_Route` API (`$rest_args`, `$html_prefix`, `get_params()`, `get_rest_args()`, `register_api_routes()`), and at the call for `$this->get_param()`. Redeclaring a config property as static is a PHP compile error, not a silent slot; the same holds for `ACF_Block`.
 
 ```php
-// ❌
-protected $method  = 'POST';
-protected $methods = 'POST';
+// ❌ Nothing here reaches register_rest_route
+protected $method = 'POST';
+protected function get_params () { return ['id' => ['required' => true]]; }
+public function permission_callback () { return current_user_can('edit_posts'); }
 
 // ✅
 protected $definition = ['methods' => 'POST'];
-```
-
-### Override `permission()` and `callback()`, not `permission_callback()`
-
-Framework wraps `permission_callback` — override `permission()` and `callback()` instead.
-
-```php
-// ❌
-public function permission_callback(): bool { ... }
-public function callback(): \WP_REST_Response { ... }
-
-// ✅
-public function permission(\WP_REST_Request $request): bool { ... }
-public function callback(\WP_REST_Request $request): \WP_REST_Response { ... }
-```
-
-### Access params from `$request`, not `$this`
-
-```php
-// ❌
-public function permission(\WP_REST_Request $request): bool {
-    return current_user_can('edit_post', $this->get_param('id'));
-}
-
-// ✅
-public function permission(\WP_REST_Request $request): bool {
-    return current_user_can('edit_post', $request->get_param('id'));
-}
-```
-
-### `$namespace` includes the version — no separate `$version` property
-
-```php
-// ❌
-protected $namespace = 'my-plugin';
-protected $version   = 'v1';
-
-// ✅
-protected $namespace = 'my-plugin/v1';
+protected $args       = ['id' => ['required' => true]];
+public function permission (\WP_REST_Request $request) { return current_user_can('edit_posts'); }
 ```
 ---
 
@@ -98,27 +50,6 @@ $total = Order::query(['posts_per_page' => -1])->total;
 $count = count(Project::query(['posts_per_page' => -1]));
 $posts = Project::query(['posts_per_page' => 10], $wp_query);
 $found = $wp_query->found_posts;
-```
----
-
-## ACF_Block
-
-### Properties must be non-static instance properties
-
-Framework accesses these as instance properties.
-
-```php
-// ❌
-protected static $slug     = 'testimonial';
-protected static $view     = Testimonial_View::class;
-protected static $block    = ['title' => 'Testimonial', 'icon' => 'format-quote'];
-protected static $defaults = ['quote' => '', 'author' => ''];
-
-// ✅
-protected $slug     = 'testimonial';
-protected $view     = Testimonial_View::class;
-protected $block    = ['title' => 'Testimonial', 'icon' => 'format-quote'];
-protected $defaults = ['quote' => '', 'author' => ''];
 ```
 ---
 

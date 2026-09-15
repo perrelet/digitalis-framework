@@ -289,7 +289,9 @@ class Route extends Factory {
     }
 
     protected function request_inject (WP_REST_Request $request, $method) {
-    
+
+        if (!method_exists($this, $method)) return new WP_Error('route-handler-missing', "Handler method '{$method}' does not exist on " . static::class, ['status' => 500]);
+
         $params = $request->get_params();
         $values = [];
 
@@ -318,6 +320,62 @@ class Route extends Factory {
 
         return static::inject([$this, $method], [$request], $values);
     
+    }
+
+    // Strict
+
+    // Falls through to PHP's own errors so a typo is never hidden; strict only adds the get_param() hint. Note is_callable([$route, x]) is now true for any x.
+    public function __call ($name, $args) {
+
+        if ($name === 'get_param') Strict::fail(static::class, 'has no get_param(); the request does.', 'Read $request->get_param() from the WP_REST_Request handed to permission() and the handler.');
+
+        if (method_exists($this, $name)) {
+
+            $method = new \ReflectionMethod($this, $name);
+            $scope  = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] ?? null;
+
+            throw new \Error('Call to ' . ($method->isPrivate() ? 'private' : 'protected') . " method {$method->class}::{$name}() from " . ($scope ? "scope {$scope}" : 'global scope'));
+
+        }
+
+        throw new \Error('Call to undefined method ' . static::class . "::{$name}()");
+
+    }
+
+    public static function strict_audit (string $class) {
+
+        $reflection = new \ReflectionClass($class);
+        $class      = $reflection->getName();
+
+        foreach (['method', 'methods'] as $prop) {
+
+            if (self::declares_prop($reflection, $class, $prop)) Strict::violation($class, "declares \${$prop}, which Route never reads.", "Move it to \$definition = ['methods' => ...].");
+
+        }
+
+        if (self::declares_prop($reflection, $class, 'version'))               Strict::violation($class, "declares \$version, which Route never reads.", "Put the version in \$namespace: 'my-plugin/v1'.");
+        if (self::declares_method($reflection, $class, 'permission_callback')) Strict::violation($class, "defines permission_callback(), which Route never calls; permission_wrap() calls permission().", "Rename it permission(WP_REST_Request \$request).");
+        if (self::declares_prop($reflection, $class, 'rest_args'))             Strict::violation($class, "declares \$rest_args, a Deprecated_Route property Route never reads.", "\$definition carries register_rest_route's arguments and \$args its 'args' map.");
+        if (self::declares_prop($reflection, $class, 'html_prefix'))           Strict::violation($class, "declares \$html_prefix, a Deprecated_Route property Route never reads.", "HTML is served at wp-html/ once the app loads the 'lattice/html-rest-api' feature; \$format = 'html' then points get_url() there.");
+
+        foreach (['get_params', 'get_rest_args', 'register_api_routes'] as $method) {
+
+            if (self::declares_method($reflection, $class, $method)) Strict::violation($class, "defines {$method}(), a Deprecated_Route method Route never calls, so nothing it returns reaches register_rest_route().", "Route registers itself from protected \$args (register_rest_route's 'args' map; override public get_args() when computed) and \$definition.");
+
+        }
+
+    }
+
+    protected static function declares_prop ($reflection, $class, $name) {
+
+        return $reflection->hasProperty($name) && ($reflection->getProperty($name)->getDeclaringClass()->name === $class);
+
+    }
+
+    protected static function declares_method ($reflection, $class, $name) {
+
+        return $reflection->hasMethod($name) && ($reflection->getMethod($name)->getDeclaringClass()->name === $class);
+
     }
 
 }
