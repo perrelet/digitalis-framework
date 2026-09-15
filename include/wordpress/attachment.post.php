@@ -126,6 +126,27 @@ class Attachment extends Post {
     
     }
 
+    public function get_focal_point () {
+
+        $x = $this->get_field('focal_x');
+        $y = $this->get_field('focal_y');
+
+        if (!is_numeric($x) && !is_numeric($y)) return null;
+
+        return [is_numeric($x) ? (float) $x : 50.0, is_numeric($y) ? (float) $y : 50.0];
+
+    }
+
+    // `full`, unlike its neighbours: a hard-cropped size reports its own ratio, not the image's
+    public function get_aspect_ratio ($size = 'full', $icon = false) {
+
+        $w = $this->get_image_width($size, $icon);
+        $h = $this->get_image_height($size, $icon);
+
+        return ($w && $h) ? ($w / $h) : null;
+
+    }
+
     public function get_image_is_resized ($size = 'medium', $icon = false) {
     
         return ($src = $this->get_image_src($size, $icon)) ? $src[3] : null;
