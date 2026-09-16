@@ -4,7 +4,7 @@ namespace Digitalis;
 
 class Updater {
 
-	protected $remote_json 		= 'https://digitaliswebdesign.com/update/digitalis.json';
+	protected $remote_json 		= false;
 	protected $plugin_slug 		= 'plugin-slug';
 	protected $plugin_base 		= 'plugin-slug/entry-file.php';
 	protected $version			= '0.0';
@@ -23,6 +23,8 @@ class Updater {
 	}
 
 	public function request () {
+
+		if (!$this->remote_json) return false;
 
 		$remote = get_transient($this->cache_key);
 
@@ -86,7 +88,7 @@ class Updater {
 			$remote
 			&& version_compare($this->version, $remote->version, '<')
 			&& (!property_exists($remote, 'requires') || version_compare($remote->requires, get_bloginfo('version'), '<='))
-			&& (!property_exists($remote, 'requires_php') || version_compare($remote->requires_php, PHP_VERSION, '<'))
+			&& (!property_exists($remote, 'requires_php') || version_compare($remote->requires_php, PHP_VERSION, '<='))
 		) {
 
 			$res 				= new \stdClass();
