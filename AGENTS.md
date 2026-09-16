@@ -15,8 +15,10 @@ This primer is a map, not the territory. Before adding files or editing framewor
 | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | File naming suffixes are load-bearing. Get them wrong and the autoloader silently skips your file — no error, no instance, just nothing. |
 | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, `parent::params()` skips, etc.). |
 | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. `new My_View([...])` over `My_View::render([...])`). |
+| [docs/VIEW_SYSTEM.md](./docs/VIEW_SYSTEM.md) | Most application code is Views. Read its **Common Confusions** — `$merge` doesn't accumulate, `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected. |
+| [docs/MODELS.md](./docs/MODELS.md) | Read its **Common Confusions** — `query()` returns a plain array not a builder, `$model->save()` over `wp_update_*`, wrap named keys in model methods. |
 
-Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The three docs above are where the framework's failure modes live.
+Skimming the primer alone produces wrongly-named files, broken subclasses, and silent no-ops. The docs above are where the framework's failure modes live.
 
 For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` with `params()` override, `Route`, `Iterator`, `Admin_Page`, …) see [docs/CHEATSHEET.md](./docs/CHEATSHEET.md).
 
@@ -159,7 +161,8 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Feature` | `Factory` | Hook registrar via `get_hooks()` | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin | yes |
-| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order — HPOS orders resolve via `OrderUtil` rather than `get_post_type()`, and deletion is caught on `woocommerce_delete_order` | yes |
+| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order` | yes |
+| `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
 ### REST, Blocks & Shortcodes
 
@@ -506,6 +509,12 @@ Auto-specificity sums: context weight (10–40 from `$context_weights`, using th
 
 **`Query_Profile` subclasses must be instantiated at boot to register.**
 Defining the class is not enough — call `My_Profile::get_instance()` during plugin initialisation.
+
+**Section vertical rhythm is `--section-py`, not a fixed `$sec-py`.**
+`.ct-section > .ct-section-inner-wrap { padding-block: var(--section-py, $sec-py) }` (`scss/core-classes.scss`). Because it's a custom property it cascades, so a template retunes every section with one declaration on its wrapper, and any single section can override it. `.merge` divides *whatever the template chose* rather than a constant — without that, a template with a tighter baseline would find `.merge` widening its gaps. Defaults to `$sec-py`, so untouched sections are unchanged. Note Oxygen writes per-section padding as `#section-X-Y > .ct-section-inner-wrap` (specificity 1,0,1,0), which still wins over this baseline.
+
+**`.merge` describes the join, not the section — it reaches forward.**
+`.ct-section.merge` halves its own `padding-bottom` *and* the `padding-top` of the next `.ct-section`, via `.merge + .ct-section .ct-section-inner-wrap` — whatever classes that next section carries. So tagging one section affects two, and a section following a merged one is pulled in whether it wants to be or not. Note the second selector is a **descendant**, so a nested `.ct-section-inner-wrap` inside the following section is also hit.
 
 **Use `static::` not `self::` for inherited static calls.**
 `self::` binds at definition time and breaks in subclasses.

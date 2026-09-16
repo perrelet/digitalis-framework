@@ -19,7 +19,6 @@ export class Digitalis_Query {
         ajax_url:               '/wp-admin/admin-ajax.php',
         action:                 'digitalis_query',
         nonce:                  false,
-        run_js:                 false,
         cache_initial_items:    true,
         auto_submit:            true,
         auto_submit_break:      false,
@@ -101,8 +100,6 @@ export class Digitalis_Query {
                 this.update_items(this.state.initial_items);
 
             }
-
-            if (this.options.run_js && event.state && event.state.hasOwnProperty('js')) eval(event.state.js);
 
             //console.log(event.state.form);
 
@@ -342,7 +339,6 @@ export class Digitalis_Query {
 
     success (data, http = null) {
 
-        if (this.options.run_js && data.hasOwnProperty('js')) eval(data.js);
         if (data.hasOwnProperty('html')) this.update_items(data.html);
 
     }
