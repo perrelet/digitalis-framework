@@ -66,3 +66,23 @@ Measured on the live consumers before release:
 | mycelium | 1 | `Result::query()` copies the executed main query's vars, stamp included, on archive pages. Without `remove('digitalis')` the `Stories_Profile` star-first ordering (a `posts_clauses` mod) silently disappears on story archives, so the consumer change must ship with the framework bump |
 | eventropy | 1 | `Event::query()` copies the executed main query's vars the same way; its profile is vars-only, so only the strict throw is visible |
 | courses, d-pace, somm, study-hub | 0 | |
+
+### Models
+
+| Violation | Mechanical fix |
+|---|---|
+| Two unrelated classes validate the same id at equal specificity (thrown at resolution) | Narrow one `validate_id()` or add a distinguishing static. A subclass already beats its ancestor and a consumer model beats the framework's, so `class Page extends \Digitalis\Post` alongside `Lattice\Page`, or `class Event extends \Eventropy\Event`, resolves without change |
+| `validate_id()` re-enters resolution (calls `get_instance()` on its own family) | Cheap checks only in `validate_id()`; resolve models after validation |
+| `static_init()` override never calls `parent::static_init()` (checked at boot) | Call `parent::static_init()` first |
+| `$post->get_type()` (throws at the call) | `get_post_type()` |
+| `save()` on an existing post inside `wp_after_insert_post` (also nested inserts, scheduled publishes, auto-drafts, REST saves) | `wp_update_post()` with the one field, or `update_meta()`; create new posts freely |
+
+Behaviour change behind the first check: resolution is now deterministic at equal specificity (descendant over ancestor, consumer over framework) instead of last-registered; the live consumer pairs measured all keep today's result.
+
+Measured on the live consumers before release:
+
+| Plugin | Violations | What |
+|---|---|---|
+| mycelium | 2 | `Mycelium\User` ties with the vendored `Eventropy\User` on every base `User` resolution (`get_author()`, `User::inst()`); make it `extends \Eventropy\User`. `Org` after_insert saves the inserted post (`save(['post_status' => 'pending_review'])`); use `wp_update_post()` with the one field |
+| eventropy (and somm through it) | 1 | `Room` and `Ticket` order items both validate a room line item (`Ticket` has no narrowing, `Order_Item` has no specificity), so room items resolve as `Ticket` today; give `Ticket::validate_id()` an exclusion for rooms |
+| courses, d-pace, study-hub | 0 | |

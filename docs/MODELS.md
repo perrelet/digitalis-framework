@@ -80,7 +80,7 @@ $user->save(['display_name' => 'Jane']);
 $term->save(['name' => 'Featured']);
 ```
 
-One narrow exception: inside a `wp_after_insert_post` callback, write only the field you're changing — see [the dedicated antipattern](./ANTIPATTERNS.md#has_wp_post-post-model--save-inside-wp_after_insert_post).
+One narrow exception: inside a `wp_after_insert_post` callback (which also wraps nested inserts, scheduled publishes, auto-drafts and REST saves), write only the field you're changing with `wp_update_post()` or `update_meta()`; strict throws on `save()` of an existing post there, because the cached instance can predate the change being saved.
 
 ### Meta and ACF — wrap named keys in model methods, never raw key strings at call sites
 
@@ -136,7 +136,7 @@ $user = User::get_instance($id);          // Account if role='account', else Use
 $post = Post::get_instance($id, false);   // Always Post, skips resolution
 ```
 
-Resolution depends on subclass `validate_id()` — keep it cheap (one `get_post_type()` call is fine; nested queries multiply across every registered subclass).
+Resolution depends on subclass `validate_id()` — keep it cheap (one `get_post_type()` call is fine; nested queries multiply across every registered subclass). At equal specificity a subclass beats its ancestor and a consumer model beats the framework's; two unrelated classes validating the same id at equal specificity are a tie and strict throws. Strict also throws when `validate_id()` re-enters resolution.
 
 ---
 

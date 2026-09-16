@@ -57,7 +57,7 @@ $found = $wp_query->found_posts;
 
 ### Keep `validate_id()` cheap — no nested queries or model instantiation
 
-Called on every registered subclass — expensive implementations multiply fast.
+Called on every registered subclass — expensive implementations multiply fast. A `validate_id()` that calls `get_instance()` on its own family recurses without end; strict throws at the re-entry.
 
 ```php
 // ❌
@@ -72,20 +72,21 @@ public static function validate_id($id) {
 }
 ```
 
-### Set at least one specificity property in every subclass
+### Unrelated subclasses must not validate the same id at equal specificity
 
-Without specificity properties, subclasses tie with their parent and may never resolve.
+At equal specificity a subclass replaces its parent for every id it validates, and a consumer model replaces the framework's default (`Lattice\Page`, `Lattice\Attachment`), so those pairs resolve deterministically. Two unrelated classes that both validate an id at the same specificity are a tie: the last registered wins, which is walk order, and strict throws naming both. Narrow one `validate_id()` or add a distinguishing static (`$post_status`, `$term`, `$post_slug` on posts).
 
 ```php
-// ❌
-class My_Post extends Post {}
+// ❌ Both validate every 'ticket' post; which one you get depends on file order
+class Ticket extends Post { protected static $post_type = 'ticket'; }
+class Room   extends Post { protected static $post_type = 'ticket'; }
 
 // ✅
-class My_Post extends Post {
-    protected static $post_type = 'my_post';
+class Ticket extends Post {
+    protected static $post_type = 'ticket';
+    public static function validate_id ($id) { return parent::validate_id($id) && get_post_meta($id, 'kind', true) !== 'room'; }
 }
 ```
-
 
 ---
 
@@ -146,13 +147,8 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 
 ### `get_type()` was removed — use `get_post_type()`
 
-```php
-// ❌
-$type = $post->get_type();
+Strict throws at the call. Models with their own `__call` (courses `Product`, somm `Teacher` and `Subscription_Post`) shadow that and forward `get_type()` to the WooCommerce product, which is the one legitimate use.
 
-// ✅
-$type = $post->get_post_type();
-```
 ---
 
 ## View
@@ -287,28 +283,6 @@ if ($user->get_onboarding_source() === 'self_registered') { ... }
 
 **Exception:** keys internal to a single class may remain as raw calls.
 
----
-
-## Has_WP_Post (Post model) — `save()` inside `wp_after_insert_post`
-
-### Don't call `save()` with full post data inside a `wp_after_insert_post` hook
-
-Hook fires inside `wp_update_post`; cached instances may be stale. Full `save()` can revert recent changes.
-
-```php
-// ❌
-public function update_keywords () {
-    $this->set_excerpt($this->generate_keywords());
-    $this->save([], false);
-}
-
-// ✅
-public function update_keywords () {
-    $keywords = $this->generate_keywords();
-    $this->wp_post->post_excerpt = $keywords;
-    wp_update_post(['ID' => $this->get_id(), 'post_excerpt' => $keywords], false, false);
-}
-```
 ---
 
 ## Post / User / Term — Saving

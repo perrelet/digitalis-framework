@@ -521,13 +521,13 @@ The model's `save()` wraps the WP function; calling WP update functions directly
 This applies to all generic accessors: `get_meta()`, `update_meta()`, `get_field()`, `update_field()`, options, transients, etc. — and their bare WordPress equivalents (`get_user_meta()`, `get_post_meta()`, `update_user_meta()`, etc.), which are also off-limits at call sites for the same reason. If the key represents a named concept on the model, or is accessed from more than one class, add `get_x()` / `set_x()` to the model. Exception: keys that are internal plumbing of a single class (e.g. a short-lived token written and consumed entirely within one feature class) may stay as raw calls.
 
 **Keep `validate_id()` cheap — it runs on every registered subclass.**
-One `get_post_type()` call is fine. Multiple queries or model instantiation are not.
+One `get_post_type()` call is fine. Multiple queries or model instantiation are not; a `validate_id()` that calls `get_instance()` on its own family recurses, and strict throws at the re-entry. At equal specificity a subclass beats its ancestor and a consumer model beats the framework's; two unrelated classes validating the same id tie, and strict throws naming both.
 
 **`Post::get_instance($id)` auto-resolves to the most specific registered subclass.**
 A post with `post_type='project'` returns a `Project` instance, not a base `Post`. Pass `false` as the second arg to force the base class when you specifically need it. See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
-**Inside a `wp_after_insert_post` callback, never call `save()` with empty or full data.**
-The cached instance state may still hold pre-change values, and a full `save()` will silently overwrite the field the caller just changed. Write the targeted field only (`update_meta`, `update_field`, or `wp_update_post` with one specific field). See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+**Inside a `wp_after_insert_post` callback, never call `save()` on an existing post.**
+The cached instance state may still hold pre-change values, and a full `save()` will silently overwrite the field the caller just changed; strict throws there. Write the targeted field only (`update_meta`, `update_field`, or `wp_update_post` with one specific field). See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 

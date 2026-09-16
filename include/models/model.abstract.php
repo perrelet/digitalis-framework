@@ -85,18 +85,44 @@ class Model extends Factory {
 
         if (is_null($auto_resolve)) $auto_resolve = static::get_auto_resolve();
 
-        if ($auto_resolve) {
+        if ($auto_resolve && (static::$class_map[static::class] ?? 0)) {
 
             $specificity = static::get_specificity();
+            $winners     = [];
 
-            if (static::$class_map[static::class] ?? 0) foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
+            self::strict_enter('loop', $id);
 
-                if (($class_specificity >= $specificity) && $sub_class::validate_id($id)) {
+            try {
 
-                    $class_name  = $sub_class;
-                    $specificity = $class_specificity;
+                foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
+
+                    if ($class_specificity < $specificity) continue;
+                    if (!$sub_class::validate_id($id))     continue;
+
+                    if ($class_specificity > $specificity) {
+
+                        $winners     = [];
+                        $specificity = $class_specificity;
+
+                    }
+
+                    $winners[] = $sub_class;
 
                 }
+
+            } finally {
+
+                self::strict_leave('loop', $id);
+
+            }
+
+            if ($winners) {
+
+                if (count($winners) > 1) $winners = self::prune_winners($winners);
+
+                if (count($winners) > 1) Strict::fail(static::class, 'id ' . self::show_id($id) . ' validates as ' . implode(', ', $winners) . " at specificity {$specificity}, so the last registered of these wins arbitrarily.", "Narrow one validate_id() or add a distinguishing static; a subclass already wins over its ancestor, and a consumer model over the framework's.");
+
+                $class_name = end($winners);
 
             }
 
@@ -105,6 +131,23 @@ class Model extends Factory {
         return Call::get_class_name($class_name, [
             'id'   => $id,
         ]);
+
+    }
+
+    // At equal specificity a subclass refines its parent and a consumer model replaces the framework's default, so neither pair is a tie.
+    protected static function prune_winners ($winners) {
+
+        $winners = array_filter($winners, function ($winner) use ($winners) {
+
+            foreach ($winners as $other) if (($other !== $winner) && is_subclass_of($other, $winner)) return false;
+
+            return true;
+
+        });
+
+        $consumer = array_filter($winners, fn ($winner) => !str_starts_with($winner, __NAMESPACE__ . '\\'));
+
+        return array_values($consumer ?: $winners);
 
     }
 
@@ -146,8 +189,20 @@ class Model extends Factory {
         if (is_null($id))                 return null;
         if ($class_name != static::class) return $class_name::get_instance($data, false);
 
-        if (isset(self::$instances[$class_name][$id]))                  return self::$instances[$class_name][$id];
-        if (!static::validate_data($data) || !static::validate_id($id)) return null;
+        if (isset(self::$instances[$class_name][$id])) return self::$instances[$class_name][$id];
+        if (!static::validate_data($data))              return null;
+
+        self::strict_enter('validate', $id);
+
+        try {
+
+            if (!static::validate_id($id)) return null;
+
+        } finally {
+
+            self::strict_leave('validate', $id);
+
+        }
 
         $instance = new $class_name($id);
         $instance->init($data);
@@ -183,6 +238,8 @@ class Model extends Factory {
 
     public static function static_init () {
 
+        if ((new \ReflectionClass(static::class))->isAbstract()) return; // Never a candidate: resolving to it would reach `new` on an abstract class.
+
         $specificity = static::get_specificity();
         $parent      = static::class;
 
@@ -195,6 +252,62 @@ class Model extends Factory {
 
         }
     
+    }
+
+    // Strict
+
+    private static $resolving = [];
+
+    // validate_id() calling get_instance() recurses without end; the loop and the validate step each guard their own re-entry for one class and id.
+    protected static function strict_enter ($site, $id) {
+
+        if (!Strict::enabled()) return;
+
+        $key = "{$site}:" . static::class . '#' . self::show_id($id);
+
+        if (isset(self::$resolving[$key])) Strict::fail(static::class, 'validate_id() re-entered ' . static::class . ' resolution for id ' . self::show_id($id) . ', which recurses without end.', 'Keep validate_id() to cheap checks (get_post_type(), has_term()); resolve models after validation.');
+
+        self::$resolving[$key] = true;
+
+    }
+
+    protected static function strict_leave ($site, $id) {
+
+        unset(self::$resolving["{$site}:" . static::class . '#' . self::show_id($id)]);
+
+    }
+
+    protected static function show_id ($id) {
+
+        return is_scalar($id) ? (string) $id : gettype($id);
+
+    }
+
+    public static function strict_audit (string $class) {
+
+        $reflection = new \ReflectionClass($class);
+        $class      = $reflection->getName();
+
+        if ($reflection->isAbstract()) return;
+
+        $parent = get_parent_class($class);
+
+        if (!$parent || !property_exists($parent, 'class_map'))    return;
+        if (isset(static::$class_map[$parent][$class]))             return;
+
+        static $reported = [];
+
+        $culprit = (new \ReflectionMethod($class, 'static_init'))->getDeclaringClass()->name;
+
+        if (isset($reported[$culprit])) return;
+        $reported[$culprit] = true;
+
+        $problem = ($culprit === $class)
+            ? "static_init() overrides Model::static_init() without calling it, so the class never registers for resolution."
+            : "inherits {$culprit}::static_init(), which never calls parent::static_init(), so the class never registers for resolution.";
+
+        Strict::violation($class, $problem, "Call parent::static_init() first in {$culprit}::static_init().");
+
     }
 
     //

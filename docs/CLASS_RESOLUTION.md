@@ -81,7 +81,10 @@ Post::get_instance(123)
     │      │      └─ Active_Project::class → specificity: 11
     │      │          └─ Active_Project::validate_id(123) → true/false
     │      │
-    │      └─ 5. Return highest-specificity class that validates
+    │      └─ 5. Keep the classes that validate at the highest specificity;
+    │            drop ancestors of other survivors and, when a consumer class
+    │            remains, framework (Lattice\) classes; more than one left is a
+    │            tie (strict throws), the last registered of them wins
     │
     └─ 6. Call resolved_class::create(['id' => 123])
 ```
@@ -95,22 +98,29 @@ public static function get_class_name($id, $auto_resolve = null) {
 
     if (is_null($auto_resolve)) $auto_resolve = static::get_auto_resolve();
 
-    if ($auto_resolve) {
+    if ($auto_resolve && (static::$class_map[static::class] ?? 0)) {
         $specificity = static::get_specificity();
+        $winners     = [];
 
-        if (static::$class_map[static::class] ?? 0) {
-            foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
-                if (($class_specificity >= $specificity) && $sub_class::validate_id($id)) {
-                    $class_name  = $sub_class;
-                    $specificity = $class_specificity;
-                }
-            }
+        foreach (static::$class_map[static::class] as $sub_class => $class_specificity) {
+            if ($class_specificity < $specificity) continue;
+            if (!$sub_class::validate_id($id))     continue;
+            if ($class_specificity > $specificity) { $winners = []; $specificity = $class_specificity; }
+            $winners[] = $sub_class;
+        }
+
+        if ($winners) {
+            if (count($winners) > 1) $winners = self::prune_winners($winners); // subclasses beat ancestors; consumer beats framework
+            if (count($winners) > 1) Strict::fail(...);                        // an unresolved tie
+            $class_name = end($winners);
         }
     }
 
     return Call::get_class_name($class_name, ['id' => $id]);
 }
 ```
+
+Under strict, `validate_id()` re-entering resolution for the same class and id (the loop, or `get_instance()`'s own validation) throws instead of recursing.
 
 ### Factory Method Integration
 
@@ -238,6 +248,8 @@ During autoload, each model's `static_init()` method registers it with all paren
 ```php
 // From Model.abstract.php
 public static function static_init() {
+    if ((new \ReflectionClass(static::class))->isAbstract()) return; // never a candidate
+
     $specificity = static::get_specificity();
     $parent      = static::class;
 
@@ -632,7 +644,7 @@ var_dump(Project::get_specificity());
 **Symptom:** Getting `Document` when expecting `Project`
 
 **Causes:**
-1. Both classes have same specificity
+1. Both classes have the same specificity and neither extends the other (strict throws naming both; a subclass beats its ancestor, a consumer model beats the framework's)
 2. Validation passing for wrong class
 3. Post has wrong `post_type`
 
@@ -655,7 +667,7 @@ var_dump(Document::validate_id(123));  // Should be false
 1. `get_class_name()` calling `get_instance()` which calls `get_class_name()`
 2. Custom validation triggering resolution
 
-**Solution:**
+**Solution:** strict throws at the re-entry, naming the class and id.
 ```php
 // Use $auto_resolve = false in validation
 public static function validate_id($id) {

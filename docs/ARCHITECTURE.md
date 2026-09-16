@@ -675,7 +675,7 @@ $model = Post::get_instance(123);
 
 ### Class Map Registration
 
-Classes register themselves during autoload via `static_init()`:
+Classes register themselves during autoload via `static_init()` (abstract classes skip it, so they are never resolution candidates):
 
 ```php
 // Pseudocode of what happens during autoload

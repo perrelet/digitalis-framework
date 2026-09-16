@@ -275,6 +275,8 @@ class Post extends WP_Model {
 
     public function save ($post_array = [], $fire_after_hooks = true) {
 
+        if (Strict::enabled() && !$this->is_new() && doing_action('wp_after_insert_post')) Strict::fail(static::class, 'save() ran inside wp_after_insert_post, where the cached instance can predate the change being saved, so the full save can revert it.', "Write the one field (wp_update_post(['ID' => \$id, 'field' => \$value]) or update_meta()); new posts may be created here, existing ones are saved after the hook.");
+
         $post_array = wp_parse_args($post_array, get_object_vars($this->wp_post));
 
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
@@ -384,6 +386,17 @@ class Post extends WP_Model {
     public function get_parent () {
 
         return ($parent_id = $this->get_parent_id()) ? Post::get_instance($parent_id) : null;
+
+    }
+
+    // Strict
+
+    // Falls through to PHP's own errors so a typo is never hidden. A subclass with its own __call shadows this.
+    public function __call ($name, $args) {
+
+        if ($name === 'get_type') Strict::fail(static::class, 'has no get_type(); the post type is get_post_type().', 'Call get_post_type(); WooCommerce product types live on the WC_Product.');
+
+        Strict::undefined_method($this, $name);
 
     }
 
