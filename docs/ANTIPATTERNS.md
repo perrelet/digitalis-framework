@@ -319,7 +319,7 @@ $posts = Project::query();
 
 ### Don't put shell logic in Page_View
 
-Page_View renders body content. Shell structure belongs in Layout.
+Page_View renders body content. Shell structure belongs in Layout. Strict throws when `Header`, `Footer`, `Modals` or a subclass renders while a `Page_View` is on the render stack; a page that needs its own shell part declares `protected static $layout = ['header' => My_Header::class]`. A project shell part that extends `Component` instead is outside the check until it sets `protected static $shell = true`.
 
 ```php
 // ❌

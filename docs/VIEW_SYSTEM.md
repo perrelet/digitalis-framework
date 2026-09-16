@@ -203,8 +203,9 @@ Under `LATTICE_STRICT` (default `WP_DEBUG`) the View lifecycle is audited. Boot 
 | `__construct()` override that never reaches `View::__construct()` | first `print()` | Call `parent::__construct($params)` first |
 | Output emitted during `pre_validate()` / `params()` / `validate()` | `print()` | Move markup to `view()`, a template or `before()` / `after()` |
 | Output buffer opened and not closed, or closed and not opened, during that phase | `print()` | Balance `ob_start()` inside `params()` |
+| `Header`, `Footer`, `Modals` or a subclass (any view with `$shell = true`) rendering while a `Page_View` is on the render stack | `print()` | Remove it from the page; declare `$layout = ['header' => My_Header::class]` on the page instead |
 
-Known holes: a `parent::params($p)` call that is present but skipped by an early return; `parent::params()` handed a different array; `validate()` / `pre_validate()` overrides that skip their parent; a balanced `ob_start()` … `ob_get_clean()` inside `params()`; a view constructed and never printed.
+Known holes: a `parent::params($p)` call that is present but skipped by an early return; `parent::params()` handed a different array; `validate()` / `pre_validate()` overrides that skip their parent; a balanced `ob_start()` … `ob_get_clean()` inside `params()`; a view constructed and never printed; a project shell part that extends `Component` without `$shell = true`; a stale render-stack frame after a PHP fatal skipped `finally`.
 
 ---
 

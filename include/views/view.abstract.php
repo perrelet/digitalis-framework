@@ -17,8 +17,10 @@ abstract class View implements \ArrayAccess {
     protected static $template      = null;    // The name of the template file to load (omit .php extension).
     protected static $template_path = __DIR__; // Absolute path to the template directory.
 
-    protected static $indexes = [];
+    protected static $indexes      = [];
     protected static $loaded_views = [];
+    protected static $render_stack = [];
+    protected static $shell        = false; // Header, Footer and Modals set true: they belong to the Layout, and strict refuses them inside a Page_View.
 
     protected static $inherited_props = [
         'defaults',
@@ -123,6 +125,45 @@ abstract class View implements \ArrayAccess {
     public function print ($return = false) {
 
         if (Strict::enabled() && !$this->constructed) $this->strict_constructor();
+
+        $level = ob_get_level();
+
+        self::$render_stack[] = $this;
+
+        try {
+
+            return $this->output($return);
+
+        } catch (\Throwable $e) {
+
+            while ((ob_get_level() > $level) && ob_end_clean()); // A throw mid-render must not leave the return buffer open.
+
+            throw $e;
+
+        } finally {
+
+            array_pop(self::$render_stack);
+
+        }
+
+    }
+
+    // The innermost view being rendered that is an instance of $class, or null.
+    public static function rendering (string $class) {
+
+        for ($i = count(self::$render_stack) - 1; $i >= 0; $i--) {
+
+            if (self::$render_stack[$i] instanceof $class) return self::$render_stack[$i]::class;
+
+        }
+
+        return null;
+
+    }
+
+    protected function output ($return = false) {
+
+        if (Strict::enabled() && static::$shell && ($page = self::rendering(Page_View::class))) Strict::fail(static::class, "rendered inside {$page}, a Page_View, which renders body content only; the Layout renders the shell.", "Remove it from the page view; a page that needs its own shell part declares protected static \$layout = ['header' => My_Header::class] (or footer, modals), honoured when the page renders through App::render().");
 
         if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
 

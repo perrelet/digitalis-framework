@@ -86,3 +86,13 @@ Measured on the live consumers before release:
 | mycelium | 2 | `Mycelium\User` ties with the vendored `Eventropy\User` on every base `User` resolution (`get_author()`, `User::inst()`); make it `extends \Eventropy\User`. `Org` after_insert saves the inserted post (`save(['post_status' => 'pending_review'])`); use `wp_update_post()` with the one field |
 | eventropy (and somm through it) | 1 | `Room` and `Ticket` order items both validate a room line item (`Ticket` has no narrowing, `Order_Item` has no specificity), so room items resolve as `Ticket` today; give `Ticket::validate_id()` an exclusion for rooms |
 | courses, d-pace, study-hub | 0 | |
+
+### Layout
+
+| Violation | Mechanical fix |
+|---|---|
+| `Header`, `Footer`, `Modals` or a subclass renders while a `Page_View` is on the render stack (thrown at `print()`) | Remove it from the page view; a page that needs its own shell part declares `protected static $layout = ['header' => My_Header::class]` (or `footer`, `modals`), honoured through `App::render()` |
+
+Measured on the live consumers before release: 0 across the six. d-pace's `Site_Header` and `Site_Footer` extend the project `Component`, so they are outside the check; `protected static $shell = true` on each opts them in without touching their template path or defaults.
+
+A throw mid-render now also unwinds any output buffer the render opened, so a `Strict_Violation` inside a nested `(string)` cast no longer leaks the parent's buffer.

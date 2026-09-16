@@ -109,7 +109,7 @@ protected static $layout = [];  // optional layout overrides, e.g. ['header' => 
 **File:** `include/views/header.component.php`
 **Extends:** `Component`
 
-Default header shell part. Renders a `<header>` element.
+Default header shell part. Renders a `<header>` element. Shell parts carry `protected static $shell = true`, and strict throws when one renders inside a `Page_View`; set the same flag on a project shell part built on `Component`.
 
 ### Footer
 
@@ -117,7 +117,7 @@ Default header shell part. Renders a `<header>` element.
 **File:** `include/views/footer.component.php`
 **Extends:** `Component`
 
-Default footer shell part. Renders a `<footer>` element.
+Default footer shell part. Renders a `<footer>` element. Same `$shell` rule as `Header`.
 
 ### Modals
 
