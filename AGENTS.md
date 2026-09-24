@@ -566,6 +566,9 @@ Any concrete class in `include/` gets instantiated during plugin bootstrap. Use 
 
 Preferred patterns where more than one syntax is valid. Full details in [docs/CONVENTIONS.md](./docs/CONVENTIONS.md).
 
+**Framework strings use the `lattice` domain; your nouns go through `$text_domain`.**
+Registrar labels compose `sprintf(__('Add New %s', 'lattice'), __($this->singular, $this->text_domain))`, so set `$text_domain` on your post types, taxonomies, meta boxes and profile sections and translate only the nouns. See [docs/CODING_STANDARDS.md#i18n](./docs/CODING_STANDARDS.md#i18n).
+
 **Instantiate views with `new` — don't call `View::render()` statically.**
 `View::render()` is supported but not preferred. Use `<?= new My_View([...]) ?>` for echoing and `(string) new My_View([...])` when a string is needed explicitly.
 

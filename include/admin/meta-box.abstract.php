@@ -9,6 +9,7 @@ abstract class Meta_Box extends Feature {
 
     protected $id       = 'digitalis-metabox';
     protected $title    = 'Lattice Metabox';
+    protected $text_domain = 'default'; // Domain for $title, which is the consumer's string.
     protected $screen   = null;
     protected $context  = 'advanced';
     protected $priority = 'default';
@@ -74,7 +75,7 @@ abstract class Meta_Box extends Feature {
 
     public function get_title () {
     
-        return __($this->title);
+        return __($this->title, $this->text_domain);
     
     }
 

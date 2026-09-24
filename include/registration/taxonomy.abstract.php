@@ -88,27 +88,31 @@ abstract class Taxonomy extends Singleton {
 
     protected function get_default_labels () {
 
+        // The noun is the consumer's ($text_domain); the scaffolding around it is the framework's ('lattice').
+        $singular = __($this->singular, $this->text_domain);
+        $plural   = __($this->plural,   $this->text_domain);
+
         return [
-            'name'                          => __( $this->singular,                         $this->text_domain ),
-            'singular_name'                 => __( $this->singular,                         $this->text_domain ),
-            'menu_name'                     => __( $this->plural,                           $this->text_domain ),
-            'all_items'                     => __( "All {$this->plural}",                   $this->text_domain ),
-            'parent_item'                   => __( "Parent {$this->singular}",              $this->text_domain ),
-            'parent_item_colon'             => __( "Parent {$this->singular}:",             $this->text_domain ),
-            'new_item_name'                 => __( "New {$this->singular}",                 $this->text_domain ),
-            'add_new_item'                  => __( "Add New {$this->singular}",             $this->text_domain ),
-            'edit_item'                     => __( "Edit {$this->singular}",                $this->text_domain ),
-            'update_item'                   => __( "Update {$this->singular}",              $this->text_domain ),
-            'view_item'                     => __( "View {$this->singular}", 	            $this->text_domain ),
-            'separate_items_with_commas'    => __( "Separate {$this->plural} with commas",  $this->text_domain ),
-            'add_or_remove_items'           => __( "Add or remove {$this->plural}",         $this->text_domain ),
-            'choose_from_most_used'         => __( "Choose from the most used",             $this->text_domain ),
-            'popular_items'                 => __( "Popular {$this->plural}",               $this->text_domain ),
-            'search_items'                  => __( "Search {$this->plural}",                $this->text_domain ),
-            'not_found'                     => __( "Not Found",                             $this->text_domain ),
-            'no_terms'                      => __( "No {$this->plural}",                    $this->text_domain ),
-            'items_list'                    => __( "List of {$this->plural}",               $this->text_domain ),
-            'items_list_navigation'         => __( "{$this->plural} list navigation",       $this->text_domain ),
+            'name'                          => $singular,
+            'singular_name'                 => $singular,
+            'menu_name'                     => $plural,
+            'all_items'                     => sprintf(__('All %s',                    'lattice'), $plural),
+            'parent_item'                   => sprintf(__('Parent %s',                 'lattice'), $singular),
+            'parent_item_colon'             => sprintf(__('Parent %s:',                'lattice'), $singular),
+            'new_item_name'                 => sprintf(__('New %s',                    'lattice'), $singular),
+            'add_new_item'                  => sprintf(__('Add New %s',                'lattice'), $singular),
+            'edit_item'                     => sprintf(__('Edit %s',                   'lattice'), $singular),
+            'update_item'                   => sprintf(__('Update %s',                 'lattice'), $singular),
+            'view_item'                     => sprintf(__('View %s',                   'lattice'), $singular),
+            'separate_items_with_commas'    => sprintf(__('Separate %s with commas',   'lattice'), $plural),
+            'add_or_remove_items'           => sprintf(__('Add or remove %s',          'lattice'), $plural),
+            'choose_from_most_used'         =>         __('Choose from the most used', 'lattice'),
+            'popular_items'                 => sprintf(__('Popular %s',                'lattice'), $plural),
+            'search_items'                  => sprintf(__('Search %s',                 'lattice'), $plural),
+            'not_found'                     =>         __('Not Found',                 'lattice'),
+            'no_terms'                      => sprintf(__('No %s',                     'lattice'), $plural),
+            'items_list'                    => sprintf(__('List of %s',                'lattice'), $plural),
+            'items_list_navigation'         => sprintf(__('%s list navigation',        'lattice'), $plural),
         ];
 
     }

@@ -148,6 +148,7 @@ class Project_Post_Type extends Post_Type {
     protected $slug         = 'project';
     protected $archive      = 'projects';
     protected $icon         = 'dashicons-portfolio';
+    protected $text_domain  = 'my-plugin';         // for $singular / $plural; the scaffolding is translated by the framework
     protected $singular     = 'Project';
     protected $plural       = 'Projects';
     protected $position     = 20;
@@ -173,6 +174,7 @@ class Project_Category_Taxonomy extends Taxonomy {
     protected $slug       = 'project_category';
     protected $singular   = 'Category';
     protected $plural     = 'Categories';
+    protected $text_domain = 'my-plugin';
     protected $post_types = ['project'];   // attach to these post types
 }
 ```

@@ -34,7 +34,7 @@ abstract class Post_Status extends Singleton {
 
             $this->_args = wp_parse_args($this->args, [
                 'label'                     => $this->get_singular(),
-                'label_count'               => _n_noop($this->get_singular(), $this->get_plural()),
+                'label_count'               => _n_noop($this->get_singular(), $this->get_plural(), $this->text_domain),
                 'exclude_from_search'       => null,
                 '_builtin'                  => false,
                 'public'                    => null,

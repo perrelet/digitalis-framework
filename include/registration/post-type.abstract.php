@@ -203,22 +203,26 @@ abstract class Post_Type extends Singleton {
 
     protected function get_default_labels () {
 
+        // The noun is the consumer's ($text_domain); the scaffolding around it is the framework's ('lattice').
+        $singular = __($this->singular, $this->text_domain);
+        $plural   = __($this->plural(), $this->text_domain);
+
         return Hook::filter(['lattice', 'post_type', static::class, 'labels'],
         [
-            'name'               => __( $this->plural(),                        $this->text_domain ),
-            'singular_name'      => __( $this->singular,                        $this->text_domain ),
-            'menu_name'          => __( $this->plural(),                        $this->text_domain ),
-            'name_admin_bar'     => __( $this->singular,                        $this->text_domain ),
-            'add_new'            => __( "Add New {$this->singular}",            $this->text_domain ),
-            'add_new_item'       => __( "Add New {$this->singular}",            $this->text_domain ),
-            'edit_item'          => __( "Edit {$this->singular}",               $this->text_domain ),
-            'new_item'           => __( "New {$this->singular}",                $this->text_domain ),
-            'view_item'          => __( "View {$this->singular}",               $this->text_domain ),
-            'search_items'       => __( "Search {$this->plural()}",             $this->text_domain ),
-            'not_found'          => __( "No {$this->plural()} found",           $this->text_domain ),
-            'not_found_in_trash' => __( "No {$this->plural()} found in trash",  $this->text_domain ),
-            'all_items'          => __( $this->plural(),                        $this->text_domain ),
-            'archive_title'      => __( $this->plural(),                        $this->text_domain ),
+            'name'               => $plural,
+            'singular_name'      => $singular,
+            'menu_name'          => $plural,
+            'name_admin_bar'     => $singular,
+            'add_new'            => sprintf(__('Add New %s',            'lattice'), $singular),
+            'add_new_item'       => sprintf(__('Add New %s',            'lattice'), $singular),
+            'edit_item'          => sprintf(__('Edit %s',               'lattice'), $singular),
+            'new_item'           => sprintf(__('New %s',                'lattice'), $singular),
+            'view_item'          => sprintf(__('View %s',               'lattice'), $singular),
+            'search_items'       => sprintf(__('Search %s',             'lattice'), $plural),
+            'not_found'          => sprintf(__('No %s found',           'lattice'), $plural),
+            'not_found_in_trash' => sprintf(__('No %s found in trash',  'lattice'), $plural),
+            'all_items'          => $plural,
+            'archive_title'      => $plural,
         ]);
 
     }

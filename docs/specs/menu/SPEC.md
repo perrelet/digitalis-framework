@@ -690,7 +690,7 @@ The adapter is responsible for shape conformance. Adapter return values flow thr
 
 ## 10. i18n strategy
 
-Lattice carries no text domain. Every user-facing default string is a `Menu`, `Menu_Item`, or `Menu_Drawer` param. Consumers wrap their override at the call site:
+Menu defaults are params, not framework-translated strings (framework-authored strings elsewhere use the `lattice` domain). Every user-facing default string is a `Menu`, `Menu_Item`, or `Menu_Drawer` param. Consumers wrap their override at the call site:
 
 ```php
 new Menu([
@@ -716,7 +716,7 @@ Defaults:
 
 The "opens in new tab" SR-hint format for `target='_blank'` links is also a `Menu_Item` param: `external_label_format` (default `'%s (opens in new tab)'`, `%s` receives the original label).
 
-This keeps lattice translation-free and avoids coupling the framework to any consumer's `.po`/`.mo` files.
+This keeps the menu components free of the `lattice` domain and avoids coupling them to any consumer's `.po`/`.mo` files.
 
 ---
 

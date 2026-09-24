@@ -11,6 +11,7 @@ abstract class Profile_Section extends Feature {
 
     protected $id       = 'digitalis-profile-section';
     protected $title    = 'Lattice Profile Section';
+    protected $text_domain = 'default'; // Domain for $title, which is the consumer's string.
     protected $priority = 10;
     protected $view     = null;
     protected $callback = null;
@@ -96,7 +97,7 @@ abstract class Profile_Section extends Feature {
 
     public function get_title () {
 
-        return __($this->title);
+        return __($this->title, $this->text_domain);
 
     }
 

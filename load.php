@@ -9,6 +9,15 @@ define('LATTICE_URI',           plugin_dir_url(__FILE__));
 
 require LATTICE_PATH . 'compat/digitalis-namespace.php';
 
+// Registers languages/ for the 'lattice' domain; since WP 6.7 this only records the path and the .mo loads on first use (eagerly before that; the registry exists since 6.1).
+if (str_starts_with(wp_normalize_path(LATTICE_PATH), wp_normalize_path(trailingslashit(WPMU_PLUGIN_DIR)))) {
+    load_muplugin_textdomain('lattice', plugin_basename(LATTICE_PATH) . '/languages');
+} elseif (str_starts_with(wp_normalize_path(LATTICE_PATH), wp_normalize_path(trailingslashit(WP_PLUGIN_DIR)))) {
+    load_plugin_textdomain('lattice', false, plugin_basename(LATTICE_PATH) . '/languages');
+} elseif (isset($GLOBALS['wp_textdomain_registry'])) {
+    $GLOBALS['wp_textdomain_registry']->set_custom_path('lattice', LATTICE_PATH . 'languages');
+}
+
 // Bootstrap: what autoload() itself reaches for before the sweep can run.
 require LATTICE_PATH . 'include/core/utility.abstract.php';
 require LATTICE_PATH . 'include/core/hook.utility.php';

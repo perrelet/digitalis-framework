@@ -322,6 +322,7 @@ abstract class Post_Type extends Singleton
 |----------|------|---------|-------------|
 | `$slug` | `string` | `''` | Post type slug |
 | `$singular` | `string` | `''` | Singular label |
+| `$text_domain` | `string` | `'default'` | Domain for `$singular` and `$plural`; the scaffolding around them uses `lattice` |
 | `$plural` | `string` | `''` | Plural label |
 | `$icon` | `string` | `'dashicons-admin-post'` | Menu icon |
 | `$position` | `int` | `25` | Menu position |
@@ -352,6 +353,7 @@ abstract class Taxonomy extends Singleton
 | `$slug` | `string` | `''` | Taxonomy slug |
 | `$singular` | `string` | `''` | Singular label |
 | `$plural` | `string` | `''` | Plural label |
+| `$text_domain` | `string` | `'default'` | Domain for `$singular` and `$plural`; the scaffolding around them uses `lattice` |
 | `$post_types` | `array` | `[]` | Associated post types |
 | `$hierarchical` | `bool` | `true` | Is hierarchical |
 

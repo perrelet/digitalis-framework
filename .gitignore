@@ -1,2 +1,4 @@
 .classmap.php
 .classmap.php.*
+languages/*.mo
+languages/*.l10n.php

@@ -12,7 +12,7 @@ class Oxygen_Element_Generator extends Editor_Element_Generator {
 
             if (isset($control['children'])) {
 
-                $code->line("\$section = \$this->addControlSection('{$control['name']}', __('{$control['label']}'), '{$control['icon']}', \$this);" . PHP_EOL);
+                $code->line("\$section = \$this->addControlSection('{$control['name']}', " . $code->export_var($control['label']) . ", '{$control['icon']}', \$this);" . PHP_EOL);
                 $code->append($this->get_control_code($control['children'], $level++, '$section'));
 
             } else {
@@ -29,7 +29,7 @@ class Oxygen_Element_Generator extends Editor_Element_Generator {
 
     protected function generate_php_code (string $class_name, $view_class) : string {
 
-        $name = $view_class::get_name();
+        $name = var_export($view_class::get_name(), true); // A literal: generated code has no text domain of its own.
         $slug = $this->generate_slug_name($view_class);
 
         $control_code = $this->get_control_code($this->get_controls($view_class));
@@ -44,7 +44,7 @@ class {$class_name} extends \OxyEl {
 
     public function name () {
 
-        return __('{$name}', 'text-domain');
+        return {$name};
 
     }
 
