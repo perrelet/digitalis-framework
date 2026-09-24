@@ -49,12 +49,6 @@ add_action('plugins_loaded', function () {
 
 }, 0);
 
-add_action('init', function () {
-
-    if (defined('BRICKS_VERSION')) require LATTICE_PATH . 'include/integrations/_bricks/bricks-element.abstract.php';
-
-}, 11);
-
 add_filter('sassy-variables', function ($variables) {
 
     $variables['digitalis_path'] = '"' . str_replace('\\', '/', LATTICE_PATH) . '"';

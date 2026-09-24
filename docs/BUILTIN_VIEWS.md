@@ -302,7 +302,7 @@ Product_Archive::render([
 | `render_no_items()` | Empty state |
 | `get_page_links($query)` | Generate pagination |
 | `render_pagination($page_links)` | Render pagination |
-| `get_controls()` | Return filter fields |
+| `get_archive_controls()` | Return the `controls` param (filter fields) |
 | `get_loader()` | Return loader HTML |
 
 ---

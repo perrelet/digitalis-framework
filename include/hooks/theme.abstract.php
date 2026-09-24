@@ -56,7 +56,7 @@ abstract class Theme {
 
     public function enqueue_style_last ($handle, $src, $deps = [], $version = false) {
 
-        if (Editor_Manager::get_instance()->is_backend_ui()) return;
+        if (defined('SHOW_CT_BUILDER') && !defined('OXYGEN_IFRAME')) return; // Oxygen's builder window; Theme leaves with the vendor-out pass.
 
         global $digitalis_styles;
 

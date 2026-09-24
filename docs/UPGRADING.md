@@ -120,3 +120,46 @@ Measured on the live consumers before release:
 | Plugin | Violations | What |
 |---|---|---|
 | courses, d-pace, eventropy, mycelium, somm, study-hub | 0 | No non-element tags, no unrenderable attribute names, no `path` / `template` / `return` params on template views |
+
+### Editors
+
+The page-builder integration is gone, `Editor_Manager` with it. The one thing consumers asked of it was whether the request is inside a builder's editing screen; that question belongs to the plugin that runs the builder. Paste this into your own namespace and call it instead:
+
+```php
+class Builder_State {
+
+    // Oxygen defines SHOW_CT_BUILDER for both builder windows and OXYGEN_IFRAME only for the content iframe.
+    // Bricks exposes bricks_is_builder(), bricks_is_builder_iframe() and bricks_is_builder_main().
+
+    public static function is_backend (): bool {
+        return defined('SHOW_CT_BUILDER') || (function_exists('bricks_is_builder') && bricks_is_builder());
+    }
+
+    public static function is_backend_content (): bool {
+        return (defined('SHOW_CT_BUILDER') && defined('OXYGEN_IFRAME')) || (function_exists('bricks_is_builder_iframe') && bricks_is_builder_iframe());
+    }
+
+    public static function is_backend_ui (): bool {
+        return (defined('SHOW_CT_BUILDER') && !defined('OXYGEN_IFRAME')) || (function_exists('bricks_is_builder_main') && bricks_is_builder_main());
+    }
+
+}
+```
+
+| Violation | Mechanical fix |
+|---|---|
+| Any `Editor_Manager`, `Design_System`, `Editor` or `Bricks_Element` reference; fatal at the call | Replace the predicate calls with your own `Builder_State`; delete the rest, the classes are gone |
+| `View::$editors`, `$controls`, `get_editors()`, `get_controls()`, `supports_editor()` and the `lattice.view.editors` / `lattice.view.controls` filters | Delete the declarations (they were inert) |
+| An `App::load_bricks_elements()` override or a `_bricks-elements/` directory | Register Bricks elements from your own `init` hook; the framework method called a `get_file_names()` that never existed |
+
+Measured on the live consumers before release:
+
+| Plugin | Violations | What |
+|---|---|---|
+| study-hub | 3 | `front.singleton.php` calls `is_backend_ui()` and, behind a secret query parameter, dumps `generate_elements()`; `hub.app.php` constructs the manager; `feature-list.view.php` declares inert `$editors` and `$controls` |
+| somm | 2 | `front.class.php` and `hub-members.view.php` call the predicate |
+| courses | 1 | `front.theme.php` calls `is_backend_ui()` |
+| mycelium | 1 | `front.theme.php` calls `is_backend()` |
+| d-pace, eventropy | 0 | |
+
+Run `wp lattice classmap` after deploying: the map lists the deleted files until it is regenerated (ignored with a notice in production, ignored outright under `WP_DEBUG`).

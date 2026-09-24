@@ -180,7 +180,7 @@ abstract class App extends Singleton
 | `get_path()` | `public get_path(): string` | Returns `$path`. |
 | `get_url()` | `public get_url(): string` | Returns `$url`. |
 | `boot()` | `public boot(): void` | Entry point, called on `plugins_loaded`. Calls `load()`, `ensure_schema()`, `boot_shared()`, then the appropriate context methods. |
-| `load()` | `public load(): void` | Runs `autoload()` and registers Bricks elements. Always runs. |
+| `load()` | `public load(): void` | Runs `autoload()`. Always runs. |
 | `ensure_schema()` | `public ensure_schema(): void` | No-op stub. Override to run DB migrations via `Migration_Runner`. Always runs before context branching. |
 | `boot_shared()` | `public boot_shared(): void` | Override for code that runs on every request after loading. |
 | `boot_admin()` | `public boot_admin(): void` | Override for admin-only boot logic. |

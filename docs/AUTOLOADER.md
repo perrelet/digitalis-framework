@@ -54,7 +54,9 @@ If `my-plugin.app.php` lives at `<plugin>/include/my-plugin.app.php`, `$this->pa
 ### `.parent.php` suffixes document inheritance; they do not drive load order
 
 > **Wrong assumption:** the autoloader needs the suffix to load parents before children.
-> **Reality:** every `*.php` file is collected, its declared class is read from the source, and a parent is resolved on demand through `spl_autoload_register` at the moment a child needs it. Two names still change behaviour: `.abstract.` suppresses instantiation, and `Editor_Manager` filters its own directory by suffix. The parent identifier itself is documentation for the reader, so keep it accurate for that reason.
+> **Reality:** every `*.php` file is collected, its declared class is read from the source, and a parent is resolved on demand through `spl_autoload_register` at the moment a child needs it. One name still changes behaviour: `.abstract.` suppresses instantiation.
+
+Run `wp lattice classmap` after deploying; a map that no longer matches the files on disk is ignored with an admin notice, and throws only when `LATTICE_CLASSMAP` forces the map on under `WP_DEBUG`.
 
 ### `_dirname/` is skipped during recursive autoload
 

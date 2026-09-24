@@ -10,8 +10,6 @@ abstract class View implements \ArrayAccess {
     protected static $required      = [];      // Param keys that are required.
     protected static $merge         = [];      // Param keys to be merged (rather than overridden) in derivative classes.
     protected static $skip_inject   = [];      // Param keys that should skip dependency injection.
-    protected static $editors       = [];      // Editor slugs to publish elements too.
-    protected static $controls      = [];      // Exposed UI Controls when rendering inside a page editor.
     protected static $name          = null;
 
     protected static $template      = null;    // The name of the template file to load (omit .php extension).
@@ -43,31 +41,10 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    public static function get_editors () {
-
-        return apply_filters('lattice.view.editors', static::$editors, static::class);
-
-    }
-
-    public static function get_controls () {
-
-        return apply_filters('lattice.view.controls', static::$controls, static::class);
-
-    }
-
     public static function get_name () {
 
         if (static::$name) return static::$name;
         return ucwords(str_replace(['\\', '_'], ' ', static::class));
-
-    }
-
-    public static function supports_editor ($editor) {
-
-        $slug    = ($editor instanceof Editor) ? $editor->get_slug() : $editor;
-        $editors = static::get_editors();
-
-        return in_array('all', $editor) || in_array($slug, $editor);
 
     }
 

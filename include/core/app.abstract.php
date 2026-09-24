@@ -82,7 +82,6 @@ abstract class App extends Factory {
     public function load () {
 
         $this->autoload();
-        $this->load_bricks_elements();
 
     }
 
@@ -162,20 +161,6 @@ abstract class App extends Factory {
     }
 
     //
-
-    public function load_bricks_elements () {
-
-        add_action('init', function () {
-
-            if (!defined('BRICKS_VERSION')) return;
-
-            $path  = $this->path . '_bricks-elements';
-            $names = $this->get_file_names($path);
-            if ($names) foreach ($names as $name) \Bricks\Elements::register_element("{$path}/{$name}");
-
-        }, 11);
-
-    }
 
     // Layout System
 

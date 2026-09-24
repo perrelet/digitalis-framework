@@ -107,13 +107,6 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Service` | `Factory` | Instantiable service/value object; auto-instantiation off by default | |
 | `Options` | `Model` | WordPress options proxy with ACF support; `Options::get()`, `add()`, `update()`; `protected static $prefix`/`$acf_prefix` for namespacing. Singleton-shaped (extract_id → 0); also serves as the ACF parent for option-page repeater `ACF_Row` subclasses (uses `Has_ACF_Fields`, `get_wp_meta_type='option'`, `get_acf_id='option'`) | yes |
 
-### Editors
-
-| Class | Extends | Purpose | Auto |
-|-------|---------|---------|:----:|
-| `Editor` | `Singleton` | Abstract base for page editor integrations (Bricks, Elementor, Oxygen, …); override `instance_condition()`, `is_backend()`, `is_backend_content()`, `is_backend_ui()` | yes |
-| `Editor_Manager` | `Singleton` | Discovers all active `Editor` instances; proxies `add_colors()`, `add_variables()`, `add_classes()`, etc. to every active editor | yes |
-
 ### Layout System
 
 | Class | Extends | Purpose | Auto |
@@ -247,7 +240,6 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `order-iterator` | `Digitalis\Order_Iterator` |
 | `admin-page` | `Digitalis\Admin_Page` |
 | `query-profile` | `Digitalis\Query_Profile` |
-| `editor` | `Digitalis\Editor` |
 | `.abstract.php` | Abstract class (no framework parent) |
 | `.trait.php` | Trait |
 | `.class.php` | Standalone class |
@@ -292,9 +284,7 @@ protected static $required    = ['key'];                // fails silently if mis
 protected static $merge       = ['classes'];            // these keys are array-merged, not overwritten
 protected static $skip_inject = ['key'];                // prevent DI resolution for specific keys
 protected static $template    = 'path/to/file.php';    // relative to templates/; alternative to view()
-protected static $editors     = [];                     // editor slugs to publish as elements; 'all' = every active editor
-protected static $controls    = [];                     // UI controls exposed when editing inside a page editor
-protected static $name        = null;                   // display name in the editor; defaults to class name
+protected static $name        = null;                   // display name; defaults to the class name
 
 // Override points
 public function pre_validate(): bool     // input gate; runs BEFORE params(). Return true to opt out
