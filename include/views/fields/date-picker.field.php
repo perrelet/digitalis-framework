@@ -32,9 +32,10 @@ class Date_Picker extends Input {
 
     public function after () {
 
-        $json = json_encode($this['date_picker']);
+        $id   = wp_json_encode($this['id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $json = wp_json_encode($this['date_picker'], JSON_HEX_TAG | JSON_HEX_AMP);
 
-        if (strpos(static::class, 'Date_Range') === false) echo "<script>new Datepicker(document.getElementById('{$this['id']}'), {$json});</script>";
+        if (strpos(static::class, 'Date_Range') === false) echo "<script>new Datepicker(document.getElementById({$id}), {$json});</script>";
 
         parent::after();
 

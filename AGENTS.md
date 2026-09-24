@@ -540,6 +540,9 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
+**Content and label params are HTML by contract; attribute values, names and tags are escaped by the framework.**
+Escape user data before it becomes a `content`, `label` or cell param (`esc_html($term->name)`); `Attributes` escapes values and rejects unrenderable names, `Element` rejects non-element tags (strict throws for both). See [VIEW_SYSTEM.md#what-the-framework-escapes](./docs/VIEW_SYSTEM.md#what-the-framework-escapes).
+
 **Quick reference for the four view-system traps** — `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`App::$path` is the App-subclass file's directory, not the plugin root.**

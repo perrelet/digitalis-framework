@@ -20,13 +20,13 @@ class Element implements \ArrayAccess {
         'wbr',
     ];
 
-    protected $tag;
+    protected $tag = 'div';
     protected $content;
     protected $attributes;
 
     public function __construct ($tag = 'div', $attributes = [], $content = '') {
 
-        $this->tag        = $tag;
+        $this->set_tag($tag);
         $this->content    = $content;
         $this->attributes = ($attributes instanceof Attributes) ? $attributes : new Attributes($attributes);
     
@@ -87,6 +87,18 @@ class Element implements \ArrayAccess {
     }
 
     public function set_tag ($tag) {
+
+        $tag = (string) $tag;
+
+        if (!preg_match('/^[A-Za-z][A-Za-z0-9:-]*$/', $tag)) {
+
+            Strict::fail(static::class, "tag '{$tag}' is not an element name.", 'Pass a bare element name such as div or my-element.');
+
+            $tag = preg_replace('/[^A-Za-z0-9:-]/', '', $tag);
+
+            if (!preg_match('/^[A-Za-z][A-Za-z0-9:-]*$/', $tag)) return $this; // Nothing usable: keep the current tag.
+
+        }
 
         $this->tag = $tag;
         return $this;

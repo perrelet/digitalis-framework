@@ -77,7 +77,7 @@ class Component extends View {
 
         $element = new Element();
 
-        if ($tag        = ($this["{$prefix}tag"]        ?? null)) $element->set_tag($tag);
+        if (!is_null($tag = ($this["{$prefix}tag"] ?? null)))     $element->set_tag($tag);
         if ($content    = ($this["{$prefix}content"]    ?? null)) $element->set_content($content);
         if ($attributes = ($this["{$prefix}attr"]       ?? null)) $element->set_attribute($attributes);
         if ($attributes = ($this["{$prefix}attributes"] ?? null)) $element->set_attribute($attributes);
@@ -90,6 +90,7 @@ class Component extends View {
         if (($href = ($this["{$prefix}href"] ?? null)) && ($element->get_tag() == 'a')) $element['href'] = $href;
 
         $this["{$prefix}attributes"] = $element->get_attributes();
+        $this["{$prefix}tag"]        = $element->get_tag(); // Templates print the checked tag, not the raw param.
 
         $this[$key] = $element;
     

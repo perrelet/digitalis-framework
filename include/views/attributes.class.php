@@ -11,7 +11,7 @@ class Attributes implements \ArrayAccess {
 
     public function __construct (array $attrs = []) {
     
-        $this->attrs = $attrs;
+        $this->set_attrs($attrs);
     
     }
 
@@ -25,7 +25,13 @@ class Attributes implements \ArrayAccess {
 
             $name = strtolower((string) $name);
 
-            //if (!$this->is_safe_attr_name($name)) continue;
+            // HTML's attribute-name grammar minus `<`: whitespace, quotes, /, = and angle brackets break out of the tag.
+            if (!preg_match('/^[^\s"\'<>\/=\x00-\x1F\x7F]+$/', $name)) {
+
+                Strict::fail(static::class, "attribute name '{$name}' cannot be rendered.", 'An attribute name cannot contain whitespace, quotes, /, = or angle brackets.');
+                continue;
+
+            }
 
             $value = $this->normalize_value($name, $value);
 
@@ -117,7 +123,10 @@ class Attributes implements \ArrayAccess {
     public function set_attrs ($attrs) {
 
         $this->string = null;
-        $this->attrs  = $attrs;
+        $this->attrs  = [];
+
+        foreach ((array) $attrs as $name => $value) $this->set_attr($name, $value);
+
         return $this;
 
     }
@@ -138,9 +147,11 @@ class Attributes implements \ArrayAccess {
 
             foreach ($attr as $name => $value) $this->set_attr($name, $value);
 
-        } else if ($attr) {
+        } else {
 
-            $this->attrs[$attr] = $value;
+            if (is_int($attr)) [$attr, $value] = [(string) $value, true]; // A list entry is a boolean attribute: ['required'].
+
+            if ((string) $attr !== '') $this->attrs[$attr] = $value;
 
         }
 

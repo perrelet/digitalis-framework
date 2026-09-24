@@ -755,8 +755,8 @@ Data table with automatic header/attribute handling.
 | `first_col` | `bool` | `false` | First column is header |
 | `last_col` | `bool` | `false` | Last column is header |
 | `last_row` | `bool` | `false` | Last row is footer |
-| `data_labels` | `bool\|string` | `false` | Add data-label attributes |
-| `data_titles` | `bool\|string` | `false` | Add data-title attributes |
+| `data_labels` | `bool\|string` | `false` | Add data-label attributes: the header cell as text (tags stripped, attribute-escaped) |
+| `data_titles` | `bool\|string` | `false` | Deprecated alias of `data_labels` |
 | `row_classes` | `array` | `[]` | Classes per row |
 | `row_atts` | `array` | `[]` | Attributes per row |
 | `col_classes` | `array` | `[]` | Classes per column |
@@ -1064,6 +1064,8 @@ Textarea::render([
 
 ### Select
 
+Option and optgroup labels are text (`esc_html`); `Radio` and `Checkbox` labels are HTML by contract.
+
 **Namespace:** `Digitalis\Field\Select`
 **File:** `include/views/fields/select.field.php`
 
@@ -1116,6 +1118,8 @@ Select::render([
 ---
 
 ### Select_Nice
+
+Exposes `data-js-var` = `{name}_nice` and registers the instance at `nice_selects[js_var]` for other scripts.
 
 **Namespace:** `Digitalis\Field\Select_Nice`
 **File:** `include/views/fields/select-nice.field.php`

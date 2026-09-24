@@ -47,9 +47,10 @@ class Date_Range extends Date_Picker {
 
     public function after () {
 
-        $json = json_encode($this['date_picker']);
+        $id   = wp_json_encode($this['id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $json = wp_json_encode($this['date_picker'], JSON_HEX_TAG | JSON_HEX_AMP);
 
-        echo "<script>new DateRangePicker(document.getElementById('{$this['id']}'), {$json});</script>";
+        echo "<script>new DateRangePicker(document.getElementById({$id}), {$json});</script>";
 
         parent::after();
 

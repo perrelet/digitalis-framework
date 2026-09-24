@@ -1,4 +1,4 @@
-<div class='digitalis-iterator iterator iterator-<?= $iterator->get_key(); ?><?= $iterator->is_doing_cron() ? ' doing_cron running' : '' ?>'>
+<div class='digitalis-iterator iterator iterator-<?= esc_attr($iterator->get_key()); ?><?= $iterator->is_doing_cron() ? ' doing_cron running' : '' ?>'>
 
     <?= $before_description ?>
     <?php if ($description = $iterator->get_description()): ?>

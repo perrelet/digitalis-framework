@@ -183,12 +183,7 @@ abstract class View implements \ArrayAccess {
 
             $path = realpath(trailingslashit($this->get_template_path()) . $template . '.php');
 
-            if (file_exists($path)) {
-
-                extract($this->params, EXTR_OVERWRITE);
-                require $path;
-
-            }
+            if (file_exists($path)) $this->include_template($path);
 
         } else {
 
@@ -207,6 +202,14 @@ abstract class View implements \ArrayAccess {
 
         }
     
+    }
+
+    // A method so templates keep $this; EXTR_SKIP behind the prefixed local so no param can shadow the path.
+    protected function include_template ($__path) {
+
+        extract($this->params, EXTR_SKIP);
+        require $__path;
+
     }
 
     protected function prepare () {

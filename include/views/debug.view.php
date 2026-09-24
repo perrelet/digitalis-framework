@@ -340,9 +340,9 @@ namespace Lattice {
                 $next  = (count($lines) > $i + 1) ? floor(strspn($lines[$i + 1], ' ') / $indent) : -1;
                 $n     = count($lines) > 1 ? $i + 1 : '>';
 
-                $html .= "<line data-level='{$level}' data-line='{$n}'";
+                $html .= "<line data-level='" . esc_attr($level) . "' data-line='" . esc_attr($n) . "'";
                 if ($level < $next)   $html .= " onclick='this.nextElementSibling.toggleAttribute(`open`)'";
-                if ($options['type']) $html .= " data-type='{$options['type']}'";
+                if ($options['type']) $html .= " data-type='" . esc_attr($options['type']) . "'";
                 $html .= ">{$line}</line>";
 
                 if ($level < $next) $html .= "<lines" . ($options['open'] ? ' open' : '') . ">";

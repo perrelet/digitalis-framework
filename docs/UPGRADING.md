@@ -96,3 +96,18 @@ Measured on the live consumers before release:
 Measured on the live consumers before release: 0 across the six. d-pace's `Site_Header` and `Site_Footer` extend the project `Component`, so they are outside the check; `protected static $shell = true` on each opts them in without touching their template path or defaults.
 
 A throw mid-render now also unwinds any output buffer the render opened, so a `Strict_Violation` inside a nested `(string)` cast no longer leaks the parent's buffer.
+
+### Rendering
+
+| Violation | Mechanical fix |
+|---|---|
+| An element tag that is not a bare element name (empty, or containing anything but letters, digits, `:` and `-`); thrown at `set_tag()` | Pass the tag name only; wrap markup in `content` |
+| An attribute name containing whitespace, quotes, `/`, `=`, `<` or `>`; thrown when the attributes render | Fix the key; a list entry such as `['required']` is a boolean attribute |
+
+Byte-level changes with no violation: option `value`, `id`, `for` and `name` positions in the field templates are now attribute-escaped (only values containing `& < > " '` differ); Table `data-label` holds the header text with tags stripped and attribute-escaped instead of a JSON fragment (`\/` and `\"` no longer appear); the inline scripts of `Date_Picker`, `Date_Range` and `Select_Nice` JSON-encode the element id (`getElementById("x")`) and `Select_Nice` registers `nice_selects["x_nice"]` keyed from `name` rather than the deprecated `key` (d-pace's `data-js-var` values change from `_nice` to `{name}_nice`, which its filter chips script needs; the `str_replace(null)` deprecation goes with it). A param named `path`, `template` or `return` now reaches a template as a variable.
+
+Measured on the live consumers before release:
+
+| Plugin | Violations | What |
+|---|---|---|
+| courses, d-pace, eventropy, mycelium, somm, study-hub | 0 | No non-element tags, no unrenderable attribute names, no `path` / `template` / `return` params on template views |

@@ -13,7 +13,7 @@ class Select_Nice extends Select {
 
     public function params (&$p) {
 
-        $js_var = str_replace("-", "_", $p['key']) . "_nice";
+        $js_var = str_replace("-", "_", (string) ($p['name'] ?? $p['key'])) . "_nice";
 
         $p['js_var'] = $js_var;
         $p['attributes']['data-js-var'] = $js_var;
@@ -56,8 +56,11 @@ class Select_Nice extends Select {
 
     public function after () {
 
-        $json = json_encode($this['nice-select']);
-        echo "<script>nice_selects.{$this['js_var']} = NiceSelect.bind(document.getElementById('{$this['id']}'), {$json});</script>";
+        $js   = wp_json_encode($this['js_var'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $id   = wp_json_encode($this['id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $json = wp_json_encode($this['nice-select'], JSON_HEX_TAG | JSON_HEX_AMP);
+
+        echo "<script>nice_selects[{$js}] = NiceSelect.bind(document.getElementById({$id}), {$json});</script>";
 
         parent::after();
 

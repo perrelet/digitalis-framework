@@ -552,6 +552,11 @@ public function params(&$p) {
 
 ## Template System
 
+### What the framework escapes
+
+The framework escapes what it renders itself: every attribute value that passes through `Attributes` (so every `Element`), attribute names (invalid ones are dropped, strict throws), element tags (`Element::set_tag()` accepts bare element names only; strict throws), the attribute positions in its own field, component and debugger templates, and the ids it writes into inline scripts. Content and label slots (`content`, `label`, option labels for radio and checkbox groups, `no_items`, table cells, the `before_*` / `after_*` slots) are HTML by contract, so the caller escapes user data before passing it: `'label' => esc_html($term->name)`. Select option and optgroup labels are the exception and are text. Consumer templates escape their own attribute positions; `include_template()` extracts params with `EXTR_SKIP` behind a prefixed local, so a param named `path`, `template` or `return` reaches the template as a variable and cannot redirect the include.
+
+
 ### Template File Approach
 
 Define template location in view class:
@@ -568,8 +573,8 @@ Template file receives extracted parameters:
 ```php
 <!-- templates/invoice.php -->
 <div class="invoice">
-    <h1><?= $title ?></h1>
-    <p>Order #<?= $order->get_id() ?></p>
+    <h1><?= esc_html($title) ?></h1>
+    <p>Order #<?= (int) $order->get_id() ?></p>
     <p>Customer: <?= $user->get_name() ?></p>
 </div>
 ```
@@ -587,7 +592,7 @@ class Simple_Alert extends View {
 
     public function view() {
         ?>
-        <div class="alert alert-<?= $this['type'] ?>">
+        <div class="alert alert-<?= esc_attr($this['type']) ?>">
             <?= $this['message'] ?>
         </div>
         <?php
@@ -967,7 +972,7 @@ The `Attributes` class manages HTML attributes with automatic escaping, type nor
 | Feature | Description |
 |---------|-------------|
 | **ArrayAccess** | Access attributes via `$attrs['name']` |
-| **Auto-escaping** | Values escaped via `htmlspecialchars()` |
+| **Auto-escaping** | Values escaped with `esc_attr()` (URL attributes with `esc_url_raw()`); names must be valid attribute names or they are dropped (strict throws) |
 | **Type normalization** | Arrays converted to appropriate formats |
 | **Output caching** | String output cached for performance |
 
@@ -1006,8 +1011,8 @@ $attrs->add_style('color', 'red');
 $attrs->add_style(['margin' => '10px', 'padding' => '5px']);
 
 // Add data attributes
-$attrs->add_data('id', 123);        // data-id="123"
-$attrs->add_data('config', ['a' => 1]); // data-config='{"a":1}'
+$attrs->add_data('id', 123);        // data-id='123'
+$attrs->add_data('config', ['a' => 1]); // data-config='{&quot;a&quot;:1}' (JSON, attribute-escaped)
 
 // Set ID
 $attrs->set_id('my-element');
@@ -1017,7 +1022,7 @@ $attrs->set_id('my-element');
 
 ```php
 // As attribute string (for HTML tag)
-echo "<div{$attrs}>";  // __toString includes leading space
+echo "<div {$attrs}>";  // __toString has no leading space; Element::open() adds one
 
 // As array
 $array = $attrs->get_attrs();

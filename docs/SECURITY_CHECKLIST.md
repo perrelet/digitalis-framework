@@ -130,6 +130,10 @@ var message = '<?php echo esc_js($message); ?>';
 <div class="content"><?php echo wp_kses_post($html_content); ?></div>
 ```
 
+### In the framework
+
+`Attributes` escapes every value and validates every name; `Element` validates tags; the framework's own templates escape their attribute positions and JSON-encode what they write into scripts. Content and label slots are HTML by contract: escape user data before it becomes a param. `View::include_template()` extracts params with `EXTR_SKIP` behind a prefixed local, so no param can redirect the template include. See [VIEW_SYSTEM.md](./VIEW_SYSTEM.md#what-the-framework-escapes).
+
 ### Escaping Checklist
 
 - [ ] All dynamic values in HTML escaped with `esc_html()`

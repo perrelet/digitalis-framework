@@ -61,14 +61,9 @@ class Table extends \Lattice\Component {
 
             if ($row) foreach ($row as $j => $cell_atts) {
             
-                if (!isset($atts[$i]))     $atts[$i]     = [];
-                if (!isset($atts[$i][$j])) $atts[$i][$j] = '';
+                if (!isset($atts[$i])) $atts[$i] = [];
 
-                if ($cell_atts) foreach ($cell_atts as $att_name => $att_value) {
-
-                    $atts[$i][$j] .= " {$att_name}='{$att_value}'";
-    
-                }
+                $atts[$i][$j] = ($s = (string) new \Lattice\Attributes((array) $cell_atts)) ? " {$s}" : '';
             
             }
 
@@ -103,7 +98,7 @@ class Table extends \Lattice\Component {
 
             $attribute = is_string($p['data_labels']) ? $p['data_labels'] : 'data-label';
 
-            foreach ($p['rows'][0] as $i => $cell) $p["{$shelf}_atts"][$i][$attribute] = trim(json_encode(strip_tags($cell)), '"');
+            foreach ($p['rows'][0] as $i => $cell) $p["{$shelf}_atts"][$i][$attribute] = wp_strip_all_tags((string) $cell);
 
         }
     
@@ -115,13 +110,7 @@ class Table extends \Lattice\Component {
 
         if ($p["{$shelf}_atts"]) foreach ($p["{$shelf}_atts"] as $i => $shelf_atts) {
 
-            if (!isset($atts[$i])) $atts[$i] = '';
-
-            if ($shelf_atts) foreach ($shelf_atts as $att_name => $att_value) {
-
-                $atts[$i] .= " {$att_name}='{$att_value}'";
-
-            }
+            $atts[$i] = ($s = (string) new \Lattice\Attributes((array) $shelf_atts)) ? " {$s}" : ''; // Leading space: the template concatenates these strings.
 
         }
         

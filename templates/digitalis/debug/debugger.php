@@ -1,11 +1,11 @@
-<digitalis-debugger-chip data-index="<?= $view_index ?>">
+<digitalis-debugger-chip data-index="<?= esc_attr($view_index) ?>">
     🤖 <?= $title ?>
 </digitalis-debugger-chip>
 <digitalis-debugger
     <?= $open ? 'open' : '' ?>
-    data-closable="<?= $closable ?>"
-    data-index="<?= $view_index ?>"
-    style="--index: <?= $view_index ?>; z-index: calc(2147483647 - var(--index)) !important;"
+    data-closable="<?= esc_attr($closable) ?>"
+    data-index="<?= esc_attr($view_index) ?>"
+    style="--index: <?= esc_attr($view_index) ?>; z-index: calc(2147483647 - var(--index)) !important;"
 >
     <header>
         <?php if ($closable): ?>

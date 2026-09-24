@@ -61,7 +61,7 @@ abstract class Archive extends Component {
             }
 
             echo  "<div class='digitalis-loader'>{$this->get_loader()}</div>";
-            echo  "<div class='{$this['child_classes']['items']}'>";
+            echo  "<div class='" . esc_attr($this['child_classes']['items']) . "'>";
 
         }
 
@@ -185,7 +185,7 @@ abstract class Archive extends Component {
                     LATTICE_URI . "assets/img/loaders/" . $this['loader'] :
                     $this['loader'];
 
-                return "<img role='progressbar' aria-valuetext='Loading' loading='lazy' alt='Loading Icon' src='{$url}'>";
+                return "<img role='progressbar' aria-valuetext='Loading' loading='lazy' alt='Loading Icon' src='" . esc_url($url) . "'>";
 
             case "file":
 
