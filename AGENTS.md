@@ -484,7 +484,7 @@ Query_Manager::get_instance()->execute(\WP_Query $q): array
 
 Full context and code examples for all of these are in [ANTIPATTERNS.md](./docs/ANTIPATTERNS.md).
 
-**Route: `$definition = ['methods' => 'POST']`, `$args` for the argument map, `$namespace` with the version (`'my-plugin/v1'`), override `permission()` not `permission_callback()`, read params from `$request`.**
+**Route: `$definition = ['methods' => 'POST']`, `$args` for the argument map, `$namespace` with the version (`'my-plugin/v1'`), override `permission()` not `permission_callback()`, read params from `$request`, and declare methods plus a real `permission()` on anything that changes state: the defaults are `['GET', 'POST']` and an open `permission()`, and 1.0 makes the default `GET` only.**
 Strict mode throws at boot for a `$method` or `$version` property, `permission_callback()` and the old `get_params()` API, and at the call for `$this->get_param()`. Redeclaring a config property as static is a PHP compile error.
 
 **`query()` returns a plain `static[]` array — no fluent builder.**

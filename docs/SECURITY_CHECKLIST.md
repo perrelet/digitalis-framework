@@ -384,6 +384,8 @@ if (!$full_path || strpos($full_path, realpath($base_dir)) !== 0) {
 
 ## REST API Security
 
+A `Route` answers `GET` and `POST` with an open `permission()` until it says otherwise: declare `$definition['methods']` (1.0 makes the default `GET` only) and override `permission()` on anything that changes state. Set `$require_nonce = true` only on a state-changing route anonymous visitors may call: `permission()` cannot tell a visitor from a cross-site form, while a logged-in caller without a `wp_rest` nonce is already downgraded to anonymous by WordPress. Under `WP_DEBUG` a non-GET request served through either default logs a `_doing_it_wrong` notice.
+
 ### Secure Route Definition
 
 ```php

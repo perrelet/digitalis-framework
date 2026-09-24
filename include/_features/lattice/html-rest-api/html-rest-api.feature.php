@@ -48,9 +48,10 @@ class HTML_REST_API extends Feature {
         if (!empty($result))             return $result;
         if (!$this->is_html_rest_path()) return $result;
 
-        // WordPress auth cookies are scoped to /wp-admin/ and /wp-content/plugins/,
-        // so standard REST cookie auth doesn't fire for wp-html/ requests.
-        // We authenticate manually using the logged_in cookie (path: /) instead.
+        // Core cookie auth does reach wp-html/: the logged_in cookie (path /) validates on determine_current_user and
+        // rest_cookie_check_errors then demands the nonce, downgrading to anonymous without it. This path exists to
+        // accept the `Nonce` header, to pass when any candidate is valid where core fails on the first stale one,
+        // and to keep the verdict ahead of core so error responses stay text/plain. It never authenticates without a valid nonce.
 
         $candidates = Route::collect_nonce_candidates();
         if (!$candidates) return $result;

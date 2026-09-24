@@ -720,7 +720,7 @@ class Projects_Table extends Posts_Table {
 
 ## REST Routes
 
-> **Non-obvious:** Override `permission(WP_REST_Request $request)`, not `permission_callback()`. For non-GET routes use `$definition = ['methods' => 'POST']` — there is no `$method` property. The argument map is `$args` (override public `get_args()` when computed); `get_params()` belongs to the removed `Deprecated_Route`. `$namespace` includes the version: `'my-plugin/v1'`. Strict mode throws at boot for each of these.
+> **Non-obvious:** A route answers `GET` and `POST` with an open `permission()` until it says otherwise. Declare `$definition = ['methods' => 'POST']` (there is no `$method` property; 1.0 makes the default `GET` only) and override `permission(WP_REST_Request $request)`, not `permission_callback()`, on anything that changes state. Set `$require_nonce = true` only on a state-changing route anonymous visitors may call: `permission()` cannot tell a visitor from a cross-site form, while a logged-in caller without a `wp_rest` nonce is already downgraded to anonymous by WordPress. The argument map is `$args` (override public `get_args()` when computed); `get_params()` belongs to the removed `Deprecated_Route`. `$namespace` includes the version: `'my-plugin/v1'`. Strict mode throws at boot for the property and method mistakes; a non-GET request served through the default methods or the base `permission()` logs a `_doing_it_wrong` notice under `WP_DEBUG`.
 
 ### Basic Route
 

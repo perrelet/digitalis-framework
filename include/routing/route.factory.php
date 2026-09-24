@@ -264,17 +264,49 @@ class Route extends Factory {
 
     //
 
+    protected $permission_request;
     protected $permission_cache;
 
+    // Cached by request identity: rest_send_allow_header() asks again per allowed method with the same request. Redispatching a mutated object reuses the verdict.
     public function permission_wrap (WP_REST_Request $request) {
-    
-        if (is_null($this->permission_cache)) $this->permission_cache = $this->request_inject($request, 'permission');
+
+        if ($this->permission_request !== $request) {
+
+            $this->permission_request = $request;
+            $this->permission_cache   = $this->request_inject($request, 'permission');
+
+        }
 
         return $this->permission_cache;
     
     }
 
+    // The 0.5 discovery instrument for the 1.0 default of GET-only routes; nothing throws.
+    protected function notice_defaults (WP_REST_Request $request) {
+
+        $method = $request->get_method();
+
+        if (in_array($method, ['GET', 'HEAD'], true)) return;
+
+        $clauses = [];
+
+        if (!isset($this->definition['methods']))                                                         $clauses[] = "handles {$method} through the default methods ['GET', 'POST']; declare \$definition['methods'] (1.0 defaults to GET)";
+        if ((new \ReflectionMethod($this, 'permission'))->getDeclaringClass()->getName() === self::class) $clauses[] = "handles {$method} with the base permission(), which allows everyone";
+
+        if (!$clauses) return;
+
+        $message = implode('. ', $clauses) . '.';
+
+        _doing_it_wrong(static::class, $message, 'Lattice 1.0');
+
+        // A served REST request suppresses the trigger and only sets an X-WP-DoingItWrong header, so the log line is written here.
+        if (defined('REST_REQUEST') && REST_REQUEST && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) error_log('Lattice: ' . static::class . ': ' . $message);
+
+    }
+
     public function callback_wrap (WP_REST_Request $request) {
+
+        if (WP_DEBUG) $this->notice_defaults($request);
 
         if ($this->get_require_nonce()) {
 

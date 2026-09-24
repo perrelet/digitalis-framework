@@ -48,6 +48,15 @@ Measured on the live consumers before release:
 | courses | 1 | `Products_Route` declares a dead `$rest_args = []` |
 | d-pace, eventropy, mycelium, somm | 0 | |
 
+Notices (`WP_DEBUG`, `_doing_it_wrong`, nothing throws):
+
+| Notice | Fix |
+|---|---|
+| A non-GET request served through the default methods `['GET', 'POST']` | Declare `$definition['methods']`; 1.0 makes the default `GET` only |
+| A non-GET request served with the base `permission()` | Override `permission()`; anonymous state-changing routes also set `$require_nonce = true` |
+
+Zero notices on measured traffic: the five POST callers (mycelium banners, org moderation, registration, autofill and its upload) all target routes that declare `POST` and override `permission()`, and mycelium's abstract base already sets `$require_nonce = true` for all its routes. One runtime-dependent case the static count cannot see: ACF's ajax form posts to the current URL, so a mycelium edit route served as the top-level page receives that POST through the default methods (a notice today, a 404 under a GET-only default).
+
 ### Queries
 
 | Violation | Mechanical fix |

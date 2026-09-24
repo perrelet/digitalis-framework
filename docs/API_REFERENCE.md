@@ -540,7 +540,7 @@ REST API endpoint registration and handling.
 class Route extends Factory
 ```
 
-Registers on `rest_api_init`. Accepts both `GET` and `POST` by default. URL generation is delegated to `REST_URL_Builder`.
+Registers on `rest_api_init`. Accepts `GET` and `POST` by default (1.0 narrows this to `GET`; declare `$definition['methods']` for anything else) and `permission()` returns `true` until overridden; under `WP_DEBUG` a non-GET request served through either default logs a `_doing_it_wrong` notice. URL generation is delegated to `REST_URL_Builder`.
 
 ```php
 class Invoice_Route extends Route {
@@ -589,7 +589,7 @@ Invoice_Route::get_instance();
 | `permission()` | `public permission(WP_REST_Request $request): mixed` | Override to add permission logic. Supports DI from `$args`. Default: `true`. |
 | `callback()` | `public callback(WP_REST_Request $request): mixed` | Override for route logic. Supports DI from `$args`. |
 | `handle()` | `public handle(WP_REST_Request $request): mixed` | Default handler — delegates to `callback()` via `request_inject()`. |
-| `permission_wrap()` | `public permission_wrap(WP_REST_Request $request): mixed` | WP callback — calls and caches `permission()`. |
+| `permission_wrap()` | `public permission_wrap(WP_REST_Request $request): mixed` | WP callback — calls `permission()` once per request (cached by request identity, so `rest_send_allow_header`'s extra calls reuse it). |
 | `callback_wrap()` | `public callback_wrap(WP_REST_Request $request): mixed` | WP callback — checks nonce, calls handler, renders view if set. |
 | `get_url()` | `public get_url(array $params = [], ?bool $nonce = null, ?string $format = null): string` | Build URL via `REST_URL_Builder`. Respects `$require_nonce` and `$format` by default. |
 | `get_nonce()` | `public get_nonce(): string` | Returns (cached) `wp_rest` nonce. |
