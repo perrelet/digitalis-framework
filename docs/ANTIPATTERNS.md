@@ -4,6 +4,62 @@ Patterns that look correct but are wrong in this framework. Each entry explains 
 
 ---
 
+## Bootstrap
+
+### `new` bypasses the Factory/Singleton cache — use `get_instance()`
+
+`get_instance()` registers the instance in the Factory/Singleton store; `new` creates an uncached, untracked object.
+
+```php
+// ❌
+$app = new My_Plugin();
+
+// ✅
+$app = My_Plugin::get_instance();
+```
+
+### Register static-time hooks in `hello()` / `static_init()` — not the constructor
+
+The constructor only runs if the class is instantiated (and runs again on every errant `new`). `hello()`/`static_init()` fire exactly once, immediately after `include_once`, regardless of instantiation — the correct place for registration that must always happen.
+
+```php
+// ❌
+class My_Integration extends Integration {
+    public function __construct() {
+        add_action('init', [$this, 'register']);
+    }
+}
+
+// ✅
+class My_Integration extends Integration {
+    public static function static_init() {
+        add_action('init', [static::class, 'register']);
+    }
+}
+```
+
+### Always call `parent::__construct()` when overriding App's constructor
+
+`App::__construct()` sets `$this->path`/`$this->url` and hooks `boot()` to `plugins_loaded`. Skip it and the subclass never autoloads.
+
+```php
+// ❌
+class My_Plugin extends App {
+    public function __construct() {
+        $this->register_updater();
+    }
+}
+
+// ✅
+class My_Plugin extends App {
+    public function __construct() {
+        parent::__construct();
+        $this->register_updater();
+    }
+}
+```
+---
+
 ## Route
 
 ### Properties must be non-static instance properties
