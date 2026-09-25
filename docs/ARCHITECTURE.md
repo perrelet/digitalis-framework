@@ -51,11 +51,9 @@ framework/
 │   │   ├── Taxonomy.abstract.php
 │   │   └── Query_Vars.class.php
 │   │
-│   ├── woocommerce/       # WooCommerce integration
-│   │   ├── Customer.class.php
-│   │   ├── Order.class.php
-│   │   ├── Order_Item.class.php
-│   │   └── Product_Type.abstract.php
+│   ├── integrations/
+│   │   ├── acf/           # ACF: the field provider, rows, blocks, option pages, the AJAX form, the bidirectional relationship feature
+│   │   └── _woocommerce/  # Declared only after woocommerce_loaded (outside the sweep): Customer, Order, Order_Item, Order_Status, Product_Type, Woo_Account_Page, the two themes, Is_Woo_Customer
 │   │
 │   ├── views/             # View rendering system
 │   │   ├── View.abstract.php
@@ -79,10 +77,6 @@ framework/
 │   │   ├── CSV_Iterator.abstract.php
 │   │   ├── Post_Iterator.abstract.php
 │   │   └── User_Iterator.abstract.php
-│   │
-│   ├── acf/               # Advanced Custom Fields
-│   │   ├── ACF_Block.factory.php
-│   │   └── Bidirectional_Relationship.feature.php
 │   │
 │   └── features/          # Optional features
 │
@@ -788,7 +782,7 @@ Front-end rendering (theme calls App::render()):
 2. **Compatibility shim** loaded (`compat/digitalis-namespace.php`: legacy constants and a lazy `Digitalis\` alias loader)
 3. **Bootstrap** required explicitly: `Utility`, `Hook`, the `Autoloader` trait and `Classmap`, the four things `autoload()` reaches for before a sweep can run
 4. **One sweep** of `include/` with instantiation off: every declaration is read (or taken from `.classmap.php` when present and current), a lazy loader is registered, and each file is included once. The framework is a library of base classes, so nothing is constructed; singletons come up on first `get_instance()`
-5. **Deferred**: the WooCommerce models are required on `plugins_loaded` from `integrations/_woocommerce/`. The directory carries the `_` prefix so the sweep never reaches it: `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`.
+5. **Gated**: the nine WooCommerce files in `integrations/_woocommerce/` are required when `woocommerce_loaded` fires (WooCommerce raises it at `plugins_loaded` priority -1), or at once if it already has. Without WooCommerce they are never declared. The directory carries the `_` prefix so the sweep never reaches it: `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`.
 
 ### App boot lifecycle (`plugins_loaded` hook)
 

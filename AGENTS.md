@@ -26,11 +26,11 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ## Autoloader contract — inclusion is also instantiation
 
-**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly during `App::__construct() → autoload()` — every file loads and eligible classes get instances on every request.
+**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly in `App::boot()` on `plugins_loaded` (priority 10) — every file loads and eligible classes get instances on every request.
 
 ### What gets auto-included
 
-Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed.
+Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed. The framework's own `include/integrations/_woocommerce/` is outside the sweep: its nine classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme`, `Is_Woo_Customer`) are declared only once `woocommerce_loaded` fires, so a site without WooCommerce never has them.
 
 ### What fires on include
 
@@ -58,6 +58,10 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 **DO NOT** `new ClassName()` for an auto-loaded class — it's already a singleton; `new` bypasses `get_instance()`, creating a second instance with duplicate hook registration. Use `ClassName::get_instance()` (idempotent — returns the cached singleton).
 
 **DO NOT** use `include/` for WIP / scratch classes — they'll auto-instantiate and run on every request. Use `_dirname/` (skipped entirely) for scratch, or `.abstract.` in the filename if you want the parent loaded but not instantiated.
+
+### Boundaries
+
+`include/core`, `models`, `views`, `routing`, `query` and `registration` never name an ACF, WooCommerce or page-builder symbol: no `get_field()`, `acf_*()`, `wc_*()`, `WC_*`, `WooCommerce`, `Automattic\WooCommerce`, Oxygen or Bricks. ACF reaches the models only through `Field_Provider` (see `Custom_Fields`); ACF-specific views and features live in `include/integrations/acf/` and `include/_features/`. `php bin/boundaries.php` enforces it (tokenizer-based, exit 1 with file and line); CI runs it on pushes to `main` and `v1` and on every pull request.
 
 For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 

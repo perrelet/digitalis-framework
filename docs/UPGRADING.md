@@ -112,6 +112,27 @@ Measured on the live consumers before release: 0 violations (no consumer names a
 
 Run `wp lattice classmap` after deploying: the map is valid only for the exact file set it was written from, and files moved under `include/`.
 
+### WooCommerce
+
+The nine framework WooCommerce classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme` and the `Is_Woo_Customer` trait) are declared when `woocommerce_loaded` fires, or at once if it already has; they used to be required on every site. Without WooCommerce they do not exist.
+
+| Violation | Mechanical fix |
+|---|---|
+| A reference to one of the nine that PHP resolves at boot outside a `~woocommerce/` directory (the `Digitalis\` alias now covers traits too, so `use \Digitalis\Is_Woo_Customer` resolves once the trait is declared): `extends`, a trait `use`, or a static call in a plain `Integration`'s `run()` (fatal `Class "Digitalis\X" not found` at `plugins_loaded`, on every request type including wp-admin, on a site without WooCommerce) | Move the file under `~woocommerce/`, or make the integration a `Plugin_Integration` with `$plugin = 'woocommerce'` |
+
+Deactivating WooCommerce on a site with such references now takes the site down until they move; `wp plugin activate woocommerce --skip-plugins=<your-plugin>` is the escape. The two gates use different signals: the framework listens for `woocommerce_loaded`, a consumer's `~woocommerce/` checks the active-plugin list for a `woocommerce/` directory, so WooCommerce loaded from `mu-plugins/` or a renamed directory satisfies only the first.
+
+Measured on the live consumers before release: no site runs without WooCommerce, so 0 violations today. The references that would fatal on a WooCommerce-less deployment:
+
+| Plugin | Files | What |
+|---|---|---|
+| courses | 5 | `front.theme.php` extends `Woocommerce_Clean_Theme`; `order.order.php`, `order-item.model.php` extend `Order`, `Order_Item`; `user.user.php` uses `Is_Woo_Customer`; `integrations/woocommerce.integration.php` calls `Woo_Account_Page::hide_page()` from a plain `Integration` |
+| somm | 3 | `front.class.php` extends `Woocommerce_Clean_Theme`; `dancer.user.php` uses `Is_Woo_Customer`; `integrations/woocommerce.integration.php` calls `Woo_Account_Page::hide_page()` |
+| eventropy | 1 | `user.user.php` uses `Is_Woo_Customer` |
+| d-pace, mycelium, study-hub | 0 | |
+
+`ACF_Block` moved from `include/views/` to `include/integrations/acf/`; the class and namespace are unchanged. Run `wp lattice classmap` after deploying.
+
 ### Layout
 
 | Violation | Mechanical fix |

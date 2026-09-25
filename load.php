@@ -34,8 +34,9 @@ require LATTICE_PATH . 'compat/digitalis-hooks.php';
 
 if (Lattice\Strict::enabled()) Lattice\Query_Manager::strict_hooks();
 
-add_action('plugins_loaded', function () {
-//add_action('woocommerce_loaded', function () {
+// WooCommerce fires woocommerce_loaded at plugins_loaded:-1; the did_action branch covers a framework included after that.
+// Bare requires on purpose: a sweep would fire static_init, Customer would tie every User resolution and Order::validate_id calls wc_get_order.
+$lattice_woocommerce = function () {
 
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/is-woo-customer.trait.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/customer.user.php';
@@ -47,7 +48,9 @@ add_action('plugins_loaded', function () {
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/woocommerce.theme.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/woocommerce-clean.theme.php';
 
-}, 0);
+};
+
+if (did_action('woocommerce_loaded')) $lattice_woocommerce(); else add_action('woocommerce_loaded', $lattice_woocommerce);
 
 add_filter('sassy-variables', function ($variables) {
 

@@ -130,7 +130,7 @@ Design rationale and trade-off analysis. Human reference only — not required f
 
 ### WooCommerce
 - Account pages: [CHEATSHEET.md](./CHEATSHEET.md#woocommerce)
-- Order model: [ARCHITECTURE.md](./ARCHITECTURE.md#woocommerce-integration)
+- Order and Customer models: [MODELS.md](./MODELS.md#order-model); declared only once `woocommerce_loaded` fires, see [UPGRADING.md](./UPGRADING.md#woocommerce)
 
 ### Iterators & Batch Processing
 - Quick patterns: [CHEATSHEET.md](./CHEATSHEET.md#iterators-batch-processing)
@@ -150,17 +150,18 @@ framework/
 ├── AGENTS.md              # AI agent primer (start here for LLM sessions)
 ├── CLAUDE.md              # Claude Code entry point → AGENTS.md
 ├── include/
-│   ├── objects/           # Core abstracts (Model, View, Factory, Route, Shortcode, …)
-│   ├── patterns/          # Design patterns (Singleton, Factory)
-│   ├── traits/            # Reusable traits
-│   ├── wordpress/         # WP models (Post, User, Term)
-│   ├── woocommerce/       # WC models (Order, Customer)
+│   ├── core/              # App, Model, Factory, Singleton, the autoloader, strict mode
+│   ├── models/            # Post, User, Term, Comment, Options, the field provider
 │   ├── views/             # Built-in views
 │   │   ├── components/
 │   │   └── fields/
+│   ├── routing/ query/ registration/ hooks/ services/
 │   ├── admin/             # Admin classes
 │   ├── iterators/         # Batch processing
-│   ├── acf/               # ACF block + relationships
+│   ├── integrations/
+│   │   ├── acf/           # Field provider, rows, blocks, option pages, AJAX form, relationships
+│   │   └── _woocommerce/  # Declared only after woocommerce_loaded
+│   ├── _features/         # Opt-in feature library
 │   └── db/                # Database schema + migrations
 ├── templates/             # PHP templates
 └── docs/

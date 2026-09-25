@@ -7,10 +7,19 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-16T17:12:36+00:00\n"
+"POT-Creation-Date: 2026-09-25T20:07:40+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: lattice\n"
+
+#: include/integrations/acf/acf-block.factory.php:275
+#, php-format
+msgid "%s — configure to preview"
+msgstr ""
+
+#: include/integrations/acf/acf-block.factory.php:277
+msgid "Configure to preview"
+msgstr ""
 
 #: include/registration/post-type.abstract.php:216
 #: include/registration/post-type.abstract.php:217
@@ -109,13 +118,4 @@ msgstr ""
 #: include/registration/taxonomy.abstract.php:115
 #, php-format
 msgid "%s list navigation"
-msgstr ""
-
-#: include/views/acf-block.factory.php:275
-#, php-format
-msgid "%s — configure to preview"
-msgstr ""
-
-#: include/views/acf-block.factory.php:277
-msgid "Configure to preview"
 msgstr ""

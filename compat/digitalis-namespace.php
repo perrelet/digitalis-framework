@@ -5,7 +5,7 @@ define('DIGITALIS_FRAMEWORK_PATH',    LATTICE_PATH);
 define('DIGITALIS_LIBRARY_PATH',      LATTICE_LIBRARY_PATH);
 define('DIGITALIS_FRAMEWORK_URI',     LATTICE_URI);
 
-// Traits cannot be aliased; consumers using framework traits must update the namespace.
+// class_alias covers classes, interfaces and traits alike.
 spl_autoload_register(function ($name) {
 
     $sub_namespaces = ['Component', 'Field', 'DB', 'WP', 'Woo', 'ACF', 'Oxygen'];
@@ -32,7 +32,7 @@ spl_autoload_register(function ($name) {
 
         if ($target === $name) continue;
 
-        if (class_exists($target) || interface_exists($target)) {
+        if (class_exists($target) || interface_exists($target) || trait_exists($target)) {
 
             class_alias($target, $name);
             return;

@@ -702,7 +702,7 @@ $terms = Project_Category::query_post($post);
 
 ## Order Model
 
-WooCommerce orders. Proxies to `WC_Order` methods.
+WooCommerce orders. Proxies to `WC_Order` methods. Declared only once `woocommerce_loaded` fires, so a subclass outside a `~woocommerce/` directory fatals on a site without WooCommerce (see [UPGRADING.md](./UPGRADING.md#woocommerce)).
 
 ### Getting Orders
 
@@ -746,7 +746,7 @@ $order->get_payment_method();
 
 ## Customer Model
 
-Extends User with WooCommerce customer data. Proxies to `WC_Customer`.
+Extends User with WooCommerce customer data. Proxies to `WC_Customer`. Declared only once `woocommerce_loaded` fires, like `Order`.
 
 ### Getting Customers
 

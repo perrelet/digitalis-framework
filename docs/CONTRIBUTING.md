@@ -241,7 +241,8 @@ But that's probably just the caffeine talking.
 2. **Commits:** Squash if messy, keep if they tell a story
 3. **Description:** Explain the why, not just the what
 4. **Tests:** If it breaks, you bought it
-5. **Strings:** after adding a framework-authored string, regenerate the template with `wp i18n make-pot . languages/lattice.pot --domain=lattice --exclude=docs,scss,assets,compat,templates --skip-js --skip-audit --headers='{"Project-Id-Version":"Lattice"}'` (`--skip-audit` because the `%s` scaffold strings need no translator comments)
+5. **Strings:** after adding a framework-authored string, regenerate the template with `wp i18n make-pot . languages/lattice.pot --domain=lattice --exclude=docs,scss,assets,compat,templates,bin --skip-js --skip-audit --headers='{"Project-Id-Version":"Lattice"}'` (`--skip-audit` because the `%s` scaffold strings need no translator comments)
+6. **Boundaries:** run `php bin/boundaries.php` before opening a PR; CI runs it on pushes to `main` and `v1` and on every pull request. `include/{core,models,views,routing,query,registration}` never name an ACF, WooCommerce or page-builder symbol
 
 ---
 
