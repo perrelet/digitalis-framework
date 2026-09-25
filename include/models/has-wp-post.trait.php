@@ -8,7 +8,7 @@ use WP_Comment_Query;
 
 trait Has_WP_Post {
 
-    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_Fields;
 
     protected $wp_post;
 
@@ -77,12 +77,6 @@ trait Has_WP_Post {
     public function get_wp_meta_type () {
 
         return 'post';
-
-    }
-
-    public function get_acf_id () {
-
-        return $this->is_new() ? null : $this->wp_post->ID;
 
     }
 

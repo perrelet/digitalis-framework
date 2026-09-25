@@ -9,7 +9,7 @@ use WP_Comment;
 
 trait Has_WP_Comment {
 
-    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_Fields;
 
     protected $wp_comment;
 
@@ -67,12 +67,6 @@ trait Has_WP_Comment {
     public function get_wp_meta_type () {
 
         return 'comment';
-
-    }
-
-    public function get_acf_id () {
-
-        return $this->is_new() ? null : 'comment_' . $this->wp_comment->comment_ID;
 
     }
 

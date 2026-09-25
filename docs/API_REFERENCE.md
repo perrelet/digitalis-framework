@@ -901,14 +901,26 @@ Meta data management.
 | `set_meta()` | `public set_meta(string $key, mixed $value): void` | Sets meta value |
 | `delete_meta()` | `public delete_meta(string $key): void` | Deletes meta |
 
-### `Has_ACF_Fields`
+### `Has_Fields`
 
-ACF field support.
+Field access through the registered `Field_Provider` (see `Custom_Fields`). Null without one.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_field()` | `public get_field(string $selector): mixed` | Gets ACF field value |
-| `update_field()` | `public update_field(string $selector, mixed $value): void` | Updates ACF field |
+| `get_field_id()` | `public get_field_id(): int\|string\|null` | The provider's id for this model; null when unsaved |
+| `get_field()` | `public get_field(string $selector, bool $format_value = true, bool $escape_html = false): mixed` | Gets a field value |
+| `update_field()` | `public update_field(string $selector, mixed $value): mixed` | Updates a field |
+| `get_field_rows()` | `public get_field_rows(string $selector, string $row_class = ACF_Row::class): array` | Repeater rows as `ACF_Row` instances |
+
+### `Custom_Fields`
+
+Registry for the field provider. `ACF_Field_Provider` registers itself when walked; under strict mode a read with no provider registered at all throws.
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `register()` | `static register(Field_Provider $provider): void` | Replaces the provider |
+| `provider()` | `static provider(): ?Field_Provider` | The provider while it is available, else null |
+| `available()` | `static available(): bool` | Whether a provider answers right now |
 
 ### `Dependency_Injection`
 

@@ -35,6 +35,8 @@ File naming conventions, lazy parent resolution, conditional loading, auto-insta
 - `name.parent.php` - Class extends parent
 - `name.abstract.php` - Abstract class
 - `name.trait.php` - Trait
+- `name.interface.php` - Interface
+- `name.final.php` - Final class (naming only, no loader meaning)
 - `_folder/` - Skipped by autoloader
 - `~folder/` - Conditional (plugin-dependent)
 

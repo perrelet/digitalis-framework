@@ -7,7 +7,7 @@ use WP_Term;
 
 trait Has_WP_Term {
 
-    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_Fields;
 
     protected $wp_term;
 
@@ -65,12 +65,6 @@ trait Has_WP_Term {
     public function get_wp_meta_type () {
 
         return 'term';
-
-    }
-
-    public function get_acf_id () {
-
-        return $this->is_new() ? null : 'term_' . $this->wp_term->term_id;
 
     }
 

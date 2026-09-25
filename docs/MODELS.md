@@ -843,7 +843,7 @@ $new  = Milestone::create(['parent' => $project, 'data' => [...]]);
 | `update_field($key, $value)` | `$this\|false` | Stage + immediately `save()` |
 | `update_fields($data)` | `$this\|false` | Stage multiple + immediately `save()` |
 
-> **Naming convention:** `set_xxx` stages (matches `WP_Model::set_title` etc.); `update_xxx` writes immediately (matches `Has_ACF_Fields::update_field`). `update_field` flushes the entire row including any prior `set_field` changes.
+> **Naming convention:** `set_xxx` stages (matches `WP_Model::set_title` etc.); `update_xxx` writes immediately (matches `Has_Fields::update_field`). `update_field` flushes the entire row including any prior `set_field` changes.
 
 ### Identity
 
@@ -876,7 +876,7 @@ Composite string: `acf:{type}:{selector}:{parent_id}:{index}` — e.g. `acf:post
 ### Caveats
 
 - **Sibling staleness on delete:** `delete()` clears the deleted instance's cache slot, but cached siblings still point to indexes that have shifted. Re-query after deletion.
-- **Unsaved parents:** `save()` returns `false` if the parent's `get_acf_id()` returns null (i.e., parent isn't yet persisted). Save the parent first.
+- **Unsaved parents:** `save()` returns `false` if the parent's `get_field_id()` returns null (the parent isn't persisted yet, or no field provider is available). Save the parent first.
 - **In-memory criteria filter:** `query_for($parent, $criteria)` loads all rows then filters in PHP. No cross-parent query (would require `meta_query LIKE` on flat ACF subkeys).
 
 ---
@@ -912,14 +912,17 @@ Available on Post, User, and Term via `WP_Model`:
 
 ---
 
-## ACF Fields
+## Custom Fields
 
-Available on Post, User, and Term when ACF is active.
+Available on Post, User, Term, Comment and Options through the registered field provider (`Has_Fields`). `ACF_Field_Provider` registers itself when the autoload sweep walks it (core calls no ACF function); it answers only while ACF is active, so on a site without ACF every read returns `null`, `get_field_rows()` returns `[]` and every write returns `null` instead of a fatal. A plugin that stores fields elsewhere implements `Field_Provider` and calls `Custom_Fields::register()` (last registration wins; `Custom_Fields::provider()` is `null` until the provider reports itself available).
+
+Every accessor short-circuits on `get_field_id()`, the provider's id for the model (ACF: the post id, `term_N`, `user_N`, `comment_N`, `option`), which is `null` while the model is unsaved. The accessor signatures mirror ACF's argument order after the selector; a provider takes the id first, then that order.
 
 ### Reading Fields
 
 | Method | Returns | Description |
 |--------|---------|-------------|
+| `get_field_id()` | `int\|string\|null` | The provider's id for this model; null when unsaved or without a provider |
 | `get_field($selector)` | `mixed` | Field value |
 | `get_fields()` | `array` | All field values |
 | `esc_field($selector)` | `string` | Escaped field value |

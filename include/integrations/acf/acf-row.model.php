@@ -231,7 +231,7 @@ class ACF_Row extends Model {
 
         if (!$this->parent)                         return false;
         if (!$this->selector)                       return false;
-        if (!$acf_id = $this->parent->get_acf_id()) return false;
+        if (!$this->parent->get_field_id())         return false;
 
         if ($this->is_new()) {
 
@@ -239,7 +239,7 @@ class ACF_Row extends Model {
             if (!$info = static::extract_parent_info($this->parent)) return false;
 
             // add_row returns the new 1-based row number, or false on failure.
-            if (!$row_num = add_row($this->selector, $this->data, $acf_id)) return false;
+            if (!$row_num = $this->parent->field_add_row($this->selector, $this->data)) return false;
 
             $this->index  = $row_num - 1;
             $this->is_new = false;
@@ -249,7 +249,7 @@ class ACF_Row extends Model {
 
         } else {
 
-            update_row($this->selector, $this->index + 1, $this->data, $acf_id);
+            $this->parent->field_update_row($this->selector, $this->index + 1, $this->data);
 
         }
 
@@ -264,9 +264,9 @@ class ACF_Row extends Model {
         if (!$this->parent)                         return false;
         if (is_null($this->index))                  return false;
         if (!$this->selector)                       return false;
-        if (!$acf_id = $this->parent->get_acf_id()) return false;
+        if (!$this->parent->get_field_id())         return false;
 
-        $result = delete_row($this->selector, $this->index + 1, $acf_id);
+        $result = $this->parent->field_delete_row($this->selector, $this->index + 1);
 
         // Sibling rows shift indexes after deletion — drop this instance's cache slot; cached siblings are now stale and should be re-queried.
         unset(self::$instances[static::class][$this->id]);

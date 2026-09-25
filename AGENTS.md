@@ -105,7 +105,10 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 |-------|---------|---------|:----:|
 | `Theme` | — | Front-end hook registrar; auto-wires `style()` → `wp_enqueue_scripts`, `theme_supports()` → `after_setup_theme`, `init()` on construct | yes |
 | `Service` | `Factory` | Instantiable service/value object; auto-instantiation off by default | |
-| `Options` | `Model` | WordPress options proxy with ACF support; `Options::get()`, `add()`, `update()`; `protected static $prefix`/`$acf_prefix` for namespacing. Singleton-shaped (extract_id → 0); also serves as the ACF parent for option-page repeater `ACF_Row` subclasses (uses `Has_ACF_Fields`, `get_wp_meta_type='option'`, `get_acf_id='option'`) | yes |
+| `Options` | `Model` | WordPress options proxy with field support; `Options::get()`, `add()`, `update()`; `protected static $prefix`/`$acf_prefix` for namespacing. Singleton-shaped (extract_id → 0); also serves as the parent for option-page repeater `ACF_Row` subclasses (uses `Has_Fields`, `get_wp_meta_type='option'`, provider id `'option'`) | yes |
+| `Custom_Fields` | — | Registry for the one `Field_Provider` behind the model field accessors (`Has_Fields` on Post, User, Term, Comment, Options): `register()`, `provider()` (null until the provider is available), `available()` | |
+| `Field_Provider` | interface | What a field store implements: `available()`, `id(Model)`, and the value/row operations the accessors delegate to; the id comes first, then ACF's parameter order | |
+| `ACF_Field_Provider` | — | The shipped `Field_Provider`: ACF's functions and id scheme (post id, `term_N`, `user_N`, `comment_N`, `option`); registers itself from `static_init()` when the sweep walks it, available while ACF is active, so a site without ACF reads `null` instead of fataling | |
 
 ### Layout System
 
@@ -263,8 +266,8 @@ $post->get_post_type(): string
 $post->get_meta(string $key): mixed
 $post->set_meta(string $key, mixed $value): void
 $post->update_meta(string $key, mixed $value): void
-$post->get_field(string $key): mixed          // ACF
-$post->update_field(string $key, mixed $value): void  // ACF
+$post->get_field(string $key): mixed          // through the field provider (ACF)
+$post->update_field(string $key, mixed $value): void  // through the field provider (ACF)
 $post->save(): void
 $post->duplicate(array $overrides = [], array $exclude_meta = []): static|WP_Error
 ```

@@ -775,6 +775,8 @@ my-plugin/
 | `name.feature.php` | Loaded, extends Feature, auto-instantiated |
 | `name.abstract.php` | Loaded, not instantiated |
 | `name.trait.php` | Loaded first (before classes) |
+| `name.interface.php` | Loaded, an interface |
+| `name.final.php` | Loaded, no auto-instantiation (naming only) |
 | `_folder/` | Skipped entirely |
 | `~plugin-name/` | Only loaded if plugin active |
 

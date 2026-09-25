@@ -22,9 +22,10 @@ class Customer extends User {
 
     //
 
-    public function get_acf_id () {
+    // The guest customer (id 0) has no fields.
+    public function get_field_id () {
 
-        return ($this->is_new() || ($this->get_id() === 0)) ? null : 'user_' . $this->wp_user->ID;
+        return $this->get_id() === 0 ? null : parent::get_field_id();
 
     }
 

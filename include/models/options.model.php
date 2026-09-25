@@ -2,12 +2,12 @@
 
 namespace Lattice;
 
-// Has_ACF_Fields so the instance can act as the ACF parent for ACF_Row subclasses on an options-page repeater.
+// Has_Fields so the instance can act as the parent for ACF_Row subclasses on an options-page repeater.
 
 class Options extends Model {
 
     use Has_WP_Hooks;
-    use Has_ACF_Fields;
+    use Has_Fields;
 
     protected static $prefix     = '';
     protected static $acf_prefix = '';
@@ -27,12 +27,6 @@ class Options extends Model {
     }
 
     public function get_wp_meta_type () {
-
-        return 'option';
-
-    }
-
-    public function get_acf_id () {
 
         return 'option';
 
@@ -118,7 +112,7 @@ class Options extends Model {
 
     public function get_acf_field ($selector, $format_value = true) {
 
-        return get_field(static::$acf_prefix . $selector, 'option', $format_value);
+        return $this->field_call('get', static::$acf_prefix . $selector, $format_value);
 
     }
 
@@ -130,7 +124,7 @@ class Options extends Model {
 
     public function update_acf_field ($selector, $value) {
 
-        return update_field(static::$acf_prefix . $selector, $value, 'option');
+        return $this->field_call('update', static::$acf_prefix . $selector, $value);
 
     }
 

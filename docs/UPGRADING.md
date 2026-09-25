@@ -96,6 +96,22 @@ Measured on the live consumers before release:
 | eventropy (and somm through it) | 1 | `Room` and `Ticket` order items both validate a room line item (`Ticket` has no narrowing, `Order_Item` has no specificity), so room items resolve as `Ticket` today; give `Ticket::validate_id()` an exclusion for rooms |
 | courses, d-pace, study-hub | 0 | |
 
+### Fields
+
+The model accessors (`get_field()`, `update_field()`, `get_field_rows()` and the rest of `Has_Fields`) reach ACF through a registered `Field_Provider` instead of calling it directly. `ACF_Field_Provider` registers itself when the sweep walks it and answers while ACF is active. Without ACF, or before its plugin file has loaded, reads return `null` and writes return `null` instead of a fatal.
+
+| Violation | Mechanical fix |
+|---|---|
+| `use Has_ACF_Fields` (fatal: the trait is gone) | `use Has_Fields`; Post, User, Term, Comment and Options already have it |
+| `get_acf_id()` called (undefined method) | `get_field_id()`; the per-family bodies are gone, the provider derives the id from `get_wp_meta_type()` and `get_meta_id()` |
+| `get_acf_id()` overridden (checked at boot: nothing calls it now, so its guard is silently dead) | Rename it `get_field_id()` and return `parent::get_field_id()` where it built the id |
+| `delete_field($selector, $value)` or `delete_sub_field($selector, $value)` | Drop the second argument: ACF's functions take a selector and an id, so the old form deleted on post id `$value` |
+| Fields stored outside ACF | Implement `Field_Provider` and `Custom_Fields::register(new My_Provider)` |
+
+Measured on the live consumers before release: 0 violations (no consumer names any of these).
+
+Run `wp lattice classmap` after deploying: the map is valid only for the exact file set it was written from, and files moved under `include/`.
+
 ### Layout
 
 | Violation | Mechanical fix |

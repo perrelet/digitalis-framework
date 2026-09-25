@@ -288,6 +288,16 @@ class Model extends Factory {
         $reflection = new \ReflectionClass($class);
         $class      = $reflection->getName();
 
+        static $legacy_reported = [];
+
+        // A get_acf_id() override is dead since the field provider derives the id, so a guard it carried is silently gone.
+        if (method_exists($class, 'get_acf_id') && !isset($legacy_reported[$culprit = (new \ReflectionMethod($class, 'get_acf_id'))->getDeclaringClass()->name])) {
+
+            $legacy_reported[$culprit] = true;
+            Strict::violation($culprit, 'defines get_acf_id(), which nothing calls: the field provider derives the id.', 'Rename it get_field_id() and return parent::get_field_id() where it built the id.');
+
+        }
+
         if ($reflection->isAbstract()) return;
 
         $parent = get_parent_class($class);

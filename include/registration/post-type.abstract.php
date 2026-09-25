@@ -473,7 +473,7 @@ abstract class Post_Type extends Singleton {
                     ]))->get_posts();
 
                     if (!$post_ids) break;
-                    if (!$field = get_field_object($key, $post_ids[0])) break;
+                    if (!$field = Custom_Fields::provider()?->get_object($post_ids[0], $key)) break;
 
                     $label = is_null($filter['args']['label']) ? $field['label'] : $filter['args']['label'];
 

@@ -9,7 +9,7 @@ use WP_Comment_Query;
 
 trait Has_WP_User {
 
-    use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
+    use Has_WP_Model, Has_WP_Meta, Has_Fields;
 
     protected $wp_user;
 
@@ -70,12 +70,6 @@ trait Has_WP_User {
     public function get_wp_meta_type () {
 
         return 'user';
-
-    }
-
-    public function get_acf_id () {
-
-        return $this->is_new() ? null : 'user_' . $this->wp_user->ID;
 
     }
 
