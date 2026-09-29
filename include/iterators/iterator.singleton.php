@@ -225,6 +225,8 @@ abstract class Iterator extends Singleton {
 
         $this->on_batch_complete($count, $results);
 
+        if (!$this->items) $this->set_total_option($this->index);
+
         if ($this->is_complete()) {
 
             $this->on_complete();
@@ -249,6 +251,7 @@ abstract class Iterator extends Singleton {
             ];
 
             if ($this->dynamic_total) $response['total'] = $this->get_total_items_wrap();
+            if (!$this->items)        $response['total'] = $this->index;
 
             return $response;
 
