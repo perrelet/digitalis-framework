@@ -1,0 +1,20 @@
+# Shared settings. Locally: `vendor/bin/phpstan analyse include/<dir>` one directory at a time (the tree needs more memory
+# than a small box has). CI runs phpstan.ci.neon, which includes this and adds workers. A gitignored phpstan.neon overrides.
+parameters:
+  level: 0
+  phpVersion: 80000
+  tmpDir: tmp/phpstan
+  paths:
+    - include
+    - load.php
+    - bin
+  scanFiles:
+    - compat/digitalis-namespace.php
+    - compat/digitalis-hooks.php
+    - stubs/oxygen.stub.php
+    - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+    - vendor/php-stubs/acf-pro-stubs/acf-pro-stubs.php
+    - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+    - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+  parallel:
+    maximumNumberOfProcesses: 1

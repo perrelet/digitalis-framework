@@ -1,0 +1,18 @@
+{
+    "name": "latticewp/lattice",
+    "description": "Lattice: a WordPress plugin framework",
+    "type": "library",
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "php-stubs/acf-pro-stubs": "^6.8",
+        "php-stubs/woocommerce-stubs": "^11.1",
+        "php-stubs/wordpress-stubs": "^6.9",
+        "php-stubs/wp-cli-stubs": "^2.12",
+        "phpstan/phpstan": "^2.2"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

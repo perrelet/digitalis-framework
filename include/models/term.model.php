@@ -63,19 +63,19 @@ class Term extends WP_Model {
 
     public static function get_by_slug ($slug) {
     
-        return static::get_by('slug', $slug, static::$taxonomy);
+        return static::get_by('slug', $slug);
     
     }
 
     public static function get_by_name ($name) {
     
-        return static::get_by('name', $slug, static::$taxonomy);
+        return static::get_by('name', $name);
     
     }
 
     public static function get_by_term_taxonomy_id ($term_taxonomy_id) {
     
-        return static::get_by('term_taxonomy_id', $term_taxonomy_id, static::$taxonomy);
+        return static::get_by('term_taxonomy_id', $term_taxonomy_id);
     
     }
 
@@ -206,7 +206,6 @@ class Term extends WP_Model {
 
     public function delete ($args = []) {
 
-        $taxonomy;
         if (!$taxonomy = static::$taxonomy ? static::$taxonomy : ($args['taxonomy'] ?? false)) return; // TODO: HANDLE ERROR
 
         return wp_delete_term($this->wp_term->term_id, $taxonomy, $args);

@@ -2,6 +2,13 @@
 
 namespace Lattice;
 
+/**
+ * Optional subclass hooks; run() wires each only when the subclass defines it.
+ * @method mixed ajax_query()
+ * @method void  filter_post_data(array &$data, array $postarr, array $unsanitized_postarr, bool $update)
+ * @method void  after_insert(int $post_id, \WP_Post $post, bool $update, ?\WP_Post $post_before)
+ * @method void  after_delete(int $post_id, \WP_Post $post)
+ */
 abstract class Post_Type extends Singleton {
 
     const AJAX_Flag = 'digitalis_ajax_query';

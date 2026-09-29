@@ -126,7 +126,7 @@ class Table extends \Lattice\Component {
 
     public function add_rows ($rows, $class = [], $atts = []) {
     
-        foreach ($rows as $row) if (is_array($row) && isset($row['row'])) {
+        foreach ($rows as $i => $row) if (is_array($row) && isset($row['row'])) {
 
             $this->add_row(
                 $row['row'],

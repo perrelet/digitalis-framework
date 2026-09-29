@@ -4,6 +4,7 @@ namespace Lattice;
 
 use Exception;
 
+/** @phpstan-consistent-constructor */
 class Model extends Factory {
 
     public static function get_auto_instantiation () {

@@ -2,6 +2,8 @@
 
 namespace Lattice\Component;
 
+use Lattice\Nav_Menu;
+
 class Menu extends \Lattice\Component {
 
     protected static $template = 'menu';

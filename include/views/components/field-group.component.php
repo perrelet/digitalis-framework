@@ -3,6 +3,7 @@
 namespace Lattice\Component;
 
 use Lattice\View;
+use Lattice\Hook;
 
 use Lattice\Field\Input;
 

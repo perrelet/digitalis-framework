@@ -1,0 +1,31 @@
+name: phpstan
+
+on:
+  push:
+    branches: [main, v1]
+  pull_request:
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+      - id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - uses: actions/cache@v4
+        with:
+          path: tmp/phpstan
+          key: phpstan-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}-${{ github.sha }}
+          restore-keys: phpstan-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}-
+      - run: vendor/bin/phpstan analyse -c phpstan.ci.neon --no-progress --memory-limit=3G

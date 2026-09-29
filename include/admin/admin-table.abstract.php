@@ -175,19 +175,11 @@ abstract class Admin_Table extends Feature {
 
     }
 
+    // A field key resolves without a context; a field name needs a post, which Posts_Table supplies.
     public function get_acf_field ($name) {
 
-        $post_ids = (new \WP_Query([
-            'post_type'      => $this->post_type,
-            'status'         => 'publish',
-            'posts_per_page' => 1,
-            'fields'         => 'ids',
-        ]))->get_posts();
+        return get_field_object($name);
 
-        $id = $post_ids ? $post_ids[0] : false;
-    
-        return get_field_object($name, $id);
-    
     }
 
     public function prepare_acf_field (&$filter) {

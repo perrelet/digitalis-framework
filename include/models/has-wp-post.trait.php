@@ -606,7 +606,10 @@ trait Has_WP_Post {
 
     public function get_comment_form_title ($no_reply_text = false, $reply_text = false, $link_to_parent = true) {
 
-        return comment_form_title($no_reply_text, $reply_text, $link_to_parent, $this->wp_post);
+        ob_start();
+        comment_form_title($no_reply_text, $reply_text, $link_to_parent, $this->wp_post);
+
+        return ob_get_clean();
 
     }
 

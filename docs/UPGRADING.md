@@ -133,6 +133,18 @@ Measured on the live consumers before release: no site runs without WooCommerce,
 
 `ACF_Block` moved from `include/views/` to `include/integrations/acf/`; the class and namespace are unchanged. Run `wp lattice classmap` after deploying.
 
+### Analysis
+
+PHPStan runs at level 0 in CI (`.github/workflows/phpstan.yml`), one directory at a time locally (`vendor/bin/phpstan analyse include/<dir>` after `composer install`; the whole tree needs more memory than a small box has). The first clean run fixed things a consumer would have met on its first `v1` request:
+
+| Was | Now |
+|---|---|
+| `Menu` with a `source` and `Field_Group` (so every `Query_Filters`) fataled on `v1` since the namespace-per-family commit: `Nav_Menu` and `Hook` were resolved inside `Lattice\Component` | Both import their class; the fixtures in `~/lattice-v1-tests` render them |
+| `Term::get_by_name()` always returned null (it passed an undefined variable) | Works; the `get_by_*` helpers no longer pass a third argument `get_by()` ignored |
+| `Table::add_rows()` dropped per-row classes and attributes (no row index) | Indexed |
+| `Field\Hidden_Group` (a dead field view; its only caller is the retired mesla) | Removed |
+| `Admin_Table::get_acf_field()` read a `$post_type` only `Posts_Table` declares | `Posts_Table` owns the post lookup; the base resolves field keys only |
+
 ### Layout
 
 | Violation | Mechanical fix |
@@ -199,4 +211,4 @@ Measured on the live consumers before release:
 | mycelium | 1 | `front.theme.php` calls `is_backend()` |
 | d-pace, eventropy | 0 | |
 
-Run `wp lattice classmap` after deploying: the map lists the deleted files until it is regenerated (ignored with a notice in production, ignored outright under `WP_DEBUG`).
+Run `wp lattice classmap` after deploying: the map lists the deleted files until it is regenerated (a notice in production; under `WP_DEBUG` the map is not read at all unless `LATTICE_CLASSMAP` is defined, and then a stale one throws).

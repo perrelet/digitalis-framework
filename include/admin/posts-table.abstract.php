@@ -8,6 +8,19 @@ abstract class Posts_Table extends Screen_Table {
 
     protected $post_type = 'post';
 
+    public function get_acf_field ($name) {
+
+        $post_ids = (new \WP_Query([
+            'post_type'      => $this->post_type,
+            'status'         => 'publish',
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+        ]))->get_posts();
+
+        return get_field_object($name, $post_ids ? $post_ids[0] : false);
+
+    }
+
     public function run () {
 
         $this->slug = $this->post_type;

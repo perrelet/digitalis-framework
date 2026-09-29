@@ -6,6 +6,7 @@ use stdClass;
 use DateTime;
 use DateTimeZone;
 use WP_Comment;
+use WP_User;
 
 trait Has_WP_Comment {
 

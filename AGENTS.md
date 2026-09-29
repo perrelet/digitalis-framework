@@ -61,7 +61,7 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 ### Boundaries
 
-`include/core`, `models`, `views`, `routing`, `query` and `registration` never name an ACF, WooCommerce or page-builder symbol: no `get_field()`, `acf_*()`, `wc_*()`, `WC_*`, `WooCommerce`, `Automattic\WooCommerce`, Oxygen or Bricks. ACF reaches the models only through `Field_Provider` (see `Custom_Fields`); ACF-specific views and features live in `include/integrations/acf/` and `include/_features/`. `php bin/boundaries.php` enforces it (tokenizer-based, exit 1 with file and line); CI runs it on pushes to `main` and `v1` and on every pull request.
+`include/core`, `models`, `views`, `routing`, `query` and `registration` never name an ACF, WooCommerce or page-builder symbol: no `get_field()`, `acf_*()`, `wc_*()`, `WC_*`, `WooCommerce`, `Automattic\WooCommerce`, Oxygen or Bricks. ACF reaches the models only through `Field_Provider` (see `Custom_Fields`); ACF-specific views and features live in `include/integrations/acf/` and `include/_features/`. `php bin/boundaries.php` enforces it (tokenizer-based, exit 1 with file and line); CI runs it on pushes to `main` and `v1` and on every pull request. PHPStan level 0 runs in CI too (`phpstan.neon.dist`; locally `vendor/bin/phpstan analyse include/<dir>` one directory at a time): a class referenced from a sub-namespace without a `use` is a fatal the sweep never sees, and level 0 catches it.
 
 For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 

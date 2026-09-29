@@ -2,3 +2,6 @@
 .classmap.php.*
 languages/*.mo
 languages/*.l10n.php
+vendor/
+tmp/
+phpstan.neon

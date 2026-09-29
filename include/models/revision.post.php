@@ -22,7 +22,9 @@ class Revision extends Post {
 
         if (is_null($post_id)) $post_id = $this->get_parent_id();
 
-        return $this->is_new() ? null : wp_restore_post_revision_meta($post_id, $this->wp_post->ID);
+        if ($this->is_new()) return;
+
+        wp_restore_post_revision_meta($post_id, $this->wp_post->ID);
 
     }
 
