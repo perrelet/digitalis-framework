@@ -7,10 +7,11 @@ class Layout extends View {
     use Resolvable;
 
     protected static $defaults = [
-        'header' => Header::class,
-        'body'   => null,
-        'footer' => Footer::class,
-        'modals' => Modals::class,
+        'header'   => Header::class,
+        'body'     => null,
+        'footer'   => Footer::class,
+        'modals'   => Modals::class,
+        'viewport' => 'width=device-width, initial-scale=1',
     ];
 
     public function params (&$p) {
@@ -28,7 +29,11 @@ class Layout extends View {
     public function view () { ?>
         <!DOCTYPE html>
         <html <?php language_attributes(); ?>>
-        <head><?php wp_head(); ?></head>
+        <head>
+            <meta charset="<?php bloginfo('charset'); ?>">
+            <?php if ($this['viewport']): ?><meta name="viewport" content="<?= esc_attr($this['viewport']) ?>"><?php endif; ?>
+            <?php wp_head(); ?>
+        </head>
         <body <?php body_class(); ?>>
             <?php wp_body_open(); ?>
             <?php if ($this['header']) echo $this['header']; ?>
