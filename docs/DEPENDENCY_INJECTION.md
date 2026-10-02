@@ -43,13 +43,13 @@ This is done by:
 
 ### Key Principle
 
-**Any class with a `get_instance()` method can be injected**, when it is the parameter's type (nullable or not) or the first member of a union.
+**Any class with a `get_instance()` method can be injected**, when it is the parameter's type (nullable or not) or the first member of a union. A value that is already an instance of the type is handed through untouched; anything else goes to `get_instance()`.
 
 This includes all framework models: `Post`, `User`, `Term`, `Order`, and custom models extending them.
 
 What is never injected: builtin types (`string`, `array`, `int`, `mixed`, ...), `self` and `parent`, intersection types, interfaces and traits. The class name is autoloaded if it is not declared yet.
 
-**WordPress's own classes have `get_instance()` too.** `WP_Post`, `WP_Term` and `WP_Comment` (also `WP_Site` and `WP_Network`) take an id, so a callback typed `\WP_Post $post` that is handed a post object receives `WP_Post::get_instance($that_object)`: the wrong post, with a PHP warning, or `false` when no value is passed. Type injected parameters with the Lattice model (`Post $post`), or leave them untyped.
+**WordPress's own classes have `get_instance()` too.** `WP_Post`, `WP_Term` and `WP_Comment` (also `WP_Site` and `WP_Network`) are injected like any other class: an id resolves, and an object of that class is kept. An object of any other class (a Lattice `Post`, say) is still handed to `WP_Post::get_instance()`, which casts it to int 1 with a warning and returns the wrong post. What also differs from a Lattice model is the absent value. `WP_Post::get_instance(null)` is `false`, a `TypeError` on a non-nullable parameter, where `Post::get_instance(null)` can still find a value from context (the global post, or the model's `$post_context` option) and is `null` only when there is none. Type injected parameters with the Lattice model (`Post $post`) unless the callback is always handed a value.
 
 ---
 

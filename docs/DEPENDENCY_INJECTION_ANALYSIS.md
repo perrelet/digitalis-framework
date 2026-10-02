@@ -530,7 +530,7 @@ The Digitalis Dependency Injection system is a **well-crafted, domain-specific s
    │     │
    │     ├─ 7. Check method_exists($class, 'get_instance')
    │     │
-   │     └─ 8. Call $class::get_instance($value)
+   │     └─ 8. Keep $values[$class] or a value that already is one, else call $class::get_instance($value)
    │
    └─ 9. call_user_func_array($call, $resolved_args)
 ```
@@ -548,7 +548,9 @@ if (in_array(strtolower($class), ['self', 'parent'], true)) continue;
 if (!class_exists($class)) continue;                // Must exist (autoloaded on purpose)
 if (!method_exists($class, 'get_instance')) continue; // Must have factory
 
-// Resolve
+// Resolve: an explicit value first, then a value that already is one, else the factory
+if (isset($values[$class]))                { $args[$i] = $values[$class]; continue; }
+if (($args[$i] ?? null) instanceof $class) continue;
 $args[$i] = $class::get_instance($args[$i] ?? null);
 ```
 
