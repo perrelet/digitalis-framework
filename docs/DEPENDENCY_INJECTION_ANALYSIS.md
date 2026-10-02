@@ -225,7 +225,7 @@ class Child_View extends Parent_View {
 ### Union Type First-Type Resolution
 
 ```php
-// Only Order is used for injection (first type)
+// Only Order is used for injection (the first member as PHP reports it: classes in written order, then builtins)
 public function process(Order|Product $item) {
     // Product IDs won't resolve correctly
 }
@@ -541,9 +541,11 @@ The Digitalis Dependency Injection system is a **well-crafted, domain-specific s
 // From function_inject()
 if (!$type = $param->getType()) continue;           // Skip untyped
 if ($type instanceof ReflectionUnionType)           // Handle unions
-    $type = $type->getTypes()[0];                   // Use first type
-if (!$class = $type->getName()) continue;           // Get class name
-if (!class_exists($class)) continue;                // Must exist
+    $type = $type->getTypes()[0];                   // Use first member
+if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) continue; // Skip builtins and intersections
+$class = $type->getName();                          // Get class name
+if (in_array(strtolower($class), ['self', 'parent'], true)) continue;
+if (!class_exists($class)) continue;                // Must exist (autoloaded on purpose)
 if (!method_exists($class, 'get_instance')) continue; // Must have factory
 
 // Resolve

@@ -7,6 +7,7 @@ use ReflectionFunction;
 use ReflectionUnionType;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
+use ReflectionNamedType;
 
 trait Dependency_Injection {
 
@@ -48,11 +49,18 @@ trait Dependency_Injection {
 
         foreach ($params as $i => $param) {
 
-            if (!$type = $param->getType())             continue;
-            if ($type instanceof ReflectionUnionType)   $type = $type->getTypes()[0];
-            if (!$class = $type->getName())             continue;
-            if (!class_exists($class))                  continue;
-            if (!method_exists($class, 'get_instance')) continue;
+            if (!$type = $param->getType())                                  continue;
+            if ($type instanceof ReflectionUnionType)                        $type = $type->getTypes()[0];
+
+            // A builtin, `self` or `parent` can never be a class, and class_exists() would send the name through every
+            // autoloader; an intersection has no name at all. A real class name is still autoloaded, on purpose.
+            if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) continue;
+
+            $class = $type->getName();
+
+            if (in_array(strtolower($class), ['self', 'parent'], true)) continue;
+            if (!class_exists($class))                                  continue;
+            if (!method_exists($class, 'get_instance'))                 continue;
 
             $args[$i] = isset($values[$class]) ?  $values[$class] : call_user_func([$class, 'get_instance'], $args[$i] ?? null);
 

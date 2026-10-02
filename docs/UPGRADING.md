@@ -149,6 +149,8 @@ PHPStan runs at level 0 in CI (`.github/workflows/phpstan.yml`), one directory a
 
 The parameters of `include/core` carry native types (`Factory`, `Singleton`, `Creational`, `App`, `Call`, `Hook`, `List_Utility`, `Transients` and the `Autoloader`, `Dependency_Injection`, `Resolvable` and `Is_Stashable` traits). Every call site in the six consumers was judged against them before they were written and none changes behaviour; untyped overrides stay legal. What a new caller will meet: `null` or an array where a scalar is declared, and `''` where an `int` is, is a `TypeError` instead of a silent coercion (`load_feature(null)`, `Hook::filter(null, …)`, `stash('')`), and `get_list(1)` labels the empty option `1`. One standing consumer bug surfaced on the way: `load_feature($file, true)` (courses.app.php:32, somm.app.php:127) has never created the feature, because `Factory::create()` returns on any scalar; pass `[]` or nothing.
 
+The injector no longer sends builtin type names (`string`, `array`, ...), `self` or `parent` through the autoloaders, and a parameter with an intersection type is left alone instead of throwing `Call to undefined method ReflectionIntersectionType::getName()`. What is injected is unchanged: a class with `get_instance()`, as the parameter's type or the first member of a union. Do not type an injected parameter with `WP_Post`, `WP_Term` or `WP_Comment`: they have `get_instance($id)` too and would receive the wrong object (see DEPENDENCY_INJECTION.md).
+
 ### Layout
 
 | Violation | Mechanical fix |

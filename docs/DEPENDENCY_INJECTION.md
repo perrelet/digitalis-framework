@@ -43,9 +43,13 @@ This is done by:
 
 ### Key Principle
 
-**Any class with a `get_instance()` method can be injected.**
+**Any class with a `get_instance()` method can be injected**, when it is the parameter's type (nullable or not) or the first member of a union.
 
 This includes all framework models: `Post`, `User`, `Term`, `Order`, and custom models extending them.
+
+What is never injected: builtin types (`string`, `array`, `int`, `mixed`, ...), `self` and `parent`, intersection types, interfaces and traits. The class name is autoloaded if it is not declared yet.
+
+**WordPress's own classes have `get_instance()` too.** `WP_Post`, `WP_Term` and `WP_Comment` (also `WP_Site` and `WP_Network`) take an id, so a callback typed `\WP_Post $post` that is handed a post object receives `WP_Post::get_instance($that_object)`: the wrong post, with a PHP warning, or `false` when no value is passed. Type injected parameters with the Lattice model (`Post $post`), or leave them untyped.
 
 ---
 
@@ -288,7 +292,7 @@ class Order_Route extends Route {
     // Both methods receive injected Order instance
 
     public function permission(WP_REST_Request $request, ?Order $order = null) {
-        // $order is Order::get_instance($request->get_param('order'))
+        // $order is Order::get_instance($request->get_param('order')), and Order::get_instance(null) when the parameter is absent
         return User::inst()->can('view_order', $order->get_id());
     }
 
@@ -547,9 +551,7 @@ protected static $defaults = [
 
 **Symptom:** Injected parameter is `null`
 
-**Causes:**
-1. `get_instance()` returned null (object not found)
-2. Parameter is nullable (`?Order $order`)
+**Cause:** `get_instance()` returned null (object not found). A nullable type does not switch injection off: `?Order $order` is injected exactly like `Order $order`, and makes a null result legal.
 
 **Solution:**
 ```php
@@ -564,14 +566,18 @@ public function callback(WP_REST_Request $request, ?Order $order = null) {
 
 ### Union Types
 
-The framework handles union types by using the first type:
+The framework injects the first member of a union as PHP reports it: class types in the order written, then builtins. Only that member is considered.
 
 ```php
-// Uses Order for injection (first type)
+// Uses Order for injection (first class member)
 public function process(Order|Product $item) {
-    // If passing Order ID, resolves as Order
+    // If passing Order ID, resolves as Order; a Product id is still resolved as an Order
 }
 ```
+
+- `string|Order $x` injects `Order`: builtins sort after classes however the union is written, and a string handed in is converted too.
+- `Some_Interface|Order $x` and `(A&B)|Order $x` inject nothing: the first member has no `get_instance()`, or no name.
+- On PHP 8.2+ `iterable` inside a union is reported as `Traversable|array`, so `iterable|Order` injects nothing while `Order|iterable` injects.
 
 ### Skip Injection Issues
 
