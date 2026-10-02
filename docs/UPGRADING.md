@@ -145,6 +145,8 @@ PHPStan runs at level 0 in CI (`.github/workflows/phpstan.yml`), one directory a
 | `Field\Hidden_Group` (a dead field view; its only caller is the retired mesla) | Removed |
 | `Admin_Table::get_acf_field()` read a `$post_type` only `Posts_Table` declares | `Posts_Table` owns the post lookup; the base resolves field keys only |
 
+`bin/variance.php` reads every consumer override of every framework method and property (traits flattened, so `Term::get_url` overridden through `Has_WP_Term` is attributed) and reports what PHP would refuse at class-declaration time if the framework tree changed under it. Its `FLOOR` list, the child return types the parent lacks (23 across the six consumers: `Feature::get_hooks(): array` x15, `View::condition(): bool` x6, d-pace's `Product_Category::get_url(): string` and `get_count(): int`), is what constrains the 1.0 return types; the migration list for a method gaining one is that method's full override list in `--matrix`, including the overriders tagged `via` a consumer parent, which PHP checks against that parent and never against the framework. Pass dependent consumers together: an unresolved namespaced parent is reported as a fatal, never skipped.
+
 ### Layout
 
 | Violation | Mechanical fix |
