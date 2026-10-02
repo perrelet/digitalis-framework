@@ -90,7 +90,7 @@ abstract class Posts_Table extends Screen_Table {
 
     public function sort_columns ($query) {
     
-        if (!$order_by = $query->get('orderby')) return;
+        if (!is_string($order_by = $query->get('orderby'))) return;
 
         $call = [$this, "sort_column_" . $order_by];
         if (is_callable($call)) {
