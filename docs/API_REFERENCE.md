@@ -59,7 +59,7 @@ abstract class Singleton extends Design_Pattern
 Creates and manages instances with optional caching. Instances are stored in a shared registry keyed by `$cache_group` + `$cache_property` value.
 
 ```php
-abstract class Factory extends Design_Pattern
+abstract class Factory extends Creational
 ```
 
 | Property | Type | Default | Description |
@@ -70,9 +70,8 @@ abstract class Factory extends Design_Pattern
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `create()` | `static create(array $data = []): static` | Creates new instance |
-| `get_instance()` | `static get_instance(mixed $identifier): ?static` | Gets cached or creates new instance |
-| `get_instances()` | `static get_instances(array $identifiers): array` | Gets multiple instances |
+| `create()` | `static create(mixed $data = []): ?static` | Creates new instance; returns nothing for scalar data |
+| `get_instance()` | `static get_instance(mixed $data = null): ?static` | Gets cached or creates new instance |
 | `get_instance_map()` | `static get_instance_map(): array` | Returns `['group' => ['key' => ClassName]]` map of all cached instances |
 
 ---
@@ -166,7 +165,7 @@ abstract class Integration extends Singleton
 Plugin application base class.
 
 ```php
-abstract class App extends Singleton
+abstract class App extends Factory
 ```
 
 | Property | Type | Description |
@@ -194,8 +193,8 @@ abstract class App extends Singleton
 | `load_cron()` | `public load_cron(): void` | Autoloads `_cron/`. |
 | `load_ajax()` | `public load_ajax(): void` | Autoloads `_ajax/`. |
 | `load_rest()` | `public load_rest(): void` | Autoloads `_rest/`. |
-| `autoload()` | `public autoload(string $path = null, bool $recursive = true): void` | Autoloads classes from directory. |
-| `load_class()` | `public load_class(string $path, callable $instantiation = null): void` | Loads a single class file. |
+| `autoload()` | `public autoload(string\|array\|null $path = null, bool $recursive = true, string $ext = 'php', ?array &$objs = [], mixed $instantiation = null): ?array` | Autoloads classes from a directory (or a `[directory => instantiation]` map) and returns the objects created. |
+| `load_class()` | `public load_class(string $path, mixed $instantiation = null): mixed` | Loads a single class file; returns the instance, the class name, or false. |
 
 ---
 
@@ -928,7 +927,7 @@ Constructor/method injection.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `inject()` | `public inject(string $method, array $params = []): mixed` | Injects dependencies |
+| `inject()` | `protected static inject(mixed $call, array $args = [], array $values = []): mixed` | Calls `$call` with type-hinted parameters resolved through `get_instance()` |
 
 ### `Inherits_Props`
 

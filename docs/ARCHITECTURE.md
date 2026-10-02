@@ -121,15 +121,15 @@ Creates and caches instances with optional property-based caching. Instances are
 ```php
 namespace Digitalis;
 
-abstract class Factory extends Design_Pattern {
+abstract class Factory extends Creational {
     protected static $cache_group    = '__global__'; // Namespace for instance storage
     protected static $cache_property = null;         // Instance property to use as cache key
 
-    public static function create($data = []) {
+    public static function create(mixed $data = []) {
         // Creates new instance with optional caching
     }
 
-    public static function get_instance($identifier) {
+    public static function get_instance(mixed $data = null) {
         // Returns cached instance or creates new one
     }
 
@@ -137,7 +137,7 @@ abstract class Factory extends Design_Pattern {
         // Returns ['group' => ['key' => ClassName]] map of all cached instances
     }
 
-    public static function get_group_instances($group = null) {
+    public static function get_group_instances(?string $group = null) {
         // Returns all instances in a cache group (used by App::get_apps())
     }
 }

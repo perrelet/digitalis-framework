@@ -127,7 +127,7 @@ abstract class App extends Factory {
 
     //
 
-    public function load_feature ($file, $options = []) {
+    public function load_feature (string $file, mixed $options = []) {
 
         $paths = apply_filters('lattice.feature.paths', [LATTICE_LIBRARY_PATH]);
         $file  = ltrim($file, '/');

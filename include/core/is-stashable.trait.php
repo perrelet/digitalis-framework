@@ -36,7 +36,7 @@ trait Is_Stashable {
     
     }
 
-    public function stash ($ttl = 300) {
+    public function stash (int $ttl = 300) {
     
         return static::get_cache_store()->set($this->get_cache_key(), $this, static::get_stash_group(), $ttl);
     

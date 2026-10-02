@@ -20,7 +20,7 @@ class Creational extends Design_Pattern {
     
     }
 
-    public function get_instance_count ($class = null) {
+    public function get_instance_count (?string $class = null) {
 
         if (is_null($class)) $class = static::class;
     
@@ -34,7 +34,7 @@ class Creational extends Design_Pattern {
     
     }
 
-    protected static function construct_instance ($instance) {
+    protected static function construct_instance (object $instance) {
 
         $class = $instance::class;
 

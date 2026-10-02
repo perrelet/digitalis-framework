@@ -12,7 +12,7 @@ abstract class Factory extends Creational {
     protected static $cache_group = '__global__';
     protected static $cache_property = null;
 
-    public static function get_group_instances ($group = null) {
+    public static function get_group_instances (?string $group = null) {
 
         $group ??= static::$cache_group;
         return self::$instances[$group] ?? [];
@@ -33,13 +33,13 @@ abstract class Factory extends Creational {
     
     }
 
-    public static function instance_condition ($data = []) {
+    public static function instance_condition (mixed $data = []) {
     
         return parent::instance_condition();
     
     }
 
-    protected static function construct_instance ($instance, $data = []) {
+    protected static function construct_instance (object $instance, mixed $data = []) {
     
         parent::construct_instance($instance);
 
@@ -51,7 +51,7 @@ abstract class Factory extends Creational {
     
     }
 
-    public static function create ($data = []) {
+    public static function create (mixed $data = []) {
 
         if (is_scalar($data)) return;
         if (!$instance = static::constructor_inject(static::class, array_slice(func_get_args(), 2))) return;
@@ -63,7 +63,7 @@ abstract class Factory extends Creational {
     
     }
 
-    public static function get_instance ($data = null) {
+    public static function get_instance (mixed $data = null) {
 
         $class_name = Call::get_class_name(static::class, $data);
         if ($class_name != static::class) return $class_name::get_instance($data);
@@ -89,7 +89,7 @@ abstract class Factory extends Creational {
 
     }
 
-    public static function prepare_data (&$data) {}
+    public static function prepare_data (mixed &$data) {}
 
     protected function get_cache_key () {
 

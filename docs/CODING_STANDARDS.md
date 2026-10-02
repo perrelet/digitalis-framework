@@ -50,14 +50,19 @@ class My_Class extends Model {
 }
 ```
 
-### Strict Types (Recommended)
+### Strict types (planned, not yet)
 
-```php
-<?php
-declare(strict_types=1);
+No framework file declares `strict_types` today, and none should until the typing pass says so: it changes how every call made from that file coerces, and the callers have to be measured first. The types being written now are chosen to survive it.
 
-namespace Digitalis;
-```
+### Parameter types
+
+- Native types wherever the body proves them: a value that reaches a string function is `string`, one that is iterated or indexed is `array`, one whose `::class` or properties are read is `object`.
+- A non-null default fixes the type (`= []` is `array`, `= ''` is `string`, `= true` is `bool`), unless the contract is "anything": `Factory::create(mixed $data = [])` takes an id, an array or an object, and its default is only the common case. `= false` is this codebase's "no value": it becomes `bool` only when the body uses it as one, otherwise a union such as `bool|string`.
+- `= null` becomes `?T` when the body shows what T is.
+- `mixed` means the type was decided and the contract is "anything" (`get_instance($data)`, a filter's value). It is never a placeholder.
+- A parameter left bare in a typed file is one PHP cannot express without changing behaviour, not one that was forgotten.
+- A by-reference parameter is nullable when a caller may pass a variable it never assigned: that variable arrives as `null`.
+- Scan the callers before typing: `null` into a non-nullable parameter is a `TypeError` with or without `strict_types`.
 
 ---
 

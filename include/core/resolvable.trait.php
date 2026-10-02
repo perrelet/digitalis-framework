@@ -28,7 +28,7 @@ trait Resolvable {
         '404'        => 40,
     ];
 
-    public static function get_specificity ($request_contexts = []) {
+    public static function get_specificity (array $request_contexts = []) {
 
         if (!is_null(static::$priority)) return static::$priority;
 

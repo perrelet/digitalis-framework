@@ -13,7 +13,7 @@ trait Autoloader {
     protected $autoloader_registered = false;
     protected $classmap              = null;
 
-    public function autoload ($path = null, $recursive = true, $ext = 'php', &$objs = [], $instantiation = null) {
+    public function autoload (string|array|null $path = null, bool $recursive = true, string $ext = 'php', ?array &$objs = [], mixed $instantiation = null) {
 
         if (is_null($path)) $path = $this->path;
 
@@ -49,7 +49,7 @@ trait Autoloader {
 
     }
 
-    public function use_classmap ($file) {
+    public function use_classmap (string $file) {
 
         $this->classmap = new Classmap($file);
 
@@ -57,7 +57,7 @@ trait Autoloader {
 
     }
 
-    protected function map_files ($files, $key = null) {
+    protected function map_files (array $files, ?string $key = null) {
 
         if ($key && ($cached = $this->classmap->read($key, $files))) {
 
@@ -78,7 +78,7 @@ trait Autoloader {
 
     }
 
-    protected function remember_declarations ($file, $names) {
+    protected function remember_declarations (string $file, array $names) {
 
         $this->autoload_declarations[$file] = $names;
 
@@ -101,7 +101,7 @@ trait Autoloader {
 
     }
 
-    protected function collect_files ($path, $recursive = true, $ext = 'php', $depth = 0) {
+    protected function collect_files (string $path, bool $recursive = true, string $ext = 'php', int $depth = 0) {
 
         $files = [];
 
@@ -121,7 +121,7 @@ trait Autoloader {
 
     }
 
-    protected function plugin_is_active ($plugin_dir) {
+    protected function plugin_is_active (string $plugin_dir) {
 
         foreach (get_plugins() as $plugin_name => $plugin) {
 
@@ -133,7 +133,7 @@ trait Autoloader {
 
     }
 
-    public function autoload_multiple ($autoloads, &$objs = []) {
+    public function autoload_multiple (array $autoloads, ?array &$objs = []) {
     
         if ($autoloads) foreach ($autoloads as $directory => $instantiation) {
 
@@ -145,7 +145,7 @@ trait Autoloader {
 
     }
 
-    public function load_class ($path, $instantiation = null) {
+    public function load_class (string $path, mixed $instantiation = null) {
 
         if (!is_file($path)) return false;
 
@@ -167,7 +167,7 @@ trait Autoloader {
 
     }
 
-    protected function resolve_auto_instantiation ($class_name, $path = '') {
+    protected function resolve_auto_instantiation (string $class_name, string $path = '') {
 
         $instantiation = false;
         if (method_exists($class_name, 'get_auto_instantiation')) $instantiation = $class_name::get_auto_instantiation();
@@ -183,7 +183,7 @@ trait Autoloader {
 
     }
 
-    protected function instantiate_class ($class_name, $instantiation) {
+    protected function instantiate_class (string $class_name, mixed $instantiation) {
 
         if ($instantiation === false) {
 
@@ -209,14 +209,14 @@ trait Autoloader {
 
     }
 
-    protected function extract_class_name ($file) {
+    protected function extract_class_name (string $file) {
 
         return $this->extract_declarations($file)[0] ?? '';
 
     }
 
     // Reads the whole file: a second declaration can sit anywhere, e.g. Debug_Options at line 406 of debug.view.php.
-    protected function extract_declarations ($file) {
+    protected function extract_declarations (string $file) {
 
         $tokens    = token_get_all(file_get_contents($file));
         $count     = count($tokens);
@@ -257,7 +257,7 @@ trait Autoloader {
 
     }
 
-    protected function is_anonymous_or_constant_class ($tokens, $i) {
+    protected function is_anonymous_or_constant_class (array $tokens, int $i) {
 
         $previous = $this->adjacent_token($tokens, $i, -1);
 
@@ -265,7 +265,7 @@ trait Autoloader {
 
     }
 
-    protected function declared_name ($tokens, $i) {
+    protected function declared_name (array $tokens, int $i) {
 
         $next = $this->adjacent_token($tokens, $i, 1);
 
@@ -273,7 +273,7 @@ trait Autoloader {
 
     }
 
-    protected function adjacent_token ($tokens, $i, $direction) {
+    protected function adjacent_token (array $tokens, int $i, int $direction) {
 
         $count = count($tokens);
 

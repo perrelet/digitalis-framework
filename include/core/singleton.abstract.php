@@ -14,7 +14,7 @@ abstract class Singleton extends Creational {
     public function __clone()        { throw new Exception("One for all and all for one."); }
     public function __wakeup()       { throw new Exception("You may not dream me into existence."); }
 
-    protected static function construct_instance ($instance) {
+    protected static function construct_instance (object $instance) {
     
         parent::construct_instance($instance);
 

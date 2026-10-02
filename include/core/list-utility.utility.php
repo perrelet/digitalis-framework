@@ -20,7 +20,7 @@ class List_Utility extends Utility {
 
     }
 
-    public static function get_list ($null_option = false) {
+    public static function get_list (bool|string $null_option = false) {
 
         $primary_keys = static::get_primary_keys();
         $primary_labels = static::get_primary_labels();
@@ -61,7 +61,7 @@ class List_Utility extends Utility {
 
     }
 
-    public static function reverse_lookup ($labels) {
+    public static function reverse_lookup (mixed $labels) {
 
         if (is_array($labels)) {
 

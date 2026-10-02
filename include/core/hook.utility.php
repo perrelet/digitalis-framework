@@ -16,7 +16,7 @@ class Hook extends Utility {
 
     }
 
-    public static function sanitize ($name) {
+    public static function sanitize (string $name) {
 
         $d = preg_quote(self::DELIMITER, '/');
 
@@ -28,7 +28,7 @@ class Hook extends Utility {
 
     }
 
-    public static function filter ($name, $value, ...$args) {
+    public static function filter (string|array $name, mixed $value, mixed ...$args) {
 
         $name = static::name($name);
 
@@ -40,7 +40,7 @@ class Hook extends Utility {
 
     }
 
-    public static function action ($name, ...$args) {
+    public static function action (string|array $name, mixed ...$args) {
 
         $name = static::name($name);
 
@@ -52,7 +52,7 @@ class Hook extends Utility {
 
     }
 
-    protected static function get_legacy_names ($name) {
+    protected static function get_legacy_names (string $name) {
 
         return class_exists(Deprecated_Hooks::class) ? Deprecated_Hooks::resolve($name) : [];
 

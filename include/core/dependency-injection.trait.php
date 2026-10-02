@@ -5,10 +5,12 @@ namespace Lattice;
 use ReflectionClass;
 use ReflectionFunction;
 use ReflectionUnionType;
+use ReflectionFunctionAbstract;
+use ReflectionMethod;
 
 trait Dependency_Injection {
 
-    protected static function inject ($call, $args = [], $values = []) {
+    protected static function inject (mixed $call, array $args = [], array $values = []) {
 
         if (!is_callable($call)) return;
 
@@ -17,7 +19,7 @@ trait Dependency_Injection {
 
     }
 
-    protected static function get_inject_args ($call, $args = [], $values = []) {
+    protected static function get_inject_args (mixed $call, array $args = [], array $values = []) {
 
         if (is_callable($call)) {
 
@@ -40,7 +42,7 @@ trait Dependency_Injection {
     
     }
 
-    protected static function function_inject ($reflection_function, $args = [], $values = []) {
+    protected static function function_inject (ReflectionFunctionAbstract $reflection_function, array $args = [], array $values = []) {
 
         $params = $reflection_function->getParameters();
 
@@ -60,13 +62,13 @@ trait Dependency_Injection {
 
     }
 
-    protected static function method_inject ($reflection_method, $args = [], $values = []) {
+    protected static function method_inject (ReflectionMethod $reflection_method, array $args = [], array $values = []) {
 
         return static::function_inject($reflection_method, $args, $values);
 
     }
     
-    protected static function constructor_inject ($class, $args = [], $values = []) {
+    protected static function constructor_inject (object|string $class, array $args = [], array $values = []) {
 
         $reflection  = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
@@ -77,7 +79,7 @@ trait Dependency_Injection {
 
     }
 
-    protected static function array_inject (&$array, $defaults = []) {
+    protected static function array_inject (array &$array, array $defaults = []) {
     
         if ($array) foreach ($array as $key => &$value) {
         
@@ -93,7 +95,7 @@ trait Dependency_Injection {
     
     }
 
-    protected static function value_inject ($class, &$value) {
+    protected static function value_inject (mixed $class, mixed &$value) {
     
         if (!is_string($class))                     return;
         if (!class_exists($class))                  return;

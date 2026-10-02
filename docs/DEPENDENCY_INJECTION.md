@@ -509,7 +509,7 @@ $service = My_Service::create();
 
 ```php
 // In Factory
-public static function create($data = []) {
+public static function create(mixed $data = []) {
     // constructor_inject resolves type-hinted params
     $instance = static::constructor_inject(static::class, array_slice(func_get_args(), 2));
     // ...
