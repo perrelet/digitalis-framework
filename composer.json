@@ -1,5 +1,5 @@
 {
-    "name": "latticewp/lattice",
+    "name": "digitalis/lattice",
     "description": "Lattice: a WordPress plugin framework",
     "type": "library",
     "require": {
