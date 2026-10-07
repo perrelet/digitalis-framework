@@ -218,7 +218,7 @@ abstract class CSV_Iterator extends Iterator {
         $csv       = $_FILES['csv'];
         $file_path = trailingslashit($this->upload_dir) . $this->key . '.csv';
 
-        if (!wp_mkdir_p($this->upload_dir)) {
+        if (!is_dir($this->upload_dir) && !mkdir($this->upload_dir, 0775, true)) {
 
             $this->notice("📁 Unable to create the upload directory '{$this->upload_dir}'.", 'error');
             return;
