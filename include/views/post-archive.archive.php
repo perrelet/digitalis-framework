@@ -11,7 +11,7 @@ class Post_Archive extends Archive {
         'item_model' => Post::class,
     ];
 
-    public function get_page_links ($wp_query) {
+    public function get_page_links (mixed $wp_query) {
 
         if (!($wp_query instanceof WP_Query) || !($wp_query->max_num_pages > 1)) return [];
 

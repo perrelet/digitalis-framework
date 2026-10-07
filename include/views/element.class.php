@@ -24,7 +24,7 @@ class Element implements \ArrayAccess {
     protected $content;
     protected $attributes;
 
-    public function __construct ($tag = 'div', $attributes = [], $content = '') {
+    public function __construct ($tag = 'div', Attributes|array $attributes = [], mixed $content = '') {
 
         $this->set_tag($tag);
         $this->content    = $content;
@@ -32,7 +32,7 @@ class Element implements \ArrayAccess {
     
     }
 
-    public function __call ($name, $args) {
+    public function __call (string $name, array $args) {
 
         return call_user_func_array([$this->get_attributes(), $name], $args);
     
@@ -111,7 +111,7 @@ class Element implements \ArrayAccess {
 
     }
 
-    public function set_content ($content) {
+    public function set_content (mixed $content) {
 
         $this->content = $content;
         return $this;

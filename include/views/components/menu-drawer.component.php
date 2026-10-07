@@ -35,7 +35,7 @@ class Menu_Drawer extends \Lattice\Component {
     protected static $required    = ['menu'];
     protected static $skip_inject = ['menu'];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if ($p['id'] === null) $p['id'] = 'drawer-' . $this->get_index();
 

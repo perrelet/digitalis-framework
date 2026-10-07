@@ -47,7 +47,7 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    protected function normalize_value ($name, $value) {
+    protected function normalize_value (string $name, mixed $value) {
 
         if ($value === null || $value === false) return null;
         if ($value === true)                     return '';
@@ -71,7 +71,7 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    protected function sanitize_value ($name, $value) {
+    protected function sanitize_value (string $name, mixed $value) {
 
         return match (true) {
             in_array($name, ['href', 'src', 'action', 'formaction', 'poster'], true) => esc_url_raw($value),
@@ -80,20 +80,20 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    protected function escape_for_output ($value) {
+    protected function escape_for_output (string $value) {
 
         return esc_attr($value);
 
     }
 
-    protected function generate_classes ($classes) {
+    protected function generate_classes (array $classes) {
 
         $tokens = array_unique(array_filter(array_map('trim', array_map('strval', $classes))));
         return implode(' ', $tokens);
 
     }
 
-    protected function generate_css ($styles) {
+    protected function generate_css (array $styles) {
 
         $css = '';
 
@@ -105,7 +105,7 @@ class Attributes implements \ArrayAccess {
 
     //
 
-    public function set_quote ($quote) {
+    public function set_quote (string $quote) {
 
         $this->string = null;
         $this->quote  = $quote;
@@ -120,7 +120,7 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    public function set_attrs ($attrs) {
+    public function set_attrs (mixed $attrs) {
 
         $this->string = null;
         $this->attrs  = [];
@@ -131,13 +131,13 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    public function get_attr ($attr) {
+    public function get_attr (int|string $attr) {
     
         return $this->attrs[$attr] ?? null;
     
     }
 
-    public function set_attr ($attr, $value = '') {
+    public function set_attr (mixed $attr, mixed $value = '') {
 
         $this->string = null;
 
@@ -159,13 +159,13 @@ class Attributes implements \ArrayAccess {
     
     }
 
-    public function add_attrs ($attrs) {
+    public function add_attrs (mixed $attrs) {
     
         return $this->set_attr($attrs);
     
     }
 
-    public function remove_attr ($attr) {
+    public function remove_attr (int|string $attr) {
     
         $this->string = null;
         unset($this->attrs[$attr]);
@@ -173,19 +173,19 @@ class Attributes implements \ArrayAccess {
     
     }
 
-    public function has_attr ($attr) {
+    public function has_attr (int|string $attr) {
     
         return isset($this->attrs[$attr]);
     
     }
 
-    public function get_attributes   (...$args) { return $this->get_attrs(...$args);   }
-    public function set_attributes   (...$args) { return $this->set_attrs(...$args);   }
-    public function add_attributes   (...$args) { return $this->add_attrs(...$args);   }
-    public function get_attribute    (...$args) { return $this->get_attr(...$args);    }
-    public function set_attribute    (...$args) { return $this->set_attr(...$args);    }
-    public function remove_attribute (...$args) { return $this->remove_attr(...$args); }
-    public function has_attribute    (...$args) { return $this->has_attr(...$args);    }
+    public function get_attributes   (mixed ...$args) { return $this->get_attrs(...$args);   }
+    public function set_attributes   (mixed ...$args) { return $this->set_attrs(...$args);   }
+    public function add_attributes   (mixed ...$args) { return $this->add_attrs(...$args);   }
+    public function get_attribute    (mixed ...$args) { return $this->get_attr(...$args);    }
+    public function set_attribute    (mixed ...$args) { return $this->set_attr(...$args);    }
+    public function remove_attribute (mixed ...$args) { return $this->remove_attr(...$args); }
+    public function has_attribute    (mixed ...$args) { return $this->has_attr(...$args);    }
 
     //
 
@@ -195,7 +195,7 @@ class Attributes implements \ArrayAccess {
     
     }
 
-    public function set_id ($id) {
+    public function set_id (mixed $id) {
     
         if ($id) $this->set_attr('id', $id);
         return $this;
@@ -214,14 +214,14 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    public function has_class ($class) {
+    public function has_class (mixed $class) {
 
         if (!isset($this->attrs['class'])) return false;
         return in_array($class, $this->attrs['class']);
 
     }
 
-    public function add_class (...$classes) {
+    public function add_class (mixed ...$classes) {
 
         foreach ($classes as $class) {
 
@@ -253,7 +253,7 @@ class Attributes implements \ArrayAccess {
     
     }
 
-    public function add_style ($property, $value = '') {
+    public function add_style (mixed $property, mixed $value = '') {
 
         if (!$property) return $this;
 
@@ -275,7 +275,7 @@ class Attributes implements \ArrayAccess {
 
     }
 
-    public function add_data ($attr, $value = '') {
+    public function add_data (string|array $attr, mixed $value = '') {
 
         if (is_array($attr)) {
 

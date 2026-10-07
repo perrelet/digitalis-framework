@@ -494,7 +494,7 @@ abstract class View implements ArrayAccess
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `render()` | `static render(array $params = [], bool $print = true): string` | Renders view |
+| `render()` | `static render(mixed $params = [], bool $print = true): string` | Renders view; `$params` is cast `(array)`, so pass an array |
 | `print()` | `public print(bool $return = false): string` | Outputs HTML |
 | `get_template_path()` | `public get_template_path(): string` | Returns full template path |
 | `offsetGet()` | `public offsetGet(mixed $key): mixed` | ArrayAccess: gets parameter |

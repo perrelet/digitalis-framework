@@ -11,7 +11,7 @@ namespace Lattice {
             'arg_names' => [],
         ];
 
-        public static function write (...$args) {
+        public static function write (mixed ...$args) {
 
             $debug  = new Debug;
             $values = [];
@@ -33,7 +33,7 @@ namespace Lattice {
 
         //
 
-        protected static function console ($value, $options = []) {
+        protected static function console (mixed $value, array $options = []) {
 
             $options = wp_parse_args($options, [
                 'method' => 'debug',
@@ -67,7 +67,7 @@ namespace Lattice {
 
         protected $debug_options;
 
-        public function print ($return = false) {
+        public function print (bool $return = false) {
 
             if (is_null($this->debug_options)) $this->debug_options = new Debug_Options;
 
@@ -123,7 +123,7 @@ namespace Lattice {
         
         }
 
-        public function params (&$p) {
+        public function params (array &$p) {
 
             $p = array_merge($p, (array) $this->get_options());
     
@@ -227,7 +227,7 @@ namespace Lattice {
         
         }
 
-        protected function extract_arg_names (&$p) {
+        protected function extract_arg_names (array &$p) {
 
             if ($p['debug_path'] && $p['debug_line'] && $p['debug_func'] && $file = @file($p['debug_path'])) {
 
@@ -283,7 +283,7 @@ namespace Lattice {
 
         }
 
-        protected function get_type ($value, $html = true) {
+        protected function get_type (mixed $value, bool $html = true) {
 
             $type = gettype($value);
             $name = $type;
@@ -307,7 +307,7 @@ namespace Lattice {
         
         }
 
-        protected function wrap_lines ($value, $options = []) {
+        protected function wrap_lines (mixed $value, array $options = []) {
 
             $options = wp_parse_args($options, [
                 'open'   => true,
@@ -414,7 +414,7 @@ namespace Lattice {
         public $backtrace_limit = 40;
         public $die             = null;
 
-        public function __construct ($props = []) {
+        public function __construct (mixed $props = []) {
 
             if (is_array($props)) foreach ($props as $prop => $value) if (property_exists($this, $prop)) $this->$prop = $value;
         

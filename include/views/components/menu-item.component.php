@@ -50,7 +50,7 @@ class Menu_Item extends \Lattice\Component {
 
     protected static $skip_inject = ['menu_class'];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         // Defensive coercion: only fires if this Menu_Item was instantiated standalone,
         // outside a parent Menu's eager coercion. In normal nested usage this is a no-op.
@@ -157,7 +157,7 @@ class Menu_Item extends \Lattice\Component {
     // echoes verbatim.
     // ------------------------------------------------------------------
 
-    protected function build_link ($p) {
+    protected function build_link (array $p) {
 
         // Degenerate case: a text-only item (no url / submenu / content) lands
         // on the 'link' shape with nothing to link to. Render the label as
@@ -181,7 +181,7 @@ class Menu_Item extends \Lattice\Component {
 
     }
 
-    protected function build_button ($p) {
+    protected function build_button (array $p) {
 
         $controls_id = $p['has_panel'] ? "{$p['li_id']}-panel" : "{$p['li_id']}-submenu";
 
@@ -213,7 +213,7 @@ class Menu_Item extends \Lattice\Component {
 
     }
 
-    protected function build_description ($p) {
+    protected function build_description (array $p) {
 
         return new Element('span', [
             'class' => ['menu-item-description'],
@@ -222,7 +222,7 @@ class Menu_Item extends \Lattice\Component {
 
     }
 
-    protected function build_panel ($p) {
+    protected function build_panel (array $p) {
 
         $attrs = [
             'role' => 'region',
@@ -242,7 +242,7 @@ class Menu_Item extends \Lattice\Component {
     // Shape decision
     // ------------------------------------------------------------------
 
-    protected function decide_shape ($p) {
+    protected function decide_shape (array $p) {
 
         if ($p['divider'])          return 'divider';
         if ($p['heading'] !== null) return 'heading';

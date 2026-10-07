@@ -20,7 +20,7 @@ class Password extends Input {
 
     protected static $elements = ['show'];
 
-    public function params (&$p) {
+    public function params (array &$p) {
     
         if ($p['button']) {
 

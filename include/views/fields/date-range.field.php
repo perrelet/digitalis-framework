@@ -21,7 +21,7 @@ class Date_Range extends Date_Picker {
         'date_end',
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         parent::params($p);
 

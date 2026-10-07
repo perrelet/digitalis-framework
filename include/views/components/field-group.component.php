@@ -23,7 +23,7 @@ class Field_Group extends \Lattice\Component {
         'attributes'    => [],
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         $p['fields'] = $this->get_fields();
 
@@ -67,7 +67,7 @@ class Field_Group extends \Lattice\Component {
 
     }
 
-    public function get_field_options ($options, $field) {
+    public function get_field_options (mixed $options, mixed $field) {
         
         return $options;
         

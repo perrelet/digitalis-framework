@@ -1065,24 +1065,24 @@ The `Element` class represents an HTML element with tag, content, and attributes
 // Basic element
 $el = new Element('div');
 
-// With content
-$el = new Element('p', 'Hello World');
+// With content (attributes come second, content third)
+$el = new Element('p', [], 'Hello World');
 
 // With attributes
-$el = new Element('a', 'Click me', [
+$el = new Element('a', [
     'href' => '/path',
     'class' => ['btn', 'btn-primary'],
-]);
+], 'Click me');
 
 // With Attributes object
-$attrs = new Attributes(['class' => 'container']);
-$el = new Element('div', '', $attrs);
+$attrs = new Attributes(['class' => ['container']]);
+$el = new Element('div', $attrs);
 ```
 
 ### Rendering
 
 ```php
-$el = new Element('div', 'Content', ['class' => 'box']);
+$el = new Element('div', ['class' => ['box']], 'Content');
 
 // Full element
 echo $el;  // <div class='box'>Content</div>
@@ -1099,7 +1099,7 @@ echo $el->close(); // </div>
 Self-closing tags are handled automatically:
 
 ```php
-$img = new Element('img', '', ['src' => 'photo.jpg', 'alt' => 'Photo']);
+$img = new Element('img', ['src' => 'photo.jpg', 'alt' => 'Photo']);
 echo $img;  // <img src='photo.jpg' alt='Photo'>
 
 $br = new Element('br');
@@ -1107,22 +1107,22 @@ echo $br;  // <br>
 echo $br->close();  // "" (empty string for void tags)
 ```
 
-**Void tags:** `area`, `base`, `br`, `col`, `embed`, `hr`, `img`, `input`, `keygen`, `link`, `meta`, `param`, `source`, `track`, `wbr`
+**Void tags:** `area`, `base`, `br`, `col`, `embed`, `hr`, `img`, `input`, `link`, `meta`, `source`, `track`, `wbr`
 
 ### Attribute Access
 
 Elements proxy to their Attributes object:
 
 ```php
-$el = new Element('div', '', ['class' => 'box']);
+$el = new Element('div', ['class' => ['box']]);
 
 // ArrayAccess
-$el['class'];            // 'box'
+$el['class'];            // ['box']
 $el['id'] = 'my-div';    // Set attribute
 isset($el['class']);     // true
 
 // Property overloading
-$el->class;              // 'box'
+$el->class;              // ['box']
 $el->id = 'my-div';      // Set attribute
 
 // Method proxying (calls Attributes methods)
@@ -1138,13 +1138,13 @@ $attrs = $el->get_attributes();
 ### Modifying Content
 
 ```php
-$el = new Element('p', 'Initial');
+$el = new Element('p', [], 'Initial');
 
 $el->set_content('New content');
 $el->set_tag('div');
 
 // Content can include other elements
-$inner = new Element('strong', 'Bold');
+$inner = new Element('strong', [], 'Bold');
 $el->set_content("Text with {$inner} word");
 ```
 
@@ -1534,7 +1534,7 @@ protected static $template_path = ''; // Template directory
 
 ```php
 public function pre_validate() {}     // Input gate — runs BEFORE params()
-public function params(&$p) {}        // Transform params
+public function params(array &$p) {}  // Transform params (overrides may stay untyped: `params(&$p)`)
 public function validate() {}         // Return bool
 public function required() {}         // Check required params
 public function permission() {}       // Access control

@@ -25,7 +25,7 @@ class Table extends \Lattice\Component {
 
     protected static $merge = ['row_classes', 'row_atts', 'col_classes', 'col_atts'];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if (!empty($p['data_titles']) && empty($p['data_labels'])) $p['data_labels'] = $p['data_titles']; // Back-compat: `data_titles` was renamed to `data_labels`
 
@@ -37,7 +37,7 @@ class Table extends \Lattice\Component {
 
     }
 
-    public function generate_col_atts (&$p) {
+    public function generate_col_atts (array &$p) {
     
         $this->generate_shelf_classes($p, 'col');
         $this->gather_shelf_atts($p, 'col');
@@ -45,7 +45,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function generate_row_atts (&$p) {
+    public function generate_row_atts (array &$p) {
     
         $this->generate_shelf_classes($p, 'row');
         $this->gather_shelf_atts($p, 'row');
@@ -53,7 +53,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function generate_cell_atts (&$p) {
+    public function generate_cell_atts (array &$p) {
 
         $atts = [];
 
@@ -73,7 +73,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function generate_shelf_classes (&$p, $shelf = 'col') {
+    public function generate_shelf_classes (array &$p, string $shelf = 'col') {
     
         if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as &$classes) {
         
@@ -84,7 +84,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function gather_shelf_atts (&$p, $shelf = 'col') {
+    public function gather_shelf_atts (array &$p, string $shelf = 'col') {
 
         if ($p["{$shelf}_classes"]) foreach ($p["{$shelf}_classes"] as $i => &$classes) {
         
@@ -104,7 +104,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function generate_shelf_atts (&$p, $shelf = 'col') {
+    public function generate_shelf_atts (array &$p, string $shelf = 'col') {
 
         $atts = [];
 
@@ -124,7 +124,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function add_rows ($rows, $class = [], $atts = []) {
+    public function add_rows (iterable $rows, array $class = [], array $atts = []) {
     
         foreach ($rows as $i => $row) if (is_array($row) && isset($row['row'])) {
 
@@ -142,7 +142,7 @@ class Table extends \Lattice\Component {
     
     }
 
-    public function add_row ($row, $class = [], $atts = []) {
+    public function add_row (mixed $row, mixed $class = [], mixed $atts = []) {
 
         $i = count($this->rows);
 

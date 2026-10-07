@@ -18,7 +18,7 @@ class Checkbox_Group extends Input {
         'null_value'     => 0,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if ($p['select_all']) {
 
@@ -46,7 +46,7 @@ class Checkbox_Group extends Input {
         
     }
 
-    protected function get_option_attributes ($atts = []) {
+    protected function get_option_attributes (array $atts = []) {
     
         foreach ($this['options'] as $option => $label) {
 

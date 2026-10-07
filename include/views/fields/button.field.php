@@ -9,7 +9,7 @@ class Button extends Input {
         'text' => 'Button',
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         parent::params($p);
 

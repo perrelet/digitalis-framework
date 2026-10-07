@@ -13,7 +13,7 @@ class Layout extends View {
         'modals' => Modals::class,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         foreach ($p as &$value) {
             if (is_string($value) && class_exists($value)) {

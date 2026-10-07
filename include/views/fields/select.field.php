@@ -11,7 +11,7 @@ class Select extends \Lattice\Field {
     protected static $defaults = [
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
         
         parent::params($p);
 
@@ -21,7 +21,7 @@ class Select extends \Lattice\Field {
 
     }
 
-    public function get_option_attributes ($atts = []) {
+    public function get_option_attributes (array $atts = []) {
     
         foreach ($this['options'] as $option => $label) {
 

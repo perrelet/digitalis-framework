@@ -10,7 +10,7 @@ class Date_Picker extends Input {
         'classes'       => ['field-date-picker'],
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         $p['date_picker'] = wp_parse_args($p['date_picker'], [
             'autohide'  => false,

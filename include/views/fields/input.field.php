@@ -10,7 +10,7 @@ class Input extends \Lattice\Field {
         'minlength' => null,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
     
         if (!is_null($p['maxlength'])) $p['attributes']['maxlength'] = $p['maxlength'];
         if (!is_null($p['minlength'])) $p['attributes']['minlength'] = $p['minlength'];

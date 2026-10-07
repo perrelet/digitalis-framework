@@ -14,7 +14,7 @@ class Range extends Input {
         'value_suffix'  => '',
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         $p['attributes']['min']  = $p['min'];
         $p['attributes']['max']  = $p['max'];

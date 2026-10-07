@@ -281,7 +281,7 @@ $post->duplicate(array $overrides = [], string|array $exclude_meta = []): static
 ### View
 
 ```php
-My_View::render(array $params, bool $echo = true): string
+My_View::render(mixed $params = [], bool $print = true): string   // the framework casts $params (array); pass an array
 ```
 
 ```php

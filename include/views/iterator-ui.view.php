@@ -19,7 +19,7 @@ class Iterator_UI extends View {
         'after_log'          => '',
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if (($p['iterator'] instanceof Iterator)) {
 

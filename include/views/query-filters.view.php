@@ -29,7 +29,7 @@ abstract class Query_Filters extends Field_Group {
         'selectors',
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         parent::params($p);
 

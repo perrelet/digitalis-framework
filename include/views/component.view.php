@@ -56,7 +56,7 @@ class Component extends View {
 
     //
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if ($content = $this->get_content()) $p['content'] = $content;
 
@@ -68,7 +68,7 @@ class Component extends View {
 
     public function get_content () {}
 
-    public function create_element ($element = null) {
+    public function create_element (?string $element = null) {
 
         $key    = $element ? $element : 'element';
         $prefix = $element ? $element . '_' : '';

@@ -106,7 +106,7 @@ abstract class Archive extends Component {
 
     }
 
-    public function get_items ($query_vars, &$query) {
+    public function get_items (array $query_vars, &$query) {
 
         if (!$this['item_model']) return [];
 
@@ -133,13 +133,13 @@ abstract class Archive extends Component {
     public function before_items () {}
     public function after_items ()  {}
 
-    public function render_items ($items) {
+    public function render_items (iterable $items) {
         
         foreach ($items as $i => $item) $this->render_item($item, $i);
         
     }
 
-    public function render_item ($item, $i) {
+    public function render_item (mixed $item, int|string $i) {
 
         //
     
@@ -151,19 +151,19 @@ abstract class Archive extends Component {
         
     }
 
-    public function get_page_links ($query) {
+    public function get_page_links (mixed $query) {
     
         //
     
     }
 
-    public function filter_page_links (&$page_links) {
+    public function filter_page_links (?array &$page_links) {
 
         //
 
     }
 
-    public function render_pagination ($page_links) {
+    public function render_pagination (?array $page_links) {
 
         if ($page_links) echo  "<div class='pagination-wrap'>" . implode("\n", $page_links) . "</div>";
     

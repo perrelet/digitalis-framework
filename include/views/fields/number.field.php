@@ -11,7 +11,7 @@ class Number extends Input {
         'step'  => null,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if (!is_null($p['min']))  $p['attributes']['min'] = $p['min'];
         if (!is_null($p['max']))  $p['attributes']['max'] = $p['max'];

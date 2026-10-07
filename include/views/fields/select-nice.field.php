@@ -11,7 +11,7 @@ class Select_Nice extends Select {
         'load_styles'  => true,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         $js_var = str_replace("-", "_", (string) ($p['name'] ?? $p['key'])) . "_nice";
 

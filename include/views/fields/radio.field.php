@@ -14,7 +14,7 @@ class Radio extends Input {
         'option_atts' => [],
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
         
         parent::params($p);
 
@@ -25,7 +25,7 @@ class Radio extends Input {
 
     }
 
-    public function get_option_attributes ($atts = []) {
+    public function get_option_attributes (array $atts = []) {
 
         foreach ($this['options'] as $option => $label) {
 

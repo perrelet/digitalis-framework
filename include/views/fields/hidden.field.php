@@ -9,7 +9,7 @@ class Hidden extends Input {
         'wrap' => false,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
     
         $p['wrap'] = false;
     

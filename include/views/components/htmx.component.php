@@ -22,7 +22,7 @@ class HTMX extends \Lattice\Component {
         '_'           => null,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         // `+=` yields to consumer values.
         if ($p['tag'] == 'a')      $p['attributes'] += ['href' => '#'];

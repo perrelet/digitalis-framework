@@ -65,6 +65,7 @@ No framework file declares `strict_types` today, and none should until the typin
 - Scan the callers before typing: `null` into a non-nullable parameter is a `TypeError` with or without `strict_types`.
 - A parameter forwarded to WordPress takes the union WordPress accepts, never narrower (`string|array $size`), and keeps `int` in the union where WordPress branches on `is_int` (`string|int|array $terms`: an int is a term id, a string a slug).
 - A value a request can shape (a `$_REQUEST` param read raw) stays untyped where WordPress tolerates the wrong shape today: a type would turn its warning into a 500.
+- A by-reference parameter that every override re-declares takes the type the framework always passes (`params(array &$p)`); the overrides stay untyped by convention, which contravariance allows.
 
 ---
 

@@ -44,7 +44,7 @@ class Field extends Component {
 
     protected static $elements = ['row', 'label', 'wrapper'];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         $slug = $this->get_class_slug();
 
@@ -127,7 +127,7 @@ class Field extends Component {
 
     }
 
-    protected function query_value ($request_key, $default = '', $query_var = null) {
+    protected function query_value (?string $request_key, mixed $default = '', ?string $query_var = null) {
 
         if (is_null($query_var)) $query_var = $request_key;
 
@@ -135,13 +135,13 @@ class Field extends Component {
     
     }
 
-    protected function sanitize_value ($value) {
+    protected function sanitize_value (mixed $value) {
     
         return sanitize_text_field($value);
     
     }
 
-    protected function checked ($value, $current, $strict = false, $attribute = 'checked') {
+    protected function checked (mixed $value, mixed $current, bool $strict = false, string $attribute = 'checked') {
 
         if (is_array($current)) {
 
@@ -163,7 +163,7 @@ class Field extends Component {
 
     }
 
-    protected function selected ($value, $current, $strict = false) {
+    protected function selected (mixed $value, mixed $current, bool $strict = false) {
 
         return $this->checked($value, $current, $strict, 'selected');
 

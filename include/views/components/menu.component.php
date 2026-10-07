@@ -58,7 +58,7 @@ class Menu extends \Lattice\Component {
         'toggle_label_format', 'item_class', 'menu_class',
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         // Step 1: source loading — load via Nav_Menu when 'source' is set and items is empty.
         if ($p['source'] !== null && empty($p['items'])) {
@@ -168,7 +168,7 @@ class Menu extends \Lattice\Component {
 
     }
 
-    protected function coerce_item ($entry, $parent_params) {
+    protected function coerce_item (array $entry, array $parent_params) {
 
         // Recurse into the entry's submenu array if present.
         if (isset($entry['submenu']) && is_array($entry['submenu'])) {

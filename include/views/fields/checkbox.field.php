@@ -12,7 +12,7 @@ class Checkbox extends Input {
         'checked_value' => 1,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         parent::params($p);
 

@@ -15,7 +15,7 @@ class Menu_Active_State extends \Lattice\Utility {
     // spl_object_id => ['is_current' => bool, 'is_ancestor' => bool]
     protected static $explicit = [];
 
-    public static function resolve ($items, $config = []) {
+    public static function resolve (array $items, array $config = []) {
 
         $config = array_merge([
             'ancestor_taxonomies' => null,
@@ -34,7 +34,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function snapshot_explicit ($items) {
+    protected static function snapshot_explicit (array $items) {
 
         foreach ($items as $item) {
 
@@ -52,13 +52,13 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function was_explicit ($item, $key) {
+    protected static function was_explicit (Menu_Item $item, string $key) {
 
         return static::$explicit[spl_object_id($item)][$key] ?? false;
 
     }
 
-    protected static function walk_match ($items, $queried, $current_url, $config) {
+    protected static function walk_match (array $items, mixed $queried, string $current_url, array $config) {
 
         foreach ($items as $item) {
 
@@ -80,7 +80,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function match_item ($item, $queried, $current_url, $config) {
+    protected static function match_item (Menu_Item $item, mixed $queried, string $current_url, array $config) {
 
         $allow_current  = $config['match_current']  && !static::was_explicit($item, 'is_current');
         $allow_ancestor = $config['match_ancestor'] && !static::was_explicit($item, 'is_ancestor');
@@ -110,7 +110,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function object_id_match ($item, $queried) {
+    protected static function object_id_match (Menu_Item $item, mixed $queried) {
 
         $object_id   = $item['object_id'];
         $object_type = $item['object_type'];
@@ -138,7 +138,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function url_exact_match ($item, $current_url) {
+    protected static function url_exact_match (Menu_Item $item, string $current_url) {
 
         if (!$item['url']) return false;
 
@@ -147,7 +147,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function content_ancestor_match ($item, $queried, $config) {
+    protected static function content_ancestor_match (Menu_Item $item, mixed $queried, array $config) {
 
         $object_id   = $item['object_id'];
         $object_type = $item['object_type'];
@@ -199,7 +199,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    protected static function url_prefix_match ($item, $current_url) {
+    protected static function url_prefix_match (Menu_Item $item, string $current_url) {
 
         if (!$item['url']) return false;
 
@@ -213,7 +213,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     // Post-order bubble. Returns true if any item in $items is marked
     // (current or ancestor) — caller uses this to mark ITS parent.
-    protected static function walk_bubble ($items) {
+    protected static function walk_bubble (array $items) {
 
         $any_marked = false;
 
@@ -246,7 +246,7 @@ class Menu_Active_State extends \Lattice\Utility {
 
     }
 
-    public static function normalise_url ($url) {
+    public static function normalise_url (string $url) {
 
         $url = trim($url);
         if ($url === '') return null;

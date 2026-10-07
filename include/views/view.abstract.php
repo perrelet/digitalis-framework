@@ -48,7 +48,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    public static function render ($params = [], $print = true) {
+    public static function render (mixed $params = [], bool $print = true) {
 
         $class_name = Call::get_class_name(static::class);
         return (new $class_name($params))->print(!$print);
@@ -84,7 +84,7 @@ abstract class View implements \ArrayAccess {
     protected $params      = [];
     protected $constructed = false;
 
-    public function __construct ($params = []) {
+    public function __construct (mixed $params = []) {
     
         $this->set_params(static::get_defaults());
         $this->merge_params($params);
@@ -99,7 +99,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    public function print ($return = false) {
+    public function print (bool $return = false) {
 
         if (Strict::enabled() && !$this->constructed) $this->strict_constructor();
 
@@ -138,7 +138,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected function output ($return = false) {
+    protected function output (bool $return = false) {
 
         if (Strict::enabled() && static::$shell && ($page = self::rendering(Page_View::class))) Strict::fail(static::class, "rendered inside {$page}, a Page_View, which renders body content only; the Layout renders the shell.", "Remove it from the page view; a page that needs its own shell part declares protected static \$layout = ['header' => My_Header::class] (or footer, modals), honoured when the page renders through App::render().");
 
@@ -182,7 +182,7 @@ abstract class View implements \ArrayAccess {
     }
 
     // A method so templates keep $this; EXTR_SKIP behind the prefixed local so no param can shadow the path.
-    protected function include_template ($__path) {
+    protected function include_template (string $__path) {
 
         extract($this->params, EXTR_SKIP);
         require $__path;
@@ -199,7 +199,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected function inject_dependencies (&$params, $defaults) {
+    protected function inject_dependencies (array &$params, array $defaults) {
 
         foreach (static::get_skip_inject_keys() as $key) if (isset($defaults[$key])) unset($defaults[$key]);
     
@@ -207,9 +207,9 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    public function params (&$p) {}
+    public function params (array &$p) {}
 
-    protected static function get_injected_class ($key, $defaults) {
+    protected static function get_injected_class (int|string $key, array $defaults) {
 
         $class_name = $defaults[$key] ?? null;
 
@@ -304,27 +304,27 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    public function set_params ($params) {
+    public function set_params (array $params) {
     
         $this->params = $params;
         return $this;
     
     }
 
-    public function merge_params ($params) {
+    public function merge_params (mixed $params) {
     
         $this->params = static::deep_parse_args($params, $this->params, static::get_merge_keys());
         return $this;
     
     }
 
-    public function get_param ($key) {
+    public function get_param (int|string $key) {
     
         return $this->params[$key] ?? null;
     
     }
 
-    public function set_param ($key = null, $value = null) {
+    public function set_param (int|string|null $key = null, mixed $value = null) {
     
         if (is_null($key)) {
             $this->params[] = $value;
@@ -336,20 +336,20 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    public function unset_param ($key) {
+    public function unset_param (int|string $key) {
     
         unset($this->params[$key]);
         return $this;
     
     }
 
-    public function has_param ($key) {
+    public function has_param (int|string $key) {
     
         return isset($this->params[$key]);
     
     }
 
-    public function merge_param ($key, ...$values) {
+    public function merge_param (int|string $key, mixed ...$values) {
 
         $values             = array_map(fn($value) => is_array($value) ? $value : [$value], $values);
         $values             = call_user_func_array('array_merge', $values);
@@ -455,7 +455,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected static function strict_audit_static_init ($class) {
+    protected static function strict_audit_static_init (string $class) {
 
         static $reported = [];
 
@@ -472,7 +472,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected static function strict_audit_required ($class) {
+    protected static function strict_audit_required (string $class) {
 
         $defaults = (array) $class::get_defaults(); // Under strict this primes the Inherits_Props cache at load time rather than at first print.
 
@@ -492,7 +492,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected static function strict_audit_resolvable ($class, $reflection) {
+    protected static function strict_audit_resolvable (string $class, \ReflectionClass $reflection) {
 
         foreach (['context', 'post_type', 'taxonomy', 'term', 'priority'] as $prop) {
 
@@ -560,7 +560,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected static function params_victim ($class) {
+    protected static function params_victim (string $class) {
 
         for ($victim = get_parent_class($class); $victim && ($victim !== self::class); $victim = get_parent_class($victim)) {
 
@@ -572,14 +572,14 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    protected static function declares ($class, $method) {
+    protected static function declares (string $class, string $method) {
 
         return method_exists($class, $method) && ((new \ReflectionMethod($class, $method))->getDeclaringClass()->name === $class);
 
     }
 
     // Token scan of the declared body for `parent::$method`, so a comment cannot fool it. An early return past the call can; that hole is documented.
-    protected static function calls_parent ($class, $method) {
+    protected static function calls_parent (string $class, string $method) {
 
         $reflection = new \ReflectionMethod($class, $method);
         $file       = $reflection->getFileName();

@@ -10,7 +10,7 @@ class File extends Input {
         'multiple' => false,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
 
         if ($p['accept']) $p['attributes']['accept'] = is_array($p['accept']) ? implode(', ', $p['accept']) : $p['accept'];
 

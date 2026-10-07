@@ -294,7 +294,7 @@ Product_Archive::render([
 
 | Method | Purpose |
 |--------|---------|
-| `get_items($query_vars, &$query, $skip_main)` | Fetch items |
+| `get_items($query_vars, &$query)` | Fetch items |
 | `before_items()` | Before item loop |
 | `render_items($items)` | Render all items |
 | `render_item($item, $i)` | Render single item |

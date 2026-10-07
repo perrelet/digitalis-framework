@@ -13,7 +13,7 @@ class Textarea extends \Lattice\Field {
         'spellcheck' => null,
     ];
 
-    public function params (&$p) {
+    public function params (array &$p) {
     
         if (!is_null($p['rows']))       $p['attributes']['rows']       = $p['rows'];
         if (!is_null($p['cols']))       $p['attributes']['cols']       = $p['cols'];

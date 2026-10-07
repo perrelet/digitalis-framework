@@ -13,7 +13,7 @@ abstract class Term_Archive extends Archive {
         'item_model' => Term::class,
     ];
 
-    public function get_page_links ($query) {
+    public function get_page_links (mixed $query) {
 
         // TODO: WP_Term_Query doesn't appear to easily support pagination.
     
