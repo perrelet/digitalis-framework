@@ -6,7 +6,7 @@ class Nav_Menu extends Term {
 
     protected static $taxonomy = 'nav_menu';
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         if (is_string($data) && !is_numeric($data) && function_exists('wp_get_nav_menu_object')) {
 
@@ -48,7 +48,7 @@ class Nav_Menu extends Term {
 
     }
 
-    protected static function assemble_tree ($parent_id, $flat, $children_of) {
+    protected static function assemble_tree (int $parent_id, array $flat, array $children_of) {
 
         $result = [];
 

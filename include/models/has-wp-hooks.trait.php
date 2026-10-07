@@ -16,7 +16,7 @@ trait Has_WP_Hooks {
 
     }
 
-    public function get_wp_hook ($hook_name) {
+    public function get_wp_hook (string $hook_name) {
 
         global $wp_filter;
         return $wp_filter[$hook_name] ?? null;
@@ -29,7 +29,7 @@ trait Has_WP_Hooks {
 
     }
 
-    protected function sanitize_hook_name ($hook_name) {
+    protected function sanitize_hook_name (string $hook_name) {
 
         return Hook::sanitize($hook_name);
 
@@ -41,7 +41,7 @@ trait Has_WP_Hooks {
 
     }
 
-    public function add_hook ($hook_name, $callback, $priority = null, $type = 'filter') {
+    public function add_hook (string|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter') {
 
         if (is_string($callback) && method_exists($this, $callback)) $callback = [$this, $callback];
         if (is_null($priority)) $priority = $this->get_default_priority();
@@ -68,19 +68,19 @@ trait Has_WP_Hooks {
 
     }
 
-    public function add_filter ($hook_name, $callback, $priority = null) {
+    public function add_filter (string|array $hook_name, mixed $callback, ?int $priority = null) {
 
         return $this->add_hook($hook_name, $callback, $priority, 'filter');
 
     }
 
-    public function add_action ($hook_name, $callback, $priority = null) {
+    public function add_action (string|array $hook_name, mixed $callback, ?int $priority = null) {
 
         return $this->add_hook($hook_name, $callback, $priority, 'action');
 
     }
 
-    public function add_hooks ($hooks, $type = 'filter') {
+    public function add_hooks (array $hooks, string $type = 'filter') {
 
         foreach ($hooks as $hook_name => $callback) if (is_array($callback)) {
 
@@ -94,19 +94,19 @@ trait Has_WP_Hooks {
 
     }
 
-    public function add_filters ($filters) {
+    public function add_filters (array $filters) {
 
         return $this->add_hooks($filters, 'filter');
 
     }
 
-    public function add_actions ($actions) {
+    public function add_actions (array $actions) {
 
         return $this->add_hooks($actions, 'action');
 
     }
 
-    public function remove_hook ($hook_name, $callback, $priority = null, $type = 'filter') {
+    public function remove_hook (string|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter') {
 
         if (is_string($callback) && method_exists($this, $callback)) $callback = [$this, $callback];
         if (is_null($priority)) $priority = $this->get_default_priority();
@@ -116,19 +116,19 @@ trait Has_WP_Hooks {
 
     }
 
-    public function remove_filter ($hook_name, $callback, $priority = null) {
+    public function remove_filter (string|array $hook_name, mixed $callback, ?int $priority = null) {
 
         return $this->remove_hook($hook_name, $callback, $priority, 'filter');
 
     }
 
-    public function remove_action ($hook_name, $callback, $priority = null) {
+    public function remove_action (string|array $hook_name, mixed $callback, ?int $priority = null) {
 
         return $this->remove_hook($hook_name, $callback, $priority, 'action');
 
     }
 
-    public function remove_all_hooks ($hook_name, $priority = false, $type = 'filter') {
+    public function remove_all_hooks (string|array $hook_name, int|false|null $priority = false, string $type = 'filter') {
 
         if (is_null($priority)) $priority = $this->get_default_priority();
         $this->build_hook_name($hook_name);
@@ -136,19 +136,19 @@ trait Has_WP_Hooks {
 
     }
 
-    public function remove_all_filters ($hook_name, $priority = false) {
+    public function remove_all_filters (string|array $hook_name, int|false|null $priority = false) {
 
         return $this->remove_all_hooks($hook_name, $priority, 'filter');
 
     }
 
-    public function remove_all_actions ($hook_name, $priority = false) {
+    public function remove_all_actions (string|array $hook_name, int|false|null $priority = false) {
 
         return $this->remove_all_hooks($hook_name, $priority, 'action');
 
     }
 
-    public function has_hook ($hook_name, $callback = false, $type = 'filter') {
+    public function has_hook (string|array $hook_name, mixed $callback = false, string $type = 'filter') {
 
         if (is_string($callback) && method_exists($this, $callback)) $callback = [$this, $callback];
         $this->build_hook_name($hook_name);
@@ -156,19 +156,19 @@ trait Has_WP_Hooks {
 
     }
 
-    public function has_filter ($hook_name, $callback = false) {
+    public function has_filter (string|array $hook_name, mixed $callback = false) {
 
         return $this->has_hook($hook_name, $callback, 'filter');
 
     }
 
-    public function has_action ($hook_name, $callback = false) {
+    public function has_action (string|array $hook_name, mixed $callback = false) {
 
         return $this->has_hook($hook_name, $callback, 'action');
 
     }
 
-    public function do_hook ($hook_name, $type = 'filter', ...$args) {
+    public function do_hook (string|array $hook_name, string $type = 'filter', mixed ...$args) {
 
         $this->build_hook_name($hook_name);
 
@@ -186,13 +186,13 @@ trait Has_WP_Hooks {
 
     }
 
-    public function apply_filters ($hook_name, ...$args) {
+    public function apply_filters (string|array $hook_name, mixed ...$args) {
 
         return $this->do_hook($hook_name, 'filter', ...$args);
 
     }
 
-    public function filter_value ($value, ...$args) {
+    public function filter_value (mixed $value, mixed ...$args) {
 
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1] ?? null;
         $method    = $backtrace['function'] ?? 'unknown';
@@ -204,46 +204,46 @@ trait Has_WP_Hooks {
 
     }
 
-    public function do_action ($hook_name, ...$args) {
+    public function do_action (string|array $hook_name, mixed ...$args) {
 
         $this->do_hook($hook_name, 'action', ...$args);
 
     }
 
-    public function apply_filters_ref_array ($hook_name, $args) {
+    public function apply_filters_ref_array (string|array $hook_name, array $args) {
 
         return $this->do_hook($hook_name, 'filter', ...$args);
 
     }
 
-    public function do_action_ref_array ($hook_name, $args) {
+    public function do_action_ref_array (string|array $hook_name, array $args) {
 
         $this->do_hook($hook_name, 'action', ...$args);
 
     }
 
-    public function doing_filter ($hook_name = null) {
+    public function doing_filter (string|array|null $hook_name = null) {
 
         $this->build_hook_name($hook_name);
         return doing_filter($hook_name);
 
     }
 
-    public function doing_action ($hook_name = null) {
+    public function doing_action (string|array|null $hook_name = null) {
 
         $this->build_hook_name($hook_name);
         return doing_action($hook_name);
 
     }
 
-    public function did_filter ($hook_name) {
+    public function did_filter (string|array $hook_name) {
 
         $this->build_hook_name($hook_name);
         return did_filter($hook_name);
 
     }
 
-    public function did_action ($hook_name) {
+    public function did_action (string|array $hook_name) {
 
         $this->build_hook_name($hook_name);
         return did_action($hook_name);

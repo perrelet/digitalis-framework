@@ -19,7 +19,7 @@ class User extends WP_Model {
     
     }
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         if (is_object($data) && property_exists($data, 'ID'))   return $data->ID;
         if (is_object($data) && method_exists($data, 'get_id')) return $data->get_id();
@@ -28,7 +28,7 @@ class User extends WP_Model {
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         //if ($id == 'new') return true;
 
@@ -50,7 +50,7 @@ class User extends WP_Model {
     
     }
 
-    public static function get_by ($field, $value) {
+    public static function get_by (string $field, int|string $value) {
 
         if (!$wp_user = get_user_by($field, $value)) return;
         if (!$user = static::get_instance($wp_user->ID)) return;
@@ -59,25 +59,25 @@ class User extends WP_Model {
 
     }
 
-    public static function get_by_email ($email) {
+    public static function get_by_email (string $email) {
 
         return static::get_by('email', $email);
 
     }
 
-    public static function get_by_login ($login) {
+    public static function get_by_login (string $login) {
 
         return static::get_by('login', $login);
 
     }
 
-    public static function get_by_username ($username) {
+    public static function get_by_username (string $username) {
 
         return static::get_by_login($username);
 
     }
 
-    public static function get_by_slug ($slug) {
+    public static function get_by_slug (string $slug) {
 
         return static::get_by('slug', $slug);
 
@@ -85,7 +85,7 @@ class User extends WP_Model {
 
     //
 
-    public static function query ($args = [], &$query = null) {
+    public static function query (array $args = [], &$query = null) {
 
         $args = (is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args);
     
@@ -100,13 +100,13 @@ class User extends WP_Model {
     
     }
 
-    public static function get_query_vars ($args = []) {
+    public static function get_query_vars (array $args = []) {
 
         return $args;
 
     }
 
-    public static function get_admin_query_vars ($args = []) {
+    public static function get_admin_query_vars (array $args = []) {
 
         return $args;
 
@@ -114,7 +114,7 @@ class User extends WP_Model {
 
     //
 
-    protected function build_instance ($data) {
+    protected function build_instance (mixed $data) {
 
         $wp_user     = new WP_User((object) $data);
         $wp_user->ID = $this->id;
@@ -127,7 +127,7 @@ class User extends WP_Model {
 
     // CRUD
 
-    public function save ($user_data = []) {
+    public function save (array $user_data = []) {
 
         $user_data['ID'] = $this->get_id();
 

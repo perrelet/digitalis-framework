@@ -14,13 +14,13 @@ class Options extends Model {
 
     // Model Identity
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         return 0;
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         return $id === 0;
 
@@ -34,49 +34,49 @@ class Options extends Model {
 
     // Option Access
 
-    public static function get ($option, $default = false) {
+    public static function get (string $option, mixed $default = false) {
 
         return static::get_instance()->get_option($option, $default);
 
     }
 
-    public static function add ($option, $value, $autoload = null) {
+    public static function add (string $option, mixed $value, bool|string|null $autoload = null) {
 
         return static::get_instance()->add_option($option, $value, $autoload);
 
     }
 
-    public static function update ($option, $value, $autoload = null) {
+    public static function update (string $option, mixed $value, bool|string|null $autoload = null) {
 
         return static::get_instance()->update_option($option, $value, $autoload);
 
     }
 
-    public static function delete ($option) {
+    public static function delete (string $option) {
 
         return static::get_instance()->delete_option($option);
 
     }
 
-    public function get_option ($option, $default = false) {
+    public function get_option (string $option, mixed $default = false) {
 
         return get_option(static::$prefix . $option, $default);
 
     }
 
-    public function add_option ($option, $value, $autoload = null) {
+    public function add_option (string $option, mixed $value, bool|string|null $autoload = null) {
 
         return add_option(static::$prefix . $option, $value, '', $autoload);
 
     }
 
-    public function update_option ($option, $value, $autoload = null) {
+    public function update_option (string $option, mixed $value, bool|string|null $autoload = null) {
 
         return update_option(static::$prefix . $option, $value, $autoload);
 
     }
 
-    public function delete_option ($option) {
+    public function delete_option (string $option) {
 
         return delete_option(static::$prefix . $option);
 
@@ -84,19 +84,19 @@ class Options extends Model {
 
     // ACF Access (static proxies)
 
-    public static function get_field ($selector, $format_value = true) {
+    public static function get_field (string $selector, bool $format_value = true) {
 
         return static::get_instance()->get_acf_field($selector, $format_value);
 
     }
 
-    public static function esc_field ($selector, $format_value = true) {
+    public static function esc_field (string $selector, bool $format_value = true) {
 
         return static::get_instance()->esc_acf_field($selector, $format_value);
 
     }
 
-    public static function update_field ($selector, $value) {
+    public static function update_field (int|string $selector, mixed $value) {
 
         return static::get_instance()->update_acf_field($selector, $value);
 
@@ -110,19 +110,19 @@ class Options extends Model {
 
     // ACF Access (instance methods)
 
-    public function get_acf_field ($selector, $format_value = true) {
+    public function get_acf_field (string $selector, bool $format_value = true) {
 
         return $this->field_call('get', static::$acf_prefix . $selector, $format_value);
 
     }
 
-    public function esc_acf_field ($selector, $format_value = true) {
+    public function esc_acf_field (string $selector, bool $format_value = true) {
 
         return trim(esc_attr($this->get_acf_field($selector, $format_value)));
 
     }
 
-    public function update_acf_field ($selector, $value) {
+    public function update_acf_field (int|string $selector, mixed $value) {
 
         return $this->field_call('update', static::$acf_prefix . $selector, $value);
 

@@ -93,7 +93,7 @@ Post::get_instance(123)
 
 ```php
 // From Model.abstract.php
-public static function get_class_name($id, $auto_resolve = null) {
+public static function get_class_name(mixed $id, ?bool $auto_resolve = null) {
     $class_name = static::class;
 
     if (is_null($auto_resolve)) $auto_resolve = static::get_auto_resolve();
@@ -124,19 +124,16 @@ Under strict, `validate_id()` re-entering resolution for the same class and id (
 
 ### Factory Method Integration
 
+`get_instance()` resolves; `create()` does not. It builds a new, unsaved instance of the class it is called on (a uuid id until `save()`), so call it on the class you want:
+
 ```php
-// Model::create() uses get_class_name()
-public static function create($args = []) {
-    $id = $args['id'] ?? $args[0] ?? null;
-    $class_name = static::get_class_name($id);
+public static function create(mixed $data = []) {
+    static::prepare_data($data);
 
-    // If resolved to different class, delegate
-    if ($class_name !== static::class) {
-        return $class_name::create($args);
-    }
+    $instance = new static($data);
+    $instance->init($data);
 
-    // Otherwise create instance of this class
-    return parent::create($args);
+    return $instance;
 }
 ```
 

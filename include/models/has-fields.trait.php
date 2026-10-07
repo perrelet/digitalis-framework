@@ -14,49 +14,49 @@ trait Has_Fields {
     }
 
     // Truthy guard on purpose: an id of 0 must never reach a provider (ACF falls back to the queried object for a falsy post id).
-    protected function field_call ($method, ...$args) {
+    protected function field_call (string $method, mixed ...$args) {
 
         return (($p = Custom_Fields::provider()) && ($id = $this->get_field_id())) ? $p->$method($id, ...$args) : null;
 
     }
 
-    public function get_fields ($format_value = true, $escape_html = false) {
+    public function get_fields (bool $format_value = true, bool $escape_html = false) {
 
         return $this->field_call('get_all', $format_value, $escape_html);
 
     }
 
-    public function get_field_objects ($format_value = true, $load_value = true, $escape_html = false) {
+    public function get_field_objects (bool $format_value = true, bool $load_value = true, bool $escape_html = false) {
 
         return $this->field_call('get_objects', $format_value, $load_value, $escape_html);
 
     }
 
-    public function get_field ($selector, $format_value = true, $escape_html = false) {
+    public function get_field (string $selector, bool $format_value = true, bool $escape_html = false) {
 
         return $this->field_call('get', $selector, $format_value, $escape_html);
 
     }
 
-    public function esc_field ($selector) {
+    public function esc_field (string $selector) {
 
         return $this->get_field($selector, true, true);
 
     }
 
-    public function get_field_object ($selector, $format_value = true, $load_value = true, $escape_html = false) {
+    public function get_field_object (string $selector, bool $format_value = true, bool $load_value = true, bool $escape_html = false) {
 
         return $this->field_call('get_object', $selector, $format_value, $load_value, $escape_html);
 
     }
 
-    public function field_has_rows ($selector) {
+    public function field_has_rows (string $selector) {
 
         return $this->field_call('has_rows', $selector);
 
     }
 
-    public function get_field_rows ($selector, $row_class = ACF_Row::class) {
+    public function get_field_rows (string $selector, string $row_class = ACF_Row::class) {
 
         $rows = $this->get_field($selector);
         if (!is_array($rows)) return [];
@@ -73,13 +73,13 @@ trait Has_Fields {
 
     }
 
-    public function update_field ($selector, $value) {
+    public function update_field (int|string $selector, mixed $value) {
 
         return $this->field_call('update', $selector, $value);
 
     }
 
-    public function update_sub_field ($selector, $value) {
+    public function update_sub_field (string|array $selector, mixed $value) {
 
         return $this->field_call('update_sub', $selector, $value);
 
@@ -91,49 +91,49 @@ trait Has_Fields {
 
     }
 
-    public function field_add_row ($selector, $row = false) {
+    public function field_add_row (string $selector, array|false $row = false) {
 
         return $this->field_call('add_row', $selector, $row);
 
     }
 
-    public function field_add_sub_row ($selector, $row = false) {
+    public function field_add_sub_row (string $selector, array|false $row = false) {
 
         return $this->field_call('add_sub_row', $selector, $row);
 
     }
 
-    public function field_update_row ($selector, $i = 1, $row = false) {
+    public function field_update_row (string $selector, int $i = 1, array|false $row = false) {
 
         return $this->field_call('update_row', $selector, $i, $row);
 
     }
 
-    public function field_update_sub_row ($selector, $i = 1, $row = false) {
+    public function field_update_sub_row (string $selector, int $i = 1, array|false $row = false) {
 
         return $this->field_call('update_sub_row', $selector, $i, $row);
 
     }
 
-    public function field_delete_row ($selector, $i = 1) {
+    public function field_delete_row (string $selector, int $i = 1) {
 
         return $this->field_call('delete_row', $selector, $i);
 
     }
 
-    public function field_delete_sub_row ($selector, $i = 1) {
+    public function field_delete_sub_row (string $selector, int $i = 1) {
 
         return $this->field_call('delete_sub_row', $selector, $i);
 
     }
 
-    public function delete_field ($selector) {
+    public function delete_field (string $selector) {
 
         return $this->field_call('delete', $selector);
 
     }
 
-    public function delete_sub_field ($selector) {
+    public function delete_sub_field (string|array $selector) {
 
         return $this->field_call('delete_sub', $selector);
 

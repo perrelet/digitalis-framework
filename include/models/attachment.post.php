@@ -6,7 +6,7 @@ class Attachment extends Post {
 
     protected static $post_type = 'attachment';
 
-    public function is ($type) {
+    public function is (string $type) {
     
         return wp_attachment_is($type, $this->wp_post);
     
@@ -18,25 +18,25 @@ class Attachment extends Post {
     
     }
 
-    public function get_path ($unfiltered = false) {
+    public function get_path (bool $unfiltered = false) {
     
         return get_attached_file($this->wp_post->ID, $unfiltered);
     
     }
 
-    public function get_file_name ($unfiltered = false) {
+    public function get_file_name (bool $unfiltered = false) {
     
         return basename($this->get_path($unfiltered));
     
     }
 
-    public function get_file_extension ($unfiltered = false) {
+    public function get_file_extension (bool $unfiltered = false) {
     
         return pathinfo($this->get_file_name($unfiltered), PATHINFO_EXTENSION);
     
     }
 
-    public function get_permalink ($leavename = false) {
+    public function get_permalink (bool $leavename = false) {
     
         return get_attachment_link($this->wp_post, $leavename);
     
@@ -92,13 +92,13 @@ class Attachment extends Post {
         
     }
 
-    public function get_image ($size = 'thumbnail', $attr = '', $icon = false) {
+    public function get_image (string|array $size = 'thumbnail', string|array $attr = '', bool $icon = false) {
 
         return wp_get_attachment_image($this->wp_post->ID, $size, $icon, $attr);
 
     }
 
-    public function get_image_url ($size = 'thumbnail', $icon = false) {
+    public function get_image_url (string|array $size = 'thumbnail', bool $icon = false) {
 
         return wp_get_attachment_image_url($this->wp_post->ID, $size, $icon);
 
@@ -106,7 +106,7 @@ class Attachment extends Post {
 
     protected $src_cache = [];
 
-    public function get_image_src ($size = 'medium', $icon = false) {
+    public function get_image_src (string|array $size = 'medium', bool $icon = false) {
 
         $key = implode(';', func_get_args());
         if (!isset($this->src_cache[$key])) $this->src_cache[$key] = wp_get_attachment_image_src($this->wp_post->ID, $size, $icon);
@@ -114,13 +114,13 @@ class Attachment extends Post {
     
     }
 
-    public function get_image_width ($size = 'medium', $icon = false) {
+    public function get_image_width (string|array $size = 'medium', bool $icon = false) {
     
         return ($src = $this->get_image_src($size, $icon)) ? $src[1] : null;
     
     }
 
-    public function get_image_height ($size = 'medium', $icon = false) {
+    public function get_image_height (string|array $size = 'medium', bool $icon = false) {
     
         return ($src = $this->get_image_src($size, $icon)) ? $src[2] : null;
     
@@ -138,7 +138,7 @@ class Attachment extends Post {
     }
 
     // `full`, unlike its neighbours: a hard-cropped size reports its own ratio, not the image's
-    public function get_aspect_ratio ($size = 'full', $icon = false) {
+    public function get_aspect_ratio (string|array $size = 'full', bool $icon = false) {
 
         $w = $this->get_image_width($size, $icon);
         $h = $this->get_image_height($size, $icon);
@@ -147,43 +147,43 @@ class Attachment extends Post {
 
     }
 
-    public function get_image_is_resized ($size = 'medium', $icon = false) {
+    public function get_image_is_resized (string|array $size = 'medium', bool $icon = false) {
     
         return ($src = $this->get_image_src($size, $icon)) ? $src[3] : null;
     
     }
 
-    public function get_image_srcset ($size = 'medium', $image_meta = null) {
+    public function get_image_srcset (string|array $size = 'medium', ?array $image_meta = null) {
     
         return wp_get_attachment_image_srcset($this->wp_post->ID, $size, $image_meta);
     
     }
 
-    public function get_image_sizes ($size = 'medium', $image_meta = null) {
+    public function get_image_sizes (string|array $size = 'medium', ?array $image_meta = null) {
     
         return wp_get_attachment_image_sizes($this->wp_post->ID, $size, $image_meta);
     
     }
 
-    public function get_id3_keys ($context = 'display') {
+    public function get_id3_keys (string $context = 'display') {
     
         return wp_get_attachment_id3_keys($this->wp_post, $context);
     
     }
 
-    public function get_attachment_taxonomies ($output = 'names') {
+    public function get_attachment_taxonomies (string $output = 'names') {
     
         return get_taxonomies($this->wp_post, $output);
     
     }
 
-    public function get_metadata ($unfiltered = false) {
+    public function get_metadata (bool $unfiltered = false) {
     
         return wp_get_attachment_metadata($this->wp_post->ID, $unfiltered);
     
     }
 
-    public function update_metadata ($data) {
+    public function update_metadata (array $data) {
     
         return wp_update_attachment_metadata($this->wp_post->ID, $data);
     

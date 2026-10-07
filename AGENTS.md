@@ -260,20 +260,20 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 ### Post / User / Term
 
 ```php
-Post::get_instance(int $id): static
-Post::get_instances(array $ids): static[]
-Post::create(array $data): static
-Post::query(array $args, WP_Query &$wp_query = null): static[]   // returns plain array
+Post::get_instance(mixed $data = null, ?bool $auto_resolve = null): ?static   // id, WP_Post, uuid or null (the global post)
+Post::get_instances($ids): static[]
+Post::create(mixed $data = []): static                                        // new and unsaved; does not resolve
+Post::query(array $args = [], &$query = null): static[]   // returns plain array; $query receives the WP_Query
 
 $post->get_id(): int
 $post->get_post_type(): string
-$post->get_meta(string $key): mixed
-$post->set_meta(string $key, mixed $value): void
-$post->update_meta(string $key, mixed $value): void
-$post->get_field(string $key): mixed          // through the field provider (ACF)
-$post->update_field(string $key, mixed $value): void  // through the field provider (ACF)
-$post->save(): void
-$post->duplicate(array $overrides = [], array $exclude_meta = []): static|WP_Error
+$post->get_meta(int|string $key = '', bool $single = true): mixed
+$post->add_meta(int|string $key, mixed $value, bool $unique = false): int|false|null
+$post->update_meta(int|string $key, mixed $value, mixed $prev_value = ''): int|bool|null
+$post->get_field(string $selector, bool $format_value = true, bool $escape_html = false): mixed   // through the field provider (ACF)
+$post->update_field(int|string $selector, mixed $value): mixed                    // through the field provider (ACF)
+$post->save(array $post_array = [], bool $fire_after_hooks = true): static|WP_Error
+$post->duplicate(array $overrides = [], string|array $exclude_meta = []): static|WP_Error
 ```
 
 `duplicate()` copies columns, all postmeta (raw — no ACF hooks, so no relationship sync fires) and taxonomy terms. Slug and placement columns (`post_parent`, `menu_order`) are deliberately not copied; `post_status` defaults to `draft`. Keep a key off every copy via the `lattice.post.duplicate.exclude_meta` filter. See [MODELS.md#duplicating](./docs/MODELS.md#duplicating).

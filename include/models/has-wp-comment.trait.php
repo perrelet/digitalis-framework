@@ -14,7 +14,7 @@ trait Has_WP_Comment {
 
     protected $wp_comment;
 
-    protected function init_wp_model ($data) {
+    protected function init_wp_model (mixed $data) {
 
         if (is_int($data)) {
 
@@ -97,7 +97,7 @@ trait Has_WP_Comment {
 
     }
 
-    public function set_author ($author) {
+    public function set_author (mixed $author) {
 
         if ($author instanceof User)         { $author = $author->get_username(); }
         else if ($author instanceof WP_User) { $author = $author->user_login; }
@@ -121,7 +121,7 @@ trait Has_WP_Comment {
 
     }
 
-    public function get_author_email_link ($link_text = '', $before = '', $after = '') {
+    public function get_author_email_link (string $link_text = '', string $before = '', string $after = '') {
 
         return get_comment_author_email_link($link_text, $before, $after, $this->wp_comment);
 
@@ -145,7 +145,7 @@ trait Has_WP_Comment {
 
     }
 
-    public function get_comment_author_url_link ($link_text = '', $before = '', $after = '') {
+    public function get_comment_author_url_link (string $link_text = '', string $before = '', string $after = '') {
     
         return get_comment_author_url_link($link_text, $before, $after, $this->wp_comment);
     
@@ -201,13 +201,13 @@ trait Has_WP_Comment {
 
     }
 
-    public function get_comment_time ($format = '', $gmt = false, $translate = true) {
+    public function get_comment_time (string $format = '', bool $gmt = false, bool $translate = true) {
 
         return get_comment_time($format, $gmt, $translate, $this->wp_comment);
 
     }
 
-    public function get_content ($args = []) {
+    public function get_content (array $args = []) {
 
         return get_comment_text($this->wp_comment, $args);
 
@@ -228,7 +228,7 @@ trait Has_WP_Comment {
 
     }
 
-    public function get_css_classes ($css_class = '', $post = null) {
+    public function get_css_classes (string|array $css_class = '', mixed $post = null) {
 
         if ($post instanceof Post) $post = $post->get_wp_post();
 
@@ -242,13 +242,13 @@ trait Has_WP_Comment {
 
     }
 
-    public function get_url ($args = []) {
+    public function get_url (array $args = []) {
 
         return get_comment_link($this->wp_comment, $args);
 
     }
 
-    public function get_reply_url ($args = [], $post = null) {
+    public function get_reply_url (array $args = [], mixed $post = null) {
 
         if ($post instanceof Post) $post = $post->get_wp_post();
 

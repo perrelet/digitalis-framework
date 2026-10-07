@@ -4,7 +4,7 @@ namespace Lattice;
 
 trait Has_WP_Model {
 
-    protected function init_wp_model ($data) {
+    protected function init_wp_model (mixed $data) {
 
         // ..
 

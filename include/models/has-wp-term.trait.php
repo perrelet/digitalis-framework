@@ -11,7 +11,7 @@ trait Has_WP_Term {
 
     protected $wp_term;
 
-    protected function init_wp_model ($data) {
+    protected function init_wp_model (mixed $data) {
 
         if (is_int($data)) {
 
@@ -158,14 +158,14 @@ trait Has_WP_Term {
     // Term::get_instance() dispatch (resets late static binding for the
     // registry walker) — an explicit class ref doesn't belong in a mixin trait.
 
-    public function set_parent ($parent) {
+    public function set_parent (mixed $parent) {
 
         if ($id = static::extract_id($parent)) $this->set_parent_id($id);
         return $this;
 
     }
 
-    public function get_all_parents ($asc = true) {
+    public function get_all_parents (bool $asc = true) {
 
         $parents = [];
         $parent  = $this;
@@ -204,7 +204,7 @@ trait Has_WP_Term {
 
     }
 
-    public function get_feed ($feed = '') {
+    public function get_feed (string $feed = '') {
     
         return get_term_feed_link($this->id, '', $feed);
     

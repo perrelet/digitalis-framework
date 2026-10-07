@@ -102,15 +102,15 @@ abstract class Model extends Factory
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$class_map` | `array` | `[]` | Maps IDs to specific subclasses |
+| `$class_map` | `array` | `[]` | Maps each class to its registered subclasses and their specificity |
 | `$id` | `mixed` | `null` | Entity identifier |
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `create()` | `static create(array $data = []): static` | Creates model instance |
-| `get_instance()` | `static get_instance(mixed $id): ?static` | Gets model by ID with auto-resolution |
-| `get_instances()` | `static get_instances(array $ids): array` | Gets multiple models |
-| `resolve_class()` | `static resolve_class(mixed $id): string` | Resolves most specific class for ID |
+| `create()` | `static create(mixed $data = []): static` | Creates a new, unsaved instance of the called class (no resolution) |
+| `get_instance()` | `static get_instance(mixed $data = null, ?bool $auto_resolve = null): ?static` | Gets model by ID with auto-resolution |
+| `get_instances()` | `static get_instances($ids): array` | Gets multiple models (falsy input gives `[]`) |
+| `get_class_name()` | `static get_class_name(mixed $id, ?bool $auto_resolve = null): string` | Resolves most specific class for ID |
 | `validate_id()` | `static validate_id(mixed $id): bool` | Validates ID for this model |
 | `is_new()` | `public is_new(): bool` | Checks if model is unsaved |
 
@@ -238,17 +238,17 @@ class Post extends WP_Model
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_post()` | `public get_post(): ?WP_Post` | Returns WP_Post object |
-| `get_by_slug()` | `static get_by_slug(string $slug): ?static` | Gets post by slug |
-| `query()` | `static query(array $args = []): array` | Queries posts |
-| `save()` | `public save(): int\|WP_Error` | Saves post to database |
-| `delete()` | `public delete(bool $force = false): bool` | Deletes post |
-| `get_meta()` | `public get_meta(string $key): mixed` | Gets post meta |
-| `set_meta()` | `public set_meta(string $key, mixed $value): void` | Sets post meta |
+| `get_wp_post()` | `public get_wp_post(): ?WP_Post` | Returns WP_Post object |
+| `get_by_slug()` | `static get_by_slug(string $slug): ?static` | Gets post by slug (path) |
+| `query()` | `static query(array $args = [], &$query = null): array` | Queries posts; `$query` receives the WP_Query |
+| `save()` | `public save(array $post_array = [], bool $fire_after_hooks = true): static\|WP_Error` | Saves post to database |
+| `delete()` | `public delete(bool $force_delete = false): WP_Post\|false\|null` | Deletes post |
+| `get_meta()` | `public get_meta(int\|string $key = '', bool $single = true): mixed` | Gets post meta |
+| `update_meta()` | `public update_meta(int\|string $key, mixed $value, mixed $prev_value = ''): int\|bool\|null` | Sets post meta |
 | `get_title()` | `public get_title(): string` | Returns post title |
-| `get_content()` | `public get_content(): string` | Returns post content |
-| `get_excerpt()` | `public get_excerpt(): string` | Returns post excerpt |
-| `get_permalink()` | `public get_permalink(): string` | Returns post URL |
+| `get_content()` | `public get_content(bool $apply_filters = true, ?string $more_link_text = null, bool $strip_teaser = false): string` | Returns post content |
+| `get_excerpt()` | `public get_excerpt(bool $force_trim = false): string` | Returns post excerpt |
+| `get_permalink()` | `public get_permalink(bool $leavename = false): string\|false` | Returns post URL |
 | `get_thumbnail_id()` | `public get_thumbnail_id(): int` | Returns featured image ID |
 | `is_main_query()` | `static is_main_query(?WP_Query $wp_query): bool` | True if the query is the non-ajax main query for this post type. |
 | `is_digitalis_ajax()` | `static is_digitalis_ajax(?WP_Query $wp_query): bool` | True if the query is a Digitalis ajax query for this post type. |
@@ -266,19 +266,19 @@ class User extends WP_Model
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$role` | `string\|array\|null` | `null` | Required user role(s) |
+| `$role` | `string\|array\|false` | `false` | Required user role(s) |
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_user()` | `public get_user(): ?WP_User` | Returns WP_User object |
-| `get_by()` | `static get_by(string $field, mixed $value): ?static` | Gets user by field |
+| `get_wp_user()` | `public get_wp_user(): ?WP_User` | Returns WP_User object |
+| `get_by()` | `static get_by(string $field, int\|string $value): ?static` | Gets user by field |
 | `get_by_email()` | `static get_by_email(string $email): ?static` | Gets user by email |
 | `get_by_login()` | `static get_by_login(string $login): ?static` | Gets user by login |
-| `get_meta()` | `public get_meta(string $key): mixed` | Gets user meta |
-| `set_meta()` | `public set_meta(string $key, mixed $value): void` | Sets user meta |
+| `get_meta()` | `public get_meta(int\|string $key = '', bool $single = true): mixed` | Gets user meta |
+| `update_meta()` | `public update_meta(int\|string $key, mixed $value, mixed $prev_value = ''): int\|bool\|null` | Sets user meta |
 | `get_display_name()` | `public get_display_name(): string` | Returns display name |
 | `get_email()` | `public get_email(): string` | Returns email |
-| `has_role()` | `public has_role(string $role): bool` | Checks if user has role |
+| `has_role()` | `public has_role(string\|array $role): bool` | Checks if user has any of the roles |
 | `query()` | `static query(array $args = [], &$query = null): array` | Queries users via `WP_User_Query`. Applies `$role` filter automatically. |
 | `get_query_vars()` | `static get_query_vars(array $args = []): array` | Override to modify front-end query args. |
 | `get_admin_query_vars()` | `static get_admin_query_vars(array $args = []): array` | Override to modify admin query args. |
@@ -295,17 +295,17 @@ class Term extends WP_Model
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$taxonomy` | `string` | `'category'` | Taxonomy slug |
+| `$taxonomy` | `?string` | `null` | Taxonomy slug |
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_term()` | `public get_term(): ?WP_Term` | Returns WP_Term object |
-| `get_by()` | `static get_by(string $field, mixed $value): ?static` | Gets term by field |
-| `get_by_slug()` | `static get_by_slug(string $slug): ?static` | Gets term by slug |
-| `query_post()` | `public query_post(array $args = []): array` | Queries posts with this term |
+| `get_wp_term()` | `public get_wp_term(): ?WP_Term` | Returns WP_Term object |
+| `get_by()` | `static get_by(string $field, $value): ?static` | Gets term by field (the value stays untyped: request input reaches it) |
+| `get_by_slug()` | `static get_by_slug($slug): ?static` | Gets term by slug |
+| `query_post()` | `static query_post($post): array` | Terms of this taxonomy on a post (id, WP_Post or model) |
 | `get_name()` | `public get_name(): string` | Returns term name |
 | `get_slug()` | `public get_slug(): string` | Returns term slug |
-| `get_link()` | `public get_link(): string` | Returns term archive URL |
+| `get_url()` | `public get_url(): string\|WP_Error` | Returns term archive URL |
 
 ---
 
@@ -886,19 +886,19 @@ WordPress hook management.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `add_hook()` | `public add_hook(string $name, callable $callback, int $priority = 10, string $type = 'filter'): void` | Registers hook |
-| `get_hooks()` | `public get_hooks(): array` | Returns hook map; omit action/filter type unless explicit documentation is useful |
-| `remove_hook()` | `public remove_hook(string $name, callable $callback, int $priority = 10): void` | Removes hook |
+| `add_hook()` | `public add_hook(string\|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter'): bool` | Registers hook; a string callback names a method of `$this`, null priority is `get_default_priority()` |
+| `get_hooks()` | `public get_hooks()` (on `Feature` and `Integration`) | Returns hook map; omit action/filter type unless explicit documentation is useful |
+| `remove_hook()` | `public remove_hook(string\|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter'): bool` | Removes hook |
 
-### `Has_Meta`
+### `Has_WP_Meta`
 
 Meta data management.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_meta()` | `public get_meta(string $key): mixed` | Gets meta value |
-| `set_meta()` | `public set_meta(string $key, mixed $value): void` | Sets meta value |
-| `delete_meta()` | `public delete_meta(string $key): void` | Deletes meta |
+| `get_meta()` | `public get_meta(int\|string $key = '', bool $single = true): mixed` | Gets meta value (null on an unsaved model) |
+| `update_meta()` | `public update_meta(int\|string $key, mixed $value, mixed $prev_value = ''): int\|bool\|null` | Sets meta value |
+| `delete_meta()` | `public delete_meta(int\|string $key, mixed $value = ''): bool\|null` | Deletes meta |
 
 ### `Has_Fields`
 
@@ -908,7 +908,7 @@ Field access through the registered `Field_Provider` (see `Custom_Fields`). Null
 |--------|-----------|-------------|
 | `get_field_id()` | `public get_field_id(): int\|string\|null` | The provider's id for this model; null when unsaved |
 | `get_field()` | `public get_field(string $selector, bool $format_value = true, bool $escape_html = false): mixed` | Gets a field value |
-| `update_field()` | `public update_field(string $selector, mixed $value): mixed` | Updates a field |
+| `update_field()` | `public update_field(int\|string $selector, mixed $value): mixed` | Updates a field |
 | `get_field_rows()` | `public get_field_rows(string $selector, string $row_class = ACF_Row::class): array` | Repeater rows as `ACF_Row` instances |
 
 ### `Custom_Fields`

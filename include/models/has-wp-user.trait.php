@@ -13,7 +13,7 @@ trait Has_WP_User {
 
     protected $wp_user;
 
-    protected function init_wp_model ($data) {
+    protected function init_wp_model (mixed $data) {
 
         if (is_int($data)) {
 
@@ -39,7 +39,7 @@ trait Has_WP_User {
 
     }
 
-    public function set_wp_user ($wp_user) {
+    public function set_wp_user (mixed $wp_user) {
 
         if (!($wp_user instanceof WP_User)) return;
 
@@ -87,13 +87,13 @@ trait Has_WP_User {
 
     }
 
-    public function has_role ($role) {
+    public function has_role (string|array $role) {
 
         return (bool) array_intersect((array) $role, $this->get_roles());
 
     }
 
-    public function set_roles ($roles) {
+    public function set_roles (string|array $roles) {
 
         $this->wp_user->set_role('');
         foreach ((array) $roles as $role) $this->wp_user->add_role($role);
@@ -101,14 +101,14 @@ trait Has_WP_User {
 
     }
 
-    public function add_role ($role) {
+    public function add_role (string $role) {
 
         $this->wp_user->add_role($role);
         return $this;
 
     }
 
-    public function remove_role ($role) {
+    public function remove_role (string $role) {
 
         $this->wp_user->remove_role($role);
         return $this;
@@ -265,7 +265,7 @@ trait Has_WP_User {
 
     }
 
-    public function can ($capability, ...$args) {
+    public function can (string $capability, mixed ...$args) {
 
         return user_can($this->wp_user->ID, $capability, ...$args);
 
@@ -279,14 +279,14 @@ trait Has_WP_User {
 
     //
 
-    public function get_comments ($args = []) {
+    public function get_comments (array $args = []) {
     
         $args['user_id'] = $this->get_id();
         return Comment::get_instances((new WP_Comment_Query())->query($args));
     
     }
 
-    public function get_comment_count ($args = []) {
+    public function get_comment_count (array $args = []) {
 
         $args['user_id'] = $this->get_id();
         $args['count']   = true;
@@ -301,13 +301,13 @@ trait Has_WP_User {
 
     }
 
-    public function get_sites ($all = false) {
+    public function get_sites (bool $all = false) {
 
         return get_blogs_of_user($this->wp_user->ID, $all);
 
     }
 
-    public function is_site_member ($blog_id = 0) {
+    public function is_site_member (int $blog_id = 0) {
 
         return is_user_member_of_blog($this->wp_user->ID, $blog_id);
 
@@ -335,13 +335,13 @@ trait Has_WP_User {
 
     }
 
-    public function get_avatar_url ($args = null) {
+    public function get_avatar_url (?array $args = null) {
 
         return get_avatar_url($this->wp_user->ID, $args);
 
     }
 
-    public function get_avatar ($size = 96, $default = '', $alt = '', $args = null) {
+    public function get_avatar (int $size = 96, mixed $default = '', string $alt = '', ?array $args = null) {
 
         return get_avatar($this->wp_user->ID, $size, $default, $alt, $args);
 
@@ -353,7 +353,7 @@ trait Has_WP_User {
 
     }
 
-    public function get_posts_count ($post_type = 'post', $public_only = false) {
+    public function get_posts_count (string|array $post_type = 'post', bool $public_only = false) {
 
         return count_user_posts($this->wp_user->ID, $post_type, $public_only);
 
@@ -367,7 +367,7 @@ trait Has_WP_User {
 
     //
 
-    public function send_new_user_notifications ($notify = 'both') {
+    public function send_new_user_notifications (string $notify = 'both') {
     
         return wp_send_new_user_notifications($this->wp_user->ID, $notify);
     
@@ -375,19 +375,19 @@ trait Has_WP_User {
 
     //
 
-    public function get_option ($option) {
+    public function get_option (string $option) {
 
         return get_user_option($option, $this->wp_user->ID);
 
     }
 
-    public function update_option ($option, $value, $is_global = false) {
+    public function update_option (string $option, mixed $value, bool $is_global = false) {
 
         return update_user_option($this->wp_user->ID, $option, $value, $is_global);
 
     }
 
-    public function delete_option ($option, $is_global = false) {
+    public function delete_option (string $option, bool $is_global = false) {
 
         return delete_user_option($this->wp_user->ID, $option, $is_global);
 

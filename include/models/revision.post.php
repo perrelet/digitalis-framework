@@ -12,13 +12,13 @@ class Revision extends Post {
 
     }
 
-    public function restore_post ($fields = null) {
+    public function restore_post (?array $fields = null) {
 
         return $this->is_new() ? null : wp_restore_post_revision($this->wp_post->ID, $fields);
 
     }
 
-    public function restore_post_meta ($post_id = null) {
+    public function restore_post_meta (?int $post_id = null) {
 
         if (is_null($post_id)) $post_id = $this->get_parent_id();
 

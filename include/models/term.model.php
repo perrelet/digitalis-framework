@@ -24,7 +24,7 @@ class Term extends WP_Model {
     
     }
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         if ($data instanceof WP_Term) return $data->term_id;
         
@@ -32,7 +32,7 @@ class Term extends WP_Model {
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         if (!$wp_term = get_term($id, static::$taxonomy))                 return false;
         if ($wp_term instanceof WP_Error)                                 return false;
@@ -52,7 +52,7 @@ class Term extends WP_Model {
 
     }
 
-    public static function get_by ($field, $value) {
+    public static function get_by (string $field, $value) {
 
         if (!$wp_term = get_term_by($field, $value, static::$taxonomy)) return;
         if (!$term    = static::get_instance($wp_term->term_id))        return;
@@ -91,7 +91,7 @@ class Term extends WP_Model {
     
     }
 
-    public static function query ($args = [], &$query = null) {
+    public static function query (array $args = [], &$query = null) {
 
         $args = wp_parse_args($args, [
             'hierarchy' => false,
@@ -122,7 +122,7 @@ class Term extends WP_Model {
 
     protected $tree_children = [];
 
-    protected static function build_hierarchy (&$terms, &$hierarchy, $parent_id = 0) {
+    protected static function build_hierarchy (array &$terms, array &$hierarchy, $parent_id = 0) {
 
         if ($terms) foreach ($terms as $i => $term) if ($term->get_parent_id() == $parent_id) {
 
@@ -135,13 +135,13 @@ class Term extends WP_Model {
     
     }
 
-    public static function get_query_vars ($args = []) {
+    public static function get_query_vars (array $args = []) {
 
         return $args;
 
     }
 
-    public static function get_admin_query_vars ($args = []) {
+    public static function get_admin_query_vars (array $args = []) {
 
         return $args;
 
@@ -149,7 +149,7 @@ class Term extends WP_Model {
 
     //
 
-    protected function build_instance ($data) {
+    protected function build_instance (mixed $data) {
 
         $wp_term          = new WP_Term((object) $data);
         $wp_term->term_id = $this->id;
@@ -162,7 +162,7 @@ class Term extends WP_Model {
 
     // Data Access
 
-    public function save ($term_array = []) {
+    public function save (array $term_array = []) {
 
         $taxonomy = static::$taxonomy ? static::$taxonomy : ($term_array['taxonomy'] ?? false);
         if (!$taxonomy) return; // TODO: HANDLE ERROR
@@ -204,7 +204,7 @@ class Term extends WP_Model {
 
     }
 
-    public function delete ($args = []) {
+    public function delete (array $args = []) {
 
         if (!$taxonomy = static::$taxonomy ? static::$taxonomy : ($args['taxonomy'] ?? false)) return; // TODO: HANDLE ERROR
 

@@ -15,9 +15,9 @@ class Model extends Factory {
 
     protected static $instances = [];
 
-    public static function prepare_data (&$data) {}
+    public static function prepare_data (mixed &$data) {}
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         if (is_numeric($data))     return (int) $data;
         if ($data instanceof self) return $data->get_id();
@@ -27,13 +27,13 @@ class Model extends Factory {
 
     }
 
-    public static function validate_data ($data) {
+    public static function validate_data (mixed $data) {
 
         return true;
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         return true;
 
@@ -68,19 +68,19 @@ class Model extends Factory {
     
     }
 
-    public static function generate_uuid ($data) {
+    public static function generate_uuid (mixed $data) {
 
         return static::get_uuid_prefix() . wp_generate_uuid4();
 
     }
 
-    public static function is_uuid ($data) {
+    public static function is_uuid (mixed $data) {
 
         return is_string($data) && (substr($data, 0, strlen(static::get_uuid_prefix())) == static::get_uuid_prefix());
 
     }
 
-    public static function get_class_name ($id, $auto_resolve = null) {
+    public static function get_class_name (mixed $id, ?bool $auto_resolve = null) {
 
         $class_name = static::class;
 
@@ -136,7 +136,7 @@ class Model extends Factory {
     }
 
     // At equal specificity a subclass refines its parent and a consumer model replaces the framework's default, so neither pair is a tie.
-    protected static function prune_winners ($winners) {
+    protected static function prune_winners (array $winners) {
 
         $winners = array_filter($winners, function ($winner) use ($winners) {
 
@@ -152,7 +152,7 @@ class Model extends Factory {
 
     }
 
-    protected static function resolve_data (&$data = [], $auto_resolve = null) {
+    protected static function resolve_data (mixed &$data = [], ?bool $auto_resolve = null) {
     
         static::prepare_data($data);
 
@@ -172,7 +172,7 @@ class Model extends Factory {
     
     }
 
-    public static function create ($data = []) {
+    public static function create (mixed $data = []) {
 
         static::prepare_data($data);
 
@@ -183,7 +183,7 @@ class Model extends Factory {
 
     }
 
-    public static function get_instance ($data = null, $auto_resolve = null) {
+    public static function get_instance (mixed $data = null, ?bool $auto_resolve = null) {
 
         [$id, $class_name] = static::resolve_data($data, $auto_resolve);
 
@@ -260,7 +260,7 @@ class Model extends Factory {
     private static $resolving = [];
 
     // validate_id() calling get_instance() recurses without end; the loop and the validate step each guard their own re-entry for one class and id.
-    protected static function strict_enter ($site, $id) {
+    protected static function strict_enter (string $site, mixed $id) {
 
         if (!Strict::enabled()) return;
 
@@ -272,13 +272,13 @@ class Model extends Factory {
 
     }
 
-    protected static function strict_leave ($site, $id) {
+    protected static function strict_leave (string $site, mixed $id) {
 
         unset(self::$resolving["{$site}:" . static::class . '#' . self::show_id($id)]);
 
     }
 
-    protected static function show_id ($id) {
+    protected static function show_id (mixed $id) {
 
         return is_scalar($id) ? (string) $id : gettype($id);
 
@@ -326,7 +326,7 @@ class Model extends Factory {
     protected $id;
     protected $is_new;
 
-    public function __construct ($data = null) {
+    public function __construct (mixed $data = null) {
 
         if (is_scalar($data)) {
 
@@ -348,10 +348,10 @@ class Model extends Factory {
 
     }
 
-    protected function build_instance   ($data) {}
+    protected function build_instance   (mixed $data) {}
     protected function hydrate_instance ()      {}
 
-    public function init ($data) {
+    public function init (mixed $data) {
 
         // ...
 

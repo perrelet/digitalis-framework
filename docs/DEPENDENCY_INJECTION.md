@@ -474,7 +474,7 @@ $result = $this->apply_filters('my_custom_hook', $order_id, $extra);
 
 ```php
 // In Has_WP_Hooks
-public function do_hook($hook_name, $type = 'filter', ...$args) {
+public function do_hook(string|array $hook_name, string $type = 'filter', mixed ...$args) {
     // Prepare injection args for each callback
     foreach ($wp_hook->callbacks as $priority) {
         foreach ($priority as $callback) {

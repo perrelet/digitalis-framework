@@ -12,7 +12,7 @@ trait Has_WP_Post {
 
     protected $wp_post;
 
-    protected function init_wp_model ($data) {
+    protected function init_wp_model (mixed $data) {
 
         if (is_int($data)) {
 
@@ -34,7 +34,7 @@ trait Has_WP_Post {
 
     }
 
-    protected function prepare_wp_post ($wp_post) {
+    protected function prepare_wp_post (WP_Post $wp_post) {
 
         return $wp_post;
 
@@ -106,7 +106,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_css_classes ($class = '') {
+    public function get_css_classes (string|array $class = '') {
 
         return get_post_class($class, $this->wp_post);
 
@@ -126,7 +126,7 @@ trait Has_WP_Post {
 
     protected $content_cache = [];
 
-    public function get_content ($apply_filters = true, $more_link_text = null, $strip_teaser = false) {
+    public function get_content (bool $apply_filters = true, ?string $more_link_text = null, bool $strip_teaser = false) {
 
         $key = serialize(array_values(func_get_args()));
 
@@ -155,7 +155,7 @@ trait Has_WP_Post {
     
     }
 
-    public function get_excerpt ($force_trim = false) {
+    public function get_excerpt (bool $force_trim = false) {
 
         $excerpt = get_the_excerpt($this->wp_post);
 
@@ -217,19 +217,19 @@ trait Has_WP_Post {
 
     // URLs
 
-    public function get_permalink ($leavename = false) {
+    public function get_permalink (bool $leavename = false) {
 
         return get_permalink($this->wp_post, $leavename);
 
     }
 
-    public function get_url ($leavename = false) {
+    public function get_url (bool $leavename = false) {
 
         return $this->get_permalink($leavename);
 
     }
 
-    public function get_edit_url ($context = false) {
+    public function get_edit_url (string|false $context = false) {
 
         return get_edit_post_link($this->wp_post, $context);
 
@@ -243,37 +243,37 @@ trait Has_WP_Post {
 
     // Dates
 
-    public function get_date ($format = '') {
+    public function get_date (string $format = '') {
 
         return get_the_date($format, $this->wp_post);
 
     }
 
-    public function get_date_modified ($format = '') {
+    public function get_date_modified (string $format = '') {
 
         return get_the_modified_date($format, $this->wp_post);
 
     }
 
-    public function get_post_datetime ($field = 'date', $source = 'local') {
+    public function get_post_datetime (string $field = 'date', string $source = 'local') {
 
         return get_post_datetime($this->wp_post, $field, $source);
 
     }
 
-    public function get_post_time ($format = 'U', $gmt = false, $translate = false) {
+    public function get_post_time (string $format = 'U', bool $gmt = false, bool $translate = false) {
 
         return get_post_time($format, $gmt, $this->wp_post, $translate);
 
     }
 
-    public function get_time_modified ($format = 'U', $gmt = false, $translate = false) {
+    public function get_time_modified (string $format = 'U', bool $gmt = false, bool $translate = false) {
 
         return get_post_modified_time($format, $gmt, $this->wp_post, $translate);
 
     }
 
-    public function get_post_timestamp ($field = 'date') {
+    public function get_post_timestamp (string $field = 'date') {
 
         return get_post_timestamp($this->wp_post, $field);
 
@@ -305,13 +305,13 @@ trait Has_WP_Post {
 
     }
 
-    public function get_author ($auto_resolve = true) {
+    public function get_author (?bool $auto_resolve = true) {
 
         return User::get_instance($this->get_author_id(), $auto_resolve);
 
     }
 
-    public function set_author ($user) {
+    public function set_author (mixed $user) {
     
         if (($user instanceof User) && ($user_id = $user->get_id())) $this->set_author_id($user_id);
         return $this;
@@ -320,13 +320,13 @@ trait Has_WP_Post {
 
     // Attachments
 
-    public function get_attached_media ($post_mime_type = '') {
+    public function get_attached_media (string|array $post_mime_type = '') {
 
         return get_attached_media($post_mime_type, $this->wp_post->ID);
 
     }
 
-    public function get_attachments ($post_mime_type = '') {
+    public function get_attachments (string|array $post_mime_type = '') {
     
         $models = [];
 
@@ -352,25 +352,25 @@ trait Has_WP_Post {
         
     }
 
-    public function get_thumbnail ($size = 'post-thumbnail', $attr = '') {
+    public function get_thumbnail (string|array $size = 'post-thumbnail', string|array $attr = '') {
 
         return get_the_post_thumbnail($this->wp_post->ID, $size, $attr);
 
     }
 
-    public function get_image ($size = 'post-thumbnail', $attr = '') {
+    public function get_image (string|array $size = 'post-thumbnail', string|array $attr = '') {
 
         return $this->get_thumbnail($size, $attr);
 
     }
 
-    public function get_thumbnail_url ($size = 'post-thumbnail') {
+    public function get_thumbnail_url (string|array $size = 'post-thumbnail') {
 
         return get_the_post_thumbnail_url($this->wp_post->ID, $size);
 
     }
 
-    public function get_image_url ($size = 'post-thumbnail') {
+    public function get_image_url (string|array $size = 'post-thumbnail') {
 
         return $this->get_thumbnail_url($size);
 
@@ -390,7 +390,7 @@ trait Has_WP_Post {
 
     // Terms
 
-    public function get_terms ($tax_or_term) {
+    public function get_terms (string $tax_or_term) {
 
         if (is_subclass_of($tax_or_term, Term::class)) {
 
@@ -404,25 +404,25 @@ trait Has_WP_Post {
 
     }
 
-    public function has_term ($term = '', $taxonomy = '') {
+    public function has_term (string|int|array $term = '', string $taxonomy = '') {
         
         return has_term($term, $taxonomy, $this->wp_post->ID);
         
     }
 
-    public function set_terms ($terms, $taxonomy = 'post_tag', $append = false) {
+    public function set_terms (string|int|array $terms, string $taxonomy = 'post_tag', bool $append = false) {
     
         return wp_set_post_terms($this->wp_post->ID, $terms, $taxonomy, $append);
     
     }
 
-    public function add_terms ($terms, $taxonomy = 'post_tag') {
+    public function add_terms (string|int|array $terms, string $taxonomy = 'post_tag') {
     
         return $this->set_terms($terms, $taxonomy, true);
     
     }
 
-    public function remove_terms ($terms, $taxonomy = 'post_tag') {
+    public function remove_terms (string|int|array $terms, string $taxonomy = 'post_tag') {
     
         return wp_remove_object_terms($this->wp_post->ID, $terms, $taxonomy);
     
@@ -458,7 +458,7 @@ trait Has_WP_Post {
     // Post::get_instance() dispatch (resets late static binding for the
     // registry walker) — an explicit class ref doesn't belong in a mixin trait.
 
-    public function set_parent ($post) {
+    public function set_parent (mixed $post) {
 
         if (($post instanceof Post) && ($post_id = $post->get_id())) $this->set_parent_id($post_id);
         return $this;
@@ -529,7 +529,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_autosave ($user_id = 0) {
+    public function get_autosave (int $user_id = 0) {
 
         return wp_get_post_autosave($this->wp_post->ID, $user_id);
 
@@ -537,7 +537,7 @@ trait Has_WP_Post {
 
     // Comments
 
-    public function get_comments ($args = []) {
+    public function get_comments (array $args = []) {
 
         $args['post_id'] = $this->get_id();
 
@@ -545,7 +545,7 @@ trait Has_WP_Post {
     
     }
 
-    public function get_comment_count ($args = []) {
+    public function get_comment_count (array $args = []) {
 
         if ($args) {
 
@@ -568,7 +568,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_comment_count_text ($zero = false, $one = false, $more = false) {
+    public function get_comment_count_text (string|false $zero = false, string|false $one = false, string|false $more = false) {
 
         return get_comment_count($zero, $one, $more, $this->wp_post);
 
@@ -586,13 +586,13 @@ trait Has_WP_Post {
 
     }
 
-    public function get_reply_url ($args = []) {
+    public function get_reply_url (array $args = []) {
 
         return get_post_reply_link($args, $this->wp_post);
 
     }
 
-    public function get_cancel_reply_url ($link_text = '') {
+    public function get_cancel_reply_url (string $link_text = '') {
 
         return get_cancel_comment_reply_link($link_text, $this->wp_post);
 
@@ -604,7 +604,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_comment_form_title ($no_reply_text = false, $reply_text = false, $link_to_parent = true) {
+    public function get_comment_form_title (string|false $no_reply_text = false, string|false $reply_text = false, bool $link_to_parent = true) {
 
         ob_start();
         comment_form_title($no_reply_text, $reply_text, $link_to_parent, $this->wp_post);
@@ -613,7 +613,7 @@ trait Has_WP_Post {
 
     }
 
-    public function get_comment_form ($args = []) {
+    public function get_comment_form (array $args = []) {
 
         ob_start();
         comment_form($args, $this->wp_post);

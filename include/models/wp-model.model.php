@@ -6,13 +6,13 @@ abstract class WP_Model extends Model {
 
     use Has_WP_Model, Is_Stashable;
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         return is_int($id) && ($id > 0);
 
     }
 
-    public static function prepare_data (&$data) {
+    public static function prepare_data (mixed &$data) {
 
         if (is_array($data)) $data = (object) $data;
 
@@ -22,7 +22,7 @@ abstract class WP_Model extends Model {
 
     protected $dirty = false;
 
-    protected function build_instance ($data) {
+    protected function build_instance (mixed $data) {
 
         $this->init_wp_model($data);
         $this->cache_wp_model();
@@ -55,13 +55,13 @@ abstract class WP_Model extends Model {
 
     //
 
-    public function get_wp_model_prop ($prop) {
+    public function get_wp_model_prop (string $prop) {
     
         return $this->get_wp_model()->$prop ?? null;
 
     }
 
-    public function set_wp_model_prop ($prop, $value) {
+    public function set_wp_model_prop (string $prop, mixed $value) {
 
         if (property_exists($this->get_wp_model(), $prop)) {
 

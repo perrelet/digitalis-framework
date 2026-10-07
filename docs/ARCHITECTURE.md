@@ -150,15 +150,16 @@ abstract class Factory extends Creational {
 Entity abstraction with automatic class resolution based on specificity.
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
-abstract class Model extends Factory {
-    protected static $class_map = [];  // Maps IDs to specific classes
+class Model extends Factory {
+    protected static $class_map = [];  // Maps each class to its registered subclasses and their specificity
 
     // Automatically resolves to most specific subclass
-    public static function get_instance($id) {
-        $class = static::resolve_class($id);
-        return $class::create(['id' => $id]);
+    public static function get_instance(mixed $data = null, ?bool $auto_resolve = null) {
+        [$id, $class_name] = static::resolve_data($data, $auto_resolve);
+        if ($class_name != static::class) return $class_name::get_instance($data, false);
+        // cached instance, else validate and hydrate `new $class_name($id)`
     }
 }
 ```
@@ -269,14 +270,14 @@ The framework uses a trait-based hook system for WordPress integration.
 
 ```php
 trait Has_WP_Hooks {
-    protected $hooks = [];
-
-    public function add_hook($name, $callback, $priority = 10, $type = 'filter') {
-        // Registers a WordPress hook callback
+    public function add_hook(string|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter') {
+        // Registers a WordPress hook callback; a string names a method of $this, null priority is get_default_priority()
     }
+}
 
-    // Override to return hooks array
-    public function get_hooks(): array {
+// Feature and Integration (which use the trait) pass their get_hooks() to add_hooks() on construction
+abstract class Feature extends Factory {
+    public function get_hooks () {
         return [
             'hook_name' => 'method_name',
             'hook_name' => ['method_name', $priority],

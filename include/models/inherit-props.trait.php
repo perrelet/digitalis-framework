@@ -12,7 +12,7 @@ Trait Inherits_Props {
     
     }
 
-    public static function get_inherited_prop ($prop, $merge = []) {
+    public static function get_inherited_prop (string $prop, array $merge = []) {
 
         if (!$inherited_props = static::get_inherited_props())  return;
         if (!in_array($prop, $inherited_props))                 return;
@@ -24,7 +24,7 @@ Trait Inherits_Props {
 
     }
 
-    protected static function inherit_merge_array ($prop, $merge = []) {
+    protected static function inherit_merge_array (string $prop, array $merge = []) {
     
         $class = static::class;
         $value = $class::$$prop;
@@ -57,7 +57,7 @@ Trait Inherits_Props {
     
     }
 
-    protected static function deep_parse_args ($args, $defaults = [], $merge = []) {
+    protected static function deep_parse_args (mixed $args, mixed $defaults = [], array $merge = []) {
     
         $args = wp_parse_args((array) $args, (array) $defaults);
 
@@ -74,7 +74,7 @@ Trait Inherits_Props {
     
     }
 
-    protected static function make_list_unique (&$array) {
+    protected static function make_list_unique (array &$array) {
     
         if (array_is_list($array)) $array = array_values(array_unique($array, SORT_REGULAR));
     

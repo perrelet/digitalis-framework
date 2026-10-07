@@ -8,7 +8,7 @@ class Comment extends WP_Model {
 
     use Has_WP_Comment;
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         if (is_object($data) && property_exists($data, 'comment_ID')) return (int) $data->comment_ID;
         if (is_object($data) && method_exists($data, 'get_id'))       return $data->get_id();
@@ -17,7 +17,7 @@ class Comment extends WP_Model {
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         return parent::validate_id($id);
 
@@ -25,7 +25,7 @@ class Comment extends WP_Model {
 
     //
 
-    protected function build_instance ($data) {
+    protected function build_instance (mixed $data) {
 
         $wp_comment             = new WP_Comment((object) $data);
         $wp_comment->comment_ID = $this->id;

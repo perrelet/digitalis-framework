@@ -42,7 +42,7 @@ class Post extends WP_Model {
 
     }
 
-    public static function extract_id ($data = null) {
+    public static function extract_id (mixed $data = null) {
 
         if (is_object($data) && property_exists($data, 'ID'))   return $data->ID;
         if (is_object($data) && method_exists($data, 'get_id')) return $data->get_id();
@@ -51,7 +51,7 @@ class Post extends WP_Model {
 
     }
 
-    public static function validate_id ($id) {
+    public static function validate_id (mixed $id) {
 
         if (static::$post_type && (get_post_type($id) != static::$post_type)) return false;
 
@@ -95,7 +95,7 @@ class Post extends WP_Model {
 
     }
 
-    protected static function resolve_term_set ($term, $taxonomy) {
+    protected static function resolve_term_set (string|int|array $term, string $taxonomy) {
 
         static $cache = [];
         $key = $taxonomy . ':' . implode(',', (array) $term);
@@ -133,7 +133,7 @@ class Post extends WP_Model {
 
     //
 
-    public static function get_query_var ($key = 'posts_per_page', $default = '', $args = [], $query_key = null, $query = null) {
+    public static function get_query_var (string $key = 'posts_per_page', mixed $default = '', array $args = [], ?string $query_key = null, mixed $query = null) {
 
         if (isset($args[$key])) return $args[$key];
 
@@ -148,21 +148,21 @@ class Post extends WP_Model {
 
     }
 
-    public static function get_query_vars ($args = []) {
+    public static function get_query_vars (array $args = []) {
 
         $call = static::$post_type_class . "::get_query_vars";
         return is_callable($call) ? call_user_func($call) : [];
 
     }
 
-    public static function get_admin_query_vars ($args = []) {
+    public static function get_admin_query_vars (array $args = []) {
 
         $call = static::$post_type_class . "::get_admin_query_vars";
         return is_callable($call) ? call_user_func($call) : [];
 
     }
 
-    public static function get_by_slug ($slug) {
+    public static function get_by_slug (string $slug) {
     
         $post_type = static::$post_type ? static::$post_type : get_post_types();
 
@@ -173,7 +173,7 @@ class Post extends WP_Model {
     
     }
 
-    public static function query ($args = [], &$query = null) {
+    public static function query (array $args = [], &$query = null) {
 
         global $wp_query;
 
@@ -217,7 +217,7 @@ class Post extends WP_Model {
 
     }
 
-    public static function is_main_query ($wp_query) {
+    public static function is_main_query (?WP_Query $wp_query) {
 
         return !wp_doing_ajax() && $wp_query && $wp_query->is_main_query() && static::query_is_post_type($wp_query);
 
@@ -226,19 +226,19 @@ class Post extends WP_Model {
     // Reuse-the-main-loop decision for Archive: true only when the main query is
     // an actual *listing* of this post type. Singular pages pass is_main_query()
     // (the page's one post is of this type) but are not a list to reuse.
-    public static function main_query_is_archive ($wp_query) {
+    public static function main_query_is_archive (?WP_Query $wp_query) {
 
         return static::is_main_query($wp_query) && !$wp_query->is_singular();
 
     }
 
-    public static function is_digitalis_ajax ($wp_query) {
+    public static function is_digitalis_ajax (?WP_Query $wp_query) {
     
         return ($wp_query && $wp_query->get(Post_Type::AJAX_Flag) && static::query_is_post_type($wp_query));
     
     }
 
-    public static function query_is_post_type ($wp_query) {
+    public static function query_is_post_type (WP_Query $wp_query) {
 
         return Query_Vars::compare_post_type($wp_query, static::$post_type);
 
@@ -246,7 +246,7 @@ class Post extends WP_Model {
 
     //
 
-    protected function build_instance ($data) {
+    protected function build_instance (mixed $data) {
 
         $wp_post     = new WP_Post((object) $data);
         $wp_post->ID = $this->id;
@@ -273,7 +273,7 @@ class Post extends WP_Model {
     
     }
 
-    public function save ($post_array = [], $fire_after_hooks = true) {
+    public function save (array $post_array = [], bool $fire_after_hooks = true) {
 
         if (Strict::enabled() && !$this->is_new() && doing_action('wp_after_insert_post')) Strict::fail(static::class, 'save() ran inside wp_after_insert_post, where the cached instance can predate the change being saved, so the full save can revert it.', "Write the one field (wp_update_post(['ID' => \$id, 'field' => \$value]) or update_meta()); new posts may be created here, existing ones are saved after the hook.");
 
@@ -322,7 +322,7 @@ class Post extends WP_Model {
 
     }
 
-    public function duplicate ($overrides = [], $exclude_meta = []) {
+    public function duplicate (array $overrides = [], string|array $exclude_meta = []) {
 
         $wp_post = $this->get_wp_post();
 
@@ -375,7 +375,7 @@ class Post extends WP_Model {
 
     }
 
-    public function delete ($force_delete = false) {
+    public function delete (bool $force_delete = false) {
 
         // TODO: delete this object? null the cache?
 
@@ -392,7 +392,7 @@ class Post extends WP_Model {
     // Strict
 
     // Falls through to PHP's own errors so a typo is never hidden. A subclass with its own __call shadows this.
-    public function __call ($name, $args) {
+    public function __call (string $name, array $args) {
 
         if ($name === 'get_type') Strict::fail(static::class, 'has no get_type(); the post type is get_post_type().', 'Call get_post_type(); WooCommerce product types live on the WC_Product.');
 

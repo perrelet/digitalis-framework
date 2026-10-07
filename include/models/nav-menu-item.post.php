@@ -3,12 +3,13 @@
 namespace Lattice;
 
 use Lattice\Component\Menu_Active_State;
+use WP_Post;
 
 class Nav_Menu_Item extends Post {
 
     protected static $post_type = 'nav_menu_item';
 
-    protected function prepare_wp_post ($wp_post) {
+    protected function prepare_wp_post (WP_Post $wp_post) {
 
         if (isset($wp_post->url)) return $wp_post;
 
@@ -22,7 +23,7 @@ class Nav_Menu_Item extends Post {
 
     }
 
-    public function get_url ($leavename = false) {
+    public function get_url (bool $leavename = false) {
 
         return !empty($this->wp_post->url) ? $this->wp_post->url : null;
 
@@ -119,7 +120,7 @@ class Nav_Menu_Item extends Post {
 
     }
 
-    protected static function detect_post_type_archive ($url) {
+    protected static function detect_post_type_archive (string $url) {
 
         if (!function_exists('get_post_types')) return null;
 
