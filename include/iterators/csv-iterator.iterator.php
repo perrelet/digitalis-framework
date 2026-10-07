@@ -12,7 +12,7 @@ abstract class CSV_Iterator extends Iterator {
     protected $upload_dir = ABSPATH . '../temp/csv';
     protected $delimiter  = ',';
     protected $enclosure  = "\"";
-    protected $escape     = "\\";
+    protected $escape     = '';
     protected $has_header = true;
     protected $headers    = [];
 
@@ -34,57 +34,50 @@ abstract class CSV_Iterator extends Iterator {
         'application/txt',
     ];
 
+    protected $upload_errors = [
+        UPLOAD_ERR_INI_SIZE   => 'The file is larger than the server allows (upload_max_filesize).',
+        UPLOAD_ERR_FORM_SIZE  => 'The file is larger than the form allows.',
+        UPLOAD_ERR_PARTIAL    => 'The file was only partially uploaded, please try again.',
+        UPLOAD_ERR_NO_FILE    => 'Please select a .csv file to continue.',
+        UPLOAD_ERR_NO_TMP_DIR => 'The server is missing a temporary folder.',
+        UPLOAD_ERR_CANT_WRITE => 'The server failed to write the file to disk.',
+        UPLOAD_ERR_EXTENSION  => 'A PHP extension blocked the upload.',
+    ];
+
     public function process_row ($row) {}
 
     //
 
     public function get_items () {
 
-        if (!file_exists($this->file)) {
+        if (!$handle = $this->open_csv()) {
 
-            $this->error("Unable to locate csv at '{$this->file}'.");
+            $this->error("Unable to open csv at '{$this->file}'.");
             return [];
 
         }
 
-        if (($handle = fopen($this->file, "r")) === false) return [];
+        // Resume from the byte offset where the last batch stopped rather than rescanning the file.
+        $cursor = $this->store['cursor'] ?? [];
+        $resume = ($cursor['index'] ?? null) === $this->index;
+        $skip   = $resume ? 0 : $this->index;
+
+        if ($resume) fseek($handle, $cursor['offset']);
 
         $rows = [];
 
-        $index_start = $this->index + ($this->has_header ? 1 : 0);
-        $index_end =   $index_start + $this->batch_size;
+        while (count($rows) < $this->batch_size && ($row = $this->read_row($handle)) !== false) {
 
-        for ($i = 0; $row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape); $i++) {
+            if ($skip-- > 0) continue;
 
-            $row = array_map(fn($value) => trim($value, "\xEF\xBB\xBF"), $row); // Remove BOM characters and such
-
-            if (($i == 0) && $this->has_header) {
-
-                $this->headers = array_map(
-                    fn($h) => strtolower(trim(preg_replace('/[^a-z0-9]+/i', '_', $h), '_')),
-                    $row
-                );
-
-                continue;
-
-            }
-
-            if ($i < $index_start) continue;
-            if ($i >= $index_end)  break;
-
-            if ($this->headers && $row) {
-
-                $keyed_row = [];
-
-                foreach ($row as $j => $cell) $keyed_row[$this->headers[$j] ?? $j] = $cell;
-
-                $row = $keyed_row;
-
-            }
-
-            $rows[] = $row;
+            $rows[] = $this->key_row($row);
 
         }
+
+        $this->store['cursor'] = [
+            'index'  => $this->index + count($rows),
+            'offset' => ftell($handle),
+        ];
 
         fclose($handle);
 
@@ -94,21 +87,16 @@ abstract class CSV_Iterator extends Iterator {
 
     public function get_total_items () {
 
-        $this->warm_up();
+        // warm_up() also reloads the index, which would rewind a batch in progress.
+        if (!$this->file) $this->warm_up();
 
-        if (!file_exists($this->file)) return 0;
+        if (!$handle = $this->open_csv()) return 0;
 
-        if (($handle = fopen($this->file, "r")) === false) return 0;
-
-        $i = 0;
-
-        if ($this->has_header) $i--;
-
-        while (($data = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape)) !== false) $i++;
+        for ($total = 0; $this->read_row($handle) !== false; $total++);
 
         fclose($handle);
 
-        return $i;
+        return $total;
 
     }
 
@@ -121,6 +109,55 @@ abstract class CSV_Iterator extends Iterator {
     public function process_item ($item) {
 
         return $this->process_row($item);
+
+    }
+
+    //
+
+    protected function open_csv () {
+
+        if (!$this->file || !is_file($this->file)) return false;
+        if (!$handle = fopen($this->file, 'r'))    return false;
+
+        if (fread($handle, 3) !== "\xEF\xBB\xBF") rewind($handle);
+
+        if ($this->has_header && ($row = $this->read_row($handle))) {
+
+            $this->headers = array_map(
+                fn($h) => strtolower(trim(preg_replace('/[^a-z0-9]+/i', '_', $h), '_')),
+                $row
+            );
+
+        }
+
+        return $handle;
+
+    }
+
+    // Skips rows with no content: blank lines and spreadsheet padding like ",,,,".
+    protected function read_row ($handle) {
+
+        while (($row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape)) !== false) {
+
+            $row = array_map('strval', $row);
+
+            if (trim(implode('', $row)) !== '') return $row;
+
+        }
+
+        return false;
+
+    }
+
+    protected function key_row ($row) {
+
+        if (!$this->headers) return $row;
+
+        $keyed_row = [];
+
+        foreach ($row as $i => $cell) $keyed_row[$this->headers[$i] ?? $i] = $cell;
+
+        return $keyed_row;
 
     }
 
@@ -148,66 +185,56 @@ abstract class CSV_Iterator extends Iterator {
 
         if (!$csv = ($_FILES['csv'] ?? 0)) return;
         if (!isset($csv['tmp_name']))      return;
-    
-        //if (($csv = ($_FILES['csv'] ?? 0)) && $csv['tmp_name']) {
 
-        $validation = $this->validate_fields();
-
-        if (is_string($validation)) {
-            $this->notice($validation);
-            return;
-        }
-
-        $this->upload_csv();
-    
-    }
-
-    protected function upload_csv () {
-
-        $csv = $_FILES['csv'];
-    
-        if ($csv['error'] ?? 0) {
-
-            $this->notice("📤 The following error occured while uploading: {$csv['error']}", 'error');
-            return;
-
-        }
-
-        $error = false;
-
-        $temp_path = $csv['tmp_name'];
-        $file_size = filesize($temp_path);
-        $file_info = finfo_open(FILEINFO_MIME_TYPE);
-        $file_type = finfo_file($file_info, $temp_path);
-
-        if (!current_user_can($this->capability))     $error = '🔒 You do not have permission to perform this action.';
-        if (!$nonce = $_POST['nonce'] ?? 0)           $error = '🤡 No funny business please.';
-        if (!wp_verify_nonce($nonce, $this->key))     $error = '🕒 This page has expired, please refresh and try again.';
-        if (!$file_size)                              $error = '👻 The uploaded file is empty.';
-        if (!in_array($file_type, $this->mime_types)) $error = '📄 Please upload a valid .csv file.';
-
-        if ($error) {
+        if (is_string($error = $this->validate_upload($csv)) || is_string($error = $this->validate_fields())) {
 
             $this->notice($error, 'error');
             return;
 
         }
 
-        $file_name = $this->key . '.csv';
-        $file_path = trailingslashit($this->upload_dir) . $file_name;
+        $this->upload_csv();
+    
+    }
 
-        if (move_uploaded_file($temp_path, $file_path)) {
+    protected function validate_upload ($csv) {
 
-            $this->notice("✔️ Successfully uploaded '{$csv['name']}'.", 'updated');
+        $path = $csv['tmp_name'];
 
-        } else {
+        if (!current_user_can($this->capability))                return '🔒 You do not have permission to perform this action.';
+        if (!$nonce = $_POST['nonce'] ?? 0)                      return '🤡 No funny business please.';
+        if (!wp_verify_nonce($nonce, $this->key))                return '🕒 This page has expired, please refresh and try again.';
+        if ($this->get_store()['file'] ?? 0)                     return '⏳ A file is already loaded, reset the import before uploading another.';
+        if ($code = $csv['error'] ?? 0)                          return '📤 ' . ($this->upload_errors[$code] ?? "Upload failed with error code {$code}.");
+        if (!filesize($path))                                    return '👻 The uploaded file is empty.';
+        if (!in_array(mime_content_type($path), $this->mime_types)) return '📄 Please upload a valid .csv file.';
+
+        return true;
+
+    }
+
+    protected function upload_csv () {
+
+        $csv       = $_FILES['csv'];
+        $file_path = trailingslashit($this->upload_dir) . $this->key . '.csv';
+
+        if (!wp_mkdir_p($this->upload_dir)) {
+
+            $this->notice("📁 Unable to create the upload directory '{$this->upload_dir}'.", 'error');
+            return;
+
+        }
+
+        if (!move_uploaded_file($csv['tmp_name'], $file_path)) {
 
             $this->notice('📤 An unexpected error occured while uploading the file.', 'error');
             return;
 
         }
 
-        chmod($file_path, 0644);
+        chmod($file_path, 0600);
+
+        $this->notice("✔️ Successfully uploaded '{$csv['name']}'.", 'updated');
 
         $this->get_store();
         $this->store['file'] = [
@@ -227,7 +254,6 @@ abstract class CSV_Iterator extends Iterator {
             $this->file = $this->store['file']['path'];
 
         }
-        
 
     }
 
@@ -256,8 +282,6 @@ abstract class CSV_Iterator extends Iterator {
     }
 
     public function validate_fields () {
-
-        if (!($_FILES['csv'] ?? 0) || !$_FILES['csv']['size']) return "Please select a .csv file to continue";
 
         return true;
     
@@ -308,6 +332,9 @@ abstract class CSV_Iterator extends Iterator {
     }
 
     public function reset () {
+
+        // Uploads can hold personal data, so they don't outlive the import.
+        if (($path = $this->get_store()['file']['path'] ?? '') && is_file($path)) unlink($path);
 
         $response = parent::reset();
         $response['reload'] = true;
