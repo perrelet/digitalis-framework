@@ -15,7 +15,9 @@ class Radio extends Input {
     ];
 
     public function params (array &$p) {
-        
+
+        $p['type'] = 'radio'; // a Radio is a radio whatever `type` says; Input::params writes it into the attributes once
+
         parent::params($p);
 
         $p['option_atts'] = $this->get_option_attributes($p['option_atts']);

@@ -3,7 +3,7 @@
 <?php endif; ?>
 <?php $i = 0; foreach ($options as $option => $option_label): ?>
     <label for='<?= esc_attr($id) ?>-<?= esc_attr($option) ?>'><?= $option_label ?>
-        <input id='<?= esc_attr($id) ?>-<?= esc_attr($option) ?>' <?= $i ? "{$once_atts} " : '' ?><?= $option_atts[$option] ?? '' ?> <?= $attributes ?>>
+        <input id='<?= esc_attr($id) ?>-<?= esc_attr($option) ?>' <?= $option_atts[$option] ?? '' ?> <?= $i ? $this->get_pre_once_attributes() : $attributes ?>>
         <span class='checkmark'></span>
     </label>
 <?php $i++; endforeach; ?>

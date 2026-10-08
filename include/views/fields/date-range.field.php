@@ -38,7 +38,7 @@ class Date_Range extends Date_Picker {
         $p['date_start']->value = $p['value_start'];
 
         $p['date_end']->set_tag('input');
-        $p['date_end']->add_attrs($p['pre_once_atts']);
+        $p['date_end']->add_attrs($this->get_pre_once_attributes());
         $p['date_end']->set_id($p['id'] . '-end');
         $p['date_end']->name  = $p['name_end'];
         $p['date_end']->value = $p['value_end'];

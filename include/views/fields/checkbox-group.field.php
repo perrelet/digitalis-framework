@@ -28,6 +28,8 @@ class Checkbox_Group extends Input {
 
         }
 
+        $p['type'] = 'checkbox'; // a Checkbox_Group is checkboxes whatever `type` says; Input::params writes it into the attributes once
+
         parent::params($p);
 
         $p['option_atts'] = $this->get_option_attributes($p['option_atts']);

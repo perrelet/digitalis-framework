@@ -92,7 +92,6 @@ class Field extends Component {
 
         parent::params($p);
 
-        $p['pre_once_atts'] = clone $p['attributes'];
         $p['element']->add_attrs($p['once_atts']);
 
     }
@@ -166,6 +165,18 @@ class Field extends Component {
     protected function selected (mixed $value, mixed $current, bool $strict = false) {
 
         return $this->checked($value, $current, $strict, 'selected');
+
+    }
+
+    // The element's attributes as rendered, minus the once-only ones: what every input after the first prints. Read it after
+    // params() has finished with the element (the option templates and Date_Range do), never from a clone taken earlier.
+    public function get_pre_once_attributes () {
+
+        $attributes = clone $this['element']->get_attrs();
+
+        foreach (array_keys($this['once_atts']->get_attrs()) as $name) $attributes->remove_attr($name);
+
+        return $attributes;
 
     }
 
