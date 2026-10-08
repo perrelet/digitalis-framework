@@ -69,7 +69,7 @@ IDEs expect PSR-4 conventions. Features like "Go to Definition" may not work cor
 The file-based inheritance resolution is independent of PHP namespaces. A file named `user.user.php` with `class User extends \Digitalis\User` works, but the naming can feel redundant.
 
 ### Global State Dependencies
-Conditional loading via `is_plugin_active()` requires WordPress to be loaded, limiting testability in isolation.
+Conditional `~dir/` loading reads WordPress's own list of the plugins loading on the request (`wp_get_active_and_valid_plugins()`), so it requires WordPress to be loaded, limiting testability in isolation.
 
 ### Token-Based Parsing
 The `extract_class_name()` method uses token parsing which, while robust, adds overhead compared to convention-based namespace resolution.

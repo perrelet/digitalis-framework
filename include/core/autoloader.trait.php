@@ -123,21 +123,22 @@ trait Autoloader {
 
     protected function plugin_is_active (string $plugin_dir) {
 
-        foreach (get_plugins() as $plugin_name => $plugin) {
+        $plugins = wp_get_active_and_valid_plugins();
+        if (is_multisite()) $plugins = array_merge($plugins, wp_get_active_network_plugins());
 
-            if ((dirname($plugin_name) == $plugin_dir) && is_plugin_active($plugin_name)) return true;
-
-        }
+        foreach ($plugins as $plugin_file) if (dirname(plugin_basename($plugin_file)) === $plugin_dir) return true;
 
         return false;
 
     }
 
     public function autoload_multiple (array $autoloads, ?array &$objs = []) {
-    
-        if ($autoloads) foreach ($autoloads as $directory => $instantiation) {
 
-            $objs = array_merge($objs, $this->autoload($this->path . $directory, true, 'php', $objs, $instantiation));
+        $objs ??= [];
+
+        foreach ($autoloads as $directory => $instantiation) {
+
+            $this->autoload($this->path . $directory, true, 'php', $objs, $instantiation);
 
         }
 
