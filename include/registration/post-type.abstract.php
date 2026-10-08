@@ -243,9 +243,9 @@ abstract class Post_Type extends Singleton {
 
         $call = false;
 
-        if ($this->model_class)             $call = $this->model_class . "::" . $method;
-        if (!$call || !is_callable($call))  $call = static::class . "::" . $method;
-        if (!$call || !is_callable($call))  $call = [$this, $method];      
+        if ($this->model_class)     $call = $this->model_class . "::" . $method;
+        if (!is_callable($call))    $call = static::class . "::" . $method;
+        if (!is_callable($call))    $call = [$this, $method];
 
         return is_callable($call) ? call_user_func_array($call, $args) : $default;
         
