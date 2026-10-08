@@ -108,7 +108,7 @@ class Attachment extends Post {
 
     public function get_image_src (string|array $size = 'medium', bool $icon = false) {
 
-        $key = implode(';', func_get_args());
+        $key = serialize([$size, $icon]);
         if (!isset($this->src_cache[$key])) $this->src_cache[$key] = wp_get_attachment_image_src($this->wp_post->ID, $size, $icon);
         return $this->src_cache[$key];
     
@@ -173,7 +173,7 @@ class Attachment extends Post {
 
     public function get_attachment_taxonomies (string $output = 'names') {
     
-        return get_taxonomies($this->wp_post, $output);
+        return get_attachment_taxonomies($this->wp_post, $output);
     
     }
 
