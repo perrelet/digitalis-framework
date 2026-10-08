@@ -2,6 +2,8 @@
 
 namespace Lattice;
 
+use WP_Term;
+
 class User_Taxonomy extends Taxonomy {
 
     protected $slug         = 'user-tag';
@@ -49,6 +51,8 @@ class User_Taxonomy extends Taxonomy {
             case 'users':
                 
                 $term = get_term($term_id, $this->slug);
+                if (!($term instanceof WP_Term)) return $output;
+
                 $url = admin_url("users.php?{$this->slug}={$term_id}");
 
                 return "<a href='{$url}'>{$term->count}</a>";
