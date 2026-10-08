@@ -109,7 +109,7 @@ abstract class Model extends Factory
 |--------|-----------|-------------|
 | `create()` | `static create(mixed $data = []): static` | Creates a new, unsaved instance of the called class (no resolution) |
 | `get_instance()` | `static get_instance(mixed $data = null, ?bool $auto_resolve = null): ?static` | Gets model by ID with auto-resolution |
-| `get_instances()` | `static get_instances($ids): array` | Gets multiple models (falsy input gives `[]`) |
+| `get_instances()` | `static get_instances($ids): array` | Gets multiple models (a non-iterable such as `false`, `null` or a `WP_Error` gives `[]`) |
 | `get_class_name()` | `static get_class_name(mixed $id, ?bool $auto_resolve = null): string` | Resolves most specific class for ID |
 | `validate_id()` | `static validate_id(mixed $id): bool` | Validates ID for this model |
 | `is_new()` | `public is_new(): bool` | Checks if model is unsaved |
@@ -270,7 +270,7 @@ class User extends WP_Model
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_wp_user()` | `public get_wp_user(): ?WP_User` | Returns WP_User object |
+| `get_wp_user()` | `public get_wp_user(): WP_User\|false` | Returns WP_User object, `false` when the lookup failed |
 | `get_by()` | `static get_by(string $field, int\|string $value): ?static` | Gets user by field |
 | `get_by_email()` | `static get_by_email(string $email): ?static` | Gets user by email |
 | `get_by_login()` | `static get_by_login(string $login): ?static` | Gets user by login |

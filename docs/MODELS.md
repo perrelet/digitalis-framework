@@ -188,6 +188,8 @@ $user = User::inst();
 $post = Post::inst($id);
 ```
 
+`get_instance()` returns `null` when no object has that id (a deleted post, user, term or comment) or when the id fails the class's `validate_id()`. Validation runs on a fresh resolution only: an instance already cached in the request is returned as is, and `new Post($id)` skips it.
+
 ### Multiple Instances
 
 ```php
@@ -307,6 +309,8 @@ class Project extends Post {
 | `add_terms($terms, $tax)` | `array\|WP_Error` | Add terms |
 | `remove_terms($terms, $tax)` | `bool\|WP_Error` | Remove terms |
 
+> ⚠️ `set_terms(5)` and `add_terms(5)` on a flat taxonomy create a term *named* "5" (WordPress's `wp_set_post_terms()` reads a scalar as a list of names); pass `[5]` to assign term 5.
+
 > ⚠️ A slug returns raw `WP_Term` objects (`->name`); a `Term` subclass name returns model instances (`->get_name()`). Legacy artifact, awaiting a breaking change to always return models.
 >
 > ```php
@@ -340,6 +344,7 @@ class Project extends Post {
 |--------|---------|-------------|
 | `get_comments($args)` | `array` | Comment instances |
 | `get_comment_count($args)` | `int` | Comment count |
+| `get_comment_count_text($zero, $one, $more)` | `string` | Comment count as text (`get_comments_number_text()`) |
 | `is_comments_open()` | `bool` | Comments allowed |
 | `get_comments_url()` | `string` | Comments anchor URL |
 
@@ -907,7 +912,7 @@ Available on Post, User, and Term via `WP_Model`:
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `get_wp_post()` | `WP_Post` | (Post) Underlying WP_Post |
-| `get_wp_user()` | `WP_User` | (User) Underlying WP_User |
+| `get_wp_user()` | `WP_User\|false` | (User) Underlying WP_User, `false` when the lookup failed |
 | `get_wp_term()` | `WP_Term` | (Term) Underlying WP_Term |
 
 ---

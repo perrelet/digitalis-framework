@@ -19,6 +19,8 @@ class Comment extends WP_Model {
 
     public static function validate_id (mixed $id) {
 
+        if (!get_comment($id)) return false;
+
         return parent::validate_id($id);
 
     }

@@ -32,10 +32,11 @@ class User extends WP_Model {
 
         //if ($id == 'new') return true;
 
+        if (!$wp_user = get_userdata($id)) return false;
+
         if (static::$role) {
 
             if (!is_array(static::$role))                         static::$role = [static::$role];
-            if (!$wp_user = get_user_by('id', $id))               return false;
             if (!array_intersect(static::$role, $wp_user->roles)) return false;
 
         }

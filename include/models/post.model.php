@@ -53,7 +53,9 @@ class Post extends WP_Model {
 
     public static function validate_id (mixed $id) {
 
-        if (static::$post_type && (get_post_type($id) != static::$post_type)) return false;
+        if (!$wp_post = get_post($id)) return false;
+
+        if (static::$post_type && ($wp_post->post_type != static::$post_type)) return false;
 
         if (static::$term) {
 
