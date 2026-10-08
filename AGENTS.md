@@ -463,12 +463,12 @@ public static function get_migrations(): array  // return Migration class names,
 ### Query_Vars + Query_Manager
 
 ```php
-$qv = new Query_Vars(array $args)
+$qv = new Query_Vars(array|WP_Query $args)
 $qv->set(string $key, mixed $value): static
 $qv->merge(array $args): static     // smart array-combining (use for composable additions)
 $qv->overwrite(array $args): static // unconditional replacement
-$qv->upsert_meta_query(string $key, array $clause): static
-$qv->find_meta_query_path(string $key): ?array
+$qv->upsert_meta_query(mixed $match, array $clause): static  // $match is compared against each clause's 'key'
+$qv->find_meta_query_path(mixed $match): ?array
 $qv->get_meta_block(array $path): array&  // reference — invalidated by structural changes
 $qv->make_query(): WP_Query               // must call before execute()
 

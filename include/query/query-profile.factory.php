@@ -2,6 +2,8 @@
 
 namespace Lattice;
 
+use WP_Query;
+
 class Query_Profile extends Factory {
 
     protected $mode = 'selectable'; // selectable (default off, only runs when selected in _profiles) | ambient (default on, skipped when _profiles is provided) | baseline (almost always on, only skipped if provided in _suppress)
@@ -28,7 +30,7 @@ class Query_Profile extends Factory {
     
     }
 
-    public function should_apply ($wp_query) {
+    public function should_apply (WP_Query $wp_query) {
     
         if (!$this->matches_profile($wp_query)) return false;
         if ($this->is_suppressed($wp_query))    return false;
@@ -38,13 +40,13 @@ class Query_Profile extends Factory {
     
     }
 
-    public function condition ($wp_query) {
+    public function condition (WP_Query $wp_query) {
 
         return true;
 
     }
 
-    public function apply ($query_vars, $wp_query, &$mods) {
+    public function apply (Query_Vars $query_vars, WP_Query $wp_query, array &$mods) {
 
         /* $query_vars->merge([
             'meta_query' => [
@@ -78,7 +80,7 @@ class Query_Profile extends Factory {
 
     }
 
-    protected function check_mode ($wp_query) {
+    protected function check_mode (WP_Query $wp_query) {
     
         $selection_mode = $this->get_stamp($wp_query)['selection_mode'] ?? 'implicit';
 
@@ -99,7 +101,7 @@ class Query_Profile extends Factory {
     
     }
 
-    protected function matches_profile ($wp_query) {
+    protected function matches_profile (WP_Query $wp_query) {
 
         if ($this->post_type) {
 
@@ -126,7 +128,7 @@ class Query_Profile extends Factory {
 
     }
 
-    protected function matches_set ($value, $rules) {
+    protected function matches_set (?string $value, array $rules) {
 
         if (!$rules) return true;
 
@@ -145,7 +147,7 @@ class Query_Profile extends Factory {
 
     }
 
-    protected function is_selected ($wp_query) {
+    protected function is_selected (WP_Query $wp_query) {
 
         if (!$this->can_be_selected($wp_query)) return false;
 
@@ -153,7 +155,7 @@ class Query_Profile extends Factory {
 
     }
 
-    protected function is_suppressed ($wp_query) {
+    protected function is_suppressed (WP_Query $wp_query) {
 
         if (!$this->can_be_selected($wp_query)) return false;
 
@@ -162,19 +164,19 @@ class Query_Profile extends Factory {
     }
 
 
-    protected function can_be_selected ($wp_query) {
+    protected function can_be_selected (WP_Query $wp_query) {
 
         return (bool) ($this->get_stamp($wp_query)['allow_profile_select'] ?? false);
 
     }
 
-    protected function in_profiles ($wp_query) {
+    protected function in_profiles (WP_Query $wp_query) {
 
         return in_array(static::class, (array) $wp_query->get('_profiles'));
 
     }
 
-    protected function get_stamp ($wp_query) {
+    protected function get_stamp (WP_Query $wp_query) {
 
         $stamp = $wp_query->get('digitalis');
 
@@ -182,25 +184,25 @@ class Query_Profile extends Factory {
 
     }
 
-    protected function get_role ($wp_query) {
+    protected function get_role (WP_Query $wp_query) {
 
         return $this->get_stamp($wp_query)['role'] ?? null;
 
     }
 
-    protected function get_context ($wp_query) {
+    protected function get_context (WP_Query $wp_query) {
 
         return $this->get_stamp($wp_query)['context'] ?? null;
 
     }
 
-    protected function is_multiple ($wp_query) {
+    protected function is_multiple (WP_Query $wp_query) {
 
         return (bool) $this->get_stamp($wp_query)['multiple'] ?? null;
 
     }
 
-    protected function has_post_type ($wp_query, $post_type) {
+    protected function has_post_type (WP_Query $wp_query, string $post_type) {
 
         return Query_Vars::compare_post_type($wp_query, $post_type);
 

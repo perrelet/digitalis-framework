@@ -8,7 +8,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     protected $query;
 
-    public function __construct ($query_vars = []) {
+    public function __construct (array|WP_Query $query_vars = []) {
 
         if ($query_vars instanceof WP_Query) $query_vars = $query_vars->query_vars;
 
@@ -28,7 +28,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function set_vars ($query_vars) {
+    public function set_vars (array $query_vars) {
     
         $this->query = wp_parse_args($query_vars, [
             'meta_query' => [],
@@ -39,36 +39,36 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
     
     }
 
-    public function get ($key, $default = null) {
+    public function get (int|string $key, mixed $default = null) {
 
         return $this->query[$key] ?? $default;
 
     }
 
-    public function set ($key, $value) {
+    public function set (int|string $key, mixed $value) {
 
         $this->query[$key] = $value;
         return $this;
 
     }
 
-    public function has ($key) {
+    public function has (int|string $key) {
     
         return array_key_exists($key, $this->query);
     
     }
 
-    public function remove ($key) {
+    public function remove (int|string $key) {
 
         unset($this->query[$key]);
         return $this;
     
     }
 
-    public function get_var ($key, $default = null) { return $this->get($key, $default); }
-    public function set_var ($key, $value)          { return $this->set($key, $value);   }
-    public function has_var ($key)                  { return $this->has($key);   }
-    public function unset_var ($key)                { return $this->remove($key);        }
+    public function get_var (int|string $key, mixed $default = null) { return $this->get($key, $default); }
+    public function set_var (int|string $key, mixed $value)          { return $this->set($key, $value);   }
+    public function has_var (int|string $key)                  { return $this->has($key);   }
+    public function unset_var (int|string $key)                { return $this->remove($key);        }
 
     public function get_meta_query () {
 
@@ -82,7 +82,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function add_meta_query ($meta_query) {
+    public function add_meta_query (array $meta_query) {
 
         $this->query['meta_query'][] = $meta_query;
 
@@ -90,7 +90,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function add_tax_query ($tax_query) {
+    public function add_tax_query (array $tax_query) {
 
         $this->query['tax_query'][] = $tax_query;
 
@@ -112,7 +112,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function overwrite ($query) {
+    public function overwrite (array $query) {
 
         if (!is_array($query) || !$query) return $this;
         foreach ($query as $key => $value) $this->set($key, $value);
@@ -120,7 +120,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
         
     }
 
-    protected function should_merge ($value, $allow_empty) {
+    protected function should_merge (mixed $value, bool $allow_empty) {
 
         if ($value === null)                   return $allow_empty;
         if ($value === '')                     return $allow_empty;
@@ -130,7 +130,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function merge ($query, $allow_empty = false) {
+    public function merge (array $query, bool $allow_empty = false) {
 
         if (!is_array($query) || !$query) return $this;
 
@@ -145,7 +145,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function merge_var ($key, $value, $allow_empty = false) {
+    public function merge_var (int|string $key, mixed $value, bool $allow_empty = false) {
 
         if (!$this->should_merge($value, $allow_empty)) return $this;
         
@@ -198,7 +198,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
     }
 
     // Falls through to PHP's own errors so a typo is never hidden. Note is_callable([$qv, x]) is now true for any x.
-    public function __call ($name, $args) {
+    public function __call (string $name, array $args) {
 
         if (in_array($name, ['find_meta_query', 'find_tax_query'], true)) {
 
@@ -214,7 +214,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     //
 
-    protected function compare ($v1, $v2, $operator = '=') {
+    protected function compare (mixed $v1, mixed $v2, string $operator = '=') {
 
         $operator = strtoupper(trim($operator));
 
@@ -238,7 +238,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function find_path ($haystack, $match_value, $key = 'key', $compare = '=') {
+    public function find_path (mixed $haystack, mixed $match_value, int|string $key = 'key', string $compare = '=') {
 
         if (!is_array($haystack)) return null;
         if (array_key_exists($key, $haystack)) return $this->compare($match_value, $haystack[$key], $compare) ? [] : null;
@@ -264,19 +264,19 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function find_meta_query_path ($match_value, $key = 'key', $compare = '=') {
+    public function find_meta_query_path (mixed $match_value, int|string $key = 'key', string $compare = '=') {
 
         return $this->find_path($this->get_meta_query(), $match_value, $key, $compare);
 
     }
 
-    public function find_tax_query_path ($match_value, $key = 'taxonomy', $compare = '=') {
+    public function find_tax_query_path (mixed $match_value, int|string $key = 'taxonomy', string $compare = '=') {
 
         return $this->find_path($this->get_tax_query(), $match_value, $key, $compare);
 
     }
 
-    protected function &get_by_path (&$arr, $path) {
+    protected function &get_by_path (?array &$arr, array $path) {
 
         $ref = &$arr;
         foreach ($path as $p) $ref = &$ref[$p];
@@ -284,19 +284,19 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function &get_meta_block ($path) {
+    public function &get_meta_block (array $path) {
     
         return $this->get_by_path($this->query['meta_query'], $path);
     
     }
 
-    public function &get_tax_block ($path) {
+    public function &get_tax_block (array $path) {
     
         return $this->get_by_path($this->query['tax_query'], $path);
     
     }
 
-    public function upsert_meta_query ($match_value, $new_block, $match_key = 'key', $compare = '=') {
+    public function upsert_meta_query (mixed $match_value, array $new_block, int|string $match_key = 'key', string $compare = '=') {
 
         $path = $this->find_meta_query_path($match_value, $match_key, $compare);
 
@@ -312,7 +312,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public function upsert_tax_query ($match_value, $new_block, $match_key = 'taxonomy', $compare = '=') {
+    public function upsert_tax_query (mixed $match_value, array $new_block, int|string $match_key = 'taxonomy', string $compare = '=') {
 
         $path = $this->find_tax_query_path($match_value, $match_key, $compare);
 
@@ -330,7 +330,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     //
 
-    public function make_query ($overrides = []) {
+    public function make_query (array $overrides = []) {
 
         $wp_query = new WP_Query();
         $wp_query->query_vars = array_merge($this->to_array(), $overrides);
@@ -415,7 +415,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     //
 
-    public static function compare_post_type (WP_Query $wp_query, $post_type) {
+    public static function compare_post_type (WP_Query $wp_query, string|array|false $post_type) {
 
         if (
             ($wp_query->is_tax() || $wp_query->is_tag() || $wp_query->is_category()) &&
@@ -452,7 +452,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     }
 
-    public static function is_multiple ($wp_query = null) {
+    public static function is_multiple (?WP_Query $wp_query = null) {
 
         if (is_null($wp_query)) global $wp_query;
 

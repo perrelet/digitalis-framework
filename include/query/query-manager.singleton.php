@@ -53,7 +53,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    public function pre_get_posts ($wp_query) {
+    public function pre_get_posts (WP_Query $wp_query) {
 
         if (!$this->is_main($wp_query)) return;
 
@@ -87,7 +87,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    public function posts_clauses ($clauses, $wp_query) {
+    public function posts_clauses (array $clauses, WP_Query $wp_query) {
 
         // Permanent posts_clauses hook: applies only when query has digitalis_query_id AND mods have been registered for that id.
 
@@ -100,7 +100,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    public function posts_results ($posts, $wp_query) {
+    public function posts_results (array $posts, WP_Query $wp_query) {
 
         // Cleanup so we don't retain mods for the rest of the request. posts_results runs after SQL, before objects are returned.
 
@@ -144,7 +144,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    public function execute (WP_Query $wp_query, $stamp_merge = []) {
+    public function execute (WP_Query $wp_query, array $stamp_merge = []) {
 
         if (Strict::enabled() && $this->is_applied($wp_query)) Strict::fail(static::class, 'execute() received a WP_Query whose stamp says profiles were already applied (a second execute() on the same object, or query_vars copied from an executed query), so this run skips every profile.', "Drop the stamp after copying vars from an executed query (\$qv->remove('digitalis') or unset(\$wp_query->query_vars['digitalis'])), or build a fresh query with make_query().");
 
@@ -166,7 +166,7 @@ class Query_Manager extends Singleton {
 
     //
 
-    protected function stamp_context ($wp_query, $query_role, $merge = []) {
+    protected function stamp_context (WP_Query $wp_query, string $query_role, array $merge = []) {
 
         $existing = $wp_query->get(self::STAMP_KEY);
         if (!is_array($existing)) $existing = [];
@@ -182,7 +182,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    protected function get_stamp ($wp_query) {
+    protected function get_stamp (WP_Query $wp_query) {
 
         $stamp = $wp_query->get(self::STAMP_KEY);
 
@@ -190,25 +190,25 @@ class Query_Manager extends Singleton {
 
     }
 
-    protected function set_stamp ($wp_query, $stamp) {
+    protected function set_stamp (WP_Query $wp_query, array $stamp) {
 
         $wp_query->set(self::STAMP_KEY, $stamp);
 
     }
 
-    protected function merge_stamp ($wp_query, $merge) {
+    protected function merge_stamp (WP_Query $wp_query, array $merge) {
 
         $this->set_stamp($wp_query, array_merge($this->get_stamp($wp_query), $merge));
 
     }
 
-    protected function get_query_id ($wp_query) {
+    protected function get_query_id (WP_Query $wp_query) {
 
         return $this->get_stamp($wp_query)['id'] ?? null;
 
     }
 
-    protected function ensure_query_id ($wp_query) {
+    protected function ensure_query_id (WP_Query $wp_query) {
 
         $stamp = $this->get_stamp($wp_query);
 
@@ -221,13 +221,13 @@ class Query_Manager extends Singleton {
 
     }
 
-    protected function is_applied ($wp_query) {
+    protected function is_applied (WP_Query $wp_query) {
 
         return array_key_exists('applied', $this->get_stamp($wp_query)); // One apply per query object, even when no profile matched.
 
     }
 
-    protected function mark_applied ($wp_query, $applied) {
+    protected function mark_applied (WP_Query $wp_query, array $applied) {
 
         $this->merge_stamp($wp_query, ['applied' => $applied]);
 
@@ -244,7 +244,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    protected function is_multiple ($wp_query) {
+    protected function is_multiple (WP_Query $wp_query) {
 
         if ($this->is_digitalis_ajax($wp_query)) return true;
     
@@ -252,13 +252,13 @@ class Query_Manager extends Singleton {
     
     }
 
-    protected function is_main ($wp_query) {
+    protected function is_main (WP_Query $wp_query) {
 
         return $wp_query->is_main_query();
     
     }
 
-    protected function is_digitalis_ajax ($wp_query) {
+    protected function is_digitalis_ajax (WP_Query $wp_query) {
 
         return (bool) $wp_query->get(Post_Type::AJAX_Flag);
     
@@ -274,7 +274,7 @@ class Query_Manager extends Singleton {
 
     }
 
-    public static function strict_main_selection ($wp_query) {
+    public static function strict_main_selection (WP_Query $wp_query) {
 
         if (!$wp_query->is_main_query()) return;
 

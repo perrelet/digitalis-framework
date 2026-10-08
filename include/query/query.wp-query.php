@@ -20,7 +20,7 @@ class Digitalis_Query extends WP_Query {
 
     // Called explicitly
 
-    public function query ($query = [], $merge_falsy = false) {
+    public function query ($query = [], bool $merge_falsy = false) {
 
         if ($query) $this->merge($query, $merge_falsy);
 
@@ -48,7 +48,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function set_query ($query) {
+    public function set_query (array $query) {
 
         $this->query_vars_obj->set_vars($query);
 
@@ -56,13 +56,13 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function get_var ($key, $default = null) {
+    public function get_var (int|string $key, mixed $default = null) {
 
         return $this->query_vars_obj->get_var($key, $default);
 
     }
 
-    public function set_var ($key, $value) {
+    public function set_var (int|string $key, mixed $value) {
 
         $this->query_vars_obj->set_var($key, $value);
 
@@ -70,7 +70,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function unset_var ($key) {
+    public function unset_var (int|string $key) {
 
         $this->query_vars_obj->unset_var($key);
 
@@ -78,7 +78,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function add_meta_query ($meta_query) {
+    public function add_meta_query (array $meta_query) {
 
         $this->query_vars_obj->add_meta_query($meta_query);
 
@@ -86,7 +86,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function add_tax_query ($tax_query) {
+    public function add_tax_query (array $tax_query) {
 
         $this->query_vars_obj->add_tax_query($tax_query);
 
@@ -94,7 +94,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function overwrite ($query) {
+    public function overwrite (array $query) {
         
         $this->query_vars_obj->overwrite($query);
 
@@ -102,7 +102,7 @@ class Digitalis_Query extends WP_Query {
         
     }
 
-    public function merge ($query, $merge_falsy = false) {
+    public function merge (array $query, bool $merge_falsy = false) {
 
         $this->query_vars_obj->merge($query, $merge_falsy);
 
@@ -110,7 +110,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public function merge_var ($key, $value, $merge_falsy = false) {
+    public function merge_var (int|string $key, mixed $value, bool $merge_falsy = false) {
 
         $this->query_vars_obj->merge_var($key, $value, $merge_falsy);
 
@@ -120,7 +120,7 @@ class Digitalis_Query extends WP_Query {
 
     //
 
-    public function is_post_type ($post_type) {
+    public function is_post_type (string|array|false $post_type) {
 
         return static::compare_post_type($this, $post_type);
 
@@ -128,7 +128,7 @@ class Digitalis_Query extends WP_Query {
 
     // Static Utils
 
-    public static function compare_post_type ($wp_query, $post_type) {
+    public static function compare_post_type ($wp_query, string|array|false $post_type) {
 
         if (!($wp_query instanceof WP_Query)) return false;
 
@@ -167,7 +167,7 @@ class Digitalis_Query extends WP_Query {
 
     }
 
-    public static function is_multiple ($wp_query = null) {
+    public static function is_multiple (?WP_Query $wp_query = null) {
 
         if (wp_doing_ajax() && (substr($_REQUEST['action'] ?? null, 0, 5) == 'query')) return true;
 
