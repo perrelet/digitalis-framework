@@ -349,6 +349,11 @@ abstract class Post_Type extends Singleton {
                 'args'  => [],
             ]);
 
+            $filter['args'] = wp_parse_args($filter['args'], [
+                'value_callback' => false,
+                'query_callback' => false,
+            ]);
+
             switch ($filter['type']) {
 
                 case 'taxonomy':
@@ -375,8 +380,6 @@ abstract class Post_Type extends Singleton {
                         'compare'        => '=',
                         'label'          => null,
                         'type'           => null,
-                        'value_callback' => false,
-                        'query_callback' => false,
                     ]);
 
             }
