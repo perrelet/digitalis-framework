@@ -33,7 +33,7 @@ trait Has_WP_User {
 
     public function get_wp_user () {
 
-        if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->wp_user->ID);
+        if (is_null($this->wp_user)) $this->wp_user = get_user_by('id', $this->id);
 
         return $this->wp_user;
 
