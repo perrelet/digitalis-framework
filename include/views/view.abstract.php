@@ -353,7 +353,12 @@ abstract class View implements \ArrayAccess {
 
         $values             = array_map(fn($value) => is_array($value) ? $value : [$value], $values);
         $values             = call_user_func_array('array_merge', $values);
-        $this->params[$key] = array_merge($this->params[$key], $values);
+        $current            = $this->params[$key] ?? [];
+
+        if ($current === '' || $current === false) $current = [];         // a placeholder default is the empty list
+        if (is_scalar($current))                   $current = [$current]; // one entry; an object still fails in array_merge, loudly
+
+        $this->params[$key] = array_merge($current, $values);
         static::make_list_unique($this->params[$key]);
         return $this;
     
