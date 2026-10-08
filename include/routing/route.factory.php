@@ -58,7 +58,7 @@ class Route extends Factory {
 
     }
 
-    public function maybe_set_wp_query_vars ($response, $handler, $request) {
+    public function maybe_set_wp_query_vars (mixed $response, array $handler, WP_REST_Request $request) {
 
         if (!$this->is_this_route($request)) return $response;
 
@@ -146,7 +146,7 @@ class Route extends Factory {
 
     }
 
-    public function render_view ($view, $params) {
+    public function render_view (string $view, array $params) {
 
         return call_user_func("{$view}::render", $params, false);
 
@@ -171,7 +171,7 @@ class Route extends Factory {
 
     }
 
-    public function get_url ($query_params = [], $nonce = null, $format = null) {
+    public function get_url (array $query_params = [], ?bool $nonce = null, ?string $format = null) {
 
         if (is_null($nonce))  $nonce  = $this->get_require_nonce();
         if (is_null($format)) $format = $this->get_format();
@@ -180,13 +180,13 @@ class Route extends Factory {
 
     }
 
-    public function add_query_params ($url, $query_params = []) {
+    public function add_query_params (string $url, array $query_params = []) {
 
         return add_query_arg($query_params, $url);
 
     }
 
-    public function nonce_url ($url) {
+    public function nonce_url (string $url) {
     
         $url = add_query_arg('_wpnonce', $this->get_nonce(), $url);
         $url = str_replace("%25post_id%25", "%post_id%", $url);
@@ -207,7 +207,7 @@ class Route extends Factory {
 
     // `$_REQUEST` and `WP_REST_Request::get_param()` both prefer the body, so a `wp_nonce_field()`
     // in a surrounding form shadows the nonce `nonce_url()` puts in the query string.
-    public static function collect_nonce_candidates ($request = null) {
+    public static function collect_nonce_candidates (?WP_REST_Request $request = null) {
 
         $candidates = [
             $_SERVER['HTTP_X_WP_NONCE'] ?? null,
@@ -226,7 +226,7 @@ class Route extends Factory {
 
     // Separate from collection: verification depends on the current user, so callers that
     // authenticate manually must verify after `wp_set_current_user()`.
-    public static function find_valid_nonce (array $candidates, $action = 'wp_rest') {
+    public static function find_valid_nonce (array $candidates, string|int $action = 'wp_rest') {
 
         foreach ($candidates as $nonce) if (wp_verify_nonce($nonce, $action)) return $nonce;
 
@@ -341,13 +341,13 @@ class Route extends Factory {
     
     //
 
-    protected function respond ($response) {
+    protected function respond (mixed $response) {
 
         return rest_ensure_response($response);
 
     }
 
-    protected function request_inject (WP_REST_Request $request, $method) {
+    protected function request_inject (WP_REST_Request $request, string $method) {
 
         if (!method_exists($this, $method)) return new WP_Error('route-handler-missing', "Handler method '{$method}' does not exist on " . static::class, ['status' => 500]);
 
@@ -384,7 +384,7 @@ class Route extends Factory {
     // Strict
 
     // Falls through to PHP's own errors so a typo is never hidden; strict only adds the get_param() hint. Note is_callable([$route, x]) is now true for any x.
-    public function __call ($name, $args) {
+    public function __call (string $name, array $args) {
 
         if ($name === 'get_param') Strict::fail(static::class, 'has no get_param(); the request does.', 'Read $request->get_param() from the WP_REST_Request handed to permission() and the handler.');
 
@@ -416,13 +416,13 @@ class Route extends Factory {
 
     }
 
-    protected static function declares_prop ($reflection, $class, $name) {
+    protected static function declares_prop (\ReflectionClass $reflection, string $class, string $name) {
 
         return $reflection->hasProperty($name) && ($reflection->getProperty($name)->getDeclaringClass()->name === $class);
 
     }
 
-    protected static function declares_method ($reflection, $class, $name) {
+    protected static function declares_method (\ReflectionClass $reflection, string $class, string $name) {
 
         return $reflection->hasMethod($name) && ($reflection->getMethod($name)->getDeclaringClass()->name === $class);
 

@@ -590,14 +590,14 @@ Invoice_Route::get_instance();
 | `handle()` | `public handle(WP_REST_Request $request): mixed` | Default handler — delegates to `callback()` via `request_inject()`. |
 | `permission_wrap()` | `public permission_wrap(WP_REST_Request $request): mixed` | WP callback — calls `permission()` once per request (cached by request identity, so `rest_send_allow_header`'s extra calls reuse it). |
 | `callback_wrap()` | `public callback_wrap(WP_REST_Request $request): mixed` | WP callback — checks nonce, calls handler, renders view if set. |
-| `get_url()` | `public get_url(array $params = [], ?bool $nonce = null, ?string $format = null): string` | Build URL via `REST_URL_Builder`. Respects `$require_nonce` and `$format` by default. |
+| `get_url()` | `public get_url(array $query_params = [], ?bool $nonce = null, ?string $format = null): string` | Build URL via `REST_URL_Builder`. Respects `$require_nonce` and `$format` by default. |
 | `get_nonce()` | `public get_nonce(): string` | Returns (cached) `wp_rest` nonce. |
 | `nonce_url()` | `public nonce_url(string $url): string` | Appends `_wpnonce` param to URL. |
 | `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates `_wpnonce` param or `Nonce` header. |
 | `respond()` | `protected respond(mixed $response): WP_REST_Response` | Wraps response in `rest_ensure_response()`. |
 | `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request matches this route. |
 | `render_view()` | `public render_view(string $view, array $params): string` | Calls `View::render($params, false)`. |
-| `add_query_params()` | `public add_query_params(string $url, array $params): string` | Appends query params via `add_query_arg()`. |
+| `add_query_params()` | `public add_query_params(string $url, array $query_params = []): string` | Appends query params via `add_query_arg()`. |
 
 **Dependency injection in args:**
 
