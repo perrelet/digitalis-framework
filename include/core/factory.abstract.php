@@ -54,7 +54,7 @@ abstract class Factory extends Creational {
     public static function create (mixed $data = []) {
 
         if (is_scalar($data)) return;
-        if (!$instance = static::constructor_inject(static::class, array_slice(func_get_args(), 2))) return;
+        if (!$instance = static::constructor_inject(static::class, array_slice(func_get_args(), 1))) return;
 
         static::prepare_data($data);
         static::construct_instance($instance, $data);
