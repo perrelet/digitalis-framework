@@ -92,7 +92,7 @@ trait Dependency_Injection {
 
     protected static function array_inject (array &$array, array $defaults = []) {
     
-        if ($array) foreach ($array as $key => &$value) {
+        foreach ($array as $key => &$value) {
         
             if ($defaults && !isset($defaults[$key])) continue;
 
