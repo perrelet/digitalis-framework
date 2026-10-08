@@ -114,7 +114,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     public function overwrite (array $query) {
 
-        if (!is_array($query) || !$query) return $this;
+        if (!$query) return $this;
         foreach ($query as $key => $value) $this->set($key, $value);
         return $this;
         
@@ -132,7 +132,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     public function merge (array $query, bool $allow_empty = false) {
 
-        if (!is_array($query) || !$query) return $this;
+        if (!$query) return $this;
 
         foreach ($query as $key => $value) {
 
@@ -440,7 +440,7 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
                 }
 
-            } elseif (($post_type == 'post') && $wp_query) {
+            } elseif ($post_type == 'post') {
 
                 return $wp_query->is_posts_page || $wp_query->is_author;
 
