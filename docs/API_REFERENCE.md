@@ -332,7 +332,11 @@ abstract class Post_Type extends Singleton
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_args()` | `public get_args(): array` | Returns registration args |
+| `get_args()` | `protected get_args(array $args): array` | Override to change the default registration args |
+| `get_rewrite()` | `protected get_rewrite(array|false $rewrite): array|false` | Override to change the default rewrite args; `false` disables rewrites, as `register_post_type()` allows |
+| `get_supports()` | `protected get_supports(array|false $supports): array|false` | Override to change the default supports; `false` registers none |
+| `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
+| `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
 | `columns()` | `public columns(array $columns): array` | Modifies admin columns |
 | `column()` | `public column(string $column, int $post_id): void` | Renders column content |
 | `get_query_vars()` | `public get_query_vars(): array` | Returns custom query vars |
@@ -355,6 +359,12 @@ abstract class Taxonomy extends Singleton
 | `$text_domain` | `string` | `'default'` | Domain for `$singular` and `$plural`; the scaffolding around them uses `lattice` |
 | `$post_types` | `array` | `[]` | Associated post types |
 | `$hierarchical` | `bool` | `true` | Is hierarchical |
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `get_args()` | `protected get_args(array $args): array` | Override to change the default registration args |
+| `get_rewrite()` | `protected get_rewrite(array|false $rewrite): array|false` | Override to change the default rewrite args; `false` disables rewrites |
+| `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 
 ---
 

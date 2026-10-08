@@ -22,7 +22,7 @@ abstract class Post_Status extends Singleton {
     protected $post_status;
     protected $_args;
 
-    protected function filter_args (&$args) {
+    protected function filter_args (array &$args) {
     
         // ...
     

@@ -2,12 +2,15 @@
 
 namespace Lattice;
 
+use WP_Query;
+use WP_Post;
+
 /**
  * Optional subclass hooks; run() wires each only when the subclass defines it.
  * @method mixed ajax_query()
- * @method void  filter_post_data(array &$data, array $postarr, array $unsanitized_postarr, bool $update)
- * @method void  after_insert(int $post_id, \WP_Post $post, bool $update, ?\WP_Post $post_before)
- * @method void  after_delete(int $post_id, \WP_Post $post)
+ * @method void  filter_post_data(array &$data, array $postarr, array|object $unsanitized_postarr, bool $update)
+ * @method void  after_insert(int $post_id, WP_Post $post, bool $update, ?WP_Post $post_before)
+ * @method void  after_delete(int $post_id, WP_Post $post)
  */
 abstract class Post_Type extends Singleton {
 
@@ -118,7 +121,7 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    protected function remove_support ($support) {
+    protected function remove_support (string $support) {
 
         $this->removed_supports[] = $support;
 
@@ -126,31 +129,31 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    protected function filter_args (&$args) {
+    protected function filter_args (array &$args) {
     
         // ...
     
     }
 
-    protected function get_args ($args) {
+    protected function get_args (array $args) {
 
         return $args;
 
     }
 
-    protected function get_rewrite ($rewrite) {     // and this...
+    protected function get_rewrite (array|false $rewrite) {     // and this...
 
         return $rewrite;
 
     }
 
-    protected function get_supports ($supports) {   // this one to
+    protected function get_supports (array|false $supports) {   // this one to
 
         return $supports;
 
     }
    
-    protected function get_labels ($labels) {       // ..also me.
+    protected function get_labels (array $labels) {       // ..also me.
 
         return $labels;
 
@@ -236,7 +239,7 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    public function call_model ($method, $default = [], $args = []) {
+    public function call_model (string $method, mixed $default = [], array $args = []) {
 
         $call = false;
 
@@ -260,7 +263,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function main_query_wrap ($query) {
+    public function main_query_wrap (WP_Query $query) {
 
         if ($this->is_main_query($query) && Query_Vars::is_multiple($query)) {
 
@@ -270,7 +273,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function main_query ($wp_query) {
+    public function main_query (WP_Query $wp_query) {
 
         $qv = new Query_Vars($wp_query->query_vars);
         $qv->merge($this->query_vars(), true);
@@ -292,7 +295,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function admin_query_wrap ($query) {
+    public function admin_query_wrap (WP_Query $query) {
 
         if (!$this->is_main_admin_query($query)) return;
 
@@ -300,7 +303,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function admin_query ($wp_query) {
+    public function admin_query (WP_Query $wp_query) {
 
         //$wp_query->query_vars = wp_parse_args(static::get_admin_query_vars(), $wp_query->query_vars);
         //merge_query(static::get_admin_query_vars(), $wp_query);
@@ -384,7 +387,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function admin_controller ($query) {
+    public function admin_controller (WP_Query $query) {
 
         if (!$this->is_main_admin_query($query)) return;
 
@@ -446,7 +449,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function disable_months_dropdown ($disable, $post_type) {
+    public function disable_months_dropdown (bool $disable, string $post_type) {
 
         return ($post_type == $this->slug) ? true : $disable;
 
@@ -519,7 +522,7 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    public function filter_post_data_wrap ($data, $postarr, $unsanitized_postarr, $update) {
+    public function filter_post_data_wrap (array $data, array $postarr, array|object $unsanitized_postarr, bool $update) {
     
         if ($data['post_type'] != $this->slug) return $data;
 
@@ -529,7 +532,7 @@ abstract class Post_Type extends Singleton {
     
     }
 
-    public function after_insert_wrap ($post_id, $post, $update, $post_before) {
+    public function after_insert_wrap (int $post_id, WP_Post $post, bool $update, ?WP_Post $post_before) {
 
         if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) return;
 
@@ -566,7 +569,7 @@ abstract class Post_Type extends Singleton {
 
     }
 
-    public function after_delete_wrap ($post_id, $post) {
+    public function after_delete_wrap (int $post_id, WP_Post $post) {
     
         if ($post->post_type != $this->slug) return;
 
@@ -576,25 +579,25 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    public function register_query_vars_wrap ($vars) {
+    public function register_query_vars_wrap (array $vars) {
 
         return $this->call_model('register_query_vars', $vars, [$vars]);
 
     }
 
-    public function register_query_vars ($vars) {
+    public function register_query_vars (array $vars) {
 
         return $vars;
 
     }
 
-    protected function is_main_query ($query) {
+    protected function is_main_query (WP_Query $query) {
 
         return ((!is_admin() || wp_doing_ajax()) && $query->is_main_query() && Query_Vars::compare_post_type($query, $this->slug));
 
     }
 
-    protected function is_main_admin_query ($query) {
+    protected function is_main_admin_query (WP_Query $query) {
 
         return ($this->is_admin_archive() && $query->is_main_query() && isset($query->query_vars['post_type']) && ($query->query_vars['post_type'] == $this->slug));
 

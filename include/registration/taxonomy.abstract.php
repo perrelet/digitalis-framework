@@ -44,19 +44,19 @@ abstract class Taxonomy extends Singleton {
 
     }
 
-    protected function get_args ($args) {           // You might override this...
+    protected function get_args (array $args) {           // You might override this...
 
         return $args;
 
     }
 
-    protected function get_rewrite ($rewrite) {     // and this...
+    protected function get_rewrite (array|false $rewrite) {     // and this...
 
         return $rewrite;
 
     }
 
-    protected function get_labels ($labels) {       // ...and this.
+    protected function get_labels (array $labels) {       // ...and this.
 
         return $labels;
 

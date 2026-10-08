@@ -10,7 +10,7 @@ abstract class User_Role extends Singleton {
 
     protected $_caps;
 
-    protected function filter_caps (&$caps) {
+    protected function filter_caps (array &$caps) {
     
         // ...
     

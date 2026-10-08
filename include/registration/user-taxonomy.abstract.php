@@ -32,7 +32,7 @@ class User_Taxonomy extends Taxonomy {
 
     }
 
-    public function taxonomy_columns ($columns) {
+    public function taxonomy_columns (array $columns) {
 
         unset($columns['posts']);
 
@@ -42,7 +42,7 @@ class User_Taxonomy extends Taxonomy {
 
     }
 
-    public function taxonomy_column ($output, $column, $term_id) {
+    public function taxonomy_column (?string $output, string $column, int $term_id) {
 
         switch ($column) {
 
@@ -59,7 +59,7 @@ class User_Taxonomy extends Taxonomy {
 
     }
 
-    public function highlight_menu_item ($parent_file) {
+    public function highlight_menu_item (?string $parent_file) {
 
         global $submenu_file;
         if ($submenu_file == "edit-tags.php?taxonomy={$this->slug}") $parent_file = 'users.php';
