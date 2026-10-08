@@ -39,11 +39,27 @@ class Attributes implements \ArrayAccess {
 
             $escaped = $this->sanitize_value($name, $value);
 
-            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . $this->escape_for_output($value) . $this->quote;
+            if ($escaped === '' && $value !== '') { // A URL esc_url_raw() rejected (a disallowed scheme): no attribute, not a self-link.
+
+                Strict::fail(static::class, "attribute '{$name}' has a URL esc_url_raw() rejects: " . (strlen($value) > 40 ? substr($value, 0, 37) . '...' : $value), 'Pass an http(s), mailto, tel or other allowed-protocol URL; javascript: and data: are refused.');
+                continue;
+
+            }
+
+            $out[] = ($value === '') ? $name : $name . '=' . $this->quote . $this->escape_for_output($escaped) . $this->quote;
 
         }
 
         return $this->string = implode(' ', $out);
+
+    }
+
+    // A class list is always a list of tokens: a string (or Stringable) splits on whitespace, a nested list is flattened.
+    protected function class_tokens (mixed $value) {
+
+        if (is_array($value)) return array_merge([], ...array_map(fn ($v) => $this->class_tokens($v), array_values($value)));
+
+        return array_values(array_filter(preg_split('/\s+/', trim((string) $value)))); // '' and '0' go, as generate_classes() drops them
 
     }
 
@@ -55,7 +71,7 @@ class Attributes implements \ArrayAccess {
         if (is_array($value)) {
 
             $value = match (true) {
-                $name === 'class'               => $this->generate_classes($value),
+                $name === 'class'               => $this->generate_classes($value) ?: null, // no tokens, no attribute
                 $name === 'style'               => $this->generate_css($value),
                 str_starts_with($name, 'data-') => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 default                         => implode(' ', array_map('strval', $value)),
@@ -88,8 +104,7 @@ class Attributes implements \ArrayAccess {
 
     protected function generate_classes (array $classes) {
 
-        $tokens = array_unique(array_filter(array_map('trim', array_map('strval', $classes))));
-        return implode(' ', $tokens);
+        return implode(' ', array_unique($classes)); // the list is tokenised on every write path (set_attr, add_class)
 
     }
 
@@ -150,6 +165,7 @@ class Attributes implements \ArrayAccess {
         } else {
 
             if (is_int($attr)) [$attr, $value] = [(string) $value, true]; // A list entry is a boolean attribute: ['required'].
+            if ($attr === 'class' && !is_bool($value) && $value !== null) $value = $this->class_tokens($value); // add_class() and has_class() work on a list; null/false still mean "omit", a list entry stays boolean
 
             if ((string) $attr !== '') $this->attrs[$attr] = $value;
 
@@ -216,32 +232,21 @@ class Attributes implements \ArrayAccess {
 
     public function has_class (mixed $class) {
 
-        if (!isset($this->attrs['class'])) return false;
-        return in_array($class, $this->attrs['class']);
+        if (!isset($this->attrs['class']) || !is_array($this->attrs['class'])) return false; // unset, or a boolean `class` entry
+
+        $wanted = $this->class_tokens($class); // 'a b' asks for both tokens
+
+        return $wanted && !array_diff($wanted, $this->attrs['class']);
 
     }
 
     public function add_class (mixed ...$classes) {
 
-        foreach ($classes as $class) {
+        $this->string = null;
 
-            if (is_array($class)) {
+        if (isset($this->attrs['class']) && !is_array($this->attrs['class'])) $this->attrs['class'] = []; // only a boolean `class` entry can be a non-list here; it has no tokens
 
-                call_user_func_array([$this, 'add_class'], $class);
-
-            } else {
-
-                if ($class) {
-
-                    $this->string = null;
-                    if (!isset($this->attrs['class'])) $this->attrs['class'] = [];
-                    $this->attrs['class'][] = $class;
-
-                }
-
-            }
-
-        }
+        foreach ($this->class_tokens($classes) as $class) $this->attrs['class'][] = $class;
 
         return $this;
 

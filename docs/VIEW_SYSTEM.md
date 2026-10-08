@@ -972,7 +972,7 @@ The `Attributes` class manages HTML attributes with automatic escaping, type nor
 | Feature | Description |
 |---------|-------------|
 | **ArrayAccess** | Access attributes via `$attrs['name']` |
-| **Auto-escaping** | Values escaped with `esc_attr()` (URL attributes with `esc_url_raw()`); names must be valid attribute names or they are dropped (strict throws) |
+| **Auto-escaping** | Values escaped with `esc_attr()`; `href`, `src`, `action`, `formaction` and `poster` go through `esc_url_raw()` first and a value it rejects drops the attribute; names must be valid attribute names or they are dropped (strict throws) |
 | **Type normalization** | Arrays converted to appropriate formats |
 | **Output caching** | String output cached for performance |
 
@@ -1028,7 +1028,7 @@ echo "<div {$attrs}>";  // __toString has no leading space; Element::open() adds
 $array = $attrs->get_attrs();
 
 // Specific attribute
-$class = $attrs['class'];
+$class = $attrs['class'];   // a list; a string you set is split on whitespace
 $id = $attrs->get_id();
 ```
 
