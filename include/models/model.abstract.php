@@ -215,7 +215,7 @@ class Model extends Factory {
 
         $instances = [];
 
-        if ($ids) foreach ($ids as $id) if ($instance = static::get_instance($id)) $instances[] = $instance;
+        if (is_iterable($ids)) foreach ($ids as $id) if ($instance = static::get_instance($id)) $instances[] = $instance;
 
         return $instances;
 
