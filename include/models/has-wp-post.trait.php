@@ -570,7 +570,7 @@ trait Has_WP_Post {
 
     public function get_comment_count_text (string|false $zero = false, string|false $one = false, string|false $more = false) {
 
-        return get_comment_count($zero, $one, $more, $this->wp_post);
+        return get_comments_number_text($zero, $one, $more, $this->wp_post);
 
     }
 
