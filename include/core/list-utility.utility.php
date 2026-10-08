@@ -34,10 +34,10 @@ class List_Utility extends Utility {
         if (!is_array($primary_keys))   $primary_keys = [$primary_keys];
         if (!is_array($primary_labels)) $primary_labels = [$primary_labels];
 
-        if ($primary_keys)      $list = array_merge($list, static::lookup($primary_keys));
-        if ($primary_labels)    $list = array_merge($list, static::reverse_lookup($primary_labels));
+        if ($primary_keys)      $list += static::lookup($primary_keys);
+        if ($primary_labels)    $list += static::reverse_lookup($primary_labels);
 
-        $list = array_merge($list, static::$list);
+        $list += static::$list;
 
         return $list;
 
