@@ -319,24 +319,28 @@ abstract class Post_Type extends Singleton
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$slug` | `string` | `''` | Post type slug |
-| `$singular` | `string` | `''` | Singular label |
+| `$slug` | `string` | `'post-type'` | Post type slug |
+| `$archive` | `string\|false` | `'post-types'` | Archive slug: `has_archive` and the rewrite slug; `false` for no archive |
+| `$icon` | `string` | `'dashicons-format-aside'` | Menu icon |
 | `$text_domain` | `string` | `'default'` | Domain for `$singular` and `$plural`; the scaffolding around them uses `lattice` |
-| `$plural` | `string` | `''` | Plural label |
-| `$icon` | `string` | `'dashicons-admin-post'` | Menu icon |
-| `$position` | `int` | `25` | Menu position |
-| `$archive` | `bool` | `true` | Has archive page |
-| `$public` | `bool` | `true` | Is publicly queryable |
-| `$hierarchical` | `bool` | `false` | Supports parent/child |
-| `$supports` | `array` | `['title', 'editor']` | Feature support |
+| `$singular` | `string` | `'Post Type'` | Singular label |
+| `$plural` | `?string` | `null` | Plural label; `null` derives `$singular . 's'` |
+| `$position` | `int` | `5` | Menu position |
+| `$model_class` | `string\|false` | `false` | Model class for `call_model()` and `instantiate_model()` |
+| `$register` | `bool` | `true` | Register the post type on `init` |
+| `$filters` | `array` | `[]` | Admin list filters: `key => 'taxonomy'` or `'acf'`, or `key => ['type' => ..., 'args' => [...]]`; a bare `'publish_month'` value (`$filters = ['publish_month']`) keeps WordPress's months dropdown, which is disabled otherwise. Deprecated with the admin-table block: use `Posts_Table` (ADMIN.md) |
+
+Supports, visibility and hierarchy are not properties: `get_supports()` and `get_args()` return them.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `get_args()` | `protected get_args(array $args): array` | Override to change the default registration args |
-| `get_rewrite()` | `protected get_rewrite(array|false $rewrite): array|false` | Override to change the default rewrite args; `false` disables rewrites, as `register_post_type()` allows |
-| `get_supports()` | `protected get_supports(array|false $supports): array|false` | Override to change the default supports; `false` registers none |
+| `get_rewrite()` | `protected get_rewrite(array\|false $rewrite): array\|false` | Override to change the default rewrite args; `false` disables rewrites, as `register_post_type()` allows |
+| `get_supports()` | `protected get_supports(array\|false $supports): array\|false` | Override to change the default supports; `false` registers none |
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
+| `get_filters()` | `protected get_filters(): array` | Override to compute `$filters` |
+| `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls `$method` on `$model_class`, then on the post type's class, then on the instance; `$default` when none has it |
 | `columns()` | `public columns(array $columns): array` | Modifies admin columns |
 | `column()` | `public column(string $column, int $post_id): void` | Renders column content |
 | `get_query_vars()` | `public get_query_vars(): array` | Returns custom query vars |
@@ -363,7 +367,7 @@ abstract class Taxonomy extends Singleton
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `get_args()` | `protected get_args(array $args): array` | Override to change the default registration args |
-| `get_rewrite()` | `protected get_rewrite(array|false $rewrite): array|false` | Override to change the default rewrite args; `false` disables rewrites |
+| `get_rewrite()` | `protected get_rewrite(array\|false $rewrite): array\|false` | Override to change the default rewrite args; `false` disables rewrites |
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 
 ---
@@ -385,11 +389,11 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `__construct()` | `public __construct(array|WP_Query $query_vars = [])` | From a vars array or a `WP_Query` (its `query_vars`); `meta_query` and `tax_query` default to `[]`. |
-| `get()` | `public get(int|string $key, mixed $default = null): mixed` | Get a var. |
-| `set()` | `public set(int|string $key, mixed $value): static` | Set a var. |
-| `has()` | `public has(int|string $key): bool` | `array_key_exists` check — detects `false`, `0`, `null`. |
-| `remove()` | `public remove(int|string $key): static` | Unset a var. |
+| `__construct()` | `public __construct(array\|WP_Query $query_vars = [])` | From a vars array or a `WP_Query` (its `query_vars`); `meta_query` and `tax_query` default to `[]`. |
+| `get()` | `public get(int\|string $key, mixed $default = null): mixed` | Get a var. |
+| `set()` | `public set(int\|string $key, mixed $value): static` | Set a var. |
+| `has()` | `public has(int\|string $key): bool` | `array_key_exists` check — detects `false`, `0`, `null`. |
+| `remove()` | `public remove(int\|string $key): static` | Unset a var. |
 | `get_var / set_var / has_var / unset_var` | — | Aliases for the above. |
 | `get_vars()` | `public get_vars(): array` | Return all vars as array. |
 | `to_array()` | `public to_array(): array` | Alias for `get_vars()`. |
@@ -401,21 +405,21 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 | `clear_meta_query()` | `public clear_meta_query(): static` | Reset `meta_query` to `[]`. |
 | `clear_tax_query()` | `public clear_tax_query(): static` | Reset `tax_query` to `[]`. |
 | `merge()` | `public merge(array $query, bool $allow_empty = false): static` | Smart merge. Skips `null`, `''`, `[]` unless `$allow_empty`. |
-| `merge_var()` | `public merge_var(int|string $key, mixed $value, bool $allow_empty = false): static` | Merge a single var with WP-aware logic for `post_type`, `post_status`, arrays. |
+| `merge_var()` | `public merge_var(int\|string $key, mixed $value, bool $allow_empty = false): static` | Merge a single var with WP-aware logic for `post_type`, `post_status`, arrays. |
 | `overwrite()` | `public overwrite(array $query): static` | Unconditional set for each key. |
-| `find_path()` | `public find_path(mixed $haystack, mixed $match, int|string $key = 'key', string $compare = '='): ?array` | Return path array to a nested clause, or `null`. |
-| `find_meta_query_path()` | `public find_meta_query_path(mixed $match, int|string $key = 'key', string $compare = '='): ?array` | Find path in `meta_query`. |
-| `find_tax_query_path()` | `public find_tax_query_path(mixed $match, int|string $key = 'taxonomy', string $compare = '='): ?array` | Find path in `tax_query`. |
+| `find_path()` | `public find_path(mixed $haystack, mixed $match, int\|string $key = 'key', string $compare = '='): ?array` | Return path array to a nested clause, or `null`. |
+| `find_meta_query_path()` | `public find_meta_query_path(mixed $match, int\|string $key = 'key', string $compare = '='): ?array` | Find path in `meta_query`. |
+| `find_tax_query_path()` | `public find_tax_query_path(mixed $match, int\|string $key = 'taxonomy', string $compare = '='): ?array` | Find path in `tax_query`. |
 | `get_meta_block()` | `public &get_meta_block(array $path): mixed` | Return reference to `meta_query` block at path. |
 | `get_tax_block()` | `public &get_tax_block(array $path): mixed` | Return reference to `tax_query` block at path. |
-| `upsert_meta_query()` | `public upsert_meta_query(mixed $match, array $new_block, int|string $key = 'key', string $compare = '='): static` | Update existing clause or append. |
-| `upsert_tax_query()` | `public upsert_tax_query(mixed $match, array $new_block, int|string $key = 'taxonomy', string $compare = '='): static` | Update existing clause or append. |
+| `upsert_meta_query()` | `public upsert_meta_query(mixed $match, array $new_block, int\|string $key = 'key', string $compare = '='): static` | Update existing clause or append. |
+| `upsert_tax_query()` | `public upsert_tax_query(mixed $match, array $new_block, int\|string $key = 'taxonomy', string $compare = '='): static` | Update existing clause or append. |
 | `get_stamp()` | `public get_stamp(): array` | Return the `digitalis` stamp written by `Query_Manager`, or `[]` when unstamped. |
 | `make_query()` | `public make_query(array $overrides = []): WP_Query` | Produce a bare `WP_Query` with `query_vars` set. No DB call. |
 | `count()` | `public count(): int` | Number of vars set. |
 | `getIterator()` | `public getIterator(): Traversable` | For `foreach`. |
 | `jsonSerialize()` | `public jsonSerialize(): mixed` | For `json_encode()`. |
-| `compare_post_type()` | `static compare_post_type(WP_Query $wp_query, string|array|false $post_type): bool` | True if query targets given post type (handles taxonomy archives, `'any'`, arrays). |
+| `compare_post_type()` | `static compare_post_type(WP_Query $wp_query, string\|array\|false $post_type): bool` | True if query targets given post type (handles taxonomy archives, `'any'`, arrays). |
 | `is_multiple()` | `static is_multiple(?WP_Query $wp_query = null): bool` | True if query is a listing (archive, search, posts page, or Digitalis ajax). Falls back to global `$wp_query`. |
 
 ---

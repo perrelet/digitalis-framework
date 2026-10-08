@@ -28,7 +28,7 @@ abstract class Post_Type extends Singleton {
     protected $model_class  = false;
     protected $register     = true;
 
-    protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, args => [ ... ], ...] || 'months_dropdown'
+    protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, args => [ ... ], ...] || 'publish_month' (keeps the months dropdown)
 
     //
 
