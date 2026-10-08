@@ -216,7 +216,7 @@ class Route extends Factory {
             $_POST['_wpnonce']          ?? null,
         ];
 
-        if ($request instanceof WP_REST_Request) $candidates[] = $request->get_param('_wpnonce');
+        if ($request) $candidates[] = $request->get_param('_wpnonce');
 
         $candidates = array_filter($candidates, fn ($nonce) => is_string($nonce) && ($nonce !== ''));
 
