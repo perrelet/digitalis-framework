@@ -198,7 +198,7 @@ class Query_Profile extends Factory {
 
     protected function is_multiple (WP_Query $wp_query) {
 
-        return (bool) $this->get_stamp($wp_query)['multiple'] ?? null;
+        return (bool) ($this->get_stamp($wp_query)['multiple'] ?? false);
 
     }
 
