@@ -351,13 +351,13 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     public function __set ($key, $value) {
 
-        return $this->set($key, $value);
+        $this->set($key, $value);
 
     }
 
     public function __unset ($key) {
 
-        return $this->remove($key);
+        $this->remove($key);
 
     }
 
