@@ -455,10 +455,11 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
     public static function is_multiple (?WP_Query $wp_query = null) {
 
         if (is_null($wp_query)) global $wp_query;
+        if (!($wp_query instanceof WP_Query)) return false;
 
         if ((bool) $wp_query->get(Post_Type::AJAX_Flag)) return true;
 
-        return $wp_query && ($wp_query->is_archive() || $wp_query->is_search() || $wp_query->is_posts_page);
+        return $wp_query->is_archive() || $wp_query->is_search() || $wp_query->is_posts_page;
     
     }
 

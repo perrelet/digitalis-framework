@@ -932,7 +932,7 @@ $qv->to_array();                       // Export to array
 
 // Static utilities
 Query_Vars::compare_post_type($wp_query, $slug);
-Query_Vars::is_multiple($wp_query);
+Query_Vars::is_multiple($wp_query);    // Listing query? No argument reads the global; false when there is none
 ```
 
 ### Dependency Injection

@@ -420,7 +420,7 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 | `getIterator()` | `public getIterator(): Traversable` | For `foreach`. |
 | `jsonSerialize()` | `public jsonSerialize(): mixed` | For `json_encode()`. |
 | `compare_post_type()` | `static compare_post_type(WP_Query $wp_query, string\|array\|false $post_type): bool` | True if query targets given post type (handles taxonomy archives, `'any'`, arrays). |
-| `is_multiple()` | `static is_multiple(?WP_Query $wp_query = null): bool` | True if query is a listing (archive, search, posts page, or Digitalis ajax). Falls back to global `$wp_query`. |
+| `is_multiple()` | `static is_multiple(?WP_Query $wp_query = null): bool` | True if query is a listing (archive, search, posts page, or Digitalis ajax). Falls back to global `$wp_query`; `false` when there is none. |
 
 ---
 
