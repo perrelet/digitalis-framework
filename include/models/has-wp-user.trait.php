@@ -57,7 +57,7 @@ trait Has_WP_User {
 
     public function get_wp_model_id () {
 
-        return $this->wp_user->ID;
+        return ($wp_user = $this->get_wp_user()) ? $wp_user->ID : null;
 
     }
 
@@ -83,7 +83,7 @@ trait Has_WP_User {
 
     public function get_roles () {
 
-        return (array) $this->wp_user->roles;
+        return ($wp_user = $this->get_wp_user()) ? (array) $wp_user->roles : [];
 
     }
 

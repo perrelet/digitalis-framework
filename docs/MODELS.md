@@ -484,8 +484,8 @@ class Account extends User {
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `get_role()` | `string` | Primary role |
-| `get_roles()` | `array` | All roles |
+| `get_role()` | `?string` | Primary role; `null` with no roles |
+| `get_roles()` | `array` | All roles; `[]` when the user lookup failed |
 | `has_role($role)` | `bool` | Has specific role |
 | `set_roles($roles)` | `$this` | Replace roles |
 | `add_role($role)` | `$this` | Add a role |
