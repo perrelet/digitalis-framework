@@ -13,6 +13,7 @@ Reference for utility classes, traits, and helper patterns.
 - [Dependency Injection](#dependency-injection)
 - [Is_Stashable Trait](#is_stashable-trait)
 - [Autoloader Trait](#autoloader-trait)
+- [Plugins](#plugins)
 - [Quick Reference](#quick-reference)
 
 ---
@@ -852,6 +853,21 @@ class My_Plugin extends App {
 
 ---
 
+## Plugins
+
+Which plugins WordPress is loading on this request, asked once per request. `Plugins::is_active()` serves both the autoloader's `~dir/` rule and `Plugin_Integration::$plugin`.
+
+```php
+Plugins::is_active('woocommerce');                  // by directory
+Plugins::is_active('woocommerce/woocommerce.php');  // by basename
+Plugins::is_active('hello.php');                    // a single-file plugin has no directory
+Plugins::active();                                  // the basenames, e.g. ['woocommerce/woocommerce.php', 'hello.php']
+```
+
+The list is WordPress's own: `wp_get_active_and_valid_plugins()` plus `wp_get_active_network_plugins()` on multisite, so a plugin that is active in the option but deleted, paused in recovery mode, or any plugin during `wp_installing()` is inactive here as it is for WordPress (`is_plugin_active()` says yes to those). The list is computed on first use and kept for the request, per blog (after `switch_to_blog()` it is that blog's option, what `is_plugin_active()` answered there, not what this request loaded) and per recovery-mode state (a paused plugin is skipped only once recovery mode has initialised, which an mu-plugin's first call precedes, so the list is read again after that), and never while `wp_installing()`, when WordPress loads nothing: a plugin activated mid-request is seen on the next one, which is when WordPress loads it. Forward slashes; a trailing slash never matches.
+
+---
+
 ## Quick Reference
 
 ### Utility Classes
@@ -862,6 +878,7 @@ class My_Plugin extends App {
 | `List_Utility` | Static lookup lists / enums |
 | `Log` | File-based logger with paginated reading |
 | `Query_Vars` | Fluent WP_Query args builder |
+| `Plugins` | Which plugins are loading on this request, by basename or directory, once per request |
 
 
 ### Traits

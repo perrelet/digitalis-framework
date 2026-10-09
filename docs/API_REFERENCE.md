@@ -975,6 +975,15 @@ Array/list operations.
 | `group_by()` | `static group_by(array $list, string $key): array` | Groups by key |
 | `filter()` | `static filter(array $list, callable $callback): array` | Filters list |
 
+### `Digitalis\Plugins`
+
+Which plugins WordPress is loading on this request (UTILITIES.md).
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `active()` | `static active(): array` | Basenames of the plugins loading on this request, computed once per request |
+| `is_active()` | `static is_active(string $plugin): bool` | True for an active plugin's basename (`woocommerce/woocommerce.php`) or its directory (`woocommerce`) |
+
 ---
 
 ## Hooks Reference

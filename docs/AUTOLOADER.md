@@ -66,7 +66,7 @@ Run `wp lattice classmap` after deploying; a map that no longer matches the file
 ### `~dirname/` loads only when the matching plugin is active
 
 > **Wrong assumption:** the leading tilde is naming flavour; the directory always loads.
-> **Reality:** The autoloader strips the `~` and matches the remainder against the directory names of the plugins WordPress itself is loading on this request (`wp_get_active_and_valid_plugins()`, plus `wp_get_active_network_plugins()` on multisite; no directory scan, and a plugin that is active but deleted, paused in recovery mode, or any plugin during `wp_installing()` counts as inactive, as it does for WordPress). `~woocommerce/` loads only if WooCommerce is active; if the plugin is absent or deactivated, the entire directory is silently ignored — no fatal, no missing-class noise.
+> **Reality:** The autoloader strips the `~` and asks `Plugins::is_active()` (UTILITIES.md), which matches the remainder against the directory names of the plugins WordPress itself is loading on this request (`wp_get_active_and_valid_plugins()`, plus `wp_get_active_network_plugins()` on multisite, read once per request; no directory scan, and a plugin that is active but deleted, paused in recovery mode, or any plugin during `wp_installing()` counts as inactive, as it does for WordPress). `~woocommerce/` loads only if WooCommerce is active; if the plugin is absent or deactivated, the entire directory is silently ignored — no fatal, no missing-class noise.
 
 ### `hello()` and `static_init()` fire after include — no instance required
 
@@ -234,14 +234,21 @@ include/
 // Pseudocode from Autoloader trait
 $plugin_dir = substr(basename($dir), 1);  // Remove ~
 
+if (Plugins::is_active($plugin_dir)) {
+    // Load directory
+}
+```
+
+```php
+// Pseudocode from Plugins::is_active($plugin); the list is computed once per request (per blog, per recovery-mode state, never while installing)
 $plugins = wp_get_active_and_valid_plugins();                              // absolute paths of the plugins loading on this request
 if (is_multisite()) $plugins = array_merge($plugins, wp_get_active_network_plugins());
 
-foreach ($plugins as $plugin_file) {
-    if (dirname(plugin_basename($plugin_file)) === $plugin_dir) {
-        // Load directory
-    }
+foreach (array_map('plugin_basename', $plugins) as $basename) {           // 'woocommerce/woocommerce.php'; 'hello.php' for a single-file plugin
+    if ($plugin === $basename) return true;                                // a basename matches
+    if (($dir = dirname($basename)) !== '.' && $plugin === $dir) return true;  // or its directory; a single-file plugin has none
 }
+return false;
 ```
 
 **Benefits:**

@@ -21,6 +21,7 @@ if (str_starts_with(wp_normalize_path(LATTICE_PATH), wp_normalize_path(trailings
 // Bootstrap: what autoload() itself reaches for before the sweep can run.
 require LATTICE_PATH . 'include/core/utility.abstract.php';
 require LATTICE_PATH . 'include/core/hook.utility.php';
+require LATTICE_PATH . 'include/core/plugins.utility.php';
 require LATTICE_PATH . 'include/core/autoloader.trait.php';
 require LATTICE_PATH . 'include/core/classmap.final.php';
 require LATTICE_PATH . 'include/core/strict.final.php';

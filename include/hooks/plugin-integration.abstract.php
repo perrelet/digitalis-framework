@@ -8,7 +8,7 @@ abstract class Plugin_Integration extends Integration {
 
     public static function instance_condition () {
     
-        return is_plugin_active(static::$plugin);
+        return Plugins::is_active((string) static::$plugin);
     
     }
 

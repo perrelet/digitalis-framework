@@ -123,12 +123,7 @@ trait Autoloader {
 
     protected function plugin_is_active (string $plugin_dir) {
 
-        $plugins = wp_get_active_and_valid_plugins();
-        if (is_multisite()) $plugins = array_merge($plugins, wp_get_active_network_plugins());
-
-        foreach ($plugins as $plugin_file) if (dirname(plugin_basename($plugin_file)) === $plugin_dir) return true;
-
-        return false;
+        return Plugins::is_active($plugin_dir);
 
     }
 
