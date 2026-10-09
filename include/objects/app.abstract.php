@@ -20,7 +20,14 @@ abstract class App extends Factory {
         $this->path       = plugin_dir_path($this->reflection->getFileName());
         $this->url        = plugin_dir_url($this->path);
 
-        add_action('plugins_loaded', [$this, 'boot']);
+        add_action('plugins_loaded', [$this, 'boot'], $this->get_boot_priority());
+
+    }
+
+    // Boots after construction, once get_instance() has cached the app.
+    protected function get_boot_priority () : int {
+
+        return doing_action('plugins_loaded') ? $GLOBALS['wp_filter']['plugins_loaded']->current_priority() + 1 : 10;
 
     }
 
