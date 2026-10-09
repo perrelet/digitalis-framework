@@ -340,7 +340,7 @@ Supports, visibility and hierarchy are not properties: `get_supports()` and `get
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
 | `get_filters()` | `protected get_filters(): array` | Override to compute `$filters` |
-| `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls `$method` on `$model_class`, then on the post type's class, then on the instance; `$default` when none has it |
+| `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls static `$method` on `$model_class`, then static on the post type's class, then on the instance; `$default` when none has it |
 | `columns()` | `public columns(array $columns): array` | Modifies admin columns |
 | `column()` | `public column(string $column, int $post_id): void` | Renders column content |
 | `get_query_vars()` | `public get_query_vars(): array` | Returns custom query vars |
@@ -581,12 +581,12 @@ Invoice_Route::get_instance();
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `$namespace` | `string` | `'digitalis/v1'` | REST namespace including version. |
-| `$route` | `string` | `'route'` | Route path (WP regex syntax). |
-| `$format` | `string` | `'json'` | Default URL format for `get_url()`. Set to `'html'` for HTML REST routes. Auto-detects from `$view` if falsy. |
+| `$route` | `?string` | `null` | Route path (WP regex syntax); `null` registers nothing, for base classes. |
+| `$format` | `?string` | `null` | Default URL format for `get_url()`; `null` resolves to `'html'` when `$view` is set, else `'json'`. Set to `'html'` for an HTML REST route without a `$view`. |
 | `$wp_query` | `bool` | `false` | If true, emulates a normal WP query before callbacks run. |
 | `$handler` | `string` | `'handle'` | Method name to call as the primary handler. Defaults to `handle()` which delegates to `callback()`. |
 | `$view` | `string\|false` | `false` | View class to render. If set, `callback_wrap()` renders this view and ignores `callback()` return value. |
-| `$require_nonce` | `bool` | `false` | If true, `_wpnonce` param or `Nonce` header is verified before `callback_wrap()` runs. |
+| `$require_nonce` | `bool` | `false` | If true, a `wp_rest` nonce is verified before `callback_wrap()` runs, collected from the `X-WP-Nonce` and `Nonce` headers, `_wpnonce` in the query string, the body and the request params, in that order. |
 | `$definition` | `array` | `[]` | Merged into the args passed to `register_rest_route()`. |
 | `$args` | `array` | `[]` | Route parameter definitions. Supports `class` key for dependency injection. |
 
@@ -596,7 +596,7 @@ Invoice_Route::get_instance();
 | `get_definition()` | `public get_definition(): array` | Returns merged route definition (cached). |
 | `get_args()` | `public get_args(): array` | Returns `$args`. |
 | `get_namespace()` | `public get_namespace(): string` | Returns `$namespace`. |
-| `get_route()` | `public get_route(): string` | Returns `$route`. |
+| `get_route()` | `public get_route(): ?string` | Returns `$route`. |
 | `get_format()` | `public get_format(): string` | Returns `$format`, auto-detecting `'html'` if `$view` is set. |
 | `get_handler()` | `public get_handler(): string` | Returns `$handler`. |
 | `get_view()` | `public get_view(): string\|false` | Returns `$view`. |
@@ -608,7 +608,7 @@ Invoice_Route::get_instance();
 | `get_url()` | `public get_url(array $query_params = [], ?bool $nonce = null, ?string $format = null): string` | Build URL via `REST_URL_Builder`. Respects `$require_nonce` and `$format` by default. |
 | `get_nonce()` | `public get_nonce(): string` | Returns (cached) `wp_rest` nonce. |
 | `nonce_url()` | `public nonce_url(string $url): string` | Appends `_wpnonce` param to URL. |
-| `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates `_wpnonce` param or `Nonce` header. |
+| `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates the first valid nonce among the candidates `collect_nonce_candidates()` gathers (headers, query string, body, request param); 401 with none, 403 with none valid. |
 | `respond()` | `protected respond(mixed $response): WP_REST_Response` | Wraps response in `rest_ensure_response()`. |
 | `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request matches this route. |
 | `render_view()` | `public render_view(string $view, array $params): string` | Calls `View::render($params, false)`. |
