@@ -428,7 +428,7 @@ public function on_start(): void                // optional; called before first
 
 ```php
 protected $slug = 'my-shortcode';  // [my-shortcode] tag
-protected $view = My_View::class;  // View class; its $defaults become the shortcode atts
+protected $view = My_View::class;  // View class name (not an instance); its $defaults become the shortcode atts
 // render() is handled automatically — no override needed
 ```
 
