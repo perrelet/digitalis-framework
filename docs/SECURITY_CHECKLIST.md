@@ -132,7 +132,7 @@ var message = '<?php echo esc_js($message); ?>';
 
 ### In the framework
 
-`Attributes` escapes every value and validates every name; `Element` validates tags; the framework's own templates escape their attribute positions and JSON-encode what they write into scripts. Content and label slots are HTML by contract: escape user data before it becomes a param. `View::include_template()` extracts params with `EXTR_SKIP` behind a prefixed local, so no param can redirect the template include. See [VIEW_SYSTEM.md](./VIEW_SYSTEM.md#what-the-framework-escapes).
+`Attributes` escapes every value and validates every name; `Element` validates tags; the framework's own templates and the admin list filters `Post_Type::render_filters()` prints escape their attribute positions (the filters' option labels are text), and the templates JSON-encode what they write into scripts. Content and label slots are HTML by contract: escape user data before it becomes a param. `View::include_template()` extracts params with `EXTR_SKIP` behind a prefixed local, so no param can redirect the template include. See [VIEW_SYSTEM.md](./VIEW_SYSTEM.md#what-the-framework-escapes).
 
 ### Escaping Checklist
 

@@ -476,7 +476,8 @@ abstract class Post_Type extends Singleton {
 
                 case 'acf':
 
-                    $current_value = $_REQUEST['meta'][$key] ?? false;
+                    $current_value = wp_unslash($_REQUEST['meta'][$key] ?? false);
+                    if (!is_scalar($current_value)) $current_value = false;
 
                     $post_ids = (new \WP_Query([
                         'post_type'         => $this->slug,
@@ -492,14 +493,14 @@ abstract class Post_Type extends Singleton {
 
                     if (isset($field['choices']) && ($options = $field['choices'])) {
 
-                        echo "<select name='meta[{$filter['name']}]'>";
+                        echo "<select name='meta[" . esc_attr($filter['name']) . "]'>";
 
-                            echo "<option value='0'>Filter by {$field['label']}</option>";
+                            echo "<option value='0'>Filter by " . esc_html($field['label']) . "</option>";
 
                             foreach ($options as $value => $option_label) {
 
                                 if ($filter['args']['hide_falsy'] && !$value) continue;
-                                echo "<option value='{$value}' " . selected($value, $current_value, false) . ">{$option_label}</option>";
+                                echo "<option value='" . esc_attr($value) . "' " . selected($value, $current_value, false) . ">" . esc_html($option_label) . "</option>";
 
                             }
 
@@ -509,7 +510,7 @@ abstract class Post_Type extends Singleton {
 
                         $type = is_null($filter['args']['type']) ? 'text' : $filter['args']['type'];
 
-                        echo "<input type='{$type}' name='meta[{$filter['name']}]' value='{$current_value}' placeholder='Filter by {$label}'>";
+                        echo "<input type='" . esc_attr($type) . "' name='meta[" . esc_attr($filter['name']) . "]' value='" . esc_attr($current_value) . "' placeholder='Filter by " . esc_attr($label) . "'>";
 
                     }
 
