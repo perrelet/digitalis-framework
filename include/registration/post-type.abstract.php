@@ -28,7 +28,7 @@ abstract class Post_Type extends Singleton {
     protected $model_class  = false;
     protected $register     = true;
 
-    protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, args => [ ... ], ...] || 'publish_month' (keeps the months dropdown)
+    protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, name => $name, args => [ ... ], ...] || 'publish_month' (keeps the months dropdown)
 
     //
 
@@ -366,7 +366,7 @@ abstract class Post_Type extends Singleton {
                         'value_field'       => 'term_id',
                         'hide_empty'        => true,
                         'hide_if_empty'     => true,
-                        'selected'          => $_REQUEST['tax'][$key] ?? false,
+                        'selected'          => $_REQUEST['tax'][$filter['name']] ?? false,
                         'show_option_none'  => "Filter by {$taxonomy->labels->singular_name}",
                         'option_none_value' => 0,
                     ]);
@@ -404,7 +404,7 @@ abstract class Post_Type extends Singleton {
 
                 case 'taxonomy':
 
-                    if ($value = $_REQUEST['tax'][$key] ?? false) {
+                    if ($value = $_REQUEST['tax'][$filter['name']] ?? false) {
 
                         if (is_callable($filter['args']['value_callback'])) $value = call_user_func($filter['args']['value_callback'], $value);
 
@@ -426,7 +426,7 @@ abstract class Post_Type extends Singleton {
 
                 case 'acf':
 
-                    if ($value = $_REQUEST['meta'][$key] ?? false) {
+                    if ($value = $_REQUEST['meta'][$filter['name']] ?? false) {
                         
                         if (is_callable($filter['args']['value_callback'])) $value = call_user_func($filter['args']['value_callback'], $value);
 
@@ -476,7 +476,7 @@ abstract class Post_Type extends Singleton {
 
                 case 'acf':
 
-                    $current_value = wp_unslash($_REQUEST['meta'][$key] ?? false);
+                    $current_value = wp_unslash($_REQUEST['meta'][$filter['name']] ?? false);
                     if (!is_scalar($current_value)) $current_value = false;
 
                     $post_ids = (new \WP_Query([

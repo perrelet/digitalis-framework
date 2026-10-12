@@ -328,7 +328,7 @@ abstract class Post_Type extends Singleton
 | `$position` | `int` | `5` | Menu position |
 | `$model_class` | `string\|false` | `false` | Model class for `call_model()` and `instantiate_model()` |
 | `$register` | `bool` | `true` | Register the post type on `init` |
-| `$filters` | `array` | `[]` | Admin list filters: `key => 'taxonomy'` or `'acf'`, or `key => ['type' => ..., 'args' => [...]]`; a bare `'publish_month'` value (`$filters = ['publish_month']`) keeps WordPress's months dropdown, which is disabled otherwise. Deprecated with the admin-table block: use `Posts_Table` (ADMIN.md) |
+| `$filters` | `array` | `[]` | Admin list filters: `key => 'taxonomy'` or `'acf'`, or `key => ['type' => ..., 'name' => ..., 'args' => [...]]`; `name` is the request parameter the control posts under and defaults to the key; a bare `'publish_month'` value (`$filters = ['publish_month']`) keeps WordPress's months dropdown, which is disabled otherwise. Deprecated with the admin-table block: use `Posts_Table` (ADMIN.md) |
 
 Supports, visibility and hierarchy are not properties: `get_supports()` and `get_args()` return them.
 
