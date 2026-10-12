@@ -354,8 +354,16 @@ class Woo_Account_Page extends Factory {
 
             $this->render_before();
 
-            $call = $this->view . '::render';
-            is_callable($call) ? call_user_func($call) : $this->render();
+            $view = $this->view;
+
+            if ($view && (!is_string($view) || !is_subclass_of($view, View::class))) {
+
+                Strict::fail(static::class, '$view must be the class name of a \Lattice\View subclass, ' . (is_string($view) ? "'{$view}'" : (is_object($view) ? 'an instance of ' : '') . get_debug_type($view)) . ' provided.', 'Set $view to the View class name, or leave it unset and override render().');
+                $view = false;
+
+            }
+
+            $view ? call_user_func("{$view}::render") : $this->render();
 
             $this->render_after();
 

@@ -436,14 +436,14 @@ protected $view = My_View::class;  // View class name (not an instance); its $de
 
 ```php
 protected $slug   = 'my-block';        // non-static (Factory reads $this->$property)
-protected $view   = My_View::class;
+protected $view   = My_View::class;    // View class name (not an instance); leave it unset for the inline view()
 protected $block  = ['title' => 'My Block', 'category' => 'common'];
 protected $fields = ['heading' => 'Heading'];   // field name → view param, 1:1
 
 // Override points
 public function get_fields (): array    // computed field config (dynamic choices)
 public function params (&$params)       // computed params; runs before the view renders
-public function view ($params): string  // inline markup when $view is unset
+public function view ($params = []): string  // inline markup when $view is unset
 ```
 
 Override `params()`, not `render()`, for computed params — `render()` owns the

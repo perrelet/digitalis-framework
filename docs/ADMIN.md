@@ -1051,7 +1051,7 @@ class CTA_Block extends ACF_Block {
         'button_url'  => ['label' => 'Button URL', 'type' => 'url'],
     ];
 
-    public function view($params) {
+    public function view($params = []) {
         return "
             <div class='cta-block'>
                 <h2>{$params['heading']}</h2>
@@ -1101,7 +1101,7 @@ resolved nothing would render whatever post the page is currently showing. Use
 | Property | Description |
 |----------|-------------|
 | `$slug` | Block identifier (acf/slug) |
-| `$view` | View class for rendering |
+| `$view` | View class name (not an instance); unset or `false` for the inline `view()` |
 | `$block` | Block registration args |
 | `$fields` | ACF field definitions |
 | `$defaults` | Default values for view params |

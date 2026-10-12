@@ -8,7 +8,7 @@ class ACF_Block extends Factory {
     protected static $cache_property = 'slug';
 
     protected $slug = 'custom-block';
-    protected $view = View::class;
+    protected $view = false;
 
     protected $block    = [
         'title'           => 'Custom Block',
@@ -220,15 +220,16 @@ class ACF_Block extends Factory {
 
         $this->params($params);
 
-        if ($this->view) {
+        $view = $this->view;
 
-            $html = call_user_func("{$this->view}::render", $params, false);
+        if ($view && (!is_string($view) || !is_subclass_of($view, View::class))) {
 
-        } else {
-
-            $html = $this->view($params);
+            Strict::fail(static::class, '$view must be the class name of a \Lattice\View subclass, ' . (is_string($view) ? "'{$view}'" : (is_object($view) ? 'an instance of ' : '') . get_debug_type($view)) . ' provided.', 'Set $view to the View class name, or leave it unset and override view().');
+            $view = false;
 
         }
+
+        $html = $view ? call_user_func("{$view}::render", $params, false) : $this->view($params);
 
         if ($is_preview) {
 
