@@ -597,6 +597,7 @@ Invoice_Route::get_instance();
 | `get_args()` | `public get_args(): array` | Returns `$args`. |
 | `get_namespace()` | `public get_namespace(): string` | Returns `$namespace`. |
 | `get_route()` | `public get_route(): ?string` | Returns `$route`. |
+| `get_rest_path()` | `public get_rest_path(): string` | `/{namespace}/{route}`, the path `get_url()` and `is_this_route()` use; `/{namespace}/` for a route with no `$route`. |
 | `get_format()` | `public get_format(): string` | Returns `$format`, auto-detecting `'html'` if `$view` is set. |
 | `get_handler()` | `public get_handler(): string` | Returns `$handler`. |
 | `get_view()` | `public get_view(): string\|false` | Returns `$view`. |
@@ -610,7 +611,7 @@ Invoice_Route::get_instance();
 | `nonce_url()` | `public nonce_url(string $url): string` | Appends `_wpnonce` param to URL. |
 | `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates the first valid nonce among the candidates `collect_nonce_candidates()` gathers (headers, query string, body, request param); 401 with none, 403 with none valid. |
 | `respond()` | `protected respond(mixed $response): WP_REST_Response` | Wraps response in `rest_ensure_response()`. |
-| `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request matches this route. |
+| `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request matches this route; `false` for a route with no `$route`. |
 | `render_view()` | `public render_view(string $view, array $params): string` | Calls `View::render($params, false)`. |
 | `add_query_params()` | `public add_query_params(string $url, array $query_params = []): string` | Appends query params via `add_query_arg()`. |
 
