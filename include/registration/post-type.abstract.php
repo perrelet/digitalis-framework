@@ -51,7 +51,7 @@ abstract class Post_Type extends Singleton {
         if (method_exists($this, 'columns')) add_filter("manage_{$this->slug}_posts_columns",       [$this, 'columns']);
         if (method_exists($this, 'column'))  add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
 
-        if (!in_array('publish_month', $this->get_filters())) add_filter('disable_months_dropdown', [$this, 'disable_months_dropdown'], 10, 2);
+        if (!in_array('publish_month', $this->get_filters(), true)) add_filter('disable_months_dropdown', [$this, 'disable_months_dropdown'], 10, 2);
         add_action('restrict_manage_posts', [$this, 'render_filters']);
         add_action('pre_get_posts',         [$this, 'admin_controller']);
 
