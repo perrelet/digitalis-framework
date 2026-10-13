@@ -240,7 +240,7 @@ class Route extends Factory {
 
         if (!$candidates) return new WP_Error(
             __NAMESPACE__ . '_rest_missing_nonce',
-            'Missing the `Nonce` header or `_wpnonce` parameter. This endpoint requires a valid nonce.',
+            'Missing the `X-WP-Nonce` or `Nonce` header or the `_wpnonce` parameter. This endpoint requires a valid nonce.',
             ['status' => 401],
         );
 
