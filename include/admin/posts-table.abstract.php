@@ -29,7 +29,6 @@ abstract class Posts_Table extends Screen_Table {
 
         add_action("manage_{$this->post_type}_posts_custom_column", [$this, 'post_column'], $this->priority, 2);
 
-        //if (!in_array('publish_month', $this->get_filters())) add_filter('disable_months_dropdown', [$this, 'disable_months_dropdown'], 10, 2);
         add_action('restrict_manage_posts', [$this, 'render_filters_wrap']);
         add_action('pre_get_posts',         [$this, 'admin_controller']);
     
@@ -75,12 +74,6 @@ abstract class Posts_Table extends Screen_Table {
         $call = [$this, "column_" . str_replace('-', '_', $column)];
 
         static::inject($call, [$post_id]);
-
-    }
-
-    public function disable_months_dropdown ($disable, $post_type) {
-
-        return ($post_type == $this->post_type) ? true : $disable;
 
     }
 

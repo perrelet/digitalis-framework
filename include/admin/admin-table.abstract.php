@@ -6,12 +6,12 @@ use Lattice\Field\Input;
 
 abstract class Admin_Table extends Feature {
 
-    protected $filters = []; // name => type (taxonomy | acf) || name => [type => $type, args => [ ... ], ...] || 'months_dropdown'
+    protected $filters = []; // name => type (taxonomy | acf) || name => [type => $type, args => [ ... ], ...]
     protected $_filters;
 
     public function filters () {
 
-        return []; // name => type (taxonomy | acf) || name => [type => $type, args => [ ... ], ...] || 'months_dropdown'
+        return []; // name => type (taxonomy | acf) || name => [type => $type, args => [ ... ], ...]
 
     }
 
