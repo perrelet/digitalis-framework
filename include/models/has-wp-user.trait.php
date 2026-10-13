@@ -17,7 +17,7 @@ trait Has_WP_User {
 
         if (is_int($data)) {
 
-            $this->set_wp_user(get_user_by('id', $data));
+            if ($wp_user = get_user_by('id', $data)) $this->set_wp_user($wp_user); else $this->wp_user = false;
 
         } else if ($data instanceof WP_User) {
 
