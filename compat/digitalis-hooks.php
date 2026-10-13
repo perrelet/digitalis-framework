@@ -31,6 +31,9 @@ class Deprecated_Hooks {
             // Hooks naming a framework class also answered to the pre-rename namespace.
             if (str_starts_with($path, 'Lattice/')) $names[] = $old . 'Digitalis/' . substr($path, 8);
 
+            // The post-type hooks carried the class with its backslashes (18b25fd); the others had replaced them with slashes.
+            if ($new === 'lattice.post_type') foreach ($names as $legacy) if (($spelling = preg_replace_callback('~^(Digitalis/Post_Type/)(.+)(/[^/]+)$~', fn ($m) => $m[1] . str_replace('/', '\\', $m[2]) . $m[3], $legacy)) !== $legacy) $names[] = $spelling;
+
             return $names;
 
         }
