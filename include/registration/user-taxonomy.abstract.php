@@ -50,12 +50,12 @@ class User_Taxonomy extends Taxonomy {
 
             case 'users':
                 
-                $term = get_term($term_id, $this->slug);
-                if (!($term instanceof WP_Term)) return $output;
+                $wp_term = get_term($term_id, $this->slug);
+                if (!($wp_term instanceof WP_Term)) return $output;
 
                 $url = admin_url("users.php?{$this->slug}={$term_id}");
 
-                return "<a href='{$url}'>{$term->count}</a>";
+                return "<a href='{$url}'>{$wp_term->count}</a>";
 
         }
 
