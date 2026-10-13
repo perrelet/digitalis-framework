@@ -246,21 +246,13 @@ class Query_Manager extends Singleton {
 
     protected function is_multiple (WP_Query $wp_query) {
 
-        if ($this->is_digitalis_ajax($wp_query)) return true;
-    
-        return $wp_query->is_archive() || $wp_query->is_search() || $wp_query->is_posts_page;
-    
+        return Query_Vars::is_multiple($wp_query);
+
     }
 
     protected function is_main (WP_Query $wp_query) {
 
         return $wp_query->is_main_query();
-    
-    }
-
-    protected function is_digitalis_ajax (WP_Query $wp_query) {
-
-        return (bool) $wp_query->get(Post_Type::AJAX_Flag);
     
     }
 
