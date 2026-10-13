@@ -325,7 +325,7 @@ class Route extends Factory {
 
         if ($view = $this->get_view()) {
 
-            if (!is_string($view) || !is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', is_string($view) ? "\$view must be a subclass of \Lattice\View, '{$view}' provided." : "\$view must be the class name of a \Lattice\View subclass, an instance of " . get_debug_type($view) . " provided on " . static::class . "."));
+            if (!is_string($view) || !is_subclass_of($view, View::class)) return $this->respond(new WP_Error('view-error', is_string($view) ? "\$view must be a subclass of \Lattice\View, '{$view}' provided." : "\$view must be the class name of a \Lattice\View subclass, " . (is_object($view) ? 'an instance of ' : '') . get_debug_type($view) . " provided on " . static::class . "."));
 
             $params     = [];
             $definition = $this->get_definition();
