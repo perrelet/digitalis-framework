@@ -318,8 +318,6 @@ class Route extends Factory {
 
         $handler = $this->get_handler();
 
-        if (!method_exists($this, $handler)) return $this->respond(new WP_Error('route-handler-missing', "Handler method '{$handler}' does not exist on " . static::class, ['status' => 500] ));
-
         $result = $this->request_inject($request, $handler);
         if ($result instanceof WP_Error) return $this->respond($result);
 
