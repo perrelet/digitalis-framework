@@ -356,7 +356,7 @@ Framework hooks follow the pattern:
 ```
 digitalis/{component}/{action}
 digitalis/{component}/{class}/{action}
-Digitalis/{Component}/{Class}/{Property}
+lattice.{component}.{class}.{property}
 ```
 
 ### Building Hook Names
@@ -374,19 +374,21 @@ $this->build_hook_name($name);  // 'digitalis.my_feature.action'
 
 ## Framework Hooks
 
+Every framework hook fires under a lowercase, dot-delimited name built by `Hook::name()`: the parts are joined with `.`, a class name's `\` becomes `.`, and the whole is lowercased. A hook that names a class takes the fully qualified class as written, so `Hook::name(['lattice', 'post_type', My_Plugin\Project::class, 'args'])` is `lattice.post_type.my_plugin.project.args`; derive the name from the class, never from the slug.
+
 ### Autoloader Hooks
 
 ```php
 // Filter instantiation for any class
-add_filter('Digitalis/Instantiate/', function($instantiation, $class_name, $path) {
+add_filter('lattice.instantiate', function($instantiation, $class_name, $path) {
     // Return false to prevent instantiation
     // Return 'method_name' to call that method
     // Return true for new ClassName()
     return $instantiation;
 }, 10, 3);
 
-// Filter instantiation for specific class
-add_filter('Digitalis/Instantiate/Digitalis/My_Class', function($instantiation, $path) {
+// Filter instantiation for a specific class (My_Plugin\My_Class)
+add_filter('lattice.instantiate.my_plugin.my_class', function($instantiation, $path) {
     return $instantiation;
 }, 10, 2);
 ```
@@ -394,11 +396,11 @@ add_filter('Digitalis/Instantiate/Digitalis/My_Class', function($instantiation, 
 ### Class Resolution Hook
 
 ```php
-// Modify class name during resolution
-add_filter('Digitalis/Class/Digitalis/My_Class', function($class_name, $data) {
+// Modify the class name Call::get_class_name() resolves (My_Plugin\My_Class)
+add_filter('lattice.class.my_plugin.my_class', function($class_name, $data) {
     // Return different class name
     if ($data['context'] === 'admin') {
-        return 'Digitalis\Admin_My_Class';
+        return 'My_Plugin\Admin_My_Class';
     }
     return $class_name;
 }, 10, 2);
@@ -406,27 +408,29 @@ add_filter('Digitalis/Class/Digitalis/My_Class', function($class_name, $data) {
 
 ### Post Type Hooks
 
+For `My_Plugin\Project`:
+
 ```php
-// Filter post type args
-add_filter('Digitalis/Post_Type/Digitalis\Project/Args', function($args) {
+// Filter the args handed to register_post_type() (after get_args(), the rewrite, supports and labels, and filter_args())
+add_filter('lattice.post_type.my_plugin.project.args', function($args) {
     $args['public'] = false;
     return $args;
 });
 
-// Filter rewrite rules
-add_filter('Digitalis/Post_Type/Digitalis\Project/Rewrite', function($rewrite) {
+// Filter the default rewrite before get_rewrite(); an array, or false for none
+add_filter('lattice.post_type.my_plugin.project.rewrite', function($rewrite) {
     $rewrite['slug'] = 'custom-slug';
     return $rewrite;
 });
 
-// Filter supports
-add_filter('Digitalis/Post_Type/Digitalis\Project/Supports', function($supports) {
+// Filter the default supports before get_supports(); an array, or false for none
+add_filter('lattice.post_type.my_plugin.project.supports', function($supports) {
     $supports[] = 'page-attributes';
     return $supports;
 });
 
-// Filter labels
-add_filter('Digitalis/Post_Type/Digitalis\Project/Labels', function($labels) {
+// Filter the default labels before get_labels()
+add_filter('lattice.post_type.my_plugin.project.labels', function($labels) {
     $labels['menu_name'] = 'Custom Menu Name';
     return $labels;
 });
@@ -435,8 +439,8 @@ add_filter('Digitalis/Post_Type/Digitalis\Project/Labels', function($labels) {
 ### Taxonomy Hooks
 
 ```php
-// Filter taxonomy args
-add_filter('Digitalis/Taxonomy/Digitalis/Project_Category/Args', function($args) {
+// Filter the args handed to register_taxonomy() (My_Plugin\Project_Category)
+add_filter('lattice.taxonomy.my_plugin.project_category.args', function($args) {
     $args['hierarchical'] = false;
     return $args;
 });
@@ -445,14 +449,23 @@ add_filter('Digitalis/Taxonomy/Digitalis/Project_Category/Args', function($args)
 ### Field Group Hook
 
 ```php
-// Filter fields in Field_Group component
-add_filter('Digitalis/Field_Group/Field', function($field, $params, $class) {
+// Filter each field of a Field_Group component; $params is the component's params, $class the Field_Group class
+add_filter('lattice.field_group.field', function($field, $params, $class) {
     // Modify field configuration
     if ($field['name'] === 'email') {
         $field['required'] = true;
     }
     return $field;
 }, 10, 3);
+```
+
+### Database Hook
+
+```php
+// Swap the wpdb the DB layer uses (DB_Context::get_wpdb()); anything but a wpdb throws a RuntimeException
+add_filter('lattice.db.wpdb', function($wpdb) {
+    return $my_secondary_wpdb;
+});
 ```
 
 ### WooCommerce Hooks
@@ -466,6 +479,10 @@ add_filter('digitalis_woocommerce_account_page_icon', function($icon, $slug, $pa
     return $icon;
 }, 10, 3);
 ```
+
+### Legacy names
+
+Before 1.0.0 these fired as `Digitalis/Post_Type/{Class}/Args` and the like. `Hook::filter()` still runs each legacy name through `apply_filters_deprecated()` before the live one, so a callback on the old name keeps working and logs a deprecation; hooks naming a framework class also answer to the pre-rename `Digitalis\` namespace (`Digitalis/Class/Digitalis/User` for `lattice.class.lattice.user`), and the post type hooks answer to both spellings they had (`Digitalis/Post_Type/My_Plugin\Project/Args` and `Digitalis/Post_Type/My_Plugin/Project/Args`). The legacy name is rebuilt from the live one (`/` between the parts, each `_` word capitalised), so a class whose name had capitals beyond the first letter of a word (`SOMM\Dancer` forwards as `Digitalis/Class/Somm/Dancer`) is not forwarded. Move callbacks to the dotted names.
 
 ---
 
@@ -706,23 +723,31 @@ class ACF_Customizations extends Feature {
 
 ### Framework Hooks Summary
 
+`{class}` is the fully qualified class, lowercased, with `.` for `\` (`My_Plugin\Project` is `my_plugin.project`).
+
 | Hook | Type | Description |
 |------|------|-------------|
-| `Digitalis/Instantiate/` | Filter | All class instantiation |
-| `Digitalis/Instantiate/{Class}` | Filter | Specific class instantiation |
-| `Digitalis/Class/{Class}` | Filter | Class name resolution |
-| `Digitalis/Post_Type/{Class}/Args` | Filter | Post type args |
-| `Digitalis/Post_Type/{Class}/Rewrite` | Filter | Post type rewrite |
-| `Digitalis/Post_Type/{Class}/Supports` | Filter | Post type supports |
-| `Digitalis/Post_Type/{Class}/Labels` | Filter | Post type labels |
-| `Digitalis/Taxonomy/{Class}/Args` | Filter | Taxonomy args |
-| `Digitalis/Field_Group/Field` | Filter | Field_Group fields |
-| `digitalis_woocommerce_account_page_icon` | Filter | Account page icons |
+| `lattice.instantiate` | Filter | All class instantiation (`$instantiation, $class_name, $path`) |
+| `lattice.instantiate.{class}` | Filter | Specific class instantiation (`$instantiation, $path`) |
+| `lattice.class.{class}` | Filter | Class name resolution (`$class_name, $data`) |
+| `lattice.post_type.{class}.args` | Filter | Post type args |
+| `lattice.post_type.{class}.rewrite` | Filter | Post type rewrite (array, or `false`) |
+| `lattice.post_type.{class}.supports` | Filter | Post type supports (array, or `false`) |
+| `lattice.post_type.{class}.labels` | Filter | Post type labels |
+| `lattice.taxonomy.{class}.args` | Filter | Taxonomy args |
+| `lattice.field_group.field` | Filter | Field_Group fields (`$field, $params, $class`) |
+| `lattice.db.wpdb` | Filter | The `wpdb` the framework's DB layer uses |
+| `lattice.feature.paths` | Filter | Directories `App::load_feature()` searches (`$paths`) |
+| `lattice.post.duplicate.exclude_meta` | Filter | Meta keys `Post::duplicate()` never copies (`$keys, $post`) |
+| `lattice.keywords.collected` | Filter | The keyword string before `Has_Keywords` filters it (`$keywords, $model`) |
+| `lattice.keywords.updated` | Action | After `Has_Keywords` writes the excerpt (`$model, $keywords`) |
+| `digitalis_woocommerce_account_page_icon` | Filter | Account page icons (`$icon, $slug, $page`) |
 
 ### Naming Convention
 
 ```
 Custom hooks:     digitalis/{feature}/{action}
 Class hooks:      digitalis.{class_name}.{method_name}
-Framework hooks:  Digitalis/{Component}/{Class}/{Property}
+Framework hooks:  lattice.{component}.{class}.{property}  (lowercase; a class name's `\` becomes `.`)
+Legacy names:     Digitalis/{Component}/{Class}/{Property}  (forwarded with a deprecation)
 ```

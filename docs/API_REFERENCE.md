@@ -989,36 +989,7 @@ Which plugins WordPress is loading on this request (UTILITIES.md).
 
 ## Hooks Reference
 
-### Framework Hooks
-
-| Hook | Type | Parameters | Description |
-|------|------|------------|-------------|
-| `digitalis_loaded` | Action | — | Framework fully loaded |
-| `digitalis_before_render` | Filter | `$html, $view` | Before view renders |
-| `digitalis_after_render` | Filter | `$html, $view` | After view renders |
-
-### Post Type Hooks
-
-| Hook | Type | Parameters | Description |
-|------|------|------------|-------------|
-| `digitalis_{$post_type}_columns` | Filter | `$columns` | Modify admin columns |
-| `digitalis_{$post_type}_query_vars` | Filter | `$vars` | Modify query vars |
-
-### Model Hooks
-
-| Hook | Type | Parameters | Description |
-|------|------|------------|-------------|
-| `digitalis_model_created` | Action | `$model` | After model created |
-| `digitalis_model_saved` | Action | `$model` | After model saved |
-| `digitalis_model_deleted` | Action | `$model` | After model deleted |
-
-### Iterator Hooks
-
-| Hook | Type | Parameters | Description |
-|------|------|------------|-------------|
-| `digitalis_iterator_before_batch` | Action | `$iterator, $items` | Before batch processes |
-| `digitalis_iterator_after_batch` | Action | `$iterator, $results` | After batch processes |
-| `digitalis_iterator_item_processed` | Action | `$iterator, $item, $result` | After item processed |
+Every framework hook, with its arguments, is in the table in [HOOKS.md](./HOOKS.md#framework-hooks-summary).
 
 ---
 

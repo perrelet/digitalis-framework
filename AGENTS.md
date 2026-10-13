@@ -586,7 +586,7 @@ Framework commits follow this format:
 type: Short description with backtick `Class::method` references 🎭🎪🎠
 ```
 
-**Types:** `feat`, `fix`, `docs`, `break`
+**Types:** `feat`, `fix`, `docs`, `break`, `chore`, `refactor`
 
 **The 3 emojis** are required and must be humorous, playful, and clever — they tell a little visual story about the change, not just decorate it.
 

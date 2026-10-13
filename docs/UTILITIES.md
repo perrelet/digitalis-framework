@@ -31,7 +31,7 @@ use Digitalis\Call;
 $class = Call::get_class_name('Digitalis\Project');
 
 // Filter allows runtime class swapping
-add_filter('Digitalis/Class/Digitalis/Project', function($class, $data) {
+add_filter('lattice.class.digitalis.project', function($class, $data) {
     if ($data['context'] === 'admin') {
         return 'Digitalis\Admin_Project';
     }
@@ -818,10 +818,10 @@ class My_Model extends Post {
 
 ```php
 // Prevent specific class from instantiating
-add_filter('Digitalis/Instantiate/Digitalis/My_Feature', '__return_false');
+add_filter('lattice.instantiate.digitalis.my_feature', '__return_false');
 
 // Conditional instantiation
-add_filter('Digitalis/Instantiate/', function($instantiation, $class, $path) {
+add_filter('lattice.instantiate', function($instantiation, $class, $path) {
     // Skip all classes in a specific directory
     if (strpos($path, '/deprecated/') !== false) {
         return false;

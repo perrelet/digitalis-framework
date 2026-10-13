@@ -341,12 +341,12 @@ The option is stored with `autoload: false`.
 $wpdb = \Digitalis\DB\DB_Context::get_wpdb();
 ```
 
-**Filter: `Digitalis/DB/WPDB`**
+**Filter: `lattice.db.wpdb`**
 
 Swap the `wpdb` instance used by the entire DB system — for example to use a secondary database connection:
 
 ```php
-add_filter('Digitalis/DB/WPDB', function ($wpdb) {
+add_filter('lattice.db.wpdb', function ($wpdb) {
     return $my_custom_wpdb; // Must be a wpdb instance
 });
 ```

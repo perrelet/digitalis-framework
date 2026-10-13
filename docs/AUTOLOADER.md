@@ -382,7 +382,7 @@ The autoloader provides filters to modify instantiation behavior:
 
 ```php
 // Fires for every class
-add_filter('Digitalis/Instantiate/', function($instantiation, $class_name, $path) {
+add_filter('lattice.instantiate', function($instantiation, $class_name, $path) {
     // Disable all auto-instantiation
     if ($some_condition) return false;
 
@@ -393,8 +393,8 @@ add_filter('Digitalis/Instantiate/', function($instantiation, $class_name, $path
 ### Class-Specific Filter
 
 ```php
-// Filter format: 'Digitalis/Instantiate/' . namespace/class_name
-add_filter('Digitalis/Instantiate/Digitalis_Co/My_Feature', function($instantiation, $path) {
+// Filter name: 'lattice.instantiate.' plus the class, lowercased, with '.' for '\'
+add_filter('lattice.instantiate.digitalis_co.my_feature', function($instantiation, $path) {
     // Override instantiation for specific class
     return 'custom_factory_method';
 }, 10, 2);
@@ -626,7 +626,7 @@ public function autoload($path = null, $recursive = true, $ext = 'php', &$objs =
 }
 
 // Or filter to see what's being instantiated
-add_filter('Digitalis/Instantiate/', function($inst, $class, $path) {
+add_filter('lattice.instantiate', function($inst, $class, $path) {
     error_log("Loading: $class from $path (instantiate: " . var_export($inst, true) . ")");
     return $inst;
 }, 10, 3);
