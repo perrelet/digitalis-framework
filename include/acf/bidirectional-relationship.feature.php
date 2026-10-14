@@ -164,6 +164,7 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
             if ($this->log) $this->log(">>> Adding '{$updated_id}' to {$selector}.{$sync_field_key} (#{$id} '" . $partner_type->title($selector) . "').");
 
             update_field($sync_field_key, $this->denormalize($sync_ids, $sync_field), $selector);
+            do_action('lattice.relationship.partner_updated', $partner_type->get_type(), (int) $id, $sync_field_key, $this);
 
         }
 
@@ -180,6 +181,7 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
             if ($this->log) $this->log(">>> Removing '{$updated_id}' from {$selector}.{$sync_field_key} (#{$id} '" . $partner_type->title($selector) . "').");
 
             update_field($sync_field_key, $this->denormalize($sync_ids, $sync_field), $selector);
+            do_action('lattice.relationship.partner_updated', $partner_type->get_type(), (int) $id, $sync_field_key, $this);
 
         }
 
