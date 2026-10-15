@@ -340,6 +340,7 @@ Supports, visibility and hierarchy are not properties: `get_supports()` and `get
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
 | `get_filters()` | `protected get_filters(): array` | Override to compute `$filters` |
+| `get_filter_request_value()` | `protected get_filter_request_value(string $group, array $filter): string\|false` | The request value an admin filter's control posted (`$group` is `'tax'` or `'meta'`), unslashed; a non-scalar value is `false` |
 | `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls static `$method` on `$model_class`, then static on the post type's class, then on the instance; `$default` when none has it |
 | `columns()` | `public columns(array $columns): array` | Modifies admin columns |
 | `column()` | `public column(string $column, int $post_id): void` | Renders column content |
