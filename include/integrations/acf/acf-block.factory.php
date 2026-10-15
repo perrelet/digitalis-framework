@@ -222,9 +222,10 @@ class ACF_Block extends Factory {
 
         $view = $this->view;
 
-        if ($view && (!is_string($view) || !is_subclass_of($view, View::class))) {
+        if ($view && ($error = View::class_error($view))) {
 
-            Strict::fail(static::class, '$view must be the class name of a \Lattice\View subclass, ' . (is_string($view) ? "'{$view}'" : (is_object($view) ? 'an instance of ' : '') . get_debug_type($view)) . ' provided.', 'Set $view to the View class name, or leave it unset and override view().');
+            Strict::fail(static::class, $error, 'Set $view to the View class name, or leave it unset and override view().');
+            View::log_class_error(static::class, $error);
             $view = false;
 
         }

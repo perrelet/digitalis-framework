@@ -510,6 +510,7 @@ abstract class View implements ArrayAccess
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `render()` | `static render(mixed $params = [], bool $print = true): string` | Renders view; `$params` is cast `(array)`, so pass an array |
+| `class_error()` | `static class_error(mixed $view, ?string $owner = null): ?string` | The problem with a `$view` property (not a string, not a `View` subclass, abstract or without a public constructor), or `null`; `$owner` is named in the text |
 | `print()` | `public print(bool $return = false): string` | Outputs HTML |
 | `get_template_path()` | `public get_template_path(): string` | Returns full template path |
 | `offsetGet()` | `public offsetGet(mixed $key): mixed` | ArrayAccess: gets parameter |
@@ -585,7 +586,7 @@ Invoice_Route::get_instance();
 | `$format` | `?string` | `null` | Default URL format for `get_url()`; `null` resolves to `'html'` when `$view` is set, else `'json'`. Set to `'html'` for an HTML REST route without a `$view`. |
 | `$wp_query` | `bool` | `false` | If true, emulates a normal WP query before callbacks run. |
 | `$handler` | `string` | `'handle'` | Method name to call as the primary handler. Defaults to `handle()` which delegates to `callback()`. |
-| `$view` | `string\|false` | `false` | View class to render. If set, `callback_wrap()` renders this view and ignores `callback()` return value. |
+| `$view` | `string\|false` | `false` | Concrete `View` class name to render. If set, `callback_wrap()` renders this view and ignores `callback()` return value. |
 | `$require_nonce` | `bool` | `false` | If true, a `wp_rest` nonce is verified before `callback_wrap()` runs, collected from the `X-WP-Nonce` and `Nonce` headers, `_wpnonce` in the query string, the body and the request params, in that order. |
 | `$definition` | `array` | `[]` | Merged into the args passed to `register_rest_route()`. |
 | `$args` | `array` | `[]` | Route parameter definitions. Supports `class` key for dependency injection. |

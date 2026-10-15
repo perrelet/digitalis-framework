@@ -19,6 +19,7 @@ abstract class View implements \ArrayAccess {
     protected static $loaded_views = [];
     protected static $render_stack = [];
     protected static $shell        = false; // Header, Footer and Modals set true: they belong to the Layout, and strict refuses them inside a Page_View.
+    protected static $class_errors_logged = []; // Lines already logged this request: a tag rendered fifty times logs once.
 
     protected static $inherited_props = [
         'defaults',
@@ -45,6 +46,28 @@ abstract class View implements \ArrayAccess {
 
         if (static::$name) return static::$name;
         return ucwords(str_replace(['\\', '_'], ' ', static::class));
+
+    }
+
+    // One judgement for every property that names a View to render by class (Route, Shortcode, ACF_Block, Woo_Account_Page): the problem text, or null when the name will render.
+    public static function class_error (mixed $view, ?string $owner = null) : ?string {
+
+        $on = $owner ? " on {$owner}" : '';
+
+        if (!is_string($view))                                return '$view must be the class name of a \Lattice\View subclass, ' . (is_object($view) ? 'an instance of ' : '') . get_debug_type($view) . " provided{$on}.";
+        if (!is_subclass_of($view, self::class))              return "\$view must be a subclass of \Lattice\View, '{$view}' provided{$on}.";
+        if (!($class = new \ReflectionClass($view))->isInstantiable()) return "\$view must be a concrete \Lattice\View subclass, " . ($class->isAbstract() ? "the abstract '{$view}'" : "'{$view}' (constructor not public)") . " provided{$on}.";
+
+        return null;
+
+    }
+
+    public static function log_class_error (string $owner, string $error) : void {
+
+        if (isset(self::$class_errors_logged["{$owner}: {$error}"])) return;
+
+        self::$class_errors_logged["{$owner}: {$error}"] = true;
+        error_log("Lattice: {$owner}: {$error}");
 
     }
 

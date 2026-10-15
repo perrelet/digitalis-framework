@@ -1101,7 +1101,7 @@ resolved nothing would render whatever post the page is currently showing. Use
 | Property | Description |
 |----------|-------------|
 | `$slug` | Block identifier (acf/slug) |
-| `$view` | View class name (not an instance); unset or `false` for the inline `view()` |
+| `$view` | View class name (a concrete `View`, not an instance); unset or `false` for the inline `view()` |
 | `$block` | Block registration args |
 | `$fields` | ACF field definitions |
 | `$defaults` | Default values for view params |

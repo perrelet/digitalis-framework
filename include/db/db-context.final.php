@@ -12,7 +12,7 @@ final class DB_Context {
 
         $wpdb = \Lattice\Hook::filter('lattice.db.wpdb', $wpdb);
 
-        if (!$wpdb instanceof wpdb) throw new \RuntimeException('digitalis/db/wpdb filter must return wpdb');
+        if (!$wpdb instanceof wpdb) throw new \RuntimeException('lattice.db.wpdb filter must return wpdb');
 
         return $wpdb;
 
