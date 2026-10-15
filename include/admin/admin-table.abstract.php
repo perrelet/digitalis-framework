@@ -207,9 +207,8 @@ abstract class Admin_Table extends Feature {
 
             if (isset($field['choices']) && $field['choices']) {
         
-                $field['choices'] = array_merge([
-                    $filter['null_value'] => $null_label
-                ], $field['choices']);
+                // `+`, not array_merge(): that renumbers numeric keys, so choices keyed by ids would lose their values.
+                $field['choices'] = [(string) $filter['null_value'] => $null_label] + $field['choices'];
 
             } else {
 
