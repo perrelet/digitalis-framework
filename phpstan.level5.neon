@@ -11,7 +11,6 @@ parameters:
   resultCachePath: %tmpDir%/resultCache-level5.php
   excludePaths:
     analyse:
-      - include/admin
       - include/_features
       - stubs/trait-users.stub.php   # with _features: its user keeps Has_Keywords analysed, so it waits for that directory's turn
       - include/iterators

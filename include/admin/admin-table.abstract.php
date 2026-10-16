@@ -284,7 +284,7 @@ abstract class Admin_Table extends Feature {
 
                 $terms = get_terms([
                     'taxonomy'      => $filter['name'],
-                    'hide_empty'    => 'true',
+                    'hide_empty'    => true,
                     'orderby'       => 'count',
                     'order'         => 'DESC',
                 ]);

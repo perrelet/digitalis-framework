@@ -184,7 +184,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $pagination = $more ? paginate_links([
             'base'      => add_query_arg('paged', '%#%'),
             'current'   => $page,
-            'total'     => floor($filesize / $bytes_per_page) + 1,
+            'total'     => (int) floor($filesize / $bytes_per_page) + 1,
             'prev_text' => "&laquo;",
             'next_text' => "&raquo;",
         ]) : false;
