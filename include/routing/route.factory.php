@@ -257,9 +257,9 @@ class Route extends Factory {
     public function is_this_route (WP_REST_Request $request) {
 
         if (is_null($this->get_route())) return false;
-        if ($request->get_route() !== $this->get_rest_path()) return false;
 
-        return true;
+        // The server matched the request path against the registered pattern this way (WP_REST_Server::match_request_to_handler); an exact compare never let a regex route match its own request.
+        return (bool) preg_match('@^' . $this->get_rest_path() . '$@i', $request->get_route());
 
     }
 

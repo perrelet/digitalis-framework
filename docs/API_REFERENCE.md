@@ -613,7 +613,7 @@ Invoice_Route::get_instance();
 | `nonce_url()` | `public nonce_url(string $url): string` | Appends `_wpnonce` param to URL. |
 | `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates the first valid nonce among the candidates `collect_nonce_candidates()` gathers (headers, query string, body, request param); 401 with none, 403 with none valid. |
 | `respond()` | `protected respond(mixed $response): WP_REST_Response` | Wraps response in `rest_ensure_response()`. |
-| `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request matches this route; `false` for a route with no `$route`. |
+| `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request's path matches this route's pattern, as the REST server matched it; `false` for a route with no `$route`. |
 | `render_view()` | `public render_view(string $view, array $params): string` | Calls `View::render($params, false)`. |
 | `add_query_params()` | `public add_query_params(string $url, array $query_params = []): string` | Appends query params via `add_query_arg()`. |
 
