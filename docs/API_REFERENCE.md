@@ -328,9 +328,11 @@ abstract class Post_Type extends Singleton
 | `$position` | `int` | `5` | Menu position |
 | `$model_class` | `string\|false` | `false` | Model class for `call_model()` and `instantiate_model()` |
 | `$register` | `bool` | `true` | Register the post type on `init` |
-| `$filters` | `array` | `[]` | Admin list filters: `key => 'taxonomy'` or `'acf'`, or `key => ['type' => ..., 'name' => ..., 'args' => [...]]`; `name` is the request parameter the control posts under and defaults to the key; a bare `'publish_month'` value (`$filters = ['publish_month']`) keeps WordPress's months dropdown, which is disabled otherwise. Deprecated with the admin-table block: use `Posts_Table` (ADMIN.md) |
+| `$filters` | `array` | `[]` | Admin list filters, `key => 'taxonomy'` or `'acf'`, or `key => ['type' => ..., 'name' => ..., 'args' => [...]]` (the shape is described under the table); a bare `'publish_month'` value (`$filters = ['publish_month']`) keeps WordPress's months dropdown, which is disabled otherwise. Deprecated with the admin-table block: use `Posts_Table` (ADMIN.md) |
 
 Supports, visibility and hierarchy are not properties: `get_supports()` and `get_args()` return them.
+
+A `$filters` key is the taxonomy slug or the ACF field name (the meta key the clause reads); `name` is the request parameter the control posts under (`tax[name]` / `meta[name]`) and defaults to the key; a falsy posted value (the select's none option) queues no clause. `args` holds the callbacks (`value_callback` transforms the posted value, `query_callback` the assembled `tax_query` or `meta_query` clause before it is queued; each takes and returns that one argument) and the type's options. For `'taxonomy'` they are the `wp_dropdown_categories()` arguments (`value_field` defaults to `term_id`, `hide_empty` and `hide_if_empty` to `true`, `show_option_none` to "Filter by {the taxonomy's singular_name}"). For `'acf'` they are `hide_falsy` (`true`: the select offers no choice whose value is `0` or `''`), `compare` (`'='`), and for a field without `choices`, which renders a text input where a field with them renders a select, `label` (its placeholder, the field's unless set) and `type` (`'text'` unless set); the field object is read from one post of the type (the newest not trashed, whose ACF reference resolves the name), so an empty type renders no `'acf'` control.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
@@ -339,7 +341,7 @@ Supports, visibility and hierarchy are not properties: `get_supports()` and `get
 | `get_supports()` | `protected get_supports(array\|false $supports): array\|false` | Override to change the default supports; `false` registers none, as does a `remove_support()` that empties the list |
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
-| `get_filters()` | `protected get_filters(): array` | Override to compute `$filters` |
+| `get_filters()` | `protected get_filters(): array` | Override to compute `$filters`; called on construction and by each `build_filters()` (`admin_controller()` and `render_filters()`), so from the second build `$this->filters`, what the default returns, already holds the parsed entries: an override extending `parent::get_filters()` receives them, one returning its own array is parsed afresh each build |
 | `get_filter_request_value()` | `protected get_filter_request_value(string $group, array $filter): string\|false` | The request value an admin filter's control posted (`$group` is `'tax'` or `'meta'`), unslashed; a non-scalar value is `false` |
 | `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls static `$method` on `$model_class`, then static on the post type's class, then on the instance; `$default` when none has it |
 | `columns()` | `public columns(array $columns): array` | Modifies admin columns |

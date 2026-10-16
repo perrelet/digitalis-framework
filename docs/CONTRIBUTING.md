@@ -206,7 +206,6 @@ feat: `Creational` pattern 🐣🎨💠
 
 ## Commit Message Length
 
-- **First line:** Under 50 characters (excluding emojis)
 - **Body:** Optional, for complex changes
 - **Emojis:** Always exactly 3
 
