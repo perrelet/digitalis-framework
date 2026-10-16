@@ -128,6 +128,8 @@ static::array_inject($params, $defaults);
 // $params['user'] is now User instance
 ```
 
+With an empty `$defaults` map nothing is injected: the values themselves are never read as class names.
+
 ### `constructor_inject($class, $args, $values)`
 
 Create instance with constructor dependencies resolved.
@@ -147,7 +149,7 @@ $service = static::constructor_inject(MyService::class, []);
 
 ## View Injection
 
-Views inject dependencies when default values are class names.
+Views inject dependencies when default values are class names; a View with no `$defaults` injects nothing.
 
 ### How It Works
 

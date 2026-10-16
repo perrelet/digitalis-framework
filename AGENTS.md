@@ -287,7 +287,7 @@ My_View::render(mixed $params = [], bool $print = true): string   // the framewo
 
 ```php
 // Inheritable static properties
-protected static $defaults    = ['key' => 'default'];  // class strings are DI-resolved automatically
+protected static $defaults    = ['key' => 'default'];  // class strings are DI-resolved automatically; no $defaults, no injection
 protected static $required    = ['key'];                // fails silently if missing; DI-backed keys gated before params(), others after
 protected static $merge       = ['classes'];            // these keys are array-merged, not overwritten
 protected static $skip_inject = ['key'];                // prevent DI resolution for specific keys

@@ -91,19 +91,19 @@ trait Dependency_Injection {
     }
 
     protected static function array_inject (array &$array, array $defaults = []) {
-    
+
+        if (!$defaults) return $array; // an empty map declares nothing to inject; reading each VALUE as a class name let a request name any class with a get_instance()
+
         foreach ($array as $key => &$value) {
-        
-            if ($defaults && !isset($defaults[$key])) continue;
 
-            $class = $defaults ? $defaults[$key] : $value;
+            if (!isset($defaults[$key])) continue;
 
-            static::value_inject($class, $value);
-        
+            static::value_inject($defaults[$key], $value);
+
         }
 
         return $array;
-    
+
     }
 
     protected static function value_inject (mixed $class, mixed &$value) {
