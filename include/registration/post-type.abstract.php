@@ -473,6 +473,8 @@ abstract class Post_Type extends Singleton {
 
         if (!$this->is_admin_archive()) return;
 
+        $this->build_filters();
+
         if (method_exists($this, 'before_render_filters')) $this->before_render_filters();
 
         if ($this->filters) foreach ($this->filters as $key => $filter) {
