@@ -417,6 +417,8 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
     public static function compare_post_type (WP_Query $wp_query, string|array|false $post_type) {
 
+        $needles = ($post_type === false) ? [] : (array) $post_type; // an array needle matches when any of its types does; false carries no type and matches only a query for 'any'
+
         if (
             ($wp_query->is_tax() || $wp_query->is_tag() || $wp_query->is_category()) &&
             ($queried_object = $wp_query->get_queried_object()) &&
@@ -424,23 +426,17 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
             ($taxonomy = get_taxonomy($taxonomy))
         ) {
 
-            return in_array($post_type, $taxonomy->object_type);
+            return (bool) array_intersect($needles, $taxonomy->object_type);
 
         } else {
 
             if ($queried_post_type = $wp_query->get('post_type')) {
 
-                if (is_array($queried_post_type)) {
+                $queried_post_type = (array) $queried_post_type;
 
-                    if (in_array('any', $queried_post_type) || in_array($post_type, $queried_post_type)) return true;
+                if (in_array('any', $queried_post_type) || array_intersect($needles, $queried_post_type)) return true;
 
-                } else {
-
-                    if (($queried_post_type == 'any') || ($queried_post_type == $post_type)) return true;
-
-                }
-
-            } elseif ($post_type == 'post') {
+            } elseif (in_array('post', $needles, true)) {
 
                 return $wp_query->is_posts_page || $wp_query->is_author;
 
