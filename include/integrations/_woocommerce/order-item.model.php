@@ -5,6 +5,9 @@ namespace Lattice;
 use \WC_Order_Item;
 use \WC_Order_Item_Product;
 
+/**
+ * @method \WC_Order|\WC_Order_Refund|false get_order()   // WC_Order_Item_Product::get_order() is wc_get_order(), which the stub types false|WC_Order|WC_Order_Refund where WC_Order_Item::get_order() says WC_Order; the callers guard for false and for a refund
+ */
 class Order_Item extends Model {
 
     protected static $product_type = null;

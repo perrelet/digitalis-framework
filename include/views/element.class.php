@@ -2,6 +2,7 @@
 
 namespace Lattice;
 
+/** @mixin Attributes   (every call __call forwards reaches the Attributes object, typed from its source) */
 class Element implements \ArrayAccess {
 
     protected $void_tags = [

@@ -12,6 +12,7 @@ parameters:
     - include
     - load.php
     - bin
+    - stubs/trait-users.stub.php
   scanFiles:
     - compat/digitalis-namespace.php
     - compat/digitalis-hooks.php

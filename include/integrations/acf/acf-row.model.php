@@ -96,7 +96,7 @@ class ACF_Row extends Model {
 
     public static function query_for ($parent, $criteria = []) {
 
-        if (!$parent instanceof Model) return [];
+        if (!$parent instanceof Model || !method_exists($parent, 'get_field_rows')) return [];
 
         $rows = $parent->get_field_rows(static::$repeater, static::class);
 

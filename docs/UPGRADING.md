@@ -100,7 +100,7 @@ Measured on the live consumers before release:
 
 ### Fields
 
-The model accessors (`get_field()`, `update_field()`, `get_field_rows()` and the rest of `Has_Fields`) reach ACF through a registered `Field_Provider` instead of calling it directly. `ACF_Field_Provider` registers itself when the sweep walks it and answers while ACF is active. Without ACF, or before its plugin file has loaded, reads return `null` and writes return `null` instead of a fatal.
+The model accessors (`get_field()`, `update_field()`, `get_field_rows()` and the rest of `Has_Fields`) reach ACF through a registered `Field_Provider` instead of calling it directly. `ACF_Field_Provider` registers itself when the sweep walks it and answers while ACF is active. Without ACF, or before its plugin file has loaded, reads return `null` and writes return `null` instead of a fatal. `ACF_Row::query_for()` on a parent `Model` without `Has_Fields` (an `Order_Item`, an `Order`) answers `[]` where it fataled on the undefined `get_field_rows()`.
 
 | Violation | Mechanical fix |
 |---|---|
@@ -137,7 +137,7 @@ Measured on the live consumers before release: no site runs without WooCommerce,
 
 ### Analysis
 
-PHPStan runs in CI (`.github/workflows/phpstan.yml`) at level 0 over the whole tree (`phpstan.neon.dist`) and at level 5 over the directories `phpstan.level5.neon` has raised so far (`include/query`, `registration`, `hooks`, `db`, `_cli` and the loose `include/functions.php` at first; a directory is raised, in the commit that makes it clean, by deleting its `excludePaths` line, users of a trait before the trait; `include/deprecated` stays at level 0 until the deprecation pass removes it); locally both configs run over the whole tree (`vendor/bin/phpstan analyse -c phpstan.level5.neon` after `composer install`: about three minutes within 1.2 GB; never one directory with the level-5 config, which reports traits used elsewhere as unused). The runtime constants the analysis cannot see are declared in `stubs/constants.stub.php` (scanned like the Oxygen stub, never run: the WordPress time, cookie and endpoint constants, `ABSPATH`, `WP_DEBUG`, the two plugin directories, `LATTICE_PATH` and `LATTICE_URI`; the site-varying ones are typed, not valued, through `dynamicConstantNames`). The first clean run fixed things a consumer would have met on its first `v1` request:
+PHPStan runs in CI (`.github/workflows/phpstan.yml`) at level 0 over the whole tree (`phpstan.neon.dist`) and at level 5 over the directories `phpstan.level5.neon` has raised so far (`include/query`, `registration`, `hooks`, `db`, `_cli` and the loose `include/functions.php` at first; `include/deprecated` stays at level 0 until the deprecation pass removes it); the local commands and the rule for raising a directory are CONTRIBUTING item 7. The runtime constants the analysis cannot see are declared in `stubs/constants.stub.php` (scanned like the Oxygen stub, never run: the WordPress time, cookie and endpoint constants, `ABSPATH`, `WP_DEBUG`, the two plugin directories, `LATTICE_PATH` and `LATTICE_URI`; the site-varying ones are typed, not valued, through `dynamicConstantNames`). The first clean run fixed things a consumer would have met on its first `v1` request:
 
 | Was | Now |
 |---|---|

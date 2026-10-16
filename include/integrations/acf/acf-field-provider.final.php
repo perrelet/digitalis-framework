@@ -25,6 +25,7 @@ final class ACF_Field_Provider implements Field_Provider {
         if (!$type = $model->get_wp_meta_type())        return null;
 
         if ($type === 'option') return 'option';
+        if (!method_exists($model, 'get_meta_id')) return null; // Options answers 'option' above and has no meta id
         if ($type === 'post')   return (int) $model->get_meta_id();
 
         return $type . '_' . $model->get_meta_id();

@@ -8,6 +8,7 @@ use \WC_Order_Query;
 
 // https://woocommerce.github.io/code-reference/classes/WC-Customer.html
 
+/** @mixin \WC_Customer   (every call __call forwards reaches the WC_Customer, typed from the stubs) */
 trait Is_Woo_Customer {
 
     protected $customer;
