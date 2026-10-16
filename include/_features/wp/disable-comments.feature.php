@@ -19,9 +19,9 @@ class Disable_Comments extends \Lattice\Feature {
 
         });
 
-        $this->add_filter('comments_open',  '__return_false',       20, 2);
-        $this->add_filter('pings_open',     '__return_false',       20, 2);
-        $this->add_filter('comments_array', '__return_empty_array', 10, 2);
+        $this->add_filter('comments_open',  '__return_false',       20);
+        $this->add_filter('pings_open',     '__return_false',       20);
+        $this->add_filter('comments_array', '__return_empty_array', 10);
 
         $this->add_action('admin_menu', function () {
 

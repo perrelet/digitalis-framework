@@ -99,7 +99,7 @@ class Page_Loader extends Feature {
 
         return str_replace(
             ['%%COLOR%%', '%%BG%%', '%%SPEED%%'],
-            [esc_attr($this->color), esc_attr($this->background), (float) $this->speed],
+            [esc_attr($this->color), esc_attr($this->background), (string) (float) $this->speed],
             file_get_contents($file)
         );
 

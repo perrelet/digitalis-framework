@@ -14,7 +14,7 @@ class Dev_Role extends Feature {
 
     public function __construct () {
 
-        $this->add_filter('user_has_cap', 'grant_cap', 10, 4);
+        $this->add_filter('user_has_cap', 'grant_cap', 10);
 
         if (defined('WP_CLI') && WP_CLI) {
             WP_CLI::add_command($this->command, new Dev_Role_CLI($this->meta_key));
