@@ -334,6 +334,21 @@ class WooCommerce_Integration extends Integration {
 }
 ```
 
+A plugin-gated integration extends `Plugin_Integration` and declares the plugin instead; `Plugins::is_active()` decides:
+
+```php
+class WooCommerce_Integration extends Plugin_Integration {
+
+    protected static $plugin = 'woocommerce/woocommerce.php';   // or its directory, 'woocommerce'; anything but a string is a strict violation
+
+    public function get_hooks() {
+        return [
+            'woocommerce_order_status_completed' => 'on_complete',
+        ];
+    }
+}
+```
+
 ---
 
 ## Hook Naming
