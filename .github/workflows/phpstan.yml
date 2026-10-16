@@ -29,3 +29,4 @@ jobs:
           key: phpstan-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}-${{ github.sha }}
           restore-keys: phpstan-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}-
       - run: vendor/bin/phpstan analyse -c phpstan.ci.neon --no-progress --memory-limit=3G
+      - run: vendor/bin/phpstan analyse -c phpstan.level5.neon --no-progress --memory-limit=3G
