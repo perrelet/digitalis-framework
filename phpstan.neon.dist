@@ -4,6 +4,9 @@
 parameters:
   level: 0
   phpVersion: 80000
+  universalObjectCratesClasses:   # params read and written as properties through __get/__set: any name is valid
+    - Lattice\View
+    - Lattice\Query_Vars
   tmpDir: tmp/phpstan
   paths:
     - include
