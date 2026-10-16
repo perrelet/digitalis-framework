@@ -1,5 +1,6 @@
 # Shared settings, level 0 over the whole tree. CI runs phpstan.ci.neon (this plus workers) and phpstan.level5.neon (this at level 5 over
-# the raised directories). Locally the whole tree runs in about three minutes within 1.2 GB; a gitignored phpstan.neon overrides.
+# the raised directories). Locally the whole tree runs in about three minutes within 1.2 GB; a gitignored phpstan.neon overrides this for
+# the bare `vendor/bin/phpstan analyse` only (a `-c` run reads the named config).
 parameters:
   level: 0
   phpVersion: 80000
@@ -12,9 +13,19 @@ parameters:
     - compat/digitalis-namespace.php
     - compat/digitalis-hooks.php
     - stubs/oxygen.stub.php
+    - stubs/constants.stub.php
     - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
     - vendor/php-stubs/acf-pro-stubs/acf-pro-stubs.php
     - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
     - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+  dynamicConstantNames:   # site-varying: typed as string/bool, not as the placeholder literal
+    - WP_DEBUG
+    - COOKIE_DOMAIN
+    - COOKIEPATH
+    - ABSPATH
+    - WP_PLUGIN_DIR
+    - WPMU_PLUGIN_DIR
+    - LATTICE_PATH
+    - LATTICE_URI
   parallel:
     maximumNumberOfProcesses: 1
