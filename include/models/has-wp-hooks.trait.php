@@ -2,7 +2,6 @@
 
 namespace Lattice;
 
-use Closure;
 use ReflectionMethod;
 use ReflectionFunction;
 
@@ -51,7 +50,7 @@ trait Has_WP_Hooks {
             $reflection = new ReflectionMethod($callback[0], $callback[1]);
             $params     = $reflection->getNumberOfParameters();
 
-        } else if (is_callable($callback) || ($callback instanceof Closure)) {
+        } else if (is_callable($callback)) {
 
             $reflection = new ReflectionFunction($callback);
             $params     = $reflection->getNumberOfParameters();

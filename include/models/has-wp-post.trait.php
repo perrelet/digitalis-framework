@@ -128,7 +128,7 @@ trait Has_WP_Post {
 
     public function get_content (bool $apply_filters = true, ?string $more_link_text = null, bool $strip_teaser = false) {
 
-        $key = serialize(array_values(func_get_args()));
+        $key = serialize(func_get_args());
 
         if (!isset($this->content_cache[$key])) {
 

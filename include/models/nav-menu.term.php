@@ -11,7 +11,7 @@ class Nav_Menu extends Term {
         if (is_string($data) && !is_numeric($data) && function_exists('wp_get_nav_menu_object')) {
 
             $wp_term = wp_get_nav_menu_object($data);
-            if ($wp_term && !is_wp_error($wp_term)) return (int) $wp_term->term_id;
+            if ($wp_term instanceof \WP_Term) return (int) $wp_term->term_id;
 
         }
 
