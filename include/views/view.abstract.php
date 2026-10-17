@@ -314,11 +314,12 @@ abstract class View implements \ArrayAccess {
     
     }
 
-    public function before_first () {}
-    public function before       () {}
-    public function view         () {}
-    public function after_first  () {}
-    public function after        () {}
+    // @phpstan-impure: an empty hook reads as pure, so a parent:: call to it would be reported as a no-op (staticMethod.resultUnused).
+    /** @phpstan-impure */ public function before_first () {}
+    /** @phpstan-impure */ public function before       () {}
+    /** @phpstan-impure */ public function view         () {}
+    /** @phpstan-impure */ public function after_first  () {}
+    /** @phpstan-impure */ public function after        () {}
 
     // Params
 
@@ -419,13 +420,13 @@ abstract class View implements \ArrayAccess {
 
     public function __set ($key, $value) {
 
-        return $this->set_param($key, $value);
+        $this->set_param($key, $value);
 
     }
 
     public function __unset ($key) {
 
-        return $this->unset_param($key);
+        $this->unset_param($key);
 
     }
 

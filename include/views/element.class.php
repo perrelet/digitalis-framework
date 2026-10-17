@@ -129,16 +129,16 @@ class Element implements \ArrayAccess {
 
     public function __set ($attr, $value) {
 
-        if ($attr == 'content')                    return $this->set_content($value);
-        if (in_array($attr, ['class', 'classes'])) return $this->get_attrs()->add_class($value);
+        if ($attr == 'content')                    { $this->set_content($value); return; }
+        if (in_array($attr, ['class', 'classes'])) { $this->get_attrs()->add_class($value); return; }
 
         if (is_null($attr)) {
 
-            return $this->get_attrs()->set_attr($value);
+            $this->get_attrs()->set_attr($value);
 
         } else {
 
-            return $this->get_attrs()->set_attr($attr, $value);
+            $this->get_attrs()->set_attr($attr, $value);
 
         }
 
@@ -146,7 +146,7 @@ class Element implements \ArrayAccess {
 
     public function __unset ($attr) {
 
-        return $this->get_attrs()->remove_attr($attr);
+        $this->get_attrs()->remove_attr($attr);
 
     }
 

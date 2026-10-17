@@ -54,7 +54,7 @@ class Field extends Component {
         if ($p['key'])  $p['name'] = $p['key'];
         if ($p['name']) $p['attributes']['name'] = $p['name'];
 
-        $p['value'] = $this->get_value($p);
+        $p['value'] = $this->get_value();
         if ($p['value_callback']) $p['value'] = $p['value_callback']($p['value'], $p);
         $p['attributes']['value'] = $p['value'];
 
@@ -88,7 +88,7 @@ class Field extends Component {
 
         if ($p['width'] != 1) $p['row_styles']['flex'] = $p['width'];
 
-        $p['once_atts'] = $this->get_once_attributes($p);
+        $p['once_atts'] = $this->get_once_attributes();
 
         parent::params($p);
 

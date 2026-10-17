@@ -168,11 +168,7 @@ namespace Lattice {
 
                             $arg = htmlentities($arg);
     
-                            if (is_string($arg)) {
-                                $name = "\"{$arg}\"";
-                            } else {
-                                $name = $arg;
-                            }
+                            $name = "\"{$arg}\"";
     
                             $p['bt_html'] .= "<line>  <span data-type='{$type}'>{$name}</span></line>";
     
@@ -340,7 +336,7 @@ namespace Lattice {
                 $next  = (count($lines) > $i + 1) ? floor(strspn($lines[$i + 1], ' ') / $indent) : -1;
                 $n     = count($lines) > 1 ? $i + 1 : '>';
 
-                $html .= "<line data-level='" . esc_attr($level) . "' data-line='" . esc_attr($n) . "'";
+                $html .= "<line data-level='" . esc_attr((string) $level) . "' data-line='" . esc_attr($n) . "'";
                 if ($level < $next)   $html .= " onclick='this.nextElementSibling.toggleAttribute(`open`)'";
                 if ($options['type']) $html .= " data-type='" . esc_attr($options['type']) . "'";
                 $html .= ">{$line}</line>";

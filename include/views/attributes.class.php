@@ -311,11 +311,11 @@ class Attributes implements \ArrayAccess {
 
         if (is_null($attr)) {
 
-            return $this->set_attr($value);
+            $this->set_attr($value);
 
         } else {
 
-            return $this->set_attr($attr, $value);
+            $this->set_attr($attr, $value);
 
         }
 
@@ -323,7 +323,7 @@ class Attributes implements \ArrayAccess {
 
     public function __unset ($attr) {
 
-        return $this->remove_attr($attr);
+        $this->remove_attr($attr);
 
     }
 
