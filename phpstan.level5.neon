@@ -1,10 +1,8 @@
 # Level 5 over the directories raised so far. The others are scanned for symbols but not analysed (excludePaths.analyse), so `paths` stays
 # the whole tree: a `paths` of its own would lose every class outside it. Always run the whole tree (vendor/bin/phpstan analyse -c
 # phpstan.level5.neon, about three minutes within 1.2 GB): one directory on the command line reports traits used elsewhere as unused.
-# Raising a directory = deleting the TOP line below, in the commit that makes it clean; the order puts a trait's users before the trait
-# (Resolvable: views before core; Inherits_Props: views before models). include/deprecated stays at level 0 until the deprecation pass
-# removes it. include/functions.php, the one loose file under include/, is analysed at level 5 from the start (clean); so is
-# stubs/trait-users.stub.php since _features was raised (its users give the consumer-facing traits their level-5 pass).
+# Every include/ directory is raised. load.php is next (the commit that makes it clean deletes its line); bin stays (a development tool,
+# analysed at level 0 by the dist, never loaded by a consumer) and include/deprecated stays at level 0 until the deprecation pass removes it.
 includes:
   - phpstan.neon.dist
 parameters:
@@ -12,7 +10,6 @@ parameters:
   resultCachePath: %tmpDir%/resultCache-level5.php
   excludePaths:
     analyse:
-      - include/core
       - load.php
       - bin
       - include/deprecated

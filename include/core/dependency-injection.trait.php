@@ -65,7 +65,7 @@ trait Dependency_Injection {
             if (isset($values[$class]))                { $args[$i] = $values[$class]; continue; }
             if (($args[$i] ?? null) instanceof $class) continue;                                  // already the right object: keep it, as value_inject() does
 
-            $args[$i] = call_user_func([$class, 'get_instance'], $args[$i] ?? null);
+            $args[$i] = $class::get_instance($args[$i] ?? null);
 
         }
 
@@ -115,7 +115,7 @@ trait Dependency_Injection {
 
         if ($class === $value) $value = null;
 
-        $value = call_user_func([$class, 'get_instance'], $value);
+        $value = $class::get_instance($value);
 
         return $value;
     

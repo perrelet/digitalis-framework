@@ -12,7 +12,7 @@ class Hook extends Utility {
 
         array_walk_recursive($parts, function ($part) use (&$flat) { $flat[] = (string) $part; });
 
-        return static::sanitize(implode(self::DELIMITER, array_filter($flat, 'strlen')));
+        return static::sanitize(implode(self::DELIMITER, array_filter($flat, fn (string $s) => $s !== '')));
 
     }
 
