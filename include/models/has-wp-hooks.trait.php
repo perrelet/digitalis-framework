@@ -47,29 +47,29 @@ trait Has_WP_Hooks {
         if (is_string($callback) && method_exists($this, $callback)) $callback = [$this, $callback];
         if (is_null($priority)) $priority = $this->get_default_priority();
 
-        if (!is_callable($callback)) return false;
+        if (!is_callable($callback))                      return false;
+        if (!in_array($type, ['filter', 'action'], true)) return false; // a stray type would name an undefined add_* function
 
-        if (is_null($accepted_args)) {
+        try {
 
-            try {
+            $reflection = match (true) {
+                $callback instanceof Closure  => new ReflectionFunction($callback),
+                is_object($callback)          => new ReflectionMethod($callback, '__invoke'),
+                is_array($callback)           => new ReflectionMethod($callback[0], $callback[1]),
+                str_contains($callback, '::') => new ReflectionMethod(...explode('::', $callback, 2)),
+                default                       => new ReflectionFunction($callback),
+            };
 
-                $reflection = match (true) {
-                    $callback instanceof Closure  => new ReflectionFunction($callback),
-                    is_object($callback)          => new ReflectionMethod($callback, '__invoke'),
-                    is_array($callback)           => new ReflectionMethod($callback[0], $callback[1]),
-                    str_contains($callback, '::') => new ReflectionMethod(...explode('::', $callback, 2)),
-                    default                       => new ReflectionFunction($callback),
-                };
+        } catch (ReflectionException) {
 
-                $accepted_args = $reflection->isVariadic() ? PHP_INT_MAX : $reflection->getNumberOfParameters(); // WordPress hands over every argument when the count exceeds what the hook passes
-
-            } catch (ReflectionException) {
-
-                $accepted_args = 1; // a name reflection cannot see (__call, __callStatic, the deprecated 'parent::m' form): callable, so it registers with WordPress's default count; pass $accepted_args for more
-
-            }
+            $reflection = null; // a name reflection cannot see (__call, __callStatic, the deprecated 'parent::m' form): callable, so it registers with WordPress's default count; pass $accepted_args for more
 
         }
+
+        $static_shape = is_string($callback) || (is_array($callback) && is_string($callback[0]));
+        if ($static_shape && $reflection instanceof ReflectionMethod && !$reflection->isStatic()) return false; // callable inside the class's own scope only; WordPress calls it from outside
+
+        if (is_null($accepted_args)) $accepted_args = !$reflection ? 1 : ($reflection->isVariadic() ? PHP_INT_MAX : $reflection->getNumberOfParameters()); // WordPress hands over every argument when the count exceeds what the hook passes
 
         $this->build_hook_name($hook_name);
         call_user_func('add_' . $type, $hook_name, $callback, $priority, $accepted_args);
@@ -91,18 +91,21 @@ trait Has_WP_Hooks {
 
     public function add_hooks (array $hooks, string $type = 'filter') {
 
-        foreach ($hooks as $hook_name => $callback) if (is_array($callback) && !is_callable($callback)) {
+        $ok = true;
 
-            [$cb, $priority, $third, $fourth] = $callback + [null, null, null, null];
-            if (is_int($third)) [$third, $fourth] = [null, $third]; // WordPress's own order: callback, priority, accepted args
+        foreach ($hooks as $hook_name => $callback) {
 
-            $this->add_hook($hook_name, $cb, $priority, $third ?? $type, $fourth);
+            [$cb, $priority, $third, $fourth] = is_array($callback) ? $callback + [null, null, null, null] : [null, null, null, null];
+            if (is_numeric($third) && !is_numeric($fourth)) [$third, $fourth] = [$fourth, $third]; // WordPress's own order: callback, priority, accepted args
 
-        } else {
+            // [callback, priority, type, accepted args]: led by a method name, a function name or a callable, the rest null or of its kind; anything else is a callback for add_hook to judge
+            $tuple = is_array($callback) && !is_callable($callback) && (is_string($cb) || is_callable($cb)) && (is_null($priority) || is_numeric($priority)) && (is_null($third) || is_string($third)) && (is_null($fourth) || is_numeric($fourth));
 
-            $this->add_hook($hook_name, $callback, null, $type);
+            $ok = ($tuple ? $this->add_hook($hook_name, $cb, is_null($priority) ? null : (int) $priority, $third ?? $type, is_null($fourth) ? null : (int) $fourth) : $this->add_hook($hook_name, $callback, null, $type)) && $ok;
 
         }
+
+        return $ok;
 
     }
 
