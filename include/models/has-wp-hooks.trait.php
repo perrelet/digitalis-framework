@@ -62,14 +62,14 @@ trait Has_WP_Hooks {
 
         } catch (ReflectionException) {
 
-            $reflection = null; // a name reflection cannot see (__call, __callStatic, the deprecated 'parent::m' form): callable, so it registers with WordPress's default count; pass $accepted_args for more
+            $reflection = null; // a name reflection cannot see (__call, __callStatic, the deprecated 'parent::m' form): callable, so it registers and takes every argument
 
         }
 
         $static_shape = is_string($callback) || (is_array($callback) && is_string($callback[0]));
         if ($static_shape && $reflection instanceof ReflectionMethod && !$reflection->isStatic()) return false; // callable inside the class's own scope only; WordPress calls it from outside
 
-        if (is_null($accepted_args)) $accepted_args = !$reflection ? 1 : ($reflection->isVariadic() ? PHP_INT_MAX : $reflection->getNumberOfParameters()); // WordPress hands over every argument when the count exceeds what the hook passes
+        if (is_null($accepted_args)) $accepted_args = (!$reflection || $reflection->isVariadic()) ? PHP_INT_MAX : $reflection->getNumberOfParameters(); // WordPress hands over every argument when the count exceeds what the hook passes
 
         $this->build_hook_name($hook_name);
         call_user_func('add_' . $type, $hook_name, $callback, $priority, $accepted_args);
