@@ -23,7 +23,7 @@ Reference for the WordPress hooks integration system.
 
 The Digitalis Framework provides a trait-based hook system that wraps WordPress's `add_action`, `add_filter`, `do_action`, and `apply_filters` with additional features:
 
-- **Automatic parameter counting** - No need to specify accepted args
+- **Automatic parameter counting** - No need to specify accepted args; a variadic callback takes every argument the hook passes, and a fourth argument to `add_filter()` / `add_action()` (or a fourth element in a hook map's array) overrides the count
 - **Method name shortcuts** - Use `'method_name'` instead of `[$this, 'method_name']`
 - **Hook name sanitization** - Consistent naming with dot notation
 - **Dependency injection** - Hook callbacks can receive injected dependencies
@@ -94,6 +94,8 @@ $this->add_hooks([
     'init'        => 'on_init',
     'wp_loaded'   => 'on_loaded',
     'the_content' => ['filter_content', 20],  // With priority
+    'save_post'   => ['on_save', 10, 3],      // With accepted args (WordPress's order; a type may sit third: ['on_save', 10, 'action', 3])
+    'admin_init'  => [$helper, 'on_admin'],   // A callable array is the callback, not a tuple
 ]);
 
 // Actions and filters share WordPress's hook registry. In hook maps, omit

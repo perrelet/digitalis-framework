@@ -387,7 +387,7 @@ public function get_hooks(): array {
 }
 // Actions and filters share WordPress's hook registry. Omit hook type in get_hooks()
 // unless explicit 'action' / 'filter' documentation is worth the extra ceremony.
-// accepted_args is derived via reflection on the callback — do not pass it.
+// accepted_args is derived via reflection on the callback (every argument for a variadic); a fourth element overrides it.
 
 public function run(): void  // called immediately on instantiation (before hooks fire)
 ```

@@ -906,7 +906,7 @@ WordPress hook management.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `add_hook()` | `public add_hook(string\|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter'): bool` | Registers hook; a string callback names a method of `$this`, null priority is `get_default_priority()` |
+| `add_hook()` | `public add_hook(string\|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter', ?int $accepted_args = null): bool` | Registers hook; a string callback names a method of `$this`, null priority is `get_default_priority()`; any callable shape registers (`[$obj, 'method']`, `'Class::method'`, a closure, a function name, an invokable), a non-callable answers `false`; the count is the callback's parameter count, every argument for a variadic or `$accepted_args` |
 | `get_hooks()` | `public get_hooks()` (on `Feature` and `Integration`) | Returns hook map; omit action/filter type unless explicit documentation is useful |
 | `remove_hook()` | `public remove_hook(string\|array $hook_name, mixed $callback, ?int $priority = null, string $type = 'filter'): bool` | Removes hook |
 
