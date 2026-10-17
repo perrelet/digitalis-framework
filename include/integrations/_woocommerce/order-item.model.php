@@ -99,38 +99,38 @@ class Order_Item extends Model {
 
     public function get_order_status () {
 
-        return $this->get_order() ? $this->get_order()->get_status() : null;
+        return ($order = $this->get_order()) ? $order->get_status() : null;
 
     }
 
     public function get_date ($event = 'created', $format = 'Y-m-d H:i:s') {
 
-        if (!$date = $this->{"get_date_{$event}"}) return null;
+        if (!method_exists($this, $getter = "get_date_{$event}") || !$date = $this->$getter()) return null; // an unknown event would reach __call and the item, which has no such method
         return $format ? $date->format($format) : $date;
 
     }
 
     public function get_date_completed () {
 
-        return $this->get_order() ? $this->get_order()->get_date_completed() : null;
+        return ($order = $this->get_order()) ? $order->get_date_completed() : null;
 
     }
 
     public function get_date_created () {
 
-        return $this->get_order() ? $this->get_order()->get_date_created() : null;
+        return ($order = $this->get_order()) ? $order->get_date_created() : null;
 
     }
 
     public function get_date_modified () {
 
-        return $this->get_order() ? $this->get_order()->get_date_modified() : null;
+        return ($order = $this->get_order()) ? $order->get_date_modified() : null;
 
     }
 
     public function get_date_paid () {
 
-        return $this->get_order() ? $this->get_order()->get_date_paid() : null;
+        return ($order = $this->get_order()) ? $order->get_date_paid() : null;
 
     }
 
