@@ -176,6 +176,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         }
 
+        clearstatcache(true, $current['path']); // the clear above, or a write earlier in the request, leaves the stat cache at the old size
         $filesize     = (int) filesize($current['path']);
         $total        = max(1, (int) ceil($filesize / $bytes_per_page));
         $page         = min($page, $total); // get_lines() clamps too; the pagination must mark the page it shows
@@ -282,46 +283,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     protected function get_lines ($path, $bytes_per_page, $page = 1, &$bytes = 0, $overflow = 500) {
 
-        $filesize   = filesize($path);
-        $min_offset = -1 * $filesize;
-        $max_pages  = max(ceil($filesize / $bytes_per_page), 1);
+        return explode("\n", Log::read_page($path, $page, ['bpp' => $bytes_per_page, 'overflow' => $overflow], $bytes));
 
-        if ($page > $max_pages) $page = $max_pages;
-
-        $offset = -1 * $page * $bytes_per_page;
-        $maxlen = min($bytes_per_page, $filesize + $offset + $bytes_per_page);
-        $offset = max($min_offset, $offset);
-
-        $look_bwd = $overflow && ($offset != $min_offset);
-        $look_fwd = $overflow && ($page > 1);
-
-        $over_bwd = $look_bwd ? min($overflow, $filesize + $offset) : 0;
-        $over_fwd = $look_fwd ? $overflow : 0;
-
-        if ($look_bwd) {
-            $offset = max($min_offset, $offset - $over_bwd);
-            $maxlen += $over_bwd;
-        }
-        if ($look_fwd) $maxlen += $over_fwd;
-
-        $lines = file_get_contents($path, false, null, $offset, $maxlen);
-
-        //dprint($offset);
-
-        if ($look_bwd || $look_fwd) {
-
-            $next_nl = $look_fwd ? strpos($lines, "\n", -1 * $over_fwd + 1) : strlen($lines);
-            $prev_nl = $look_bwd ? strrpos($lines, "\n", -1 * ($bytes_per_page + $over_fwd)) : 0;
-            $lines   = substr($lines, $prev_nl, $next_nl - $prev_nl);
-
-        }
-
-        $bytes = strlen($lines);
-
-        $lines = explode("\n", $lines);
-
-        return $lines; 
-    
     }
 
     protected function format_line (&$line, $syntax_rules) {

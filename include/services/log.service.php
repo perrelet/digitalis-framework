@@ -136,13 +136,21 @@ class Log extends Service {
 
     public function get_page ($page = 1, $args = [], &$bytes = 0) {
 
+        return static::read_page($this->get_path(), (int) $page, wp_parse_args($args), $bytes); // the loose contract stays: a null page, a query-string $args
+
+    }
+
+    // One paging reader for any file: get_page() reads this log through it, Logs_Page its chosen file.
+    public static function read_page (string $path, int $page = 1, array $args = [], &$bytes = 0) : string {
+
         $bytes    = 0;
         $defaults = ['bpp' => 200000, 'overflow' => 500];
         $args     = wp_parse_args($args, $defaults);
 
-        $path = realpath($this->get_path());
+        $path = realpath($path);
         if (!is_string($path) || !is_readable($path)) return '';
 
+        clearstatcache(true, $path); // a write earlier in the request leaves PHP's stat cache at the old size
         $filesize = filesize($path);
         if ($filesize === false || $filesize <= 0) return '';
 
@@ -151,7 +159,6 @@ class Log extends Service {
         $overflow  = max(0, (int) $args['overflow']);
         $max_pages = max((int) ceil($filesize / $bpp), 1);
 
-        $page = (int) $page;
         if ($page < 0) $page = $max_pages + $page + 1;   // -1 is the last page: the file's head
         $page = min(max($page, 1), $max_pages);
 
@@ -191,7 +198,7 @@ class Log extends Service {
             if ($look_bwd) {
 
                 $cut     = max(0, strlen($lines) - ($bpp + $over_fwd));
-                $chunk   = substr($lines, 0, $cut);
+                $chunk   = substr($lines, 0, $cut + 1); // through the page's first byte: a page starting on a newline starts after it, or the previous line would print on both pages
                 $pos     = strrpos($chunk, "\n");
                 $prev_nl = ($pos === false) ? 0 : ($pos + 1);
 
@@ -201,7 +208,6 @@ class Log extends Service {
 
             }
 
-            if ($prev_nl < 0)        $prev_nl = 0;
             if ($next_nl < $prev_nl) $next_nl = $prev_nl;
 
             $lines = substr($lines, $prev_nl, $next_nl - $prev_nl);

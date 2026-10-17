@@ -227,6 +227,9 @@ echo "Returned {$bytes} bytes";
 
 // Custom page size
 $page = $log->get_page(1, ['bpp' => 50000, 'overflow' => 200]);
+
+// Any file, the same paging
+$page = Log::read_page($path, 2, ['bpp' => 50000]);
 ```
 
 `get_page()` reads backwards from the end of the file:
