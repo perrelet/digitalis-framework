@@ -1,8 +1,8 @@
-# Level 5 over the directories raised so far. The others are scanned for symbols but not analysed (excludePaths.analyse), so `paths` stays
-# the whole tree: a `paths` of its own would lose every class outside it. Always run the whole tree (vendor/bin/phpstan analyse -c
-# phpstan.level5.neon, about three minutes within 1.2 GB): one directory on the command line reports traits used elsewhere as unused.
-# Every include/ directory is raised. load.php is next (the commit that makes it clean deletes its line); bin stays (a development tool,
-# analysed at level 0 by the dist, never loaded by a consumer) and include/deprecated stays at level 0 until the deprecation pass removes it.
+# Level 5 over the whole tree but two entries. include/deprecated stays at level 0 until the deprecation pass removes it; bin is a
+# development tool, analysed at level 0 by phpstan.neon.dist and never loaded by a consumer. Both are excluded from analysis only
+# (excludePaths.analyse): they are still scanned for symbols, so `paths` stays the dist's whole tree. Always run the whole tree
+# (vendor/bin/phpstan analyse -c phpstan.level5.neon, about three minutes within 1.2 GB): one directory on the command line reports
+# traits used elsewhere as unused. Never add a baseline or an ignoreErrors entry (docs/CONTRIBUTING.md item 7).
 includes:
   - phpstan.neon.dist
 parameters:
@@ -10,6 +10,5 @@ parameters:
   resultCachePath: %tmpDir%/resultCache-level5.php
   excludePaths:
     analyse:
-      - load.php
       - bin
       - include/deprecated

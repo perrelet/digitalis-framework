@@ -31,7 +31,7 @@ require LATTICE_PATH . 'compat/digitalis-hooks.php';
 // Declared, not instantiated: the framework is a library of base classes, unlike a consuming plugin.
 (new class { use Lattice\Autoloader; })
     ->use_classmap(LATTICE_PATH . '.classmap.php')
-    ->autoload(LATTICE_PATH . 'include', true, 'php', $lattice_loaded, false);
+    ->autoload(LATTICE_PATH . 'include', true, 'php', instantiation: false);
 
 if (Lattice\Strict::enabled()) Lattice\Query_Manager::strict_hooks();
 
