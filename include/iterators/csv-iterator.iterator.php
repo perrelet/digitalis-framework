@@ -74,7 +74,7 @@ abstract class CSV_Iterator extends Iterator {
             if ($i < $index_start) continue;
             if ($i >= $index_end)  break;
 
-            if ($this->headers && $row) {
+            if ($this->headers) {
 
                 $keyed_row = [];
 
