@@ -147,8 +147,9 @@ abstract class Logs_Page extends Admin_Sub_Page {
         if (!$logs = $this->get_logs()) return;
 
         $slug           = $_GET['log'] ?? null;
-        $bytes_per_page = (int) ($_GET['bpp'] ?? $this->bytes_per_page);
-        $page           = (int) ($_GET['paged'] ?? 1);
+        $bytes_per_page = is_scalar($_GET['bpp'] ?? null) ? (int) $_GET['bpp'] : 0;
+        if ($bytes_per_page < 1) $bytes_per_page = $this->bytes_per_page; // ?bpp=0 divided by zero; the default rather than a clamp, since a one-byte page is empty
+        $page           = is_scalar($_GET['paged'] ?? null) ? max(1, (int) $_GET['paged']) : 1;
         $clear          = $_POST['clear-log'] ?? null;
 
         $current = $slug ? ($logs[$slug] ?? $logs[array_key_first($logs)]) : $logs[array_key_first($logs)];
@@ -175,16 +176,18 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         }
 
+        $filesize     = (int) filesize($current['path']);
+        $total        = max(1, (int) ceil($filesize / $bytes_per_page));
+        $page         = min($page, $total); // get_lines() clamps too; the pagination must mark the page it shows
         $bytes        = 0;
         $lines        = $this->get_lines($current['path'], $bytes_per_page, $page, $bytes);
-        $filesize     = filesize($current['path']);
         $more         = ($filesize > $bytes);
         $syntax_rules = $this->get_log_syntax_rules($current);
 
         $pagination = $more ? paginate_links([
             'base'      => add_query_arg('paged', '%#%'),
             'current'   => $page,
-            'total'     => (int) floor($filesize / $bytes_per_page) + 1,
+            'total'     => $total,
             'prev_text' => "&laquo;",
             'next_text' => "&raquo;",
         ]) : false;
