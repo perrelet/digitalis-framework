@@ -123,7 +123,7 @@ abstract class Iterator extends Singleton {
 
     public function ajax () {
 
-        if (!wp_verify_nonce($_REQUEST['nonce'], "iterator_{$this->key}")) wp_send_json_error('Iterator Expired.', 401);
+        if (!wp_verify_nonce($_REQUEST['nonce'] ?? '', "iterator_{$this->key}")) wp_send_json_error('Iterator Expired.', 401);
         if (!current_user_can($this->capability))                          wp_send_json_error('Unauthorized Access.', 401);
         if (!isset($_REQUEST['task']))                                     wp_send_json_error('Task parameter is required.', 422);
 
@@ -140,6 +140,9 @@ abstract class Iterator extends Singleton {
 
             case "stop_cron":
                 wp_send_json($this->stop_cron());
+
+            default:
+                wp_send_json_error('Unknown task.', 422);
 
         }
 
