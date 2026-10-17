@@ -142,7 +142,7 @@ class Log extends Service {
         ]);
 
         $path = realpath($this->get_path());
-        if (!is_string($path) || $path === '' || !is_readable($path)) return '';
+        if (!is_string($path) || !is_readable($path)) return '';
 
         $filesize = filesize($path);
         if ($filesize === false || $filesize <= 0) return '';

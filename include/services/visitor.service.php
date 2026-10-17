@@ -324,7 +324,7 @@ class Visitor extends Service {
 
     public function get_request_time () {
 
-        return (float) $_SERVER['REQUEST_TIME_FLOAT'] ?? $_SERVER['REQUEST_TIME'] ?? microtime();
+        return (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? $_SERVER['REQUEST_TIME'] ?? microtime(true));
 
     }
 
