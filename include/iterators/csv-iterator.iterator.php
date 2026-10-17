@@ -56,9 +56,14 @@ abstract class CSV_Iterator extends Iterator {
         $index_start = $this->index + ($this->has_header ? 1 : 0);
         $index_end =   $index_start + $this->batch_size;
 
-        for ($i = 0; $row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape); $i++) {
+        $i = -1;
 
-            $row = array_map(fn($value) => trim($value, "\xEF\xBB\xBF"), $row); // Remove BOM characters and such
+        while (($row = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape)) !== false) {
+
+            if ($row === [null]) continue; // a blank line: fgetcsv's one null cell is no record (trim(null) deprecated it and the keyed row became a bogus item)
+
+            $i++;
+            if (($i == 0) && isset($row[0])) $row[0] = (string) preg_replace('/^\xEF\xBB\xBF/', '', $row[0]); // a BOM leads the file's first cell only; trim() took its three bytes as a character list, from both ends of every cell, and ate a trailing », ¿ or ÿ
 
             if (($i == 0) && $this->has_header) {
 
@@ -106,11 +111,11 @@ abstract class CSV_Iterator extends Iterator {
 
         if ($this->has_header) $i--;
 
-        while (($data = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape)) !== false) $i++;
+        while (($data = fgetcsv($handle, 0, $this->delimiter, $this->enclosure, $this->escape)) !== false) if ($data !== [null]) $i++;
 
         fclose($handle);
 
-        return $i;
+        return max(0, $i);
 
     }
 
