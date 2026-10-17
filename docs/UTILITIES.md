@@ -236,6 +236,8 @@ $page = $log->get_page(1, ['bpp' => 50000, 'overflow' => 200]);
 | `bpp` | `200000` | Bytes per page |
 | `overflow` | `500` | Extra bytes read on each edge to find clean line boundaries |
 
+`$page` clamps to the file: `0`, or a negative beyond `-max`, reads page 1; a page past the last reads the last; the last page holds the remainder.
+
 ### Export Vars Mode
 
 ```php

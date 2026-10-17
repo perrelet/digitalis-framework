@@ -136,10 +136,9 @@ class Log extends Service {
 
     public function get_page ($page = 1, $args = [], &$bytes = 0) {
 
-        $args = wp_parse_args($args, [
-            'bpp'      => 200000,
-            'overflow' => 500,
-        ]);
+        $bytes    = 0;
+        $defaults = ['bpp' => 200000, 'overflow' => 500];
+        $args     = wp_parse_args($args, $defaults);
 
         $path = realpath($this->get_path());
         if (!is_string($path) || !is_readable($path)) return '';
@@ -148,20 +147,23 @@ class Log extends Service {
         if ($filesize === false || $filesize <= 0) return '';
 
         $min_offset = -1 * $filesize;
-        $max_pages  = max((int) ceil($filesize / $args['bpp']), 1);
+        $bpp       = ((int) $args['bpp'] > 0) ? (int) $args['bpp'] : $defaults['bpp']; // 0 divided; a one-byte page is a newline, so the default rather than a clamp
+        $overflow  = max(0, (int) $args['overflow']);
+        $max_pages = max((int) ceil($filesize / $bpp), 1);
 
-        if ($page < 0) $page = $max_pages - abs((int) $page) + 1;
+        $page = (int) $page;
+        if ($page < 0) $page = $max_pages + $page + 1;   // -1 is the last page: the file's head
+        $page = min(max($page, 1), $max_pages);
 
-        $offset = -1 * $page * (int) $args['bpp'];
+        $offset = -1 * $page * $bpp;
+        $maxlen = min($bpp, $filesize + $offset + $bpp); // the last page holds the remainder: derived before the offset is clamped, which re-read a full page from the start
         $offset = max($min_offset, $offset);
 
-        $maxlen = min((int) $args['bpp'], $filesize + $offset + (int) $args['bpp']);
+        $look_bwd = $overflow && ($offset != $min_offset);
+        $look_fwd = $overflow && ($page > 1);
 
-        $look_bwd = !empty($args['overflow']) && ($offset != $min_offset);
-        $look_fwd = !empty($args['overflow']) && ($page > 1);
-
-        $over_bwd = $look_bwd ? min((int) $args['overflow'], $filesize + $offset) : 0;
-        $over_fwd = $look_fwd ? (int) $args['overflow'] : 0;
+        $over_bwd = $look_bwd ? min($overflow, $filesize + $offset) : 0;
+        $over_fwd = $look_fwd ? min($overflow, ($page - 1) * $bpp) : 0; // only the bytes after the page exist to read; past the end, the read fell short and the cut found the file's first line
 
         if ($look_bwd) {
             $offset = max($min_offset, $offset - $over_bwd);
@@ -176,7 +178,7 @@ class Log extends Service {
 
             if ($look_fwd) {
 
-                $start   = max(0, strlen($lines) - $over_fwd);
+                $start   = max(0, strlen($lines) - $over_fwd - 1); // from the page's last byte: a page ending on a newline ends there, or the next page's first line would print on both
                 $pos     = strpos($lines, "\n", $start);
                 $next_nl = ($pos === false) ? strlen($lines) : $pos;
 
@@ -188,7 +190,7 @@ class Log extends Service {
 
             if ($look_bwd) {
 
-                $cut     = max(0, strlen($lines) - ((int) $args['bpp'] + $over_fwd));
+                $cut     = max(0, strlen($lines) - ($bpp + $over_fwd));
                 $chunk   = substr($lines, 0, $cut);
                 $pos     = strrpos($chunk, "\n");
                 $prev_nl = ($pos === false) ? 0 : ($pos + 1);
