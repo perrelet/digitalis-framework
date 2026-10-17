@@ -88,7 +88,7 @@ abstract class Bidirectional_Relationship extends \Lattice\Feature {
             if (empty($sync_ids))     $sync_ids = [];
             if (!is_array($sync_ids)) $sync_ids = [$sync_ids];
 
-            if (!in_array($updated_id, $sync_ids) && $limit && (count($sync_ids) >= $limit)) {
+            if (!in_array($updated_id, $sync_ids) && (count($sync_ids) >= $limit)) {
 
                 $title = $partner_type->title($selector);
                 return "Unable to update this field because '{$title}' cannot be related to more than {$limit} items.";

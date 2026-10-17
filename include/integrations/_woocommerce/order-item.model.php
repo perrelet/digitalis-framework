@@ -25,7 +25,7 @@ class Order_Item extends Model {
         if (static::$product_type) {
 
             $item = new WC_Order_Item_Product($id);
-            return ($item && ($product = $item->get_product()) && ($product->get_type() == static::$product_type));
+            return (($product = $item->get_product()) && ($product->get_type() == static::$product_type));
 
         } else {
 
@@ -92,7 +92,7 @@ class Order_Item extends Model {
 
     public function get_customer_id () {
 
-        return method_exists($this->get_order(), 'get_customer_id') ? $this->get_order()->get_customer_id() : null; // Refunded orders dont have get_customer_id method
+        return (($order = $this->get_order()) && method_exists($order, 'get_customer_id')) ? $order->get_customer_id() : null; // Refunded orders dont have get_customer_id method
 
     }
 
@@ -143,7 +143,7 @@ class Order_Item extends Model {
 
             $this->siblings = [];
 
-            if ($items = $this->get_order()->get_items()) foreach ($items as $item) {
+            if (($order = $this->get_order()) && ($items = $order->get_items())) foreach ($items as $item) {
 
                 if ($item->get_id() == $this->get_item_id()) continue;
 
@@ -163,7 +163,7 @@ class Order_Item extends Model {
 
             if ($this->siblings) foreach ($this->siblings as $sibling) {
 
-                if ($sibling->get_product()->get_type() == $product_type) $filtered[] = $sibling;
+                if (($product = $sibling->get_product()) && ($product->get_type() == $product_type)) $filtered[] = $sibling;
 
             }
 

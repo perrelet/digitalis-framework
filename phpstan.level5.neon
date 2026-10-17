@@ -12,7 +12,6 @@ parameters:
   resultCachePath: %tmpDir%/resultCache-level5.php
   excludePaths:
     analyse:
-      - include/integrations
       - include/routing
       - include/views
       - include/models
