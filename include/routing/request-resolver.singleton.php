@@ -16,6 +16,7 @@ class Request_Resolver extends Singleton {
 
     }
 
+    /** @param class-string<Layout|Page_View> $base_class */
     protected function resolve (string $base_class, bool $return_class = false) {
 
         $contexts   = $this->get_current_context();
@@ -31,8 +32,7 @@ class Request_Resolver extends Singleton {
 
         $candidates = array_filter(
             View::get_loaded_views(),
-            fn ($class) => is_subclass_of($class, $base_class) && ($class !== $base_class)
-                && !(new \ReflectionClass($class))->isAbstract()
+            fn ($class) => is_subclass_of($class, $base_class)   // never the base itself; get_loaded_views() holds no abstract (View::static_init skips them)
                 && (!$class::get_context()   || array_intersect((array) $class::get_context(), $contexts))
                 && (!$class::get_post_type() || array_intersect((array) $class::get_post_type(), $post_types))
                 && (!$class::get_taxonomy()  || in_array($taxonomy, (array) $class::get_taxonomy()))

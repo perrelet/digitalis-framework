@@ -36,6 +36,7 @@ abstract class View implements \ArrayAccess {
 
     }
 
+    /** @return list<class-string<View>> */
     public static function get_loaded_views () {
 
         return self::$loaded_views;
