@@ -27,8 +27,8 @@ class Order_Item extends Model {
 
         if (!static::$product_type) return true;
 
-        $item = new WC_Order_Item_Product($id);
-        return (($product = $item->get_product()) && ($product->get_type() == static::$product_type));
+        $wc_item = new WC_Order_Item_Product($id);
+        return (($wc_product = $wc_item->get_product()) && ($wc_product->get_type() == static::$product_type));
 
     }
 
@@ -89,13 +89,13 @@ class Order_Item extends Model {
 
     public function get_customer_id () {
 
-        return (($order = $this->get_order()) && method_exists($order, 'get_customer_id')) ? $order->get_customer_id() : null; // Refunded orders dont have get_customer_id method
+        return (($wc_order = $this->get_order()) && method_exists($wc_order, 'get_customer_id')) ? $wc_order->get_customer_id() : null; // Refunded orders dont have get_customer_id method
 
     }
 
     public function get_order_status () {
 
-        return ($order = $this->get_order()) ? $order->get_status() : null;
+        return ($wc_order = $this->get_order()) ? $wc_order->get_status() : null;
 
     }
 
@@ -108,25 +108,25 @@ class Order_Item extends Model {
 
     public function get_date_completed () {
 
-        return ($order = $this->get_order()) ? $order->get_date_completed() : null;
+        return ($wc_order = $this->get_order()) ? $wc_order->get_date_completed() : null;
 
     }
 
     public function get_date_created () {
 
-        return ($order = $this->get_order()) ? $order->get_date_created() : null;
+        return ($wc_order = $this->get_order()) ? $wc_order->get_date_created() : null;
 
     }
 
     public function get_date_modified () {
 
-        return ($order = $this->get_order()) ? $order->get_date_modified() : null;
+        return ($wc_order = $this->get_order()) ? $wc_order->get_date_modified() : null;
 
     }
 
     public function get_date_paid () {
 
-        return ($order = $this->get_order()) ? $order->get_date_paid() : null;
+        return ($wc_order = $this->get_order()) ? $wc_order->get_date_paid() : null;
 
     }
 
@@ -140,13 +140,13 @@ class Order_Item extends Model {
 
             $this->siblings = [];
 
-            if (($order = $this->get_order()) && ($items = $order->get_items())) foreach ($items as $item) {
+            if (($wc_order = $this->get_order()) && ($wc_items = $wc_order->get_items())) foreach ($wc_items as $wc_item) {
 
-                if ($item->get_id() == $this->get_item_id()) continue;
+                if ($wc_item->get_id() == $this->get_item_id()) continue;
 
-                if (($sibling_group_id = $item->get_meta('_group', true)) && ($sibling_group_id == $group_id)) {
+                if (($sibling_group_id = $wc_item->get_meta('_group', true)) && ($sibling_group_id == $group_id)) {
 
-                    $this->siblings[] = $item;
+                    $this->siblings[] = $wc_item;
 
                 }
 
@@ -158,9 +158,9 @@ class Order_Item extends Model {
 
             $filtered = [];
 
-            if ($this->siblings) foreach ($this->siblings as $sibling) {
+            if ($this->siblings) foreach ($this->siblings as $wc_sibling) {
 
-                if (($product = $sibling->get_product()) && ($product->get_type() == $product_type)) $filtered[] = $sibling;
+                if (($wc_product = $wc_sibling->get_product()) && ($wc_product->get_type() == $product_type)) $filtered[] = $wc_sibling;
 
             }
 
