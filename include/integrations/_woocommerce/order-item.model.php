@@ -23,16 +23,12 @@ class Order_Item extends Model {
 
     public static function validate_id ($id) {
 
-        if (static::$product_type) {
+        if (!static::exists($id)) return false; // WC_Order_Item_Product's constructor throws "Invalid order item" for an unknown id, where a model answers null
 
-            $item = new WC_Order_Item_Product($id);
-            return (($product = $item->get_product()) && ($product->get_type() == static::$product_type));
+        if (!static::$product_type) return true;
 
-        } else {
-
-            return true;
-
-        }
+        $item = new WC_Order_Item_Product($id);
+        return (($product = $item->get_product()) && ($product->get_type() == static::$product_type));
 
     }
 
