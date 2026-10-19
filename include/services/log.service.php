@@ -136,7 +136,7 @@ class Log extends Service {
 
     public function get_page ($page = 1, $args = [], &$bytes = 0) {
 
-        return static::read_page($this->get_path(), (int) $page, wp_parse_args($args), $bytes); // the loose contract stays: a null page, a query-string $args
+        return static::read_page($this->get_path(), (int) $page, wp_parse_args($args), $bytes); // a null page (page 1 now) and a query-string $args still type-check
 
     }
 
@@ -197,10 +197,18 @@ class Log extends Service {
 
             if ($look_bwd) {
 
-                $cut     = max(0, strlen($lines) - ($bpp + $over_fwd));
-                $chunk   = substr($lines, 0, $cut + 1); // through the page's first byte: a page starting on a newline starts after it, or the previous line would print on both pages
-                $pos     = strrpos($chunk, "\n");
-                $prev_nl = ($pos === false) ? 0 : ($pos + 1);
+                $cut = max(0, strlen($lines) - ($bpp + $over_fwd));
+
+                if (($cut > 0) && ($lines[$cut - 1] === "\n")) {
+
+                    $prev_nl = $cut; // the previous page's line ended before this page: it starts here, an empty line of its own included
+
+                } else {
+
+                    $pos     = strrpos(substr($lines, 0, $cut + 1), "\n"); // a line runs into this page: start where it starts, or just after a newline that ends it at the page's first byte
+                    $prev_nl = ($pos === false) ? 0 : ($pos + 1);
+
+                }
 
             } else {
 
