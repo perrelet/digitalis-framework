@@ -23,7 +23,7 @@ class Order_Item extends Model {
 
     public static function validate_id ($id) {
 
-        if (!static::exists($id)) return false; // WC_Order_Item_Product's constructor throws "Invalid order item" for an unknown id, where a model answers null
+        if (!static::exists($id)) return false; // WC_Order_Item_Product's constructor throws "Invalid order item" for an unknown id and wraps an empty item for a non-numeric one, where a model answers null
 
         if (!static::$product_type) return true;
 
@@ -36,11 +36,9 @@ class Order_Item extends Model {
 
         global $wpdb;
 
-        $items_table = "{$wpdb->prefix}woocommerce_order_items";
+        if (!is_numeric($item_id) || ((int) $item_id != $item_id)) return false; // %d would read a request's '7abc' as 7, and this gate guards get_instance() for the consumers that call it first
 
-        $sql = "SELECT 'order_item_id' FROM {$items_table} WHERE order_item_id = '%d'";
-
-        return (bool) $wpdb->get_row($wpdb->prepare($sql, $item_id));
+        return (bool) $wpdb->get_var($wpdb->prepare("SELECT 1 FROM {$wpdb->prefix}woocommerce_order_items WHERE order_item_id = %d", $item_id));
 
     }
 
