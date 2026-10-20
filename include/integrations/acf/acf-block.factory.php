@@ -225,7 +225,7 @@ class ACF_Block extends Factory {
         if ($view && ($error = View::class_error($view))) {
 
             Strict::fail(static::class, $error, 'Set $view to the View class name, or leave it unset and override view().');
-            View::log_class_error(static::class, $error);
+            Strict::log_once(static::class, $error);
             $view = false;
 
         }

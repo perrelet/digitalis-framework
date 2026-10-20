@@ -21,7 +21,7 @@ abstract class Shortcode extends Factory {
         if ($error = View::class_error($this->view)) {
 
             Strict::fail(static::class, $error, 'Set $view to the View class name, or override render().');
-            View::log_class_error(static::class, $error);
+            Strict::log_once(static::class, $error);
 
             return '';
 

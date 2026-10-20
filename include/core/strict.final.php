@@ -9,6 +9,7 @@ final class Strict {
 
     private static array $violations = [];
     private static array $walked     = [];
+    private static array $logged     = [];
     private static int   $depth      = 0;
 
     public static function enabled () : bool {
@@ -24,6 +25,16 @@ final class Strict {
         if (!self::enabled()) return;
 
         throw new Strict_Violation(self::message($class, $problem, $fix));
+
+    }
+
+    // The production counterpart of fail(): one error_log line per class and problem per request beside the fallback, so a tag rendered fifty times logs once; under strict the violation is the diagnosis.
+    public static function log_once (string $class, string $problem) : void {
+
+        if (self::enabled() || isset(self::$logged["{$class}: {$problem}"])) return;
+
+        self::$logged["{$class}: {$problem}"] = true;
+        error_log("Lattice: {$class}: {$problem}");
 
     }
 

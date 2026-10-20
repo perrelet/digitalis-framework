@@ -192,7 +192,7 @@ PHP's `__toString()` is invoked automatically when a view is echoed; the explici
 
 ### Strict mode
 
-Under `LATTICE_STRICT` (default `WP_DEBUG`) the View lifecycle is audited. Boot checks run once per view during the autoload walk and list every problem in one `Strict_Violation`; render checks throw at the offending `print()`. Messages read `Class (dir/file.php): problem. Fix.`
+Under `LATTICE_STRICT` (default `WP_DEBUG`) the View lifecycle is audited. Boot checks run once per view during the autoload walk and list every problem in one `Strict_Violation`; render checks throw at the offending `print()`. Messages read `Class (dir/file.php): problem. Fix.` In production (`LATTICE_STRICT` off) the render-time sites fall back and log once per class and problem through `Strict::log_once()`.
 
 | Check | When | Fix |
 |---|---|---|
