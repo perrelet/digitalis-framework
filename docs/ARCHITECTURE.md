@@ -787,7 +787,7 @@ Front-end rendering (theme calls App::render()):
 
 ### App boot lifecycle (`plugins_loaded` hook)
 
-When your plugin calls `App::get_instance()` it schedules `boot()` on `plugins_loaded`. The boot sequence is:
+When your plugin calls `App::get_instance()` it schedules `boot()` on `plugins_loaded` (or boots from that `get_instance()` when the hook has already run). The boot sequence is:
 
 ```
 boot()

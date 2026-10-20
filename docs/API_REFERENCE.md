@@ -178,7 +178,7 @@ abstract class App extends Factory
 |--------|-----------|-------------|
 | `get_path()` | `public get_path(): string` | Returns `$path`. |
 | `get_url()` | `public get_url(): string` | Returns `$url`. |
-| `boot()` | `public boot(): void` | Entry point, called on `plugins_loaded`. Calls `load()`, `ensure_schema()`, `boot_shared()`, then the appropriate context methods. |
+| `boot()` | `public boot(): void` | Entry point, called on `plugins_loaded`, or at once from `get_instance()` when built after it. Calls `load()`, `ensure_schema()`, `boot_shared()`, then the appropriate context methods. |
 | `load()` | `public load(): void` | Runs `autoload()`. Always runs. |
 | `ensure_schema()` | `public ensure_schema(): void` | No-op stub. Override to run DB migrations via `Migration_Runner`. Always runs before context branching. |
 | `boot_shared()` | `public boot_shared(): void` | Override for code that runs on every request after loading. |
