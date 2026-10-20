@@ -418,7 +418,7 @@ add_filter('lattice.instantiate.my_plugin.my_class', function($instantiation, $p
 // Modify the class name Call::get_class_name() resolves (My_Plugin\My_Class)
 add_filter('lattice.class.my_plugin.my_class', function($class_name, $data) {
     // Return different class name
-    if ($data['context'] === 'admin') {
+    if (($data['context'] ?? null) === 'admin') {
         return 'My_Plugin\Admin_My_Class';
     }
     return $class_name;
