@@ -87,7 +87,20 @@ abstract class Post_Type extends Singleton {
         $args['supports']   = $this->get_supports($this->get_default_supports());
         $args['labels']     = $this->get_labels($this->get_default_labels());
 
-        if ($this->removed_supports && is_array($args['supports'])) $args['supports'] = array_diff($args['supports'], $this->removed_supports); // array_diff() stringifies an array-valued feature (a warning), so only when something was removed
+        if ($this->removed_supports && is_array($args['supports'])) { // nothing to remove is the common case: skip the pass
+
+            $supports = [];
+
+            foreach ($args['supports'] as $key => $feature) { // a feature is a value ('title') or a key with arguments ('editor' => [...]), as WP_Post_Type::add_supports() reads it; array_diff() compared values alone, so a keyed feature survived its removal and stringified with a warning
+
+                if (in_array(is_array($feature) ? $key : $feature, $this->removed_supports, true)) continue;
+                if (is_array($feature)) $supports[$key] = $feature; else $supports[] = $feature;
+
+            }
+
+            $args['supports'] = $supports;
+
+        }
         if ($args['supports'] === []) $args['supports'] = false; // [] would hand WordPress its defaults back (title, editor, autosave); false is "none"
 
         $this->filter_args($args);
