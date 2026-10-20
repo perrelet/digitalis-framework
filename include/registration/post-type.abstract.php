@@ -87,7 +87,8 @@ abstract class Post_Type extends Singleton {
         $args['supports']   = $this->get_supports($this->get_default_supports());
         $args['labels']     = $this->get_labels($this->get_default_labels());
 
-        if ($this->removed_supports && is_array($args['supports'])) $args['supports'] = array_diff($args['supports'], $this->removed_supports) ?: false; // [] would hand WordPress its defaults back (title, editor, autosave); false is "none"
+        if ($this->removed_supports && is_array($args['supports'])) $args['supports'] = array_diff($args['supports'], $this->removed_supports); // array_diff() stringifies an array-valued feature (a warning), so only when something was removed
+        if ($args['supports'] === []) $args['supports'] = false; // [] would hand WordPress its defaults back (title, editor, autosave); false is "none"
 
         $this->filter_args($args);
 

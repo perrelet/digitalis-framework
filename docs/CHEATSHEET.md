@@ -154,10 +154,9 @@ class Project_Post_Type extends Post_Type {
     protected $position     = 20;
     protected $model_class  = Project::class;   // Auto-instantiate model on singular requests
 
-    // Optional: tighten registration args
-    protected function get_args ($args) {
-        $args['supports'] = ['title', 'editor', 'thumbnail', 'excerpt'];
-        return $args;
+    // Optional: tighten the supports (register() reads get_supports(), so a supports key set in get_args() is overwritten)
+    protected function get_supports ($supports) {
+        return ['title', 'editor', 'thumbnail', 'excerpt'];   // false or [] registers none
     }
 }
 ```

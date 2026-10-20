@@ -338,7 +338,7 @@ A `$filters` key is the taxonomy slug or the ACF field name (the meta key the cl
 |--------|-----------|-------------|
 | `get_args()` | `protected get_args(array $args): array` | Override to change the default registration args |
 | `get_rewrite()` | `protected get_rewrite(array\|false $rewrite): array\|false` | Override to change the default rewrite args; `false` disables rewrites, as `register_post_type()` allows |
-| `get_supports()` | `protected get_supports(array\|false $supports): array\|false` | Override to change the default supports; `false` registers none, as does a `remove_support()` that empties the list |
+| `get_supports()` | `protected get_supports(array\|false $supports): array\|false` | Override to change the default supports; `false` or `[]` registers none, as does a `remove_support()` that empties the list |
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
 | `get_filters()` | `protected get_filters(): array` | Override to compute `$filters`; called on construction and by each `build_filters()` (`admin_controller()` and `render_filters()`), so from the second build `$this->filters`, what the default returns, already holds the parsed entries: an override extending `parent::get_filters()` receives them, one returning its own array is parsed afresh each build |

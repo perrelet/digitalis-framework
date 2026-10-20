@@ -884,8 +884,8 @@ class Project extends Singleton {
     protected static $archive  = false;
     protected static $position = 20;
 
-    // Supports
-    protected static $supports = ['title', 'editor', 'thumbnail'];
+    // Supports are not a property: override get_supports() (false or [] registers none)
+    protected function get_supports ($supports) { return ['title', 'editor', 'thumbnail']; }
 
     // Taxonomies to register
     protected static $taxonomies = ['project_category'];

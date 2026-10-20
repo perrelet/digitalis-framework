@@ -428,7 +428,7 @@ add_filter('lattice.class.my_plugin.my_class', function($class_name, $data) {
 For `My_Plugin\Project`:
 
 ```php
-// Filter the args handed to register_post_type() (after get_args(), the rewrite, supports and labels, and filter_args())
+// Filter the args handed to register_post_type() (after get_args(), the rewrite, supports and labels, and filter_args()); a supports => [] here keeps WordPress's defaults
 add_filter('lattice.post_type.my_plugin.project.args', function($args) {
     $args['public'] = false;
     return $args;
@@ -440,7 +440,7 @@ add_filter('lattice.post_type.my_plugin.project.rewrite', function($rewrite) {
     return $rewrite;
 });
 
-// Filter the default supports before get_supports(); an array, or false for none
+// Filter the default supports before get_supports(); an array, or [] or false for none
 add_filter('lattice.post_type.my_plugin.project.supports', function($supports) {
     $supports[] = 'page-attributes';
     return $supports;
@@ -749,7 +749,7 @@ class ACF_Customizations extends Feature {
 | `lattice.class.{class}` | Filter | Class name resolution (`$class_name, $data`); honoured by `View::render()` and `Shortcode::render()` |
 | `lattice.post_type.{class}.args` | Filter | Post type args |
 | `lattice.post_type.{class}.rewrite` | Filter | Post type rewrite (array, or `false`) |
-| `lattice.post_type.{class}.supports` | Filter | Post type supports (array, or `false`) |
+| `lattice.post_type.{class}.supports` | Filter | Post type supports (array; `[]` or `false` for none) |
 | `lattice.post_type.{class}.labels` | Filter | Post type labels |
 | `lattice.taxonomy.{class}.args` | Filter | Taxonomy args |
 | `lattice.field_group.field` | Filter | Field_Group fields (`$field, $params, $class`) |
