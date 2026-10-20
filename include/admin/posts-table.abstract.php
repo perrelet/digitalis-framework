@@ -12,7 +12,7 @@ abstract class Posts_Table extends Screen_Table {
 
         $post_ids = (new \WP_Query([
             'post_type'      => $this->post_type,
-            'status'         => 'publish',
+            'post_status'    => 'publish',
             'posts_per_page' => 1,
             'fields'         => 'ids',
         ]))->get_posts();
