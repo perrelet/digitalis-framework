@@ -758,6 +758,7 @@ class ACF_Customizations extends Feature {
 | `lattice.post.duplicate.exclude_meta` | Filter | Meta keys `Post::duplicate()` never copies (`$keys, $post`) |
 | `lattice.keywords.collected` | Filter | The keyword string before `Has_Keywords` filters it (`$keywords, $model`) |
 | `lattice.keywords.updated` | Action | After `Has_Keywords` writes the excerpt (`$model, $keywords`) |
+| `lattice.relationship.partner_updated` | Action | After `Bidirectional_Relationship` writes a partner's field (`$type, $id, $key, $relationship`); `Excerpt_Keywords` rebuilds the partner's keywords on it |
 | `digitalis_woocommerce_account_page_icon` | Filter | Account page icons (`$icon, $slug, $page`) |
 
 ### Naming Convention
