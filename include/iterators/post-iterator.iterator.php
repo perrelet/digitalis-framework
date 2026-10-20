@@ -51,6 +51,7 @@ abstract class Post_Iterator extends Iterator {
             'posts_per_page' => -1,
             'offset'         => false,
             'fields'         => 'ids',
+            'no_found_rows'  => false, // a subclass's no_found_rows => true answered 0 and the iterator never completed
         ], $this->get_query_vars($this->get_default_query_vars()));
 
         return (new WP_Query($args))->found_posts;

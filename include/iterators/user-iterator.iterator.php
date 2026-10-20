@@ -39,9 +39,10 @@ abstract class User_Iterator extends Iterator {
     public function get_total_items () {
 
         $args = wp_parse_args([
-            'number' => 1,
-            'offset' => 0,
-            'fields' => 'ID',
+            'number'      => 1,
+            'offset'      => 0,
+            'fields'      => 'ID',
+            'count_total' => true, // a subclass's count_total => false answered 0 and the iterator never completed
         ], $this->get_query_vars($this->get_default_query_vars()));
 
         return (new WP_User_Query($args))->get_total();
