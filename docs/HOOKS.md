@@ -25,6 +25,7 @@ The Digitalis Framework provides a trait-based hook system that wraps WordPress'
 
 - **Automatic parameter counting** - No need to specify accepted args; a variadic callback takes every argument the hook passes, and a fourth argument to `add_filter()` / `add_action()` (or a fourth element in a hook map's array) overrides the count
 - **Method name shortcuts** - Use `'method_name'` instead of `[$this, 'method_name']`
+- **Loud refusals** - Under strict (`LATTICE_STRICT`, default `WP_DEBUG`) a callback WordPress could not call (not callable here, a non-public method, an instance method in a static shape, a stray hook type) is a `Strict_Violation` at registration that names the hook, the callback and the fix; production answers `false` and logs once. A callback another plugin provides belongs in a `~plugin/` directory or a `Plugin_Integration`
 - **Hook name sanitization** - Consistent naming with dot notation
 - **Dependency injection** - Hook callbacks can receive injected dependencies
 - **Batch registration** - Register multiple hooks via `get_hooks()` array

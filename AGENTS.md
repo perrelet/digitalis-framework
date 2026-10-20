@@ -163,7 +163,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `Feature` | `Factory` | Hook registrar via `get_hooks()` | yes |
+| `Feature` | `Factory` | Hook registrar via `get_hooks()`; a callback WordPress could not call is a strict violation at registration (HOOKS.md) | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin; `$plugin` is a plugin basename or its directory (`Plugins::is_active()`); anything but a string is a strict violation | yes |
 | `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order`. Fires `lattice.relationship.partner_updated` (`$type`, `$id`, `$key`, `$relationship`) after each partner write; `Excerpt_Keywords` listens to rebuild the partner's keywords, since the write is not a save | yes |
