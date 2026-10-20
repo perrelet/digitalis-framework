@@ -746,7 +746,7 @@ class ACF_Customizations extends Feature {
 |------|------|-------------|
 | `lattice.instantiate` | Filter | All class instantiation (`$instantiation, $class_name, $path`) |
 | `lattice.instantiate.{class}` | Filter | Specific class instantiation (`$instantiation, $path`) |
-| `lattice.class.{class}` | Filter | Class name resolution (`$class_name, $data`) |
+| `lattice.class.{class}` | Filter | Class name resolution (`$class_name, $data`); honoured by `View::render()` and `Shortcode::render()` |
 | `lattice.post_type.{class}.args` | Filter | Post type args |
 | `lattice.post_type.{class}.rewrite` | Filter | Post type rewrite (array, or `false`) |
 | `lattice.post_type.{class}.supports` | Filter | Post type supports (array, or `false`) |

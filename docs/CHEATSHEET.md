@@ -828,7 +828,7 @@ class Project_Card_Shortcode extends Shortcode {
 }
 ```
 
-**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])`.
+**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])` (through the `lattice.class.digitalis.project_card` filter, as `View::render()` does; a swapped class's `$defaults` gate the atts).
 
 ---
 

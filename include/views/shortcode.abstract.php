@@ -27,9 +27,10 @@ abstract class Shortcode extends Factory {
 
         }
 
-        $defaults = call_user_func("{$this->view}::get_defaults");
+        $class    = Call::get_class_name($this->view); // through the lattice.class.{name} filter, as View::render() does
+        $defaults = $class::get_defaults();
         $atts     = shortcode_atts($defaults, $atts, $this->slug);
-        $view     = new $this->view($atts);
+        $view     = new $class($atts);
 
         return (string) $view;
         
