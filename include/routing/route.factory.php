@@ -86,7 +86,7 @@ class Route extends Factory {
 
     public function get_rest_path () {
 
-        return '/' . trim($this->get_namespace(), '/') . '/' . ltrim((string) $this->get_route(), '/');
+        return '/' . trim($this->get_namespace(), '/') . '/' . trim((string) $this->get_route(), '/'); // register_rest_route() trims both ends: the server knows no trailing slash
 
     }
 
