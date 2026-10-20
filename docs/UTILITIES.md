@@ -32,7 +32,7 @@ $class = Call::get_class_name('Digitalis\Project');
 
 // Filter allows runtime class swapping
 add_filter('lattice.class.digitalis.project', function($class, $data) {
-    if ($data['context'] === 'admin') {
+    if (($data['context'] ?? null) === 'admin') {
         return 'Digitalis\Admin_Project';
     }
     return $class;
