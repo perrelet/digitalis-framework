@@ -8,6 +8,7 @@ use ReflectionUnionType;
 use ReflectionFunctionAbstract;
 use ReflectionMethod;
 use ReflectionNamedType;
+use Closure;
 
 trait Dependency_Injection {
 
@@ -22,25 +23,17 @@ trait Dependency_Injection {
 
     protected static function get_inject_args (mixed $call, array $args = [], array $values = []) {
 
-        if (is_callable($call)) {
+        if (!is_callable($call)) return $args;
 
-            if (is_array($call)) {
+        // ReflectionMethod sees a non-public method that __call forwards to, as getMethod() did; Closure::fromCallable() takes the shapes
+        // reflection cannot name (an invokable, a name only __call answers: a parameterless closure, so nothing injects and PHP's call goes
+        // where it would). ReflectionFunction took closures and function names alone and getMethod() threw for a name without a method.
+        [$class, $method] = is_array($call) ? $call : ((is_string($call) && str_contains($call, '::')) ? explode('::', $call, 2) : [null, null]);
 
-                $class = new ReflectionClass($call[0]);
-                $func  = $class->getMethod($call[1]);
-                $args = static::method_inject($func, $args, $values);
+        return ($method && method_exists($class, $method))
+            ? static::method_inject(new ReflectionMethod($class, $method), $args, $values)
+            : static::function_inject(new ReflectionFunction(Closure::fromCallable($call)), $args, $values);
 
-            } else {
-
-                $func  = new ReflectionFunction($call);
-                $args  = static::function_inject($func, $args, $values);
-
-            }
-
-        }
-
-        return $args;
-    
     }
 
     protected static function function_inject (ReflectionFunctionAbstract $reflection_function, array $args = [], array $values = []) {

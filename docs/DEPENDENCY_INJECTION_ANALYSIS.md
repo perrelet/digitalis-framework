@@ -518,9 +518,9 @@ The Digitalis Dependency Injection system is a **well-crafted, domain-specific s
 ```
 1. inject($call, $args, $values) called
    │
-   ├─ 2. get_inject_args() inspects callable
+   ├─ 2. get_inject_args() inspects the callable
    │     │
-   │     └─ 3. Uses ReflectionClass/ReflectionFunction
+   │     └─ 3. ReflectionMethod for a named method, else ReflectionFunction over Closure::fromCallable()
    │
    ├─ 4. function_inject() iterates parameters
    │     │
