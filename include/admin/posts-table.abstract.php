@@ -12,9 +12,11 @@ abstract class Posts_Table extends Screen_Table {
 
         $post_ids = (new \WP_Query([
             'post_type'      => $this->post_type,
-            'post_status'    => 'publish',
+            'post_status'    => 'any',       // the table lists every status; a type whose posts were all drafts resolved no field
+            'meta_key'       => "_{$name}",  // get_field_object() resolves a name through the post's ACF reference meta alone, which the newest post (an import, a REST draft) may not carry
             'posts_per_page' => 1,
             'fields'         => 'ids',
+            'no_found_rows'  => true,
         ]))->get_posts();
 
         return get_field_object($name, $post_ids ? $post_ids[0] : false);
