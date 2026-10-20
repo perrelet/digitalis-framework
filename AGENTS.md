@@ -26,7 +26,7 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ## Autoloader contract — inclusion is also instantiation
 
-**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly in `App::boot()` on `plugins_loaded` (priority 10) — every file loads and eligible classes get instances on every request.
+**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly in `App::boot()` on `plugins_loaded` (priority 10; from `get_instance()` when the app is built after it) — every file loads and eligible classes get instances on every request.
 
 ### What gets auto-included
 
