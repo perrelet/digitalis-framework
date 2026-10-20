@@ -53,7 +53,8 @@ trait Has_Keywords {
 
     public function update_keywords () {
 
-        if (!$keywords = $this->generate_keywords()) return;
+        $keywords = $this->generate_keywords();
+        if ($keywords === get_post_field('post_excerpt', $this->get_id(), 'raw')) return;
 
         $this->wp_post->post_excerpt = $keywords;
 

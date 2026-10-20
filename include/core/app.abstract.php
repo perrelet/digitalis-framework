@@ -22,7 +22,14 @@ abstract class App extends Factory {
 
         $this->use_classmap($this->path . '.classmap.php');
 
-        add_action('plugins_loaded', [$this, 'boot']);
+        add_action('plugins_loaded', [$this, 'boot'], $this->get_boot_priority());
+
+    }
+
+    // Boots after construction, once get_instance() has cached the app.
+    protected function get_boot_priority () : int {
+
+        return doing_action('plugins_loaded') ? $GLOBALS['wp_filter']['plugins_loaded']->current_priority() + 1 : 10;
 
     }
 

@@ -192,10 +192,11 @@ class Layout extends View {
     use Resolvable;
 
     protected static $defaults = [
-        'header' => Header::class,
-        'body'   => null,
-        'footer' => Footer::class,
-        'modals' => Modals::class,
+        'header'   => Header::class,
+        'body'     => null,
+        'footer'   => Footer::class,
+        'modals'   => Modals::class,
+        'viewport' => 'width=device-width, initial-scale=1',
     ];
 
     public function params (&$p) {
@@ -210,7 +211,11 @@ class Layout extends View {
     public function view (): void { ?>
         <!DOCTYPE html>
         <html <?php language_attributes(); ?>>
-        <head><?php wp_head(); ?></head>
+        <head>
+            <meta charset="<?php bloginfo('charset'); ?>">
+            <?php if ($this['viewport']): ?><meta name="viewport" content="<?= esc_attr($this['viewport']) ?>"><?php endif; ?>
+            <?php wp_head(); ?>
+        </head>
         <body <?php body_class(); ?>>
             <?php if ($this['header']) echo $this['header']; ?>
             <?php if ($this['body'])   echo $this['body']; ?>
@@ -234,6 +239,8 @@ Shell parts are class strings in `$defaults`. `params()` instantiates them befor
 | `false` (suppress) | Falsy, skipped |
 
 The `body` param is a Page_View instance from the resolver — rendered via `__toString()`.
+
+`viewport` is the `<meta name="viewport">` content, overridable the same way (e.g. appending `viewport-fit=cover` for full-bleed apps using safe-area insets); `false` omits the tag. Never default to `maximum-scale=1` or `user-scalable=no` (WCAG 1.4.4).
 
 ### Multiple layouts
 

@@ -457,6 +457,8 @@ public function load_admin() {
 }
 ```
 
+An app built while `plugins_loaded` runs boots at the next priority, not 10.
+
 ---
 
 ## Real-World Examples
