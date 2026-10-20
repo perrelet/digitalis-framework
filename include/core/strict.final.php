@@ -96,9 +96,11 @@ final class Strict {
 
     public static function end_walk (bool $completed) : void {
 
-        self::$depth--;
+        self::$depth = max(0, self::$depth - 1); // an unbalanced end_walk() would otherwise leave violation() queueing for the rest of the request
 
-        if ($completed && (self::$depth === 0)) self::flush();
+        if (self::$depth > 0) return;
+
+        if ($completed) self::flush(); else self::$violations = []; // an aborted walk's findings would surface in the next unrelated flush; what stopped it is the finding
 
     }
 

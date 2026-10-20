@@ -284,6 +284,7 @@ class Query_Manager extends Singleton {
         $registered = array_map(fn ($profile) => $profile::class, $this->profiles);
 
         Strict::begin_walk();
+        $completed = false;
 
         try {
 
@@ -297,9 +298,11 @@ class Query_Manager extends Singleton {
 
             }
 
+            $completed = true;
+
         } finally {
 
-            Strict::end_walk(true);
+            Strict::end_walk($completed); // as the autoloader: an aborted audit's queue is dropped, the Error is the finding
 
         }
 
