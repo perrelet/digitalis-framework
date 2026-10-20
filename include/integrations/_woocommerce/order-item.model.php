@@ -36,7 +36,7 @@ class Order_Item extends Model {
 
         global $wpdb;
 
-        if (!is_numeric($item_id) || ((int) $item_id != $item_id)) return false; // %d would read a request's '7abc' as 7, and this gate guards get_instance() for the consumers that call it first
+        if (!is_numeric($item_id)) return false; // %d would read a request's '7abc' as 7; numeric values pass as extract_id() casts them, so a consumer's exists() then get_instance() agree on every value
 
         return (bool) $wpdb->get_var($wpdb->prepare("SELECT 1 FROM {$wpdb->prefix}woocommerce_order_items WHERE order_item_id = %d", $item_id));
 
