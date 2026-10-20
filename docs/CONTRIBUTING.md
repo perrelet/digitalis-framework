@@ -29,7 +29,7 @@ type: Brief description in imperative mood 🎭🎪🎠
 | `break` | Breaking changes (use sparingly!) | Explosions, transformation |
 | `refactor` | Code restructuring, no behavior change | Movement, reorganization |
 | `style` | Formatting, whitespace, CSS | Aesthetics, cleaning |
-| `doc` | Documentation only | Writing, books |
+| `docs` | Documentation only | Writing, books |
 | `tidy` | Minor cleanup, removing old code | Brooms, trash |
 | `chore` | Housekeeping: tooling, config, analysis plumbing, dead guards; nothing a consumer notices | Gears, ladders, brooms |
 | `tweak` | Small adjustments | Tiny hands, precision |
@@ -45,6 +45,44 @@ type: Brief description in imperative mood 🎭🎪🎠
 **Every commit ends with exactly three emojis.** Not two. Not four. Three.
 
 These emojis must tell a story. They are not decoration—they are *documentation*.
+
+### The Rebus
+
+The three emojis spell the subject. Two ways to do it, and the picture wins:
+
+1. **Word by word, in the subject's order.** Take the three content words (the thing, the action, the outcome; drop the type and the class path) and give each one emoji. `fix: `Has_WP_Hooks::add_hook` takes any callable and counts variadics 🪝🧮♾️` is hook, counts, every. Order matters here: `1️⃣🪵🩳` is "one log reader, short log"; `1️⃣🩳🪵` is not.
+2. **A picture of the phrase.** The three together depict the sentence rather than one word each: `fix: `Iterator::iterate` you cannot fall through the floor 🧱👣🧱` (footsteps held between two floors), `fix: `Posts_Table::sort_columns` order by 📶🛎️👋` (a bell to order, a wave for bye), `fix: `CSV_Iterator` multiple issues 🐛🐜🪲`.
+
+Extra points when the emoji is the *other* sense of the word, and anchor at least one literal when two are puns. Read the three back as the sentence before you commit. A word keeps the same emoji across a batch, so the glossary below is the house dialect; pick from it first and add to it when you coin one.
+
+| Word | Emoji | Why |
+|------|-------|-----|
+| hook | 🪝 | literal |
+| log | 🪵 | the other log |
+| order (item) | 🧾 | a receipt |
+| iterator | 🔁 | literal |
+| file | 📄 | literal |
+| route | 🛣️ | literal |
+| level | 🪜 | a ladder, one rung at a time |
+| class | 🎓 | the other class |
+| date | 💑 | the other date |
+| content | 😌 | content, as in satisfied |
+| arguments | 🥊 | the other argument |
+| reflection | 🪞 | literal, and the API |
+| map | 🗺️ | a map value |
+| BOM | 💣 | the other bomb |
+| keeps | 🏰 | the castle keep |
+| short | 🩳 | shorts |
+| locals | 🍻 | the local |
+| blank | 🕳️ | a hole, never a white square |
+| get | 🫳 | a grabbing hand, not a page |
+| counts | 🧮 | an abacus |
+| every / variadic | ♾️ | all of them |
+| calls | 📞 | the other call |
+| clamps | 🗜️ | literal |
+| refuses / none | 🚫 | literal |
+
+Never a filler that merely decorates: 🧹 ✅ 🔧 🔢 on their own say nothing about *this* commit.
 
 ---
 

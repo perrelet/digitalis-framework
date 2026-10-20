@@ -96,6 +96,7 @@ $this->add_hooks([
     'the_content' => ['filter_content', 20],  // With priority
     'save_post'   => ['on_save', 10, 3],      // With accepted args (WordPress's order; a type may sit third: ['on_save', 10, 'action', 3])
     'admin_init'  => [$helper, 'on_admin'],   // A callable array is the callback, not a tuple
+    'admin_menu'  => [[$helper, 'on_admin'], 20],  // An object callable with a priority: nest it ([$obj, 'm', 20] is neither a callable nor a tuple)
 ]);
 
 // Actions and filters share WordPress's hook registry. In hook maps, omit
