@@ -58,7 +58,7 @@ What is never injected: builtin types (`string`, `array`, `int`, `mixed`, ...), 
 ### Location
 
 ```
-framework/include/patterns/dependency-injection.trait.php
+framework/include/core/dependency-injection.trait.php
 ```
 
 ### Core Methods
@@ -66,7 +66,7 @@ framework/include/patterns/dependency-injection.trait.php
 | Method | Purpose |
 |--------|---------|
 | `inject($call, $args, $values)` | Execute callable with injected args |
-| `get_inject_args($call, $args, $values)` | Resolve args without executing |
+| `get_inject_args($call, $args, $values)` | Resolve args without executing (every callable shape: a closure, a function or `'Class::method'` name, `[$obj, 'method']`, an invokable) |
 | `function_inject($reflection, $args, $values)` | Inject into function parameters |
 | `method_inject($reflection, $args, $values)` | Inject into method parameters |
 | `constructor_inject($class, $args, $values)` | Inject into constructor |
