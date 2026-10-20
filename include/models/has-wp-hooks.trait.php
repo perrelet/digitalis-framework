@@ -66,8 +66,21 @@ trait Has_WP_Hooks {
 
         }
 
-        $static_shape = is_string($callback) || (is_array($callback) && is_string($callback[0]));
-        if ($static_shape && $reflection instanceof ReflectionMethod && !$reflection->isStatic()) return false; // callable inside the class's own scope only; WordPress calls it from outside
+        if ($reflection instanceof ReflectionMethod) {
+
+            $static_shape = is_string($callback) || (is_array($callback) && is_string($callback[0]));
+
+            if (!$reflection->isPublic() && !$static_shape && method_exists($callback[0], '__call')) {
+
+                $reflection = null; // from outside the call reaches __call, which takes every argument
+
+            } elseif (!$reflection->isPublic() || ($static_shape && !$reflection->isStatic())) {
+
+                return false; // callable inside the class's own scope only (is_callable judged it from here); WordPress calls from outside and would fatal at fire time
+
+            }
+
+        }
 
         if (is_null($accepted_args)) $accepted_args = (!$reflection || $reflection->isVariadic()) ? PHP_INT_MAX : $reflection->getNumberOfParameters(); // WordPress hands over every argument when the count exceeds what the hook passes
 
