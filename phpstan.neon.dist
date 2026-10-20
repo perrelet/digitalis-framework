@@ -1,5 +1,5 @@
-# Shared settings, level 0 over the whole tree. CI runs phpstan.ci.neon (this plus workers) and phpstan.level5.neon (this at level 5 over all
-# but bin and include/deprecated). Locally the whole tree runs in about three minutes within 1.2 GB; a gitignored phpstan.neon overrides this for
+# Shared settings, level 0 over the whole tree. CI runs phpstan.ci.neon (this plus workers) and phpstan.level5.ci.neon (phpstan.level5.neon plus
+# workers: this at level 5 over all but bin and include/deprecated). Locally the whole tree runs in about three minutes within 1.2 GB; a gitignored phpstan.neon overrides this for
 # the bare `vendor/bin/phpstan analyse` only (a `-c` run reads the named config).
 parameters:
   level: 0

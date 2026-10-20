@@ -1,0 +1,6 @@
+# CI only: phpstan.level5.neon with the workers phpstan.ci.neon gives level 0. Locally run phpstan.level5.neon (one process fits the 2 GB box).
+includes:
+  - phpstan.level5.neon
+parameters:
+  parallel:
+    maximumNumberOfProcesses: 3
