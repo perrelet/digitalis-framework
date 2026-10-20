@@ -219,7 +219,7 @@ abstract class Iterator extends Singleton {
 
         if (!$this->items) $this->set_total_option($this->index);
 
-        if ($this->is_complete()) {
+        if ($this->is_complete() || !$this->items) { // an empty first batch set the total to 0, which get_progress() reads as 0: a cron iterator with nothing to do looped for ever
 
             $this->on_complete();
             $this->set_doing_cron(false);
