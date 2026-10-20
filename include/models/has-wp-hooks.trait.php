@@ -69,10 +69,11 @@ trait Has_WP_Hooks {
         if ($reflection instanceof ReflectionMethod) {
 
             $static_shape = is_string($callback) || (is_array($callback) && is_string($callback[0]));
+            $class        = is_array($callback) ? $callback[0] : (is_string($callback) ? strstr($callback, '::', true) : null); // null for an invokable object
 
-            if (!$reflection->isPublic() && !$static_shape && method_exists($callback[0], '__call')) {
+            if (!$reflection->isPublic() && $class && method_exists($class, $static_shape ? '__callStatic' : '__call')) {
 
-                $reflection = null; // from outside the call reaches __call, which takes every argument
+                $reflection = null; // from outside the call reaches __call or __callStatic, which take every argument
 
             } elseif (!$reflection->isPublic() || ($static_shape && !$reflection->isStatic())) {
 
