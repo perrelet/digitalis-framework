@@ -193,6 +193,12 @@ The injector no longer sends builtin type names (`string`, `array`, ...), `self`
 
 `include/core` declares `strict_types=1` (the strict_types pass: one family per commit in the typing order, a paragraph here per family and a `| Was | Now |` row for any behaviour a consumer can observe change). A consumer's calls into the framework are unaffected: strict typing governs the calling file, and a `parent::` call from a non-strict subclass still coerces. The framework's own calls from `core` into PHP, WordPress and typed framework methods now pass the exact type asked for; the five sites where a `false` used to reach a string parameter keep their behaviour: `autoload()` of an absent directory and of an unreadable file, `load_feature()`'s file shorthand and a feature file declaring no class, and a `Classmap` on a path `realpath()` cannot resolve (which now keeps the directory as given instead of `''`).
 
+The nine model traits (`include/models/*.trait.php`) declare it with four casts and one guard. The date columns `createFromFormat()` parses (a comment's date and GMT date, a user's registration date) and the comment author `get_by_username()` resolves are cast to string first, so an unsaved user (whose `user_registered` is `false` from meta), a date set as a timestamp or `null` and an int author answer `false` or `null` as they did. A selector, a meta key or a hook name a consumer passes travels unchanged. `add_hooks()` refuses an int key before it reaches `add_hook()`'s typed parameter:
+
+| Was | Now |
+|---|---|
+| `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
+
 ### Layout
 
 | Violation | Mechanical fix |

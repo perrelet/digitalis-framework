@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use DateTime;
@@ -184,7 +186,7 @@ trait Has_WP_User {
 
     public function get_registered_datetime () {
 
-        return DateTime::createFromFormat('Y-m-d H:i:s', $this->get_registered_date());
+        return DateTime::createFromFormat('Y-m-d H:i:s', (string) $this->get_registered_date());
 
     }
 

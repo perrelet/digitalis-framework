@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use stdClass;
@@ -87,7 +89,7 @@ trait Has_WP_Comment {
 
     public function get_author () {
 
-        return User::get_by_username($this->get_author_username());
+        return User::get_by_username((string) $this->get_author_username());
 
     }
 
@@ -171,7 +173,7 @@ trait Has_WP_Comment {
 
     public function get_datetime () {
     
-        return DateTime::createFromFormat('Y-m-d H:i:s', $this->get_date());
+        return DateTime::createFromFormat('Y-m-d H:i:s', (string) $this->get_date());
     
     }
 
@@ -190,7 +192,7 @@ trait Has_WP_Comment {
 
     public function get_datetime_gmt () {
     
-        return DateTime::createFromFormat('Y-m-d H:i:s', $this->get_date_gmt(), new DateTimeZone('GMT'));
+        return DateTime::createFromFormat('Y-m-d H:i:s', (string) $this->get_date_gmt(), new DateTimeZone('GMT'));
     
     }
 

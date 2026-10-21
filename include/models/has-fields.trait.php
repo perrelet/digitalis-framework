@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // Field access through the registered Field_Provider (see Custom_Fields). Without one every accessor returns null (get_field_rows: []).

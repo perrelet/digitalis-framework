@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Closure;
@@ -184,6 +186,8 @@ trait Has_WP_Hooks {
         $ok = true;
 
         foreach ($hooks as $hook_name => $callback) {
+
+            if (!is_string($hook_name)) { $ok = $this->refuse_hook((string) $hook_name, 'is an array index, not a hook name.', 'Key the add_hooks() array by hook name.') && $ok; continue; }
 
             [$cb, $priority, $third, $fourth] = is_array($callback) ? $callback + [null, null, null, null] : [null, null, null, null];
             if (is_numeric($third) && !is_numeric($fourth)) [$third, $fourth] = [$fourth, $third]; // WordPress's own order: callback, priority, accepted args
