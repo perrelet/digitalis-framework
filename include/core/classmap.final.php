@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use RuntimeException;
@@ -18,7 +20,7 @@ final class Classmap {
     public function __construct (string $file) {
 
         $this->file = $file;
-        $this->dir  = realpath(dirname($file));
+        $this->dir  = realpath(dirname($file)) ?: dirname($file);
 
         self::$registry[] = $this;
 

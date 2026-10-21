@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use ReflectionClass;
@@ -163,7 +165,7 @@ abstract class App extends Factory {
 
         foreach ($paths as $base) {
 
-            $path = realpath($base . $file);
+            $path = realpath($base . $file) ?: '';
 
             // Directory shorthand: `foo/bar` → `foo/bar/bar.feature.php`.
             if (is_dir($path)) {
@@ -180,7 +182,7 @@ abstract class App extends Factory {
             if (!is_file($path)) continue;
 
             $feature = $this->load_class($path, false);
-            if (class_exists($feature)) {
+            if ($feature && class_exists($feature)) {
                 $feature::create($options);
                 return $feature;
             }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Closure;
@@ -18,7 +20,7 @@ trait Autoloader {
         if (is_null($path)) $path = $this->path;
 
         if (is_array($path))                  return $this->autoload_multiple($path, $objs);
-        if (!is_dir($path = realpath($path))) return $objs;
+        if ((($path = realpath($path)) === false) || !is_dir($path)) return $objs;
 
         $files = $this->collect_files($path, $recursive, $ext);
 
@@ -212,7 +214,7 @@ trait Autoloader {
     // Reads the whole file: a second declaration can sit anywhere, e.g. Debug_Options at line 406 of debug.view.php.
     protected function extract_declarations (string $file) {
 
-        $tokens    = token_get_all(file_get_contents($file));
+        $tokens    = token_get_all(file_get_contents($file) ?: '');
         $count     = count($tokens);
         $namespace = '';
         $names     = [];

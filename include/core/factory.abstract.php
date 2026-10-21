@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use ReflectionClass;
@@ -45,7 +47,7 @@ abstract class Factory extends Creational {
 
         if ($data && is_array($data)) foreach ($data as $prop => $value) {
 
-            if (property_exists($instance, $prop)) $instance->$prop = $value;
+            if (property_exists($instance, (string) $prop)) $instance->$prop = $value;
 
         }
     
