@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Attachment extends Post {
@@ -26,7 +28,7 @@ class Attachment extends Post {
 
     public function get_file_name (bool $unfiltered = false) {
     
-        return basename($this->get_path($unfiltered));
+        return basename((string) $this->get_path($unfiltered));
     
     }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // Has_Fields so the instance can act as the parent for ACF_Row subclasses on an options-page repeater.

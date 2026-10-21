@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // The storage behind the model field accessors (Has_Fields). ACF_Field_Provider ships; Custom_Fields::register() replaces it.
