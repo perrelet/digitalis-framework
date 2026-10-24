@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Lattice\Component\Field_Group;
@@ -86,7 +88,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 $log['permissions'] = wp_parse_args($log['permissions'], $this->permissions);
 
-                if (!file_exists($log['path'])) continue;
+                if (!file_exists((string) $log['path'])) continue;
 
                 $this->_logs[$log['slug']] = $log;
 

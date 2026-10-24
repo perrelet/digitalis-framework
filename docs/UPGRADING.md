@@ -205,6 +205,8 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 `include/registration` declares it with no edits: the rewrite and supports arrays a post type or taxonomy registers are the framework's own, a filter on them keeps its `array|false` contract, and the slug a main-query check compares is the subclass's declared string.
 
+`include/admin` (14 files) declares it with casts and fallbacks that keep today's values: an admin table filter absent from the request still answers `''` (its `null_value`, `null` by default, through `urldecode()`) instead of throwing; a logs page skips a log registered with no path as before; an updater whose feed gives `version`, `requires` or `requires_php` as a number compares it as a string and a feed whose `sections` or `banners` will not JSON-encode still decodes to null. The column slugs WordPress hands the tables and the lines a log is split into are strings already.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |

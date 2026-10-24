@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Updater {
@@ -67,8 +69,8 @@ class Updater {
 
 		if (!$remote = $this->request()) return $res;
 
-		if (property_exists($remote, 'sections')) $remote->sections = json_decode(json_encode($remote->sections), true); 	// obj -> array
-		if (property_exists($remote, 'banners')) $remote->banners = json_decode(json_encode($remote->banners), true);		// obj -> array
+		if (property_exists($remote, 'sections')) $remote->sections = json_decode(json_encode($remote->sections) ?: '', true); 	// obj -> array
+		if (property_exists($remote, 'banners')) $remote->banners = json_decode(json_encode($remote->banners) ?: '', true);		// obj -> array
 
 		/* echo "<pre>";
 		var_dump($remote);
@@ -86,9 +88,9 @@ class Updater {
 
 		if(
 			$remote
-			&& version_compare($this->version, $remote->version, '<')
-			&& (!property_exists($remote, 'requires') || version_compare($remote->requires, get_bloginfo('version'), '<='))
-			&& (!property_exists($remote, 'requires_php') || version_compare($remote->requires_php, PHP_VERSION, '<='))
+			&& version_compare($this->version, (string) $remote->version, '<')
+			&& (!property_exists($remote, 'requires') || version_compare((string) $remote->requires, get_bloginfo('version'), '<='))
+			&& (!property_exists($remote, 'requires_php') || version_compare((string) $remote->requires_php, PHP_VERSION, '<='))
 		) {
 
 			$res 				= new \stdClass();

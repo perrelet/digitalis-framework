@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Lattice\Field\Input;
@@ -222,7 +224,7 @@ abstract class Admin_Table extends Feature {
     public function get_filter_value ($key, $filter) {
 
         $value = wp_unslash($_GET[$key] ?? $filter['null_value']);
-        return sanitize_text_field(urldecode($value));
+        return sanitize_text_field(urldecode((string) $value));
 
     }
 
