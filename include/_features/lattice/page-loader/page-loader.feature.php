@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Full-screen loading overlay with configurable spinner, shown during page load
 // and optionally on exit. Hides on whichever of these fires first:
 //

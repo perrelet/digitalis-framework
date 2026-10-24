@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Woo;
 
 class Product_Gallery_Fallback extends \Lattice\Feature {

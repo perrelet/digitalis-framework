@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\WP;
 
 class Hide_Posts_Post_Type extends \Lattice\Feature {

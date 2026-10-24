@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 trait Has_Keywords {
@@ -77,13 +79,13 @@ trait Has_Keywords {
         // Preserve intra-word `.` and `-` (model numbers, versions, ranges,
         // URLs) by swapping to placeholders before the punctuation strip,
         // then restoring. Sentence-level punctuation drops through.
-        $text = preg_replace('/(?<=[\p{L}\p{N}])\.(?=[\p{L}\p{N}])/u', "\x01", $text);
-        $text = preg_replace('/(?<=[\p{L}\p{N}])-(?=[\p{L}\p{N}])/u', "\x02", $text);
+        $text = preg_replace('/(?<=[\p{L}\p{N}])\.(?=[\p{L}\p{N}])/u', "\x01", $text) ?? '';
+        $text = preg_replace('/(?<=[\p{L}\p{N}])-(?=[\p{L}\p{N}])/u', "\x02", $text) ?? '';
 
         $preserved = preg_quote($this->get_keyword_preserve_chars(), '/');
-        $text = preg_replace("/[^\\p{L}\\p{N}\\s{$preserved}\x01\x02]/u", ' ', $text);
+        $text = preg_replace("/[^\\p{L}\\p{N}\\s{$preserved}\x01\x02]/u", ' ', $text) ?? '';
         $text = strtr($text, ["\x01" => '.', "\x02" => '-']);
-        $text = preg_replace('/\s+/', ' ', trim($text));
+        $text = preg_replace('/\s+/', ' ', trim($text)) ?? '';
 
         $words = array_diff(explode(' ', $text), $this->get_keyword_stop_words());
 

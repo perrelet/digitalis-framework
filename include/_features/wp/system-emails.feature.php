@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Redirect WordPress system emails (recovery mode, auto-updates) to a custom address.
 
 namespace Lattice\WP;

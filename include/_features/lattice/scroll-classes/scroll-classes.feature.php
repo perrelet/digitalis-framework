@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Add scroll-aware body classes: 'scrolled', 'scroll-up', 'scroll-down'.
 
 namespace Lattice;

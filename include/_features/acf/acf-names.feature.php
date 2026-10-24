@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Display ACF field names next to labels in the admin, with click-to-copy.
 
 namespace Lattice;

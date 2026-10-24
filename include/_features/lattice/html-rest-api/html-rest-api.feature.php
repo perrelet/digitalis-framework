@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_REST_Request;
@@ -161,13 +163,13 @@ class HTML_REST_API extends Feature {
 
     }
 
-    public function get_path ($path = '') {
+    public function get_path (string $path = '') {
 
         return $this->url_builder->get_path($path);
 
     }
 
-    public function get_url ($path = '', $blog_id = null, $scheme = 'rest') {
+    public function get_url (string $path = '', ?int $blog_id = null, string $scheme = 'rest') {
 
         return $this->url_builder->get_url($path, $blog_id, $scheme);
 

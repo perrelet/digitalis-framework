@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\WP;
 
 class Turn_Off_Emojicons extends \Lattice\Feature {

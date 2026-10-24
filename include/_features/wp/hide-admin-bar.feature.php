@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // Hide the WP admin bar on the frontend, revealing on hover.
 
 namespace Lattice\WP;
