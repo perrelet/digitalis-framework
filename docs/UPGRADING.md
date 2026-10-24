@@ -209,6 +209,8 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 `include/_features` (18 files) declares it with one fallback that keeps today's value: `Has_Keywords::filter_keywords()` given malformed UTF-8 still answers `''` (each `/u` `preg_replace()` in its chain answers null on such input, and the next one now receives `''` instead of throwing). `HTML_REST_API::get_url()` and `get_path()` now carry the parameter types of the `HTML_REST_URL` builder they forward to (`string $path`, `?int $blog_id`, `string $scheme`, as the API reference already documents them), so a numeric-string blog id from a coercive caller still coerces at the call instead of throwing inside the feature; a strict caller now gets the TypeError at its own line. The page loader's spinner sheet, the HTML REST prefix and the feature hook lists are strings the features build or declare themselves.
 
+`include/iterators` (6 files) declares it with no edit: the CSV iterator's cursor offsets, file handles and row keys, and the iterators' log lines, are values the framework builds itself.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
