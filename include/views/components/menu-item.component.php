@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Component;
 
 use Lattice\Element;
@@ -174,7 +176,7 @@ class Menu_Item extends \Lattice\Component {
         if ($p['is_external']) {
             $attrs['target']     = '_blank';
             $attrs['rel']        = 'noopener noreferrer';
-            $attrs['aria-label'] = sprintf($p['external_label_format'], $p['text']);
+            $attrs['aria-label'] = sprintf((string) $p['external_label_format'], $p['text']);
         }
 
         return new Element('a', $attrs, esc_html($p['text']));
@@ -202,7 +204,7 @@ class Menu_Item extends \Lattice\Component {
         ];
 
         if (!$has_visible_text) {
-            $attrs['aria-label'] = sprintf($p['toggle_label_format'], $p['text']);
+            $attrs['aria-label'] = sprintf((string) $p['toggle_label_format'], $p['text']);
         }
 
         if ($p['describedby_on_button']) {

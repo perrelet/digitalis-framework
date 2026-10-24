@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Component;
 
 class Menu_Drawer extends \Lattice\Component {

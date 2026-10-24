@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice {
 
     class Debug extends View {
@@ -41,13 +43,13 @@ namespace Lattice {
                 'style'  => false,
             ]);
 
-            $options['label'] = str_replace("\\", "\\\\", $options['label']);
-            $options['style'] = str_replace("\\", "\\\\", $options['style']);
+            $options['label'] = str_replace("\\", "\\\\", (string) $options['label']);
+            $options['style'] = str_replace("\\", "\\\\", (string) $options['style']);
 
             if ($options['style'] == 'label') $options['style'] = 'color: #ccc; font-size: 0.8em;';
 
             if (is_scalar($value)) {
-                $value = str_replace("\\", "\\\\", $value);
+                $value = str_replace("\\", "\\\\", (string) $value);
                 $value = $options['style'] ? "'%c{$value}'" : "'{$value}'";
             } else {
                 $value = json_encode($value);
@@ -127,7 +129,7 @@ namespace Lattice {
 
             $p = array_merge($p, (array) $this->get_options());
     
-            $p['backtrace'] = debug_backtrace(0, $p['backtrace_limit']);
+            $p['backtrace'] = debug_backtrace(0, (int) $p['backtrace_limit']);
             $offset         = 0;
 
             foreach ($p['backtrace'] as $i => $frame) {
@@ -166,7 +168,7 @@ namespace Lattice {
     
                         if (is_scalar($arg)) {
 
-                            $arg = htmlentities($arg);
+                            $arg = htmlentities((string) $arg);
     
                             $name = "\"{$arg}\"";
     
@@ -234,7 +236,7 @@ namespace Lattice {
 
                 $file = array_slice($file, $start, $end - $start + 1, false);
                 $file = implode($file);
-                $file = substr($file, strpos($file, $p['debug_func']));
+                $file = substr($file, strpos($file, $p['debug_func']) ?: 0);
                 $lvl  = 0;
                 $args = [''];
                 $arg  = 0;

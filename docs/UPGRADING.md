@@ -197,9 +197,12 @@ The nine model traits (`include/models/*.trait.php`) declare it with four casts 
 
 The model classes declare it with one cast: `Attachment::get_file_name()` passes `get_attached_file()`'s answer through `(string)`, so a `get_attached_file` filter answering `false` still yields `''` (the missing meta answers `''` on its own). The class names the model registry resolves, the uuid prefix and a nav menu's item ids are strings and ints of the framework's own making; a subclass's `$post_type`, `$term` and `$taxonomy` travel as declared.
 
+The views (`include/views`, 46 files) declare it with casts and guards that keep today's values: the Debug view casts a backtrace frame's scalar argument, its console label and style options, a scalar value and `backtrace_limit` (`'5'` renders) and takes the whole source slice when the sliced lines do not name the function; a `View` whose `$template` names no file prints nothing where `realpath()`'s `false` would now throw; the required-key audit under strict names an unencodable default (`INF`) instead of failing on it; a `Checkbox_Group` given an int value answers `['5']`; a float `module_version` reaches the module url as `1.2`; a field's `name`, a date range's `name_start` and `name_end` and a menu item's `external_label_format` and `toggle_label_format` are cast where a consumer may pass `false` or an int. One behaviour changes, the second row:
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
+| A `value_callback` closure (or a Debug `expand` callable) declared with a typed parameter (`function (int $v)`) received the value coerced (`'3'` as `3`) | Receives it as is, since the view calls it directly from a strict file: a closure typed narrower than the value throws a `TypeError`; type it `mixed` or `int\|string`, or cast inside |
 
 ### Layout
 

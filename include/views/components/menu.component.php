@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Component;
 
 use Lattice\Nav_Menu;

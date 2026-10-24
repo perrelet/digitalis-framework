@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Field;
 
 use Lattice\Field;
@@ -43,7 +45,7 @@ class Checkbox_Group extends Input {
     public function get_value () {
 
         $value = parent::get_value();
-        if (!is_array($value)) $value = explode(',', $value);
+        if (!is_array($value)) $value = explode(',', (string) $value);
         return (array) $value;
         
     }

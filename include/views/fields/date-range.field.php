@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Field;
 
 class Date_Range extends Date_Picker {
@@ -28,8 +30,8 @@ class Date_Range extends Date_Picker {
         if (!$p['name_start']) $p['name_start'] = $p['name'] . '-start';
         if (!$p['name_end'])   $p['name_end']   = $p['name'] . '-end';
 
-        $p['value_start'] = is_null($p['value_start']) ? $this->query_value($p['name_start'], $p['default_start']) : $p['value_start'];
-        $p['value_end']   = is_null($p['value_end'])   ? $this->query_value($p['name_end'],   $p['default_end'])   : $p['value_end'];
+        $p['value_start'] = is_null($p['value_start']) ? $this->query_value((string) $p['name_start'], $p['default_start']) : $p['value_start'];
+        $p['value_end']   = is_null($p['value_end'])   ? $this->query_value((string) $p['name_end'],   $p['default_end'])   : $p['value_end'];
 
         $p['date_start']->set_tag('input');
         $p['date_start']->add_attrs($p['attributes']);

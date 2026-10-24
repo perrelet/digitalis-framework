@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 abstract class View implements \ArrayAccess {
@@ -172,9 +174,7 @@ abstract class View implements \ArrayAccess {
 
         if ($template = $this->get_template()) {
 
-            $path = realpath(trailingslashit($this->get_template_path()) . $template . '.php');
-
-            if (file_exists($path)) $this->include_template($path);
+            if ($path = realpath(trailingslashit($this->get_template_path()) . $template . '.php')) $this->include_template($path);
 
         } else {
 
@@ -503,7 +503,7 @@ abstract class View implements \ArrayAccess {
             if (is_null($default))                                                                     continue;
             if (is_string($default) && (str_contains($default, '\\') || class_exists($default))) continue; // A class string, even from a plugin that loads later.
 
-            $shown = json_encode($default);
+            $shown = json_encode($default) ?: var_export($default, true);
             if (strlen($shown) > 40) $shown = substr($shown, 0, 37) . '...';
 
             Strict::violation($class, "\$required lists '{$key}' but \$defaults gives it {$shown}, so required() can never fail.", "Default it to null in the class that requires it, or test emptiness in condition() and drop it from \$required.");

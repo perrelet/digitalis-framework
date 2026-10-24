@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Lattice\Component\Field_Group;
@@ -66,7 +68,7 @@ abstract class Query_Filters extends Field_Group {
 
         if ($version = $this->module_version) {
             $url = remove_query_arg('ver', $url);
-            $url = add_query_arg('ver', rawurlencode($version), $url);
+            $url = add_query_arg('ver', rawurlencode((string) $version), $url);
         }
 
         return $url;

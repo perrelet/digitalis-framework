@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Field extends Component {
@@ -122,7 +124,7 @@ class Field extends Component {
 
     public function get_value () {
         
-        return is_null($this['value']) ? $this->query_value($this['name'], $this['default']) : $this['value'];
+        return is_null($this['value']) ? $this->query_value((string) $this['name'], $this['default']) : $this['value'];
 
     }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 /** @mixin Attributes   (every call __call forwards reaches the Attributes object, typed from its source) */
