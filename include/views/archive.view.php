@@ -191,7 +191,7 @@ abstract class Archive extends Component {
 
             case "file":
 
-                return file_exists($this['loader']) ? file_get_contents($this['loader']) : '';
+                return file_exists((string) $this['loader']) ? file_get_contents((string) $this['loader']) : '';
 
             case "callback":
 
