@@ -203,6 +203,8 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 `include/query` declares it with one cast: `Digitalis_Query::is_multiple()` reads the ajax `action` through `(string)`, so an ajax request without one still answers false instead of throwing. A profile's `$post_type` entries are the consumer's own strings, a query's stamped role and context are the framework's, and `Query_Vars`' magic property names are the engine's.
 
+`include/registration` declares it with no edits: the rewrite and supports arrays a post type or taxonomy registers are the framework's own, a filter on them keeps its `array|false` contract, and the slug a main-query check compares is the subclass's declared string.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
