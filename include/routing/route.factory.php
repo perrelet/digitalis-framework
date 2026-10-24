@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_REST_Request;
@@ -86,7 +88,7 @@ class Route extends Factory {
 
     public function get_rest_path () {
 
-        return '/' . trim($this->get_namespace(), '/') . '/' . trim((string) $this->get_route(), '/'); // register_rest_route() trims both ends: the server knows no trailing slash
+        return '/' . trim((string) $this->get_namespace(), '/') . '/' . trim((string) $this->get_route(), '/'); // register_rest_route() trims both ends: the server knows no trailing slash
 
     }
 
@@ -173,7 +175,7 @@ class Route extends Factory {
 
     public function get_url (array $query_params = [], ?bool $nonce = null, ?string $format = null) {
 
-        if (is_null($nonce))  $nonce  = $this->get_require_nonce();
+        if (is_null($nonce))  $nonce  = (bool) $this->get_require_nonce();
         if (is_null($format)) $format = $this->get_format();
 
         return REST_URL_Builder::get_instance()->for_route($this, $query_params, $nonce, $format);

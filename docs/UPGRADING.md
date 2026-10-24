@@ -199,6 +199,8 @@ The model classes declare it with one cast: `Attachment::get_file_name()` passes
 
 The views (`include/views`, 46 files) declare it with casts and guards that keep today's values: the Debug view casts a backtrace frame's scalar argument, its console label and style options, a scalar value and `backtrace_limit` (`'5'` renders) and takes the whole source slice when the sliced lines do not name the function; a `View` whose `$template` names no file prints nothing where `realpath()`'s `false` would now throw; the required-key audit under strict names an unencodable default (`INF`) instead of failing on it; a `Checkbox_Group` given an int value answers `['5']`; a float `module_version` reaches the module url as `1.2`; a field's `name`, a date range's `name_start` and `name_end` and a menu item's `external_label_format` and `toggle_label_format` are cast where a consumer may pass `false` or an int. One behaviour changes, the second row:
 
+`include/routing` declares it with two casts: `Route::get_url()` reads `$require_nonce` through `(bool)`, so a subclass declaring it `1` still gets a nonced url, and `get_rest_path()` casts the namespace as it already cast the route, so a base route nulling both keeps its path. A route's handler and view are the subclass's declared properties and the url formatters are the builder's own.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
