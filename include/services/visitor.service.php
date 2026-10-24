@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Visitor extends Service {
@@ -41,7 +43,7 @@ class Visitor extends Service {
         if (isset($_COOKIE['digitalis_sid'])) return $_COOKIE['digitalis_sid'];
 
         $id = bin2hex(random_bytes(16));
-        setcookie('digitalis_sid', $id, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+        setcookie('digitalis_sid', $id, time() + DAY_IN_SECONDS, COOKIEPATH, (string) COOKIE_DOMAIN, is_ssl(), true);
         return $id;
     
     }
@@ -129,7 +131,7 @@ class Visitor extends Service {
     public function set_cookie ($key, $value, $ttl = null, $args = []) {
 
         $name  = $this->get_cookie_prefix() . $key;
-        $value = !is_scalar($value) ? wp_json_encode($value) : (string) $value;
+        $value = !is_scalar($value) ? (wp_json_encode($value) ?: '') : (string) $value;
         $args  = $this->get_cookie_args($ttl, $args);
 
         setcookie($name, $value, $args);
@@ -358,7 +360,7 @@ class Visitor extends Service {
 
         foreach ($headers as $name => $value) {
 
-            $pretty = implode('-', array_map('ucfirst', array_map('strtolower', explode('-', $name))));
+            $pretty = implode('-', array_map('ucfirst', array_map('strtolower', explode('-', (string) $name))));
             $normalized[$pretty] = $value;
 
         }
