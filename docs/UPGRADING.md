@@ -201,6 +201,8 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 `include/routing` declares it with two casts: `Route::get_url()` reads `$require_nonce` through `(bool)`, so a subclass declaring it `1` still gets a nonced url, and `get_rest_path()` casts the namespace as it already cast the route, so a base route nulling both keeps its path. A route's handler and view are the subclass's declared properties and the url formatters are the builder's own.
 
+`include/query` declares it with one cast: `Digitalis_Query::is_multiple()` reads the ajax `action` through `(string)`, so an ajax request without one still answers false instead of throwing. A profile's `$post_type` entries are the consumer's own strings, a query's stamped role and context are the framework's, and `Query_Vars`' magic property names are the engine's.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_Query;
@@ -169,7 +171,7 @@ class Digitalis_Query extends WP_Query {
 
     public static function is_multiple (?WP_Query $wp_query = null) {
 
-        if (wp_doing_ajax() && (substr($_REQUEST['action'] ?? null, 0, 5) == 'query')) return true;
+        if (wp_doing_ajax() && (substr((string) ($_REQUEST['action'] ?? ''), 0, 5) == 'query')) return true;
 
         if (is_null($wp_query)) global $wp_query;
     
