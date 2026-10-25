@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {

@@ -213,6 +213,8 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 `include/services` (5 files) declares it with one fallback and two casts that keep today's values: `Visitor::set_cookie()` given a value that will not JSON-encode (INF, NAN, a recursive structure) still sets `''` and `get_cookie()` reads it back as `''` instead of throwing at `setcookie()`; `get_session_id()` passes `COOKIE_DOMAIN` as a string, so a wp-config that still carries `define('COOKIE_DOMAIN', false)` (WordPress's own default before it became `''`) sets the session cookie as before; `get_headers()` names a header whose name is digits alone (PHP stores such a key as an int) as before instead of throwing at `explode()`. The cron timezone, the log paths and the request uri are strings already or already fall back.
 
+`include/integrations` (15 files) declares it with no edit: an order status's slug, the WooCommerce form-field filters' markup, an ACF block's rendered html and the bidirectional feature's log lines are strings the integrations or their hosts build.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
