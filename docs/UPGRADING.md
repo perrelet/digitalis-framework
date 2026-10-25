@@ -217,10 +217,13 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it with no edit: a theme's `script_loader_tag` arguments are strings from WordPress, and the db layer's `: string`/`: int` returns answer the `$slug`, `$version`, `$base_name` and `$scope` a consumer declares, as every consumer writes them.
 
+`load.php` and the two `compat/` shims (3 files) declare it with no edit, which closes the pass: every file under `include/`, with `load.php` and `compat/`, now declares it; `templates/`, `bin/` and `include/deprecated/` stay coercive.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
 | A `value_callback` closure (or a Debug `expand` callable) declared with a typed parameter (`function (int $v)`) received the value coerced (`'3'` as `3`) | Receives it as is, since the view calls it directly from a strict file: a closure typed narrower than the value throws a `TypeError`; type it `mixed` or `int\|string`, or cast inside |
+| The framework's files ran coercive: a call it made into PHP or WordPress with a `'3'` where an int was asked coerced silently | Every file under `include/`, with `load.php` and `compat/`, declares `strict_types`: a consumer's calls into the framework are unaffected (the caller's file governs its own calls), the framework's own calls pass exact scalar types, a Schema's `$version` is an int and a Table's `$slug` a string, as every consumer writes them; `templates/` stay coercive, so a consumer copying a framework template copies its casts |
 
 ### Layout
 

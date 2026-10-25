@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 if (defined('LATTICE_VERSION')) return;
 
 define('LATTICE_VERSION',       '0.4.0');
