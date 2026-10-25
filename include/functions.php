@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // PHP: Introduced in 8.1 (https://stackoverflow.com/questions/173400/how-to-check-if-php-array-is-associative-or-sequential)
 
 if (!function_exists('array_is_list')) {

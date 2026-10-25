@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\DB;
 
 final class Option_Migration_Logger extends Migration_Logger {

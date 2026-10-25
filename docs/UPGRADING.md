@@ -215,6 +215,8 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 `include/integrations` (15 files) declares it with no edit: an order status's slug, the WooCommerce form-field filters' markup, an ACF block's rendered html and the bidirectional feature's log lines are strings the integrations or their hosts build.
 
+The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it with no edit: a theme's `script_loader_tag` arguments are strings from WordPress, and the db layer's `: string`/`: int` returns answer the `$slug`, `$version`, `$base_name` and `$scope` a consumer declares, as every consumer writes them.
+
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
