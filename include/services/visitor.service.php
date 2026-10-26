@@ -175,7 +175,7 @@ class Visitor extends Service {
 
         if (headers_sent() || $defer) {
 
-            return $this->set_cookie_js($key, $value, $ttl, $defer);
+            return $this->set_cookie_js($key, $value, $ttl, $args, $defer);
 
         } else {
 
