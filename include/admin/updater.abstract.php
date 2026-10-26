@@ -50,7 +50,7 @@ class Updater {
 
 		$remote = json_decode(wp_remote_retrieve_body($remote));
 
-		return $remote;
+		return is_object($remote) ? $remote : false;   // a feed that decodes to a scalar would fatal at property_exists() on every update check
 
 	}
 
