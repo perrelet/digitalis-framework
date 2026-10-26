@@ -171,7 +171,8 @@ class Digitalis_Query extends WP_Query {
 
     public static function is_multiple (?WP_Query $wp_query = null) {
 
-        if (wp_doing_ajax() && (substr((string) ($_REQUEST['action'] ?? ''), 0, 5) == 'query')) return true;
+        $action = $_REQUEST['action'] ?? '';
+        if (wp_doing_ajax() && is_scalar($action) && substr((string) $action, 0, 5) == 'query') return true;
 
         if (is_null($wp_query)) global $wp_query;
     
