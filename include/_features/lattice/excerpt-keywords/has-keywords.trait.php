@@ -71,6 +71,9 @@ trait Has_Keywords {
 
     public function filter_keywords ($text) {
 
+        // The /u regexes below answer null for one bad byte, which blanked the whole excerpt; WP recommends mbstring but polyfills only mb_strlen/mb_substr without it.
+        if (function_exists('mb_scrub')) $text = mb_scrub($text, 'UTF-8');
+
         if ($substitutions = $this->get_keyword_substitutions()) $text = strtr($text, $substitutions);
 
         $text = strtolower(strip_tags($text));
