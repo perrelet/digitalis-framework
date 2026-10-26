@@ -28,9 +28,13 @@ trait Dependency_Injection {
         if (!is_callable($call)) return $args;
 
         // ReflectionMethod sees a non-public method that __call forwards to, as getMethod() did; Closure::fromCallable() takes the shapes
-        // reflection cannot name (an invokable, a name only __call answers: a parameterless closure, so nothing injects and PHP's call goes
-        // where it would). ReflectionFunction took closures and function names alone and getMethod() threw for a name without a method.
+        // reflection cannot name: an invokable injects through __invoke's parameters, a name only __call answers gives a parameterless
+        // closure, so nothing injects and PHP's call goes where it would. ReflectionFunction took closures and function names alone and
+        // getMethod() threw for a name without a method.
         [$class, $method] = is_array($call) ? $call : ((is_string($call) && str_contains($call, '::')) ? explode('::', $call, 2) : [null, null]);
+
+        // PHP resolves a 'self::m' / 'parent::m' / 'static::m' callable against the injector (this trait's class, or its called class for static), not the registrant's, and deprecates the form (8.2): no injection.
+        if ($method && is_string($class) && in_array(strtolower($class), ['self', 'parent', 'static'], true)) return $args;
 
         return ($method && method_exists($class, $method))
             ? static::method_inject(new ReflectionMethod($class, $method), $args, $values)
