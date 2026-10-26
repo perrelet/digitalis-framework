@@ -227,6 +227,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | A post holding one invalid UTF-8 byte sequence had its excerpt rewritten to `''` by `Excerpt_Keywords` (each `/u` `preg_replace()` in `filter_keywords()` answered null for the whole text) | `filter_keywords()` scrubs its input first (`mb_scrub()`, where mbstring is loaded) and writes the keywords from the valid words; re-save such a post to regenerate its excerpt |
 | `Checkbox_Group::get_value()` with no value (no request value, a null or `false` default) answered `['']`, one empty selection | Answers `[]`; a comma-separated or array value splits or is kept as before, and the hidden `null_value` input's `'0'` still arrives as `['0']` |
 | An `Updater` whose feed decoded to a number or bool fatal'd at `property_exists()`, and one decoding to a string warned reading `->version`, on every `plugins_api` and update-transient filter | `request()` answers `false` for a feed that is not an object, so no update is offered and the plugin screen renders |
+| `Posts_Table::get_acf_field()` and `Post_Type::render_filters()` (the `acf` filter's label) queried `'post_status' => 'any'`, which skips statuses registered `exclude_from_search` (trash, auto-draft, a custom one), so a type living in such a status resolved no field object | Queries every registered status |
 
 ### Layout
 

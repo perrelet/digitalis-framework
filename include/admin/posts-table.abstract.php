@@ -14,7 +14,7 @@ abstract class Posts_Table extends Screen_Table {
 
         $post_ids = (new \WP_Query([
             'post_type'      => $this->post_type,
-            'post_status'    => 'any',       // the table lists every status; a type whose posts were all drafts resolved no field
+            'post_status'    => array_values(get_post_stati()),   // every status: 'any' skips those registered exclude_from_search, and a type living in one resolved no field
             'meta_key'       => "_{$name}",  // get_field_object() resolves a name through the post's ACF reference meta alone, which the newest post (an import, a REST draft) may not carry
             'posts_per_page' => 1,
             'fields'         => 'ids',

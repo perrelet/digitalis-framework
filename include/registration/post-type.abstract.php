@@ -509,7 +509,7 @@ abstract class Post_Type extends Singleton {
 
                     $post_ids = (new \WP_Query([
                         'post_type'         => $this->slug,
-                        'post_status'       => 'any',
+                        'post_status'       => array_values(get_post_stati()),   // 'any' skips statuses registered exclude_from_search
                         'posts_per_page'    => 1,
                         'fields'            => 'ids',
                     ]))->get_posts();
