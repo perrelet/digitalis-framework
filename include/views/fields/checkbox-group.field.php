@@ -45,6 +45,7 @@ class Checkbox_Group extends Input {
     public function get_value () {
 
         $value = parent::get_value();
+        if ($value === null || $value === '' || $value === false) return [];   // explode() would make one empty selection of no value
         if (!is_array($value)) $value = explode(',', (string) $value);
         return (array) $value;
         
