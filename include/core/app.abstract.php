@@ -42,11 +42,18 @@ abstract class App extends Factory {
 
     public static function get_instance (mixed $data = null) {
 
-        $instance = parent::get_instance($data);
+        $instance = self::$instances[static::$cache_group][static::class] ?? parent::get_instance($data);
 
         if ($instance instanceof self && $instance->boots_late) { $instance->boots_late = false; $instance->boot(); }
 
         return $instance;
+
+    }
+
+    // One App per class: stored and looked up by class whatever get_instance() was given (Factory only looks up a scalar key), so a late get_instance([...]) boots it once.
+    protected function get_cache_key () {
+
+        return static::class;
 
     }
 

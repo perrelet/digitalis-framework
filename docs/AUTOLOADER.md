@@ -457,7 +457,7 @@ public function load_admin() {
 }
 ```
 
-An app built while `plugins_loaded` runs boots at the next priority, not 10; one built after it boots from the `get_instance()` that built it.
+An app built while `plugins_loaded` runs boots at the next priority, not 10; one built after it boots from the `get_instance()` that built it, whatever data that call was given (an App caches by class); `create()` and `new` never boot a late App.
 
 ---
 
