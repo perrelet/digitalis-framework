@@ -229,6 +229,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | An `Updater` whose feed decoded to a number or bool fatal'd at `property_exists()`, and one decoding to a string warned reading `->version`, on every `plugins_api` and update-transient filter | `request()` answers `false` for a feed that is not an object, so no update is offered and the plugin screen renders |
 | `Posts_Table::get_acf_field()` and `Post_Type::render_filters()` (the `acf` filter's label) queried `'post_status' => 'any'`, which skips statuses registered `exclude_from_search` (trash, auto-draft, a custom one), so a type living in such a status resolved no field object | Queries every registered status |
 | `Visitor::ensure_cookie()` dropped its `$args` and always deferred the script fallback to `wp_footer` (`$defer` landed in the `$args` slot) | Passes `$args` and `$defer` through: the cookie options reach the script, and a call with `$defer` false echoes the script where it is called once headers are sent |
+| `Admin_Table::get_filter_value()` ran `urldecode()` on a request value PHP had already decoded, so a filter value holding a literal plus or a percent-hex sequence was mangled (`C%2B%2B` arrived as `C++` and left as `C  `) | The value is unslashed and sanitised once; a literal plus stays (`sanitize_text_field()` still strips `%xx` octets, as it always did) |
 
 ### Layout
 

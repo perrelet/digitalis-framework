@@ -225,7 +225,7 @@ abstract class Admin_Table extends Feature {
 
         $value = $_GET[$key] ?? null;
         $value = is_scalar($value) ? wp_unslash($value) : $filter['null_value'];
-        return sanitize_text_field(urldecode((string) $value));
+        return sanitize_text_field((string) $value);
 
     }
 
