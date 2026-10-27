@@ -150,20 +150,22 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         if (!$logs = $this->get_logs()) return;
 
-        $slug           = $_GET['log'] ?? null;
-        $bytes_per_page = is_scalar($_GET['bpp'] ?? null) ? (int) $_GET['bpp'] : 0;
-        if ($bytes_per_page < 1) $bytes_per_page = (int) $this->bytes_per_page; // ?bpp=0 divided by zero; the default rather than a clamp, since a one-byte page is empty
+        $slug           = is_scalar($_GET['log'] ?? null) ? (string) $_GET['log'] : null;
+        $default        = (int) $this->bytes_per_page;
 
-        if ($bytes_per_page < 1) { // a subclass property of 0 divided too: a declaration error, named under strict, the default in production
+        if ($default < 1) { // a subclass property of 0 divides by zero: a declaration error, named under strict on every request, the default size in production
 
             $error = 'declares $bytes_per_page as ' . var_export($this->bytes_per_page, true) . ', which is not a positive integer, so the log cannot be paged.';
 
             Strict::violation(static::class, $error, 'Declare a positive number of bytes per page, or leave the default of ' . self::DEFAULT_BYTES_PER_PAGE . '.');
             Strict::log_once(static::class, $error);
 
-            $bytes_per_page = self::DEFAULT_BYTES_PER_PAGE;
+            $default = self::DEFAULT_BYTES_PER_PAGE;
 
         }
+
+        $request        = is_scalar($_GET['bpp'] ?? null) ? (int) $_GET['bpp'] : 0;
+        $bytes_per_page = $request > 0 ? $request : $default; // ?bpp=0 divides by zero too; the default rather than a clamp, since a one-byte page is empty
         $page           = is_scalar($_GET['paged'] ?? null) ? max(1, (int) $_GET['paged']) : 1;
         $clear          = $_POST['clear-log'] ?? null;
 

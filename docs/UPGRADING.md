@@ -230,6 +230,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Posts_Table::get_acf_field()` and `Post_Type::render_filters()` (the `acf` filter's label) queried `'post_status' => 'any'`, which skips statuses registered `exclude_from_search` (trash, auto-draft, a custom one), so a type living in such a status resolved no field object | Queries every registered status |
 | `Visitor::ensure_cookie()` dropped its `$args` and always deferred the script fallback to `wp_footer` (`$defer` landed in the `$args` slot) | Passes `$args` and `$defer` through: the cookie options reach the script, and a call with `$defer` false echoes the script where it is called once headers are sent |
 | `Admin_Table::get_filter_value()` ran `urldecode()` on a request value PHP had already decoded, so a filter value holding a literal plus or a percent-hex sequence was mangled (`C%2B%2B` arrived as `C++` and left as `C  `) | The value is unslashed and sanitised once; a literal plus stays (`sanitize_text_field()` still strips `%xx` octets, as it always did) |
+| `Logs_Page` validated a subclass's `$bytes_per_page` declaration only on a request without a usable `?bpp`, so a declaration of 0 passed on most requests and threw under strict on the bare page; an array `?log[]=` was a TypeError | The declaration is validated on every request (a strict violation under `WP_DEBUG`; production logs once and pages at the default) and the `?bpp` override applies after it; an array `?log` falls back to the first log |
 
 ### Layout
 
