@@ -181,8 +181,6 @@ class Post extends WP_Model {
 
         if (static::is_digitalis_ajax($wp_query)) $qv->merge($wp_query->query_vars);
 
-        $qv->post_type = static::$post_type ?: 'any';
-
         if (static::$post_status) $qv->post_status = static::$post_status;
 
         if (static::$term) $qv->add_tax_query([
@@ -193,6 +191,11 @@ class Post extends WP_Model {
 
         $qv->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
         $qv->merge($args, true);
+
+        // Set the post type last so no merge can widen it. A model always queries its own type; the base class uses the type passed in, or 'any'.
+        if (static::$post_type && array_diff((array) ($args['post_type'] ?? []), (array) static::$post_type)) _doing_it_wrong(static::class . '::query', 'A model queries its own post type: use the base class or the right model.', '');
+
+        $qv->overwrite(['post_type' => static::$post_type ?: ($args['post_type'] ?? 'any')]);
 
         $query = $qv->make_query();
 
