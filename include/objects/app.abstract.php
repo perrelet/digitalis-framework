@@ -133,7 +133,7 @@ abstract class App extends Factory {
 
     //
 
-    public function load_feature ($file, $options = []) {
+    public function load_feature ($file, $options = null) {
 
         $paths = apply_filters('lattice.feature.paths', [DIGITALIS_LIBRARY_PATH]);
         $file  = ltrim($file, '/');
@@ -158,7 +158,7 @@ abstract class App extends Factory {
 
             $feature = $this->load_class($path, false);
             if (class_exists($feature)) {
-                $feature::create($options);
+                $feature::get_instance($options);
                 return $feature;
             }
 

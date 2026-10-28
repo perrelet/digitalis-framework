@@ -14,7 +14,7 @@ abstract class Factory extends Creational {
 
     public static function get_group_instances ($group = null) {
 
-        $group ??= static::$cache_group;
+        $group ??= static::get_cache_group();
         return self::$instances[$group] ?? [];
 
     }
@@ -71,8 +71,8 @@ abstract class Factory extends Creational {
         static::prepare_data($data);
         if (!static::instance_condition($data)) return null;
 
-        $group = static::$cache_group;
-        $key   = is_null($data) ? static::class : (is_scalar($data) ? (string) $data : null);
+        $group = static::get_cache_group();
+        $key   = static::get_data_key($data);
 
         self::$instances[$group] ??= [];
 
@@ -86,6 +86,18 @@ abstract class Factory extends Creational {
         }
 
         return $instance;
+
+    }
+
+    protected static function get_cache_group () {
+
+        return static::$cache_group;
+
+    }
+
+    protected static function get_data_key ($data) {
+
+        return is_null($data) ? static::class : (is_scalar($data) ? (string) $data : null);
 
     }
 
