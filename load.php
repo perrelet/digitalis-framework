@@ -184,6 +184,17 @@ require DIGITALIS_FRAMEWORK_PATH . 'include/views/iterator-ui.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-ajax-form.view.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/acf/acf-option-pages.singleton.php';
 
+require DIGITALIS_FRAMEWORK_PATH . 'include/acf/has-unsaved-copies.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/has-version.trait.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/resource-field.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/resource-change.class.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/model-resource.abstract.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/resources.service.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/journal/journal.db-table.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/journal/v1-create-journal.migration.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/journal/journal.schema.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/resources/journal/journal.service.php';
+
 require DIGITALIS_FRAMEWORK_PATH . 'include/functions.php';
 
 add_action('plugins_loaded', function () {
