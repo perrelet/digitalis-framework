@@ -45,7 +45,8 @@ class Changes_Page extends Admin_Sub_Page {
         $model    = $resource?->find($row['record_id']);
         $record   = $model ? '<a href="' . esc_url($resource->get_edit_url($model)) . '">' . esc_html($resource->summarise($model)['title'] ?: "#{$row['record_id']}") . '</a>' : esc_html("#{$row['record_id']}");
         $history  = '<a href="' . esc_url(add_query_arg(['resource' => $row['resource'], 'record' => $row['record_id']], $this->get_url())) . '">history</a>';
-        $changes  = array_map(fn ($change) => esc_html("{$change['field']}: " . ($change['before'] ?? '∅') . ' → ' . ($change['after'] ?? '∅')), Resources::inst()->diff($row['before'] ?? [], $row['after'] ?? []));
+        $lines    = $resource ? $resource->present_changes($row['before'] ?? [], $row['after'] ?? [], $model) : Resources::inst()->diff($row['before'] ?? [], $row['after'] ?? []);
+        $changes  = array_map(fn ($line) => esc_html(($line['label'] ?? $line['field']) . ': ' . (($line['before'] ?? '') === '' ? '∅' : $line['before']) . ' → ' . (($line['after'] ?? '') === '' ? '∅' : $line['after'])), $lines);
 
         echo '<tr>';
         echo '<td>' . esc_html(get_date_from_gmt($row['at'], 'Y-m-d H:i')) . '</td>';

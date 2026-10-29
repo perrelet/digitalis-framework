@@ -194,6 +194,10 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 
 Views (`get_views()`) are named reads: `'prices' => fn ($offer) => …`. Consequences (`get_consequences(Resource_Change $change)`) compare `$change->before` (the saved record, null on create) with `$change->after` (the unsaved copy) and answer `[['kind', 'label', 'items']]`.
 
+### Presenting a change
+
+The API answers flat paths (`stages.1.ends`). For people, `$change->present()` (a dry run) and `$resource->present_changes($before, $after, $model)` (a journal row) answer lines of `label`, `before` and `after`: ACF's labels (`Stages › Row 2 › Date and time`), rows added, removed or changed one by one, titles, term and user names and file names for what ids point at, choice labels, and counts once a list is long. The Changes screen uses it.
+
 ---
 
 ## Option Pages

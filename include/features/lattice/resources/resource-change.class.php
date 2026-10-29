@@ -19,6 +19,14 @@ final class Resource_Change {
         public readonly string         $via    = '',
     ) {}
 
+    public function present () : array {
+
+        $before = $this->before ? array_intersect_key($this->resource->read($this->before), $this->values) : [];
+
+        return $this->resource->present_changes($before, $this->resource->mask($this->values, $this->resource->get_fields_for($this->before, $this->values)), $this->before);
+
+    }
+
     public function describe () : array {
 
         return [

@@ -252,6 +252,17 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // For people: labels, rows one by one, names for what ids point at.
+    public function present_changes (array $before, array $after, $model = null) : array {
+
+        $lines = [];
+
+        foreach (array_intersect_key($this->get_fields_for($model, $after) + $this->get_fields(), $before + $after) as $name => $field) array_push($lines, ...$field->present_change($before[$name] ?? null, $after[$name] ?? null));
+
+        return $lines;
+
+    }
+
     public function stage_model_values ($model, array $values) : void {
 
         foreach ($values as $name => $value) {

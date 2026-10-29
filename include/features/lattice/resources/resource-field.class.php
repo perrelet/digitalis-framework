@@ -127,6 +127,107 @@ final class Resource_Field {
 
     }
 
+    // Changes, for people
+
+    const SHOWN_ITEMS = 10;
+
+    /** @return array[] ['field' => path, 'label', 'before', 'after'], one per change a person would name */
+    public function present_change ($before, $after, string $label = '', string $path = '') : array {
+
+        if ($before === $after) return [];
+
+        $own   = ($this->acf['label'] ?? '') ?: $this->name;
+        $label = $label ? "{$label} › {$own}" : $own;
+        $path  = $path ? "{$path}.{$this->name}" : $this->name;
+
+        return match (true) {
+            $this->type === 'terms'                    => $this->present_terms((array) $before, (array) $after, $label, $path),
+            $this->is_rows(), $this->is_flexible()     => $this->present_rows(array_values((array) $before), array_values((array) $after), $label, $path),
+            $this->is_group()                          => static::present_row($this->sub_fields, (array) $before, (array) $after, $label, $path),
+            is_array($before) || is_array($after)      => [['field' => $path, 'label' => $label, 'before' => $this->display_list((array) $before), 'after' => $this->display_list((array) $after)]],
+            default                                    => [['field' => $path, 'label' => $label, 'before' => $this->display($before), 'after' => $this->display($after)]],
+        };
+
+    }
+
+    protected function present_rows (array $before, array $after, string $label, string $path) : array {
+
+        $lines = [];
+
+        foreach (array_keys($after + $before) as $i) {
+
+            $was    = $before[$i] ?? null;
+            $is     = $after[$i] ?? null;
+            $fields = $this->is_flexible() ? ($this->layouts[($is ?? $was)['layout'] ?? ''] ?? []) : $this->sub_fields;
+            $row    = "{$label} › Row " . ($i + 1);
+
+            if (is_null($was))    $lines[] = ['field' => "{$path}.{$i}", 'label' => $row, 'before' => '', 'after' => 'Added'];
+            elseif (is_null($is)) $lines[] = ['field' => "{$path}.{$i}", 'label' => $row, 'before' => 'Removed', 'after' => ''];
+            else array_push($lines, ...static::present_row($fields, (array) $was, (array) $is, $row, "{$path}.{$i}"));
+
+        }
+
+        return $lines;
+
+    }
+
+    protected static function present_row (array $fields, array $before, array $after, string $label, string $path) : array {
+
+        $lines = [];
+
+        foreach ($fields as $name => $field) array_push($lines, ...$field->present_change($before[$name] ?? null, $after[$name] ?? null, $label, $path));
+
+        return $lines;
+
+    }
+
+    protected function present_terms (array $before, array $after, string $label, string $path) : array {
+
+        $lines = [];
+
+        foreach (array_keys($after + $before) as $taxonomy) {
+
+            if (($was = (array) ($before[$taxonomy] ?? [])) == ($is = (array) ($after[$taxonomy] ?? []))) continue;
+
+            $names   = fn (array $ids) => array_map(fn ($id) => get_term((int) $id)?->name ?? "#{$id}", $ids);
+            $lines[] = ['field' => "{$path}.{$taxonomy}", 'label' => "{$label} › " . (get_taxonomy($taxonomy)?->labels->singular_name ?? $taxonomy), 'before' => $this->shorten_list($names($was)), 'after' => $this->shorten_list($names($is))];
+
+        }
+
+        return $lines;
+
+    }
+
+    public function display ($value) : string {
+
+        if (in_array($value, [null, '', []], true) || (in_array($value, [0, '0'], true) && in_array($this->type, static::REFERENCES, true))) return '';
+
+        $id = is_numeric($value) ? (int) $value : 0;
+
+        return match (true) {
+            $this->type === 'true_false'                                       => $value ? 'Yes' : 'No',
+            in_array($this->type, static::CHOICE_TYPES, true)                 => (string) ($this->get_choices()[(string) $value] ?? $value),
+            in_array($this->type, ['image', 'file', 'gallery'], true) && $id  => wp_basename((string) get_attached_file($id)) ?: "#{$id}",
+            in_array($this->type, ['post_object', 'relationship', 'page_link'], true) && $id => get_the_title($id) ?: "#{$id}",
+            ($this->type === 'taxonomy') && $id                                => get_term($id)?->name ?? "#{$id}",
+            ($this->type === 'user') && $id                                    => get_userdata($id)?->display_name ?? "#{$id}",
+            default                                                            => wp_html_excerpt(wp_strip_all_tags((string) $value), 100, '…'),
+        };
+
+    }
+
+    protected function display_list (array $values) : string {
+
+        return $this->shorten_list(array_map(fn ($value) => $this->display($value), array_values($values)));
+
+    }
+
+    protected function shorten_list (array $items) : string {
+
+        return (count($items) > static::SHOWN_ITEMS) ? count($items) . ' items' : implode(', ', $items);
+
+    }
+
     // Secrets
 
     public function mask ($value) {
