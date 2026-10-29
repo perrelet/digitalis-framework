@@ -384,7 +384,7 @@ if (!$full_path || strpos($full_path, realpath($base_dir)) !== 0) {
 
 ## REST API Security
 
-A `Route` answers `GET` only, with an open `permission()`, until it says otherwise: declare `$definition['methods']` and override `permission()` on anything that changes state. Set `$require_nonce = true` only on a state-changing route anonymous visitors may call: `permission()` cannot tell a visitor from a cross-site form, while a logged-in caller without a `wp_rest` nonce is already downgraded to anonymous by WordPress. Under `WP_DEBUG` a non-GET request served with the base `permission()` logs a `_doing_it_wrong` notice.
+A `Route` answers `GET` only, with an open `permission()`, until it says otherwise: declare `$definition['methods']` and override `permission()` on anything that changes state. Set `$require_nonce = true` only on a state-changing route anonymous visitors may call: `permission()` cannot tell a visitor from a cross-site form, while a logged-in caller without a `wp_rest` nonce is already downgraded to anonymous by WordPress. Under `WP_DEBUG` a non-GET request served with the base `permission()` logs a `_doing_it_wrong` notice. The strings in an untyped `$args` entry are sanitised with `sanitize_text_field()` unless it declares a `type` or its own `sanitize_callback`; a typed one is core's schema sanitiser's.
 
 ### Secure Route Definition
 

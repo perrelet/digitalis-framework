@@ -123,6 +123,10 @@ class Route extends Factory {
                 'permission_callback'   => [$this, 'permission_wrap'],
             ]);
 
+            // Core sanitises a typed arg from its schema; an untyped one would otherwise reach the handler raw. Strings only, so a
+            // declared default keeps its type (core runs the sanitizer over defaults too).
+            foreach ((array) $definition['args'] as $key => $arg) if (is_array($arg) && !isset($arg['type']) && !isset($arg['sanitize_callback'])) $definition['args'][$key]['sanitize_callback'] = [$this, 'sanitize_untyped_arg'];
+
             $this->definition_cache = $definition;
 
         }
@@ -145,6 +149,14 @@ class Route extends Factory {
             ],
             ...
         ]; */
+
+    }
+
+    public function sanitize_untyped_arg (mixed $value) {
+
+        if (is_array($value)) return array_map([$this, 'sanitize_untyped_arg'], $value);
+
+        return is_string($value) ? sanitize_text_field($value) : $value;
 
     }
 

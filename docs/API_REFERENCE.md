@@ -559,7 +559,7 @@ REST API endpoint registration and handling.
 class Route extends Factory
 ```
 
-Registers on `rest_api_init`. Accepts `GET` by default (declare `$definition['methods']` for anything else) and `permission()` returns `true` until overridden; under `WP_DEBUG` a non-GET request served with the base `permission()` logs a `_doing_it_wrong` notice. URL generation is delegated to `REST_URL_Builder`.
+Registers on `rest_api_init`. Accepts `GET` by default (declare `$definition['methods']` for anything else) and `permission()` returns `true` until overridden; under `WP_DEBUG` a non-GET request served with the base `permission()` logs a `_doing_it_wrong` notice. An untyped `$args` entry defaults to a `sanitize_text_field()` sanitizer over its strings. URL generation is delegated to `REST_URL_Builder`.
 
 ```php
 class Invoice_Route extends Route {

@@ -55,6 +55,7 @@ Notices (`WP_DEBUG`, `_doing_it_wrong`, nothing throws):
 | Notice | Fix |
 |---|---|
 | A route that declares no `$definition['methods']` now answers `GET` only (the default was `['GET', 'POST']`); a POST to it is core's `rest_no_route` 404 | Declare `$definition['methods']` on every route that handles a non-GET request. A route served as a page that hosts an ACF form must declare `['GET', 'POST']`, because ACF posts the form to the current URL (mycelium's `event-edit`, `org-edit` and `story-edit` routes) |
+| An untyped `$args` entry reached the handler raw | Each string in its value is run through `sanitize_text_field()` (walked over an array; a bool, int or null, a declared `default` among them, is untouched) unless the entry declares a `type` or a `sanitize_callback`; declare `type` for a string that must keep its markup or newlines |
 | A non-GET request served with the base `permission()` | Override `permission()`; anonymous state-changing routes also set `$require_nonce = true` |
 
 Zero notices on measured traffic: the five POST callers (mycelium banners, org moderation, registration, autofill and its upload) all target routes that declare `POST` and override `permission()`, and mycelium's abstract base already sets `$require_nonce = true` for all its routes. One runtime-dependent case the static count cannot see: ACF's ajax form posts to the current URL, so a mycelium edit route served as the top-level page receives that POST through the default methods (a 404 now that the default is GET only: those routes declare `['GET', 'POST']`).
