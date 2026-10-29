@@ -232,6 +232,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Admin_Table::get_filter_value()` ran `urldecode()` on a request value PHP had already decoded, so a filter value holding a literal plus or a percent-hex sequence was mangled (`C%2B%2B` arrived as `C++` and left as `C  `) | The value is unslashed and sanitised once; a literal plus stays (`sanitize_text_field()` still strips `%xx` octets, as it always did) |
 | `Logs_Page` validated a subclass's `$bytes_per_page` declaration only on a request without a usable `?bpp`, so a declaration of 0 passed on most requests and threw under strict on the bare page; an array `?log[]=` was a TypeError | The declaration is validated on every request (a strict violation under `WP_DEBUG`; production logs once and pages at the default) and the `?bpp` override applies after it; an array `?log` falls back to the first log |
 | `Visitor::get_ip()` cached its first answer for both modes, so `get_ip(false)` after `get_ip()` answered the forwarded-header address (and the reverse) | One cached answer per mode: `get_ip(false)` always answers `REMOTE_ADDR` |
+| `Visitor::get_session_id()` generated a fresh id on every call within the request that set the cookie, so two readers in one cookieless request disagreed | The generated id is written to `$_COOKIE['digitalis_sid']` and every later call answers it |
 
 ### Layout
 

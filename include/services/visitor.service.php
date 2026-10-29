@@ -44,6 +44,7 @@ class Visitor extends Service {
 
         $id = bin2hex(random_bytes(16));
         setcookie('digitalis_sid', $id, time() + DAY_IN_SECONDS, COOKIEPATH, (string) COOKIE_DOMAIN, is_ssl(), true);
+        $_COOKIE['digitalis_sid'] = $id;
         return $id;
     
     }
