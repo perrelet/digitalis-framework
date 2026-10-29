@@ -145,7 +145,7 @@ final class Resource_Field {
             $this->is_rows(), $this->is_flexible()     => $this->present_rows(array_values((array) $before), array_values((array) $after), $label, $path),
             $this->is_group()                          => static::present_row($this->sub_fields, (array) $before, (array) $after, $label, $path),
             is_array($before) || is_array($after)      => [['field' => $path, 'label' => $label, 'before' => $this->display_list((array) $before), 'after' => $this->display_list((array) $after)]],
-            default                                    => [['field' => $path, 'label' => $label, 'before' => $this->display($before), 'after' => $this->display($after)]],
+            default                                    => [['field' => $path, 'label' => $label, 'before' => $this->display($before), 'after' => ($this->display($before) === $this->display($after)) ? 'Changed' : $this->display($after)]],
         };
 
     }

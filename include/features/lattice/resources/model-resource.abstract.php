@@ -259,7 +259,7 @@ abstract class Model_Resource extends Singleton {
 
         foreach (array_intersect_key($this->get_fields_for($model, $after) + $this->get_fields(), $before + $after) as $name => $field) array_push($lines, ...$field->present_change($before[$name] ?? null, $after[$name] ?? null));
 
-        return $lines;
+        return (array) apply_filters('lattice.resources.present', $lines, $this, $before, $after, $model);
 
     }
 
