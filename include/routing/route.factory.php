@@ -29,7 +29,7 @@ class Route extends Factory {
      * @var bool         $wp_query                Whether to emulate a normal WordPress query. Note: $wp isn't reset so repeat `rest_do_request` calls may result in unexpected behaviour. 
      * @var string       $handler                 The handler method name responsible for executing the route's primary application logic.
      * @var bool|string  $view                    The view class to render at the endpoint (view args are inherited from `WP_REST_Request`). Set `false` to turn off and use the `$handler`.
-     * @var bool         $require_nonce           Enforce nonce check.
+     * @var bool         $require_nonce           Verify the `wp_rest` nonce before the handler runs. CSRF hygiene, not authentication: every logged-out visitor shares one anonymous nonce, so a nonced anonymous route is still an anonymous route; gate with `permission()`.
      * @var array        $definition              Args passed to `register_rest_route`.
      * @var array        $args                    $args['args'] passed to `register_rest_route`.
      */
