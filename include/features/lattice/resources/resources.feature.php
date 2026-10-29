@@ -2,6 +2,14 @@
 
 namespace Digitalis;
 
+require_once __DIR__ . '/resource-field.class.php';
+require_once __DIR__ . '/resource-change.class.php';
+require_once __DIR__ . '/model-resource.abstract.php';
+require_once __DIR__ . '/resources.service.php';
+require_once __DIR__ . '/journal/journal.db-table.php';
+require_once __DIR__ . '/journal/v1-create-journal.migration.php';
+require_once __DIR__ . '/journal/journal.schema.php';
+require_once __DIR__ . '/journal/journal.service.php';
 require_once __DIR__ . '/resources-command.class.php';
 require_once __DIR__ . '/changes.sub-page.php';
 require_once __DIR__ . '/routes/resource.route.php';
@@ -10,41 +18,43 @@ foreach (glob(__DIR__ . '/routes/*.route.php') as $file) require_once $file;
 
 class Lattice_Resources extends Feature {
 
-    const PRUNE = 'lattice_journal_prune';
+    const PRUNE         = 'lattice_journal_prune';
+    const VERSION_FIELD = 'lattice_version';
 
     const ROUTES = [Resources_Guide_Route::class, Resources_Journal_Route::class, Resources_Undo_Route::class, Resources_Collection_Route::class, Resources_Record_Route::class, Resources_Member_Route::class];
 
     protected array $before = [];
 
-    public function run () {
+    public function get_hooks () {
 
-        $this->add_action('init', 'start', 20);
+        return [
+            'save_post'                           => 'raise_version',
+            'pre_post_update'                     => 'take_before',
+            'wp_after_insert_post'                => ['settle_save', 100],
+            'post_submitbox_misc_actions'         => 'print_version',
+            'admin_action_editpost'               => 'refuse_stale_edit',
+            'lattice.post.duplicate.exclude_meta' => 'exclude_version',
+            'cli_init'                            => 'register_commands',
+            static::PRUNE                         => 'prune_journal',
+        ];
 
     }
 
-    public function start () {
-
-        if (!$resources = Resources::inst()->get_resources()) return;
+    public function run () {
 
         Journal_Schema::ensure();
 
-        foreach ($resources as $resource) $this->add_action("save_post_{$resource->get_post_type()}", 'raise_version');
-
-        $this->add_action('wp_after_insert_post', 'finish_version', 100);
-        $this->add_action('pre_post_update', 'take_before');
-        $this->add_action('wp_after_insert_post', 'write_journal', 101);
-        $this->add_action('post_submitbox_misc_actions', 'print_version');
-        $this->add_action('admin_action_editpost', 'refuse_stale_edit');
-        $this->add_action(static::PRUNE, 'prune_journal');
-
         if (!wp_next_scheduled(static::PRUNE)) wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', static::PRUNE);
 
-        // Some plugins start the REST server before init.
-        foreach (static::ROUTES as $route) if (did_action('rest_api_init')) $route::get_instance()->register_route(); else $route::get_instance();
+        foreach (static::ROUTES as $route) $route::get_instance();
 
         if (is_admin()) Changes_Page::get_instance();
 
-        if (defined('WP_CLI') && WP_CLI) Resources_Command::register();
+    }
+
+    public function register_commands () {
+
+        Resources_Command::register();
 
     }
 
@@ -76,31 +86,29 @@ class Lattice_Resources extends Feature {
 
     }
 
-    public function finish_version ($post_id) {
+    public function print_version ($wp_post) {
 
-        [, $model] = $this->find($post_id);
+        [, $model] = $this->find($wp_post->ID);
 
-        $model?->finish_version();
-
-    }
-
-    public function print_version ($post) {
-
-        [, $model] = $this->find($post->ID);
-
-        if ($model) echo '<input type="hidden" name="lattice_version" value="' . esc_attr($model->get_version()) . '">';
+        if ($model) echo '<input type="hidden" name="' . static::VERSION_FIELD . '" value="' . esc_attr($model->get_version()) . '">';
 
     }
 
     public function refuse_stale_edit () {
 
-        if (!isset($_POST['lattice_version'])) return;
+        if (!isset($_POST[static::VERSION_FIELD])) return;
 
         [$resource, $model] = $this->find((int) ($_POST['post_ID'] ?? 0));
 
-        if (!$model || (int) $_POST['lattice_version'] === $model->get_version()) return;
+        if (!$model || (int) $_POST[static::VERSION_FIELD] === $model->get_version()) return;
 
         wp_die(esc_html("This {$resource->get_label()} changed after you opened it, so your edit was not saved. Open it again to see the change, then make yours."), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
+
+    }
+
+    public function exclude_version ($keys, $post) {
+
+        return method_exists($post, 'get_version_key') ? [...$keys, $post::get_version_key()] : $keys;
 
     }
 
@@ -122,17 +130,19 @@ class Lattice_Resources extends Feature {
 
     }
 
-    public function write_journal ($post_id, $post, $update) {
+    public function settle_save ($post_id, $wp_post, $update) {
 
         $before = $this->before[$post_id] ?? null;
 
         unset($this->before[$post_id]);
 
-        if ($this->is_autosave() || Resources::inst()->is_writing() || $post->post_status === 'auto-draft' || ($update && !$before)) return;
-
         [$resource, $model] = $this->find($post_id);
 
         if (!$model) return;
+
+        if (!Resources::inst()->is_writing($post_id)) $model->finish_version();
+
+        if ($this->is_autosave() || Resources::inst()->is_writing() || ($wp_post->post_status === 'auto-draft') || ($update && !$before)) return;
 
         $resource->forget_values($model);
         $model->reload();

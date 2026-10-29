@@ -6,7 +6,7 @@ trait Has_Version {
 
     protected static array $writing_version = [];
 
-    protected static function get_version_key () : string {
+    public static function get_version_key () : string {
 
         return '_lattice_version';
 
@@ -36,12 +36,6 @@ trait Has_Version {
         unset(static::$writing_version[$this->get_id()]);
 
         $this->step_version($this->get_version());
-
-    }
-
-    public function duplicate ($overrides = [], $exclude_meta = []) {
-
-        return parent::duplicate($overrides, array_merge((array) $exclude_meta, [static::get_version_key()]));
 
     }
 
