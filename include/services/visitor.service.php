@@ -234,37 +234,89 @@ class Visitor extends Service {
 
         if (!isset($this->ip[$mode])) {
 
-            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-    
-            if ($deep_detect) {
-    
-                $headers = [
-                    'HTTP_X_FORWARDED_FOR',
-                    'HTTP_CLIENT_IP',
-                    'HTTP_CF_CONNECTING_IP', // Cloudflare
-                ];
-        
-                foreach ($headers as $header) {
-                    
-                    if (empty($_SERVER[$header])) continue;
-    
-                    $parts     = explode(',', $_SERVER[$header]);
-                    $candidate = trim($parts[0]);
-    
-                    if (filter_var($candidate, FILTER_VALIDATE_IP)) {
-                        $ip = $candidate;
-                        break;
-                    }
-                    
-                }
-    
-            }
-        
+            $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+
+            // A forwarded header is only the proxy's word, so it counts only when REMOTE_ADDR is a proxy we trust.
+            if ($deep_detect && $this->is_trusted_proxy($ip) && ($forwarded = $this->get_forwarded_ip())) $ip = $forwarded;
+
             $this->ip[$mode] = $ip ?: '0.0.0.0';
 
         }
 
         return $this->ip[$mode];
+
+    }
+
+    // The rightmost X-Forwarded-For hop that is not itself a trusted proxy: the leftmost is whatever the client sent, and
+    // every proxy (Cloudflare included) appends the address it saw. A chain of trusted hops only is a LAN client behind a
+    // local proxy, so its leftmost hop answers. CF-Connecting-IP is not read: a plain proxy passes a forged one through.
+    protected function get_forwarded_ip (): ?string {
+
+        $hops = array_values(array_filter(array_map('trim', explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''))), fn($hop) => filter_var($hop, FILTER_VALIDATE_IP) !== false));
+
+        foreach (array_reverse($hops) as $hop) if (!$this->is_trusted_proxy($hop)) return $hop;
+
+        if ($hops) return $hops[0];
+
+        $client = trim((string) ($_SERVER['HTTP_CLIENT_IP'] ?? ''));
+        return filter_var($client, FILTER_VALIDATE_IP) ? $client : null;
+
+    }
+
+    public function is_trusted_proxy (string $ip): bool {
+
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) return false;
+
+        foreach ($this->get_trusted_proxies() as $range) if (self::ip_in_range($ip, (string) $range)) return true;
+
+        return false;
+
+    }
+
+    // Cloudflare's published ranges (cloudflare.com/ips) plus loopback and the private networks a reverse proxy on the box or
+    // the LAN answers from. Filter `lattice/visitor/trusted_proxies` to add a host's own proxies.
+    public function get_trusted_proxies (): array {
+
+        return (array) apply_filters('lattice/visitor/trusted_proxies', [
+            '127.0.0.0/8', '::1/128', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7',
+            '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18',
+            '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+            '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+            '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+        ]);
+
+    }
+
+    public static function ip_in_range (string $ip, string $range): bool {
+
+        $parts  = explode('/', $range, 2);
+        $ip_bin = self::ip_bytes($ip);
+        $net    = self::ip_bytes($parts[0]);
+
+        if ($ip_bin === false || $net === false || strlen($ip_bin) !== strlen($net)) return false;
+        if (isset($parts[1]) && !ctype_digit($parts[1])) return false; // a malformed prefix must not read as /0
+
+        $bits  = min(isset($parts[1]) ? (int) $parts[1] : strlen($net) * 8, strlen($net) * 8);
+        $bytes = intdiv($bits, 8);
+        $rest  = $bits % 8;
+
+        if (substr($ip_bin, 0, $bytes) !== substr($net, 0, $bytes)) return false;
+        if (!$rest) return true;
+
+        $mask = 0xFF & (0xFF << (8 - $rest));
+
+        return (ord($ip_bin[$bytes]) & $mask) === (ord($net[$bytes]) & $mask);
+
+    }
+
+    // Packed bytes, with an IPv4-mapped IPv6 address (::ffff:a.b.c.d) reduced to its four IPv4 bytes.
+    protected static function ip_bytes (string $ip): string|false {
+
+        $bin = inet_pton($ip);
+
+        if ($bin !== false && strlen($bin) === 16 && substr($bin, 0, 12) === "\0\0\0\0\0\0\0\0\0\0\xff\xff") return substr($bin, 12);
+
+        return $bin;
 
     }
 
