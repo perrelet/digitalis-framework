@@ -32,7 +32,7 @@ abstract class Options_Page_Resource extends Model_Resource {
 
     }
 
-    public function get_fields_for ($model) : array {
+    public function get_fields_for ($model, array $values = []) : array {
 
         return $this->get_fields();
 

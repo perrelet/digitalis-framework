@@ -120,20 +120,28 @@ class Offer_Resource extends \Digitalis\Model_Resource {
 | Kind | Declared by | Read and written |
 |------|-------------|------------------|
 | ACF | The model's field groups | `get_field()` / `update_field()` |
-| Model | `get_model_fields()` (title and status by default) | `get_{name}()` / `set_{name}()` then `save()`, or the methods `'get'` and `'set'` name; `'get'` may be a closure |
+| Model | `get_model_fields()`: the `POST_FIELDS` a resource opts into | `get_{name}()` / `set_{name}()` then `save()`, or the methods or closures `'get'` and `'set'` give |
 | Computed | `get_computed()`: `'dotted.path' => null` inside ACF, `'name' => fn ($model)` outside it | Read only |
 
+`POST_FIELDS` picks from `title`, `status`, `content`, `excerpt`, `featured_image` and `terms` (default: title and status). Others are added in `get_model_fields()`:
+
 ```php
+const POST_FIELDS = ['title', 'status', 'content', 'terms'];
+
 public function get_model_fields () : array {
 
-    return parent::get_model_fields() + ['excerpt' => ['type' => 'textarea', 'label' => 'Excerpt']];
+    return parent::get_model_fields() + ['subtitle' => ['type' => 'text', 'label' => 'Subtitle']];
 
 }
 ```
 
 A model field's setter must only stage: a dry run calls it on the unsaved copy.
 
+- **Content** is saved as the acting account, so WordPress filters its markup (kses) exactly as wp-admin would for that account.
+- **Terms** are `taxonomy => term ids`; a taxonomy left out keeps its terms. A write that changes a term may write the fields of the groups that term brings in.
+
 - **Groups.** The guide lists the post type's groups and those that depend on one of its terms, marked `applies_when` with ACF's rules. A record reads and writes the groups its own edit screen shows; a field it does not show is refused.
+- **References.** A post, term, user or file field takes an id; `0` means none.
 - **Checks.** ACF validates each value (`acf_validate_value()`: lengths, min and max, rows, a site's filters). The layer adds what ACF does not check on the server: choices, that a referenced post, term, user or file exists, a date's stored format, a repeater's computed row keys. A field its conditions hide is never required.
 - **Action-only** (`ACTION_ONLY`, dotted paths): changed only by an action.
 - **Locked** (`get_locked_fields($model)`, `name => why`): refused in the record's present state; other fields in the same write go through. `get_lock($model)` is the record-wide form: a capability updating needs.
@@ -209,6 +217,8 @@ Fields come from the groups on that page; the capability is the page's; create i
 
 `Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. `raise_version()` is a single step for raises outside a save.
 
+Relationship sync (`ACF\Bidirectional_Relationship`) writes a partner's meta without saving it, so the feature raises the partner's version itself.
+
 wp-admin's classic editor and options pages carry the version in a hidden field and refuse a save from a page opened before another change, before anything is written. Copies never inherit it (`lattice.post.duplicate.exclude_meta`).
 
 ---
@@ -266,6 +276,7 @@ Another feature has its say over single records:
 
 - `lattice.resources.refuse` (`$reason, $resource, $model, $operation`): a non-empty reason refuses that record as `locked`. `$operation` is `read`, `update` or an action's name.
 - `lattice.resources.query` (`$args, $resource`): the list's query, to leave records out.
+- `lattice.resources.journal` (`$journal, $resource, $model`): `false` keeps a record's changes out of the journal.
 
 ---
 

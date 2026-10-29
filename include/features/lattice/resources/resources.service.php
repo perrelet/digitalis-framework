@@ -307,7 +307,7 @@ class Resources extends Service {
 
         }
 
-        $journaled = Journal::inst()->write([
+        $journaled = !$this->is_journaled($resource, $made ?? $model) ? null : Journal::inst()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => ($made ?? $model)->get_id(),
@@ -355,7 +355,7 @@ class Resources extends Service {
 
             $problems = $this->check_why($input, $via);
 
-            $fields = $resource->get_fields_for($model);
+            $fields = $resource->get_fields_for($model, $values);
 
             foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($fields[$name], $values + $current)) array_push($problems, ...$fields[$name]->check($value, $name, null, true));
 
@@ -409,9 +409,10 @@ class Resources extends Service {
 
             $snapshot = $resource->before_write($model);
 
-            $fields = $resource->get_fields_for($model);
+            $fields = $resource->get_fields_for($model, $values);
 
-            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($name, $value);
+            // By key: finding a field by name asks the saved record's groups, which a term in this write may change.
+            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, $value);
 
             $resource->stage_model_values($model, $values);
 
@@ -428,7 +429,7 @@ class Resources extends Service {
         $model->finish_version();
         $resource->forget_values($model);
 
-        $journaled = Journal::inst()->write([
+        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::inst()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $model->get_id(),
@@ -449,9 +450,15 @@ class Resources extends Service {
 
     }
 
-    protected function report_journal (int $row_id) : array {
+    public function is_journaled (Model_Resource $resource, $model) : bool {
 
-        if ($row_id) return [];
+        return (bool) apply_filters('lattice.resources.journal', true, $resource, $model);
+
+    }
+
+    protected function report_journal (?int $row_id) : array {
+
+        if ($row_id !== 0) return [];
 
         error_log('Lattice resources: a change was saved without its journal row.');
 
@@ -465,7 +472,7 @@ class Resources extends Service {
 
         $was = $before ? array_intersect_key($resource->read($before), $values) : [];
 
-        $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before)));
+        $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before, $values)));
         $change->consequences = $resource->get_consequences($change);
         $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $change->consequences]));
 
@@ -594,7 +601,7 @@ class Resources extends Service {
         $values   = array_diff_key($input, array_flip(static::CONTROL));
         $problems = [];
         $current  = $model ? $resource->read($model, false) : [];
-        $shown    = $resource->get_fields_for($model);
+        $shown    = $resource->get_fields_for($model, $values);
         $known    = $resource->get_fields() + $shown;
 
         if ($unknown = array_diff(array_keys($values), array_keys($known))) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
@@ -622,7 +629,7 @@ class Resources extends Service {
         if (($record['status'] ?? $status) !== 'publish') return [];
 
         // A new record has no terms, so no term-gated group applies to it yet.
-        $missing = array_filter($resource->get_fields_for($model), fn ($field) => ($model || empty($field->acf['applies_when'])) && $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));
+        $missing = array_filter($resource->get_fields_for($model, $record), fn ($field) => ($model || empty($field->acf['applies_when'])) && $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));
 
         return array_map(fn ($name) => "{$name} is required to publish.", array_keys($missing));
 
@@ -631,7 +638,7 @@ class Resources extends Service {
     // Repeaters keep their computed sub-fields, so undo restores row keys.
     protected function get_writable_values (Model_Resource $resource, $model, array $values) : array {
 
-        $fields = $resource->get_fields_for($model);
+        $fields = $resource->get_fields_for($model, $values);
 
         return array_filter($values, fn ($value, $name) => ($field = $fields[$name] ?? null) && !$field->computed && !$field->action_only && !$field->is_secret(), ARRAY_FILTER_USE_BOTH);
 

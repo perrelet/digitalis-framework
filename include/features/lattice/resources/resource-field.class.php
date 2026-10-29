@@ -17,7 +17,9 @@ final class Resource_Field {
 
     const MULTIPLE = ['checkbox', 'relationship', 'gallery'];
 
-    const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set'];
+    const REFERENCES = ['post_object', 'relationship', 'page_link', 'taxonomy', 'user', 'image', 'file', 'gallery'];
+
+    const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set', 'validate'];
 
     public readonly string $name;
     public readonly string $type;
@@ -318,6 +320,8 @@ final class Resource_Field {
     protected function check_one ($value) : string {
 
         if (is_array($value) || is_object($value)) return 'is not a list or an object here';
+
+        if (in_array($value, [0, '0'], true) && in_array($this->type, static::REFERENCES, true)) return '';
 
         $id    = is_numeric($value) ? (int) $value : 0;
         $types = array_filter((array) ($this->acf['post_type'] ?? []));

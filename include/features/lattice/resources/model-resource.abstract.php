@@ -12,6 +12,9 @@ abstract class Model_Resource extends Singleton {
 
     const SECRET = [];
 
+    // Of get_post_fields(): title, status, content, excerpt, featured_image, terms.
+    const POST_FIELDS = ['title', 'status'];
+
     protected $fields;
     protected $post_type;
     protected $record_fields = [];
@@ -55,13 +58,40 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    // Through get_{name}() and set_{name}(), or the methods 'get' and 'set' name ('get' may be a closure). A dry run calls the setter: it must only stage.
+    // Through get_{name}() and set_{name}(), or the methods or closures 'get' and 'set' give. A dry run calls the setter: it must only stage.
     public function get_model_fields () : array {
 
+        return array_intersect_key($this->get_post_fields(), array_flip(static::POST_FIELDS));
+
+    }
+
+    public function get_post_fields () : array {
+
+        $taxonomies = get_object_taxonomies($this->get_post_type());
+
         return [
-            'title'  => ['type' => 'text', 'label' => 'Title', 'get' => fn ($post) => $post->get_wp_post()->post_title],
-            'status' => ['type' => 'select', 'label' => 'Status', 'choices' => ['draft' => 'Draft', 'publish' => 'Published']],
+            'title'          => ['type' => 'text', 'label' => 'Title', 'get' => fn ($post) => $post->get_wp_post()->post_title],
+            'status'         => ['type' => 'select', 'label' => 'Status', 'choices' => ['draft' => 'Draft', 'publish' => 'Published']],
+            'content'        => ['type' => 'wysiwyg', 'label' => 'Content', 'get' => fn ($post) => $post->get_wp_post()->post_content],
+            'excerpt'        => ['type' => 'textarea', 'label' => 'Excerpt', 'get' => fn ($post) => $post->get_wp_post()->post_excerpt],
+            'featured_image' => ['type' => 'image', 'label' => 'Featured image', 'get' => fn ($post) => (int) $post->get_thumbnail_id(), 'set' => fn ($post, $id) => $post->stage_thumbnail_id((int) $id)],
+            'terms'          => ['type' => 'terms', 'label' => 'Terms', 'taxonomies' => $taxonomies, 'validate' => fn ($terms, $path) => $this->check_terms($terms, $path, $taxonomies),
+                                 'get' => fn ($post) => array_combine($taxonomies, array_map(fn ($taxonomy) => $post->get_term_ids($taxonomy), $taxonomies)),
+                                 'set' => function ($post, $terms) { foreach ($terms as $taxonomy => $ids) $post->stage_terms((array) $ids, $taxonomy); }],
         ];
+
+    }
+
+    // taxonomy => term ids; taxonomies left out keep their terms.
+    protected function check_terms ($terms, string $path, array $taxonomies) : array {
+
+        if (!is_array($terms) || ($terms && array_is_list($terms))) return ["{$path} is an object of " . implode(', ', $taxonomies) . '.'];
+
+        $problems = ($unknown = array_diff(array_keys($terms), $taxonomies)) ? ["{$path} has no " . implode(', ', $unknown) . '.'] : [];
+
+        foreach (array_intersect_key($terms, array_flip($taxonomies)) as $taxonomy => $ids) foreach ((array) $ids as $id) if (!is_numeric($id) || !term_exists((int) $id, $taxonomy)) $problems[] = "{$path}.{$taxonomy} has no term {$id}.";
+
+        return $problems;
 
     }
 
@@ -79,12 +109,21 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    /** @return Resource_Field[] by name: the fields this record shows. */
-    public function get_fields_for ($model) : array {
+    /** @return Resource_Field[] by name: the fields this record shows, with $values' terms when it brings some. */
+    public function get_fields_for ($model, array $values = []) : array {
 
         if (!$model?->get_id() || !function_exists('acf_get_field_groups')) return $this->get_fields();
 
-        return $this->record_fields[$model->get_id()] ??= $this->build_fields(acf_get_field_groups(['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()]));
+        $screen = ['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()];
+
+        if ($this->get_field('terms')?->source === 'model') {
+
+            if (is_array($values['terms'] ?? null)) return $this->build_fields(acf_get_field_groups($screen + ['post_terms' => $values['terms'] + $this->read_terms($model)]));
+            if ($model->is_unsaved_copy())         return $this->build_fields(acf_get_field_groups($screen + ['post_terms' => $this->read_terms($model)]));
+
+        }
+
+        return $this->record_fields[$model->get_id()] ??= $this->build_fields(acf_get_field_groups($screen));
 
     }
 
@@ -215,13 +254,29 @@ abstract class Model_Resource extends Singleton {
 
     public function stage_model_values ($model, array $values) : void {
 
-        foreach ($values as $name => $value) if (($field = $this->get_field($name)) && $field->source === 'model') $model->{$field->acf['set'] ?? "set_{$name}"}($value);
+        foreach ($values as $name => $value) {
+
+            if (($field = $this->get_field($name))?->source !== 'model') continue;
+
+            $setter = $field->acf['set'] ?? "set_{$name}";
+
+            ($setter instanceof \Closure) ? $setter($model, $value) : $model->$setter($value);
+
+        }
+
+    }
+
+    protected function read_terms ($model) : array {
+
+        $getter = $this->get_field('terms')->acf['get'];
+
+        return $getter($model);
 
     }
 
     public function get_unsaved_copy ($model, array $values) : object {
 
-        $copy = $model->get_unsaved_copy($this->to_raw($values, $this->get_fields_for($model)));
+        $copy = $model->get_unsaved_copy($this->to_raw($values, $this->get_fields_for($model, $values)));
 
         if (method_exists($copy, 'get_wp_post') && $copy->get_wp_post()) $copy->set_wp_post(clone $copy->get_wp_post());
 

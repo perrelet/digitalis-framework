@@ -40,6 +40,7 @@ class Lattice_Resources extends Feature {
             'acf/options_page/submitbox_before_major_actions' => 'print_page_version',
             'acf/options_page/save'                           => 'settle_page_save',
             'lattice.post.duplicate.exclude_meta'             => 'exclude_version',
+            'lattice.relationship.partner_updated'            => 'raise_partner_version',
             'cli_init'                                        => 'register_commands',
             static::PRUNE                                     => 'prune_journal',
         ];
@@ -124,6 +125,20 @@ class Lattice_Resources extends Feature {
 
     }
 
+    // Relationship sync writes the partner's meta without saving it.
+    public function raise_partner_version ($type, $id) {
+
+        if (($type !== 'post') || Resources::inst()->is_writing($id)) return;
+
+        [$resource, $model] = $this->find($id);
+
+        if (!$model) return;
+
+        $model->raise_version();
+        $resource->forget_values($model);
+
+    }
+
     public function exclude_version ($keys, $post) {
 
         return method_exists($post, 'get_version_key') ? [...$keys, $post::get_version_key()] : $keys;
@@ -168,7 +183,7 @@ class Lattice_Resources extends Feature {
         $created = !$update || $before['status'] === 'auto-draft';
         $after   = $resource->read($model);
 
-        if (!$created && $after === $before['values']) return;
+        if ((!$created && $after === $before['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
 
         Journal::inst()->write([
             'via'            => is_admin() ? 'admin' : 'other',
@@ -223,7 +238,7 @@ class Lattice_Resources extends Feature {
         $model->finish_version();
         $resource->forget_values($model);
 
-        if (($after = $resource->read($model)) === $before['values']) return;
+        if ((($after = $resource->read($model)) === $before['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
 
         Journal::inst()->write([
             'via'            => 'admin',

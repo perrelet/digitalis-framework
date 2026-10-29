@@ -294,7 +294,8 @@ class Project extends Post {
 | `get_image($size)` | `string` | Alias for get_thumbnail |
 | `get_thumbnail_url($size)` | `string` | Featured image URL |
 | `get_image_url($size)` | `string` | Alias for get_thumbnail_url |
-| `get_thumbnail_id()` | `int` | Attachment ID |
+| `get_thumbnail_id()` | `int` | Attachment ID, a staged one first |
+| `stage_thumbnail_id($id)` | `$this` | Stage the featured image (`0` removes it) for `save()` |
 | `get_attachments($mime)` | `array` | Attached media |
 
 ### Terms/Taxonomies
@@ -303,7 +304,9 @@ class Project extends Post {
 |--------|---------|-------------|
 | `get_terms($tax_or_term)` | `WP_Term[]\|Term[]` | Terms for a taxonomy — **return type depends on the argument**, see below |
 | `has_term($term, $tax)` | `bool` | Has specific term |
-| `set_terms($terms, $tax)` | `array\|WP_Error` | Replace terms |
+| `set_terms($terms, $tax)` | `array\|WP_Error` | Replace terms, written at once |
+| `get_term_ids($tax)` | `int[]` | Term IDs, staged ones first |
+| `stage_terms($ids, $tax)` | `$this` | Stage a taxonomy's terms for `save()`, which writes them before `wp_after_insert_post` |
 | `add_terms($terms, $tax)` | `array\|WP_Error` | Add terms |
 | `remove_terms($terms, $tax)` | `bool\|WP_Error` | Remove terms |
 
