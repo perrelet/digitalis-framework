@@ -264,14 +264,10 @@ class Route extends Factory {
 
     //
 
-    protected $permission_cache;
-
     public function permission_wrap (WP_REST_Request $request) {
-    
-        if (is_null($this->permission_cache)) $this->permission_cache = $this->request_inject($request, 'permission');
 
-        return $this->permission_cache;
-    
+        return $this->request_inject($request, 'permission');
+
     }
 
     public function callback_wrap (WP_REST_Request $request) {
