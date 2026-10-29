@@ -162,6 +162,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin | yes |
 | `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order`. Fires `lattice.relationship.partner_updated` (`$type`, `$id`, `$key`, `$relationship`) after each partner write; `Excerpt_Keywords` listens to rebuild the partner's keywords, since the write is not a save | yes |
+| `Lattice_Resources` | `Feature` | Models through REST (`lattice/v1`) and `wp lattice`: dry runs, a version, a journal with undo, actions shared with wp-admin. Subclass `Model_Resource` per model (or `Options_Page_Resource` per options page); load with `load_feature('lattice/resources')` before `parent::load()`. See [RESOURCES.md](./docs/RESOURCES.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
 ### REST, Blocks & Shortcodes
@@ -614,5 +615,6 @@ Examples:
 | Dependency injection internals | [docs/DEPENDENCY_INJECTION.md](./docs/DEPENDENCY_INJECTION.md) |
 | Copy-paste patterns | [docs/CHEATSHEET.md](./docs/CHEATSHEET.md) |
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
+| Models through REST and WP-CLI: resources, dry runs, the journal | [docs/RESOURCES.md](./docs/RESOURCES.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |
