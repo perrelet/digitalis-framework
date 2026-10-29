@@ -114,12 +114,18 @@ class Route extends Factory {
 
     public function get_definition () {
 
-        if (is_null($this->definition_cache)) $this->definition_cache = wp_parse_args($this->definition, [
-            'args'                  => $this->get_args(),
-            'methods'               => ['GET', 'POST'],
-            'callback'              => [$this, 'callback_wrap'],
-            'permission_callback'   => [$this, 'permission_wrap'],
-        ]);
+        if (is_null($this->definition_cache)) {
+
+            $definition = wp_parse_args($this->definition, [
+                'args'                  => $this->get_args(),
+                'methods'               => ['GET'],
+                'callback'              => [$this, 'callback_wrap'],
+                'permission_callback'   => [$this, 'permission_wrap'],
+            ]);
+
+            $this->definition_cache = $definition;
+
+        }
 
         return $this->definition_cache;        
 
@@ -284,7 +290,7 @@ class Route extends Factory {
     
     }
 
-    // The 0.5 discovery instrument for the 1.0 default of GET-only routes; nothing throws.
+    // The discovery instrument for the base permission(): a non-GET request a route serves without ever gating it. Nothing throws.
     protected function notice_defaults (WP_REST_Request $request) {
 
         $method = $request->get_method();
@@ -293,7 +299,6 @@ class Route extends Factory {
 
         $clauses = [];
 
-        if (!isset($this->definition['methods']))                                                         $clauses[] = "handles {$method} through the default methods ['GET', 'POST']; declare \$definition['methods'] (1.0 defaults to GET)";
         if ((new \ReflectionMethod($this, 'permission'))->getDeclaringClass()->getName() === self::class) $clauses[] = "handles {$method} with the base permission(), which allows everyone";
 
         if (!$clauses) return;
