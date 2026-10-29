@@ -94,6 +94,17 @@ namespace Lattice {
             return current_user_can('administrator');
 
         }
+
+        // The gate runs before params(): a visitor pays for no backtrace or file read, and a shipped dd() halts them too.
+        public function pre_validate () {
+
+            if ($this->condition()) return parent::pre_validate();
+
+            if ($this->get_options()->die) die;
+
+            return false;
+
+        }
     
         public function get_template () {
     
