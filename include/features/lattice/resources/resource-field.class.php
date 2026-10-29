@@ -86,6 +86,12 @@ final class Resource_Field {
 
     }
 
+    public function is_secret () : bool {
+
+        return !empty($this->acf['secret']) || ($this->type === 'password');
+
+    }
+
     public function get_format () : string {
 
         return static::STORED_FORMATS[$this->type] ?? '';
@@ -110,6 +116,7 @@ final class Resource_Field {
         return array_filter([
             ...array_diff_key($this->acf, array_flip(static::INTERNAL)),
             'format'      => $this->get_format(),
+            'secret'      => $this->is_secret(),
             'computed'    => $this->computed,
             'action_only' => $this->action_only,
             'sub_fields'  => $describe($this->sub_fields),

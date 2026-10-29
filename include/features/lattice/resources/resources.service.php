@@ -329,7 +329,11 @@ class Resources extends Service {
 
             if ($refusal = $this->refuse_update($resource, $model)) return $refusal;
 
-            $values  = array_filter($this->get_writable_values($resource, $row['before']), fn ($value, $name) => $value !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH);
+            $changed = array_filter($row['before'], fn ($value, $name) => $value !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH);
+            $values  = $this->get_writable_values($resource, $changed);
+
+            if ($changed && !$values) return $this->error('locked', 'Only secrets changed, and the journal keeps none to restore.', 409, ['reason' => 'Secrets are not kept.']);
+
             $current = $resource->read($model);
 
             if ($changed = array_keys(array_filter($values, fn ($value, $name) => ($current[$name] ?? null) !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH))) return $moved(implode(', ', $changed));
@@ -442,7 +446,7 @@ class Resources extends Service {
 
         $was = $before ? array_intersect_key($resource->read($before), $values) : [];
 
-        $change->changes      = $this->diff($was, $values);
+        $change->changes      = $this->diff($was, $resource->mask($values));
         $change->consequences = $resource->get_consequences($change);
         $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $change->consequences]));
 
@@ -595,7 +599,7 @@ class Resources extends Service {
     // Repeaters keep their computed sub-fields, so undo restores row keys.
     protected function get_writable_values (Model_Resource $resource, array $values) : array {
 
-        return array_filter($values, fn ($value, $name) => ($field = $resource->get_field($name)) && !$field->computed && !$field->action_only, ARRAY_FILTER_USE_BOTH);
+        return array_filter($values, fn ($value, $name) => ($field = $resource->get_field($name)) && !$field->computed && !$field->action_only && !$field->is_secret(), ARRAY_FILTER_USE_BOTH);
 
     }
 

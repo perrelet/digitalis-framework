@@ -10,6 +10,8 @@ abstract class Model_Resource extends Singleton {
 
     const ACTION_ONLY = [];
 
+    const SECRET = [];
+
     protected $fields;
     protected $post_type;
 
@@ -97,7 +99,7 @@ abstract class Model_Resource extends Singleton {
 
         foreach ($this->get_model_fields() as $name => $settings) $fields[$name] = new Resource_Field(['name' => $name] + array_diff_key($settings, ['validate' => 0]), 'model', validate: $settings['validate'] ?? null);
 
-        foreach ($groups as $group) foreach ((array) acf_get_fields($group) as $field) if (($field['name'] ?? '') !== '') $fields[$field['name']] = Resource_Field::from_acf($field + array_intersect_key($group, ['applies_when' => 0]), array_keys($this->get_computed()), static::ACTION_ONLY);
+        foreach ($groups as $group) foreach ((array) acf_get_fields($group) as $field) if (($field['name'] ?? '') !== '') $fields[$field['name']] = Resource_Field::from_acf($field + array_intersect_key($group, ['applies_when' => 0]) + ['secret' => in_array($field['name'], static::SECRET, true)], array_keys($this->get_computed()), static::ACTION_ONLY);
 
         foreach ($this->get_computed() as $name => $reader) if (is_callable($reader) && !isset($fields[$name])) $fields[$name] = new Resource_Field(['name' => $name, 'type' => 'computed'], 'reader', computed: true);
 
@@ -176,6 +178,15 @@ abstract class Model_Resource extends Singleton {
             'reader' => $readers[$name]($model),
             default  => $field->from_raw($model->get_field($name, false)),
         };
+
+        return $this->mask($values);
+
+    }
+
+    // The layer's reads, diffs and journal rows all come through here: a secret leaves as a keyed hash, so a change still shows.
+    public function mask (array $values) : array {
+
+        foreach ($values as $name => $value) if ($this->get_field($name)?->is_secret()) $values[$name] = in_array($value, [null, '', []], true) ? '' : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']';
 
         return $values;
 
