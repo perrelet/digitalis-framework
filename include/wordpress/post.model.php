@@ -280,6 +280,8 @@ class Post extends WP_Model {
 
         $post_array = wp_parse_args($post_array, get_object_vars($this->wp_post));
 
+        foreach ($this->take_staged_input() as $key => $staged) $post_array[$key] = ($post_array[$key] ?? []) + $staged;
+
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
 

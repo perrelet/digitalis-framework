@@ -10,6 +10,9 @@ trait Has_WP_Post {
 
     use Has_WP_Model, Has_WP_Meta, Has_ACF_Fields;
 
+    protected $staged_terms = [];
+    protected $staged_thumbnail_id;
+
     protected $wp_post;
 
     protected function init_wp_model ($data) {
@@ -383,9 +386,18 @@ trait Has_WP_Post {
     }
 
     public function get_thumbnail_id () {
-        
-        return get_post_thumbnail_id($this->wp_post->ID);
-        
+
+        return $this->staged_thumbnail_id ?? get_post_thumbnail_id($this->wp_post->ID);
+
+    }
+
+    public function stage_thumbnail_id (int $attachment_id) {
+
+        $this->staged_thumbnail_id = $attachment_id;
+        $this->dirty               = true;
+
+        return $this;
+
     }
 
     public function get_image_id () {
@@ -414,6 +426,40 @@ trait Has_WP_Post {
         
         return has_term($term, $taxonomy, $this->wp_post->ID);
         
+    }
+
+    public function get_term_ids (string $taxonomy) : array {
+
+        if (array_key_exists($taxonomy, $this->staged_terms)) return $this->staged_terms[$taxonomy];
+
+        $ids = wp_get_object_terms($this->wp_post->ID, $taxonomy, ['fields' => 'ids']);
+
+        return is_wp_error($ids) ? [] : array_map('intval', $ids);
+
+    }
+
+    // Written by save(), where set_terms() writes at once.
+    public function stage_terms (array $term_ids, string $taxonomy) {
+
+        $this->staged_terms[$taxonomy] = array_map('intval', $term_ids);
+        $this->dirty                   = true;
+
+        return $this;
+
+    }
+
+    protected function take_staged_input () : array {
+
+        $input = array_filter([
+            'tax_input'  => $this->staged_terms,
+            'meta_input' => is_null($this->staged_thumbnail_id) ? [] : ['_thumbnail_id' => $this->staged_thumbnail_id ?: ''],
+        ]);
+
+        $this->staged_terms        = [];
+        $this->staged_thumbnail_id = null;
+
+        return $input;
+
     }
 
     public function set_terms ($terms, $taxonomy = 'post_tag', $append = false) {
