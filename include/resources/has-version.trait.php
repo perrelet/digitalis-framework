@@ -47,11 +47,7 @@ trait Has_Version {
 
     public function raise_version () : void {
 
-        if (isset(static::$writing_version[$this->get_id()])) return;
-
-        $this->step_version($this->get_version());
-
-        static::$writing_version[$this->get_id()] = true;
+        if (!isset(static::$writing_version[$this->get_id()])) $this->step_version($this->get_version());
 
     }
 

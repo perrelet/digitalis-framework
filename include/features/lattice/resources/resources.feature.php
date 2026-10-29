@@ -72,7 +72,7 @@ class Lattice_Resources extends Feature {
 
         [, $model] = $this->find($post_id);
 
-        $model?->raise_version();
+        $model?->claim_version($model->get_version());
 
     }
 
