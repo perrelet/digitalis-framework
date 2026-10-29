@@ -14,6 +14,7 @@ abstract class Model_Resource extends Singleton {
 
     protected $fields;
     protected $post_type;
+    protected $record_fields = [];
 
     public function init () {
 
@@ -54,11 +55,11 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    // Through get_{name}() and set_{name}(), or the methods 'get' and 'set' name. A dry run calls the setter: it must only stage.
+    // Through get_{name}() and set_{name}(), or the methods 'get' and 'set' name ('get' may be a closure). A dry run calls the setter: it must only stage.
     public function get_model_fields () : array {
 
         return [
-            'title'  => ['type' => 'text', 'label' => 'Title'],
+            'title'  => ['type' => 'text', 'label' => 'Title', 'get' => fn ($post) => $post->get_wp_post()->post_title],
             'status' => ['type' => 'select', 'label' => 'Status', 'choices' => ['draft' => 'Draft', 'publish' => 'Published']],
         ];
 
@@ -83,7 +84,7 @@ abstract class Model_Resource extends Singleton {
 
         if (!$model?->get_id() || !function_exists('acf_get_field_groups')) return $this->get_fields();
 
-        return $this->build_fields(acf_get_field_groups(['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()]));
+        return $this->record_fields[$model->get_id()] ??= $this->build_fields(acf_get_field_groups(['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()]));
 
     }
 
@@ -99,7 +100,7 @@ abstract class Model_Resource extends Singleton {
 
         foreach ($this->get_model_fields() as $name => $settings) $fields[$name] = new Resource_Field(['name' => $name] + array_diff_key($settings, ['validate' => 0]), 'model', validate: $settings['validate'] ?? null);
 
-        foreach ($groups as $group) foreach ((array) acf_get_fields($group) as $field) if (($field['name'] ?? '') !== '') $fields[$field['name']] = Resource_Field::from_acf($field + array_intersect_key($group, ['applies_when' => 0]) + ['secret' => in_array($field['name'], static::SECRET, true)], array_keys($this->get_computed()), static::ACTION_ONLY);
+        foreach ($groups as $group) foreach ((array) acf_get_fields($group) as $field) if (($field['name'] ?? '') !== '') $fields[$field['name']] = Resource_Field::from_acf($field + array_intersect_key($group, ['applies_when' => 0]), array_keys($this->get_computed()), static::ACTION_ONLY, static::SECRET);
 
         foreach ($this->get_computed() as $name => $reader) if (is_callable($reader) && !isset($fields[$name])) $fields[$name] = new Resource_Field(['name' => $name, 'type' => 'computed'], 'reader', computed: true);
 
@@ -168,35 +169,45 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    public function read ($model) : array {
+    // The layer's reads, diffs and journal rows are masked: a secret leaves as a keyed hash, so a change still shows.
+    public function read ($model, bool $mask = true) : array {
 
         $values  = [];
         $readers = $this->get_computed();
 
-        foreach ($this->get_fields_for($model) as $name => $field) $values[$name] = match ($field->source) {
-            'model'  => $model->{$field->acf['get'] ?? "get_{$name}"}(),
-            'reader' => $readers[$name]($model),
-            default  => $field->from_raw($model->get_field($name, false)),
-        };
+        foreach ($this->get_fields_for($model) as $name => $field) {
 
-        return $this->mask($values);
+            $getter = $field->acf['get'] ?? "get_{$name}";
+            $value  = match ($field->source) {
+                'model'  => ($getter instanceof \Closure) ? $getter($model) : $model->$getter(),
+                'reader' => $readers[$name]($model),
+                default  => $field->from_raw($model->get_field($name, false)),
+            };
 
-    }
+            $values[$name] = $mask ? $field->mask($value) : $value;
 
-    // The layer's reads, diffs and journal rows all come through here: a secret leaves as a keyed hash, so a change still shows.
-    public function mask (array $values) : array {
-
-        foreach ($values as $name => $value) if ($this->get_field($name)?->is_secret()) $values[$name] = in_array($value, [null, '', []], true) ? '' : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']';
+        }
 
         return $values;
 
     }
 
-    public function to_raw (array $values) : array {
+    public function mask (array $values, ?array $fields = null) : array {
 
-        $raw = [];
+        $fields ??= $this->get_fields();
 
-        foreach ($values as $name => $value) if (($field = $this->get_field($name)) && $field->source === 'acf') $raw[$name] = $field->to_raw($value);
+        foreach ($values as $name => $value) if (isset($fields[$name])) $values[$name] = $fields[$name]->mask($value);
+
+        return $values;
+
+    }
+
+    public function to_raw (array $values, ?array $fields = null) : array {
+
+        $fields ??= $this->get_fields();
+        $raw      = [];
+
+        foreach ($values as $name => $value) if (($fields[$name] ?? null)?->source === 'acf') $raw[$name] = $fields[$name]->to_raw($value);
 
         return $raw;
 
@@ -210,7 +221,7 @@ abstract class Model_Resource extends Singleton {
 
     public function get_unsaved_copy ($model, array $values) : object {
 
-        $copy = $model->get_unsaved_copy($this->to_raw($values));
+        $copy = $model->get_unsaved_copy($this->to_raw($values, $this->get_fields_for($model)));
 
         if (method_exists($copy, 'get_wp_post') && $copy->get_wp_post()) $copy->set_wp_post(clone $copy->get_wp_post());
 
@@ -230,6 +241,8 @@ abstract class Model_Resource extends Singleton {
             foreach (array_keys((array) $store->get()) as $key) if (str_starts_with((string) $key, "{$id}:")) $store->remove($key);
 
         }
+
+        unset($this->record_fields[$model->get_id()]);
 
         $model->forget_derived();
 

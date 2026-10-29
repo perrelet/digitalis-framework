@@ -47,13 +47,13 @@ final class Resource_Field {
     }
 
     // Dotted paths: 'stages.stage_key'.
-    public static function from_acf (array $field, array $computed = [], array $action_only = [], string $prefix = '') : static {
+    public static function from_acf (array $field, array $computed = [], array $action_only = [], array $secret = [], string $prefix = '') : static {
 
         $path     = $prefix . $field['name'];
-        $children = fn (array $fields) => array_column(array_map(fn ($sub) => static::from_acf($sub, $computed, $action_only, "{$path}."), array_filter($fields, fn ($sub) => ($sub['name'] ?? '') !== '')), null, 'name');
+        $children = fn (array $fields) => array_column(array_map(fn ($sub) => static::from_acf($sub, $computed, $action_only, $secret, "{$path}."), array_filter($fields, fn ($sub) => ($sub['name'] ?? '') !== '')), null, 'name');
 
         return new static(
-            acf:         $field,
+            acf:         $field + (in_array($path, $secret, true) ? ['secret' => true] : []),
             computed:    in_array($path, $computed, true),
             action_only: in_array($path, $action_only, true),
             sub_fields:  $children((array) ($field['sub_fields'] ?? [])),
@@ -122,6 +122,46 @@ final class Resource_Field {
             'sub_fields'  => $describe($this->sub_fields),
             'layouts'     => array_map(fn ($layout) => ['name' => $layout['name'], 'label' => $layout['label'] ?? '', 'sub_fields' => $describe($this->layouts[$layout['name']] ?? [])], array_values((array) ($this->acf['layouts'] ?? []))),
         ], fn ($value) => !in_array($value, ['', [], null, false], true));
+
+    }
+
+    // Secrets
+
+    public function mask ($value) {
+
+        if ($this->is_secret()) return in_array($value, [null, '', []], true) ? '' : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']';
+
+        return $this->map_rows($value, fn (array $fields, array $row) => static::map_row($fields, $row, fn ($field, $one) => $field->mask($one)));
+
+    }
+
+    // A mask sent back is the value it stands for.
+    public function unmask ($sent, $raw) {
+
+        if ($this->is_secret()) return ($sent === $this->mask($raw)) ? $raw : $sent;
+
+        return $this->map_rows($sent, fn (array $fields, array $row, $i) => static::map_row($fields, $row, fn ($field, $one, $name) => $field->unmask($one, ($this->is_group() ? $raw : ($raw[$i] ?? []))[$name] ?? null)));
+
+    }
+
+    protected function map_rows ($value, callable $map) {
+
+        if (!is_array($value)) return $value;
+
+        return match (true) {
+            $this->is_group()    => $map($this->sub_fields, $value, null),
+            $this->is_rows()     => array_map(fn ($row, $i) => is_array($row) ? $map($this->sub_fields, $row, $i) : $row, $value, array_keys($value)),
+            $this->is_flexible() => array_map(fn ($row, $i) => is_array($row) ? $map($this->layouts[$row['layout'] ?? ''] ?? [], $row, $i) : $row, $value, array_keys($value)),
+            default              => $value,
+        };
+
+    }
+
+    protected static function map_row (array $fields, array $row, callable $map) : array {
+
+        foreach (array_intersect_key($row, $fields) as $name => $one) $row[$name] = $map($fields[$name], $one, $name);
+
+        return $row;
 
     }
 

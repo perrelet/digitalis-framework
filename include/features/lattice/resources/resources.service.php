@@ -41,7 +41,7 @@ class Resources extends Service {
     /** @return Model_Resource[] by name */
     public function get_resources () : array {
 
-        return array_filter(array_map([$this, 'get_resource'], array_combine(array_keys($this->resources), array_keys($this->resources))));
+        return $this->resources;
 
     }
 
@@ -330,7 +330,7 @@ class Resources extends Service {
             if ($refusal = $this->refuse_update($resource, $model)) return $refusal;
 
             $changed = array_filter($row['before'], fn ($value, $name) => $value !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH);
-            $values  = $this->get_writable_values($resource, $changed);
+            $values  = $this->get_writable_values($resource, $model, $changed);
 
             if ($changed && !$values) return $this->error('locked', 'Only secrets changed, and the journal keeps none to restore.', 409, ['reason' => 'Secrets are not kept.']);
 
@@ -340,7 +340,9 @@ class Resources extends Service {
 
             $problems = $this->check_why($input, $via);
 
-            foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($resource->get_field($name), $values + $current)) array_push($problems, ...$resource->get_field($name)->check($value, $name, null, true));
+            $fields = $resource->get_fields_for($model);
+
+            foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($fields[$name], $values + $current)) array_push($problems, ...$fields[$name]->check($value, $name, null, true));
 
             if ($problems) return $this->invalid($problems);
 
@@ -392,7 +394,9 @@ class Resources extends Service {
 
             $snapshot = $resource->before_write($model);
 
-            foreach ($values as $name => $value) if ($resource->get_field($name)->source === 'acf') $model->update_field($name, $value);
+            $fields = $resource->get_fields_for($model);
+
+            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($name, $value);
 
             $resource->stage_model_values($model, $values);
 
@@ -446,7 +450,7 @@ class Resources extends Service {
 
         $was = $before ? array_intersect_key($resource->read($before), $values) : [];
 
-        $change->changes      = $this->diff($was, $resource->mask($values));
+        $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before)));
         $change->consequences = $resource->get_consequences($change);
         $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $change->consequences]));
 
@@ -565,11 +569,14 @@ class Resources extends Service {
 
         $values   = array_diff_key($input, array_flip(static::CONTROL));
         $problems = [];
-        $current  = $model ? $resource->read($model) : [];
+        $current  = $model ? $resource->read($model, false) : [];
         $shown    = $resource->get_fields_for($model);
+        $known    = $resource->get_fields() + $shown;
 
-        if ($unknown = array_diff(array_keys($values), array_keys($resource->get_fields()))) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
-        if ($hidden = array_diff(array_keys(array_intersect_key($values, $resource->get_fields())), array_keys($shown))) $problems[] = 'Not shown for this record (see applies_when): ' . implode(', ', $hidden) . '.';
+        if ($unknown = array_diff(array_keys($values), array_keys($known))) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
+        if ($hidden = array_diff(array_keys(array_intersect_key($values, $known)), array_keys($shown))) $problems[] = 'Not shown for this record (see applies_when): ' . implode(', ', $hidden) . '.';
+
+        foreach (array_intersect_key($values, $shown) as $name => $value) $values[$name] = $shown[$name]->unmask($value, $current[$name] ?? null);
 
         foreach (array_intersect_key($values, $shown) as $name => $value) {
 
@@ -581,7 +588,7 @@ class Resources extends Service {
 
         }
 
-        return [array_intersect_key($values, $resource->get_fields()), $problems];
+        return [array_intersect_key($values, $shown), $problems];
 
     }
 
@@ -590,16 +597,19 @@ class Resources extends Service {
 
         if (($record['status'] ?? $status) !== 'publish') return [];
 
-        $missing = array_filter($resource->get_fields_for($model), fn ($field) => $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));
+        // A new record has no terms, so no term-gated group applies to it yet.
+        $missing = array_filter($resource->get_fields_for($model), fn ($field) => ($model || empty($field->acf['applies_when'])) && $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));
 
         return array_map(fn ($name) => "{$name} is required to publish.", array_keys($missing));
 
     }
 
     // Repeaters keep their computed sub-fields, so undo restores row keys.
-    protected function get_writable_values (Model_Resource $resource, array $values) : array {
+    protected function get_writable_values (Model_Resource $resource, $model, array $values) : array {
 
-        return array_filter($values, fn ($value, $name) => ($field = $resource->get_field($name)) && !$field->computed && !$field->action_only && !$field->is_secret(), ARRAY_FILTER_USE_BOTH);
+        $fields = $resource->get_fields_for($model);
+
+        return array_filter($values, fn ($value, $name) => ($field = $fields[$name] ?? null) && !$field->computed && !$field->action_only && !$field->is_secret(), ARRAY_FILTER_USE_BOTH);
 
     }
 

@@ -31,16 +31,17 @@ class Lattice_Resources extends Feature {
     public function get_hooks () {
 
         return [
-            'save_post'                           => 'raise_version',
-            'pre_post_update'                     => 'take_before',
-            'wp_after_insert_post'                => ['settle_save', 100],
-            'post_submitbox_misc_actions'         => 'print_version',
-            'admin_action_editpost'               => 'refuse_stale_edit',
-            'acf/save_post'                       => ['take_page_before', 5],
-            'acf/options_page/save'               => 'settle_page_save',
-            'lattice.post.duplicate.exclude_meta' => 'exclude_version',
-            'cli_init'                            => 'register_commands',
-            static::PRUNE                         => 'prune_journal',
+            'save_post'                                       => 'raise_version',
+            'pre_post_update'                                 => 'take_before',
+            'wp_after_insert_post'                            => ['settle_save', 100],
+            'post_submitbox_misc_actions'                     => 'print_version',
+            'admin_action_editpost'                           => 'refuse_stale_edit',
+            'acf/save_post'                                   => ['take_page_before', 5],
+            'acf/options_page/submitbox_before_major_actions' => 'print_page_version',
+            'acf/options_page/save'                           => 'settle_page_save',
+            'lattice.post.duplicate.exclude_meta'             => 'exclude_version',
+            'cli_init'                                        => 'register_commands',
+            static::PRUNE                                     => 'prune_journal',
         ];
 
     }
@@ -95,7 +96,7 @@ class Lattice_Resources extends Feature {
 
         [, $model] = $this->find($wp_post->ID);
 
-        if ($model) echo '<input type="hidden" name="' . static::VERSION_FIELD . '" value="' . esc_attr($model->get_version()) . '">';
+        if ($model) $this->print_version_field($model);
 
     }
 
@@ -105,7 +106,19 @@ class Lattice_Resources extends Feature {
 
         [$resource, $model] = $this->find((int) ($_POST['post_ID'] ?? 0));
 
-        if (!$model || (int) $_POST[static::VERSION_FIELD] === $model->get_version()) return;
+        if ($model) $this->refuse_if_stale($resource, $model);
+
+    }
+
+    protected function print_version_field ($model) : void {
+
+        echo '<input type="hidden" name="' . static::VERSION_FIELD . '" value="' . esc_attr($model->get_version()) . '">';
+
+    }
+
+    protected function refuse_if_stale (Model_Resource $resource, $model) : void {
+
+        if (!isset($_POST[static::VERSION_FIELD]) || ((int) $_POST[static::VERSION_FIELD] === $model->get_version())) return;
 
         wp_die(esc_html("This {$resource->get_label()} changed after you opened it, so your edit was not saved. Open it again to see the change, then make yours."), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
 
@@ -183,11 +196,19 @@ class Lattice_Resources extends Feature {
 
         if (!$model = $resource?->find($plugin_page)) return;
 
+        $this->refuse_if_stale($resource, $model);
+
         $resource->forget_values($model);
 
         $this->before[$plugin_page] = ['values' => $resource->read($model), 'version' => $model->get_version()];
 
         $model->claim_version($model->get_version());
+
+    }
+
+    public function print_page_version ($page) {
+
+        if ($model = Resources::inst()->get_resource_for_page((string) ($page['menu_slug'] ?? ''))?->find($page['menu_slug'])) $this->print_version_field($model);
 
     }
 

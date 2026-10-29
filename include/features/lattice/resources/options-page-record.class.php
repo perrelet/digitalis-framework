@@ -31,7 +31,10 @@ class Options_Page_Record extends Options_Page {
 
         global $wpdb;
 
-        $name    = $this->get_option_name($key);
+        $name = $this->get_option_name($key);
+
+        if (is_null($prev)) return update_option($name, $value, false);
+
         $updated = $wpdb->update($wpdb->options, ['option_value' => maybe_serialize($value)], ['option_name' => $name, 'option_value' => maybe_serialize($prev)]);
 
         wp_cache_delete($name, 'options');
