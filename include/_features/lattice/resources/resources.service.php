@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_Error;
@@ -141,7 +143,7 @@ class Resources extends Service {
 
         if (!$readable) return [];
 
-        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !($model = $this->get_resource($row['resource'])->find($row['record_id'])) || !$this->refuse_read($this->get_resource($row['resource']), $model)));
+        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !($model = $this->get_resource((string) $row['resource'])->find($row['record_id'])) || !$this->refuse_read($this->get_resource((string) $row['resource']), $model)));
 
     }
 
@@ -301,9 +303,9 @@ class Resources extends Service {
 
             unset($this->writing[(string) $model->get_id()]);
 
-            $code = isset(static::STATUSES[$result->get_error_code()]) ? $result->get_error_code() : 'not_saved';
+            $code = isset(static::STATUSES[$result->get_error_code()]) ? (string) $result->get_error_code() : 'not_saved';
 
-            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500);
+            return $this->error($code, $result->get_error_message(), (int) (static::STATUSES[$code] ?? 500));
 
         }
 
@@ -332,7 +334,7 @@ class Resources extends Service {
 
         if (!$row = Journal::inst()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
 
-        [$resource, $model] = $this->find($row['resource'], $row['record_id']);
+        [$resource, $model] = $this->find((string) $row['resource'], $row['record_id']);
 
         if ($resource instanceof WP_Error)          return $resource;
         if ($refusal = $this->refuse_read($resource, $model)) return $refusal;

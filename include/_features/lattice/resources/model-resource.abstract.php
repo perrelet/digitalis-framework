@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 abstract class Model_Resource extends Singleton {
@@ -16,7 +18,7 @@ abstract class Model_Resource extends Singleton {
     const POST_FIELDS = ['title', 'status'];
 
     protected $fields;
-    protected $post_type;
+    protected ?string $post_type = null;
     protected $record_fields = [];
 
     public function init () {
@@ -395,7 +397,7 @@ abstract class Model_Resource extends Singleton {
 
         $caps = get_post_type_object($this->get_post_type())?->cap;
 
-        return match (true) {
+        return (string) match (true) {
             $model && ($operation === 'read')   => 'read_post',
             $model && ($operation === 'update') => 'edit_post',
             $operation === 'create'             => $caps?->create_posts ?? 'edit_posts',

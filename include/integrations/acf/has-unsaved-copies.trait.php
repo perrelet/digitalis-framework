@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 trait Has_Unsaved_Copies {
@@ -27,13 +29,13 @@ trait Has_Unsaved_Copies {
 
     public function forget_derived () : void {}
 
-    public function get_field ($selector, $format_value = true, $escape_html = false) {
+    public function get_field (string $selector, bool $format_value = true, bool $escape_html = false) {
 
         if (is_null($this->unsaved_values) || !array_key_exists($selector, $this->unsaved_values)) return parent::get_field($selector, $format_value, $escape_html);
 
         $value = $this->unsaved_values[$selector];
 
-        if (!$format_value || !function_exists('acf_maybe_get_field') || !($field = acf_maybe_get_field($selector, $this->get_acf_id(), false))) return $value;
+        if (!$format_value || !function_exists('acf_maybe_get_field') || !($field = acf_maybe_get_field($selector, $this->get_field_id(), false))) return $value;
 
         // ACF caches formatted values by post id, sub-fields included.
         return apply_filters('acf/format_value', $value, $this->unsaved_key, $field, $escape_html);

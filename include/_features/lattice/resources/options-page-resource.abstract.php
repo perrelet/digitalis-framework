@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // One ACF options page as one record, found by the page's slug. Writes run ACF's per-field filters, not acf/save_post.

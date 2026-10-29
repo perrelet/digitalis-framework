@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 final class Resource_Change {
@@ -9,14 +11,14 @@ final class Resource_Change {
     public string $fingerprint  = '';
 
     public function __construct (
-        public readonly Model_Resource $resource,
-        public readonly string         $operation,
-        public readonly ?object        $before,
-        public readonly object         $after,
-        public readonly array          $values = [],
-        public readonly array          $input  = [],
-        public readonly string         $why    = '',
-        public readonly string         $via    = '',
+        public /* readonly */ Model_Resource $resource,
+        public /* readonly */ string         $operation,
+        public /* readonly */ ?object        $before,
+        public /* readonly */ object         $after,
+        public /* readonly */ array          $values = [],
+        public /* readonly */ array          $input  = [],
+        public /* readonly */ string         $why    = '',
+        public /* readonly */ string         $via    = '',
     ) {}
 
     public function present () : array {

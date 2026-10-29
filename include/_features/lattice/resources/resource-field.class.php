@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Closure;
@@ -21,10 +23,10 @@ final class Resource_Field {
 
     const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set', 'validate'];
 
-    public readonly string $name;
-    public readonly string $type;
-    public readonly string $key;
-    public readonly bool   $required;
+    public /* readonly */ string $name;
+    public /* readonly */ string $type;
+    public /* readonly */ string $key;
+    public /* readonly */ bool   $required;
 
     /**
      * @param array $acf        ACF's field array; a declared field gives the same shape.
@@ -32,18 +34,18 @@ final class Resource_Field {
      * @param array $layouts    A flexible field's sub-fields, by layout name.
      */
     public function __construct (
-        public readonly array    $acf,
-        public readonly string   $source      = 'acf',
-        public readonly bool     $computed    = false,
-        public readonly bool     $action_only = false,
-        public readonly array    $sub_fields  = [],
-        public readonly array    $layouts     = [],
-        public readonly ?Closure $validate    = null,
+        public /* readonly */ array    $acf,
+        public /* readonly */ string   $source      = 'acf',
+        public /* readonly */ bool     $computed    = false,
+        public /* readonly */ bool     $action_only = false,
+        public /* readonly */ array    $sub_fields  = [],
+        public /* readonly */ array    $layouts     = [],
+        public /* readonly */ ?Closure $validate    = null,
     ) {
 
-        $this->name     = $acf['name'];
-        $this->type     = $acf['type'] ?? 'text';
-        $this->key      = $acf['key'] ?? '';
+        $this->name     = (string) $acf['name'];
+        $this->type     = (string) ($acf['type'] ?? 'text');
+        $this->key      = (string) ($acf['key'] ?? '');
         $this->required = !empty($acf['required']);
 
     }
@@ -136,7 +138,7 @@ final class Resource_Field {
 
         if ($before === $after) return [];
 
-        $own   = ($this->acf['label'] ?? '') ?: $this->name;
+        $own   = (string) (($this->acf['label'] ?? '') ?: $this->name);
         $label = $label ? "{$label} › {$own}" : $own;
         $path  = $path ? "{$path}.{$this->name}" : $this->name;
 

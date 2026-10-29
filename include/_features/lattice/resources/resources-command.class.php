@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_CLI;
@@ -72,7 +74,7 @@ class Resources_Command {
 
         if (isset($assoc['input'])) {
 
-            $json  = file_get_contents($assoc['input'] === '-' ? 'php://stdin' : $assoc['input']);
+            $json  = file_get_contents($assoc['input'] === '-' ? 'php://stdin' : (string) $assoc['input']);
             $input = json_decode((string) $json, true);
 
             if (!is_array($input)) WP_CLI::error('--input is not a JSON object.');

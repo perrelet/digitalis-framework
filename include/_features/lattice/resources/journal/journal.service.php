@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Journal extends Service {
@@ -96,8 +98,8 @@ class Journal extends Service {
         foreach (['id', 'user_id', 'version_before', 'version_after'] as $column) $row[$column] = (int) $row[$column];
 
         $row['undoes'] = is_null($row['undoes']) ? null : (int) $row['undoes'];
-        $row['before'] = is_null($row['before']) ? null : json_decode($row['before'], true);
-        $row['after']  = is_null($row['after']) ? null : json_decode($row['after'], true);
+        $row['before'] = is_null($row['before']) ? null : json_decode((string) $row['before'], true);
+        $row['after']  = is_null($row['after']) ? null : json_decode((string) $row['after'], true);
 
         return $row;
 
