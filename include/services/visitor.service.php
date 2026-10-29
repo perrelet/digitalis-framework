@@ -145,13 +145,13 @@ class Visitor extends Service {
     public function set_cookie_js ($key, $value, $ttl = null, $args = [], $defer = true) {
 
         $name  = $this->get_cookie_prefix() . $key;
-        $value = !is_scalar($value) ? wp_json_encode($value) : (string) $value;
+        $value = (string) (!is_scalar($value) ? wp_json_encode($value) : $value);
         $args  = $this->get_cookie_args($ttl, $args);
 
         $args['expires'] = gmdate('D, d M Y H:i:s T', (int) $args['expires']);
 
         $cookie_parts = [];
-        $cookie_parts[] = "{$name}={$value}";
+        $cookie_parts[] = "{$name}=" . rawurlencode($value);
         if ($args['secure']) $cookie_parts[] = 'Secure';
         unset($args['secure']);
         foreach ($args as $key => $value) if (!empty($value)) $cookie_parts[] = "{$key}={$value}";
