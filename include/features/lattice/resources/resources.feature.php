@@ -5,6 +5,9 @@ namespace Digitalis;
 require_once __DIR__ . '/resource-field.class.php';
 require_once __DIR__ . '/resource-change.class.php';
 require_once __DIR__ . '/model-resource.abstract.php';
+require_once __DIR__ . '/options-page.model.php';
+require_once __DIR__ . '/options-page-record.class.php';
+require_once __DIR__ . '/options-page-resource.abstract.php';
 require_once __DIR__ . '/resources.service.php';
 require_once __DIR__ . '/journal/journal.db-table.php';
 require_once __DIR__ . '/journal/v1-create-journal.migration.php';
@@ -33,6 +36,8 @@ class Lattice_Resources extends Feature {
             'wp_after_insert_post'                => ['settle_save', 100],
             'post_submitbox_misc_actions'         => 'print_version',
             'admin_action_editpost'               => 'refuse_stale_edit',
+            'acf/save_post'                       => ['take_page_before', 5],
+            'acf/options_page/save'               => 'settle_page_save',
             'lattice.post.duplicate.exclude_meta' => 'exclude_version',
             'cli_init'                            => 'register_commands',
             static::PRUNE                         => 'prune_journal',
@@ -160,6 +165,53 @@ class Lattice_Resources extends Feature {
             'before'         => $created ? null : $before['values'],
             'after'          => $after,
             'version_before' => $created ? 0 : $before['version'],
+            'version_after'  => $model->get_version(),
+        ]);
+
+    }
+
+    // Options pages
+
+    // Every options page saves under one ACF id; wp-admin names the page.
+    public function take_page_before ($post_id) {
+
+        global $plugin_page;
+
+        if (is_numeric($post_id) || !is_string($plugin_page) || Resources::inst()->is_writing()) return;
+
+        $resource = Resources::inst()->get_resource_for_page($plugin_page);
+
+        if (!$model = $resource?->find($plugin_page)) return;
+
+        $resource->forget_values($model);
+
+        $this->before[$plugin_page] = ['values' => $resource->read($model), 'version' => $model->get_version()];
+
+        $model->claim_version($model->get_version());
+
+    }
+
+    public function settle_page_save ($post_id, $slug) {
+
+        $before = $this->before[$slug] ?? null;
+
+        unset($this->before[$slug]);
+
+        if (!$before || !($resource = Resources::inst()->get_resource_for_page($slug)) || !($model = $resource->find($slug))) return;
+
+        $model->finish_version();
+        $resource->forget_values($model);
+
+        if (($after = $resource->read($model)) === $before['values']) return;
+
+        Journal::inst()->write([
+            'via'            => 'admin',
+            'resource'       => $resource->get_name(),
+            'record_id'      => $slug,
+            'action'         => 'update',
+            'before'         => $before['values'],
+            'after'          => $after,
+            'version_before' => $before['version'],
             'version_after'  => $model->get_version(),
         ]);
 

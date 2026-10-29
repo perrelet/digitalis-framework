@@ -47,7 +47,15 @@ class Resources extends Service {
 
     public function get_resource_for_post_type (string $post_type) : ?Model_Resource {
 
-        foreach ($this->get_resources() as $resource) if ($resource->get_post_type() === $post_type) return $resource;
+        foreach ($this->get_resources() as $resource) if ($post_type && ($resource->get_post_type() === $post_type)) return $resource;
+
+        return null;
+
+    }
+
+    public function get_resource_for_page (string $slug) : ?Options_Page_Resource {
+
+        foreach ($this->get_resources() as $resource) if (($resource instanceof Options_Page_Resource) && ($resource->get_page_slug() === $slug)) return $resource;
 
         return null;
 
