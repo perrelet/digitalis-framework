@@ -92,6 +92,40 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // ACF skips a required field its conditions hide. Conditions name fields by key and compare raw values; one on a field this level lacks counts as met.
+    public function is_shown (Resource_Field $field, array $record) : bool {
+
+        if (!$field->shown_when) return true;
+
+        $names = [];
+
+        foreach ($this->get_fields() as $name => $each) if ($each->key) $names[$each->key] = $name;
+
+        foreach ($field->shown_when as $group) if (!array_filter($group, fn ($rule) => isset($names[$rule['field']]) && !$this->meets($rule, $record[$names[$rule['field']]] ?? null))) return true;
+
+        return false;
+
+    }
+
+    protected function meets (array $rule, $value) : bool {
+
+        $values = array_map('strval', is_array($value) ? $value : (in_array($value, [null, ''], true) ? [] : [$value]));
+        $want   = (string) $rule['value'];
+
+        return match ($rule['operator']) {
+            '=='         => in_array($want, $values, true),
+            '!='         => !in_array($want, $values, true),
+            '==empty'    => !$values,
+            '!=empty'    => (bool) $values,
+            '==contains' => str_contains(implode(' ', $values), $want),
+            '!=contains' => !str_contains(implode(' ', $values), $want),
+            '<'          => $values && (float) $values[0] < (float) $want,
+            '>'          => $values && (float) $values[0] > (float) $want,
+            default      => true,
+        };
+
+    }
+
     protected function get_acf_fields () : array {
 
         if (!function_exists('acf_get_field_groups')) return [];
