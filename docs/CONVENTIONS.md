@@ -94,7 +94,7 @@ class Dashboard_Layout extends Layout {
 
 ### Name a configured feature with `id` when anything needs to reach it
 
-A feature loaded without config (or with an empty one) is found by its class. A feature can also be booted from config as many times as needed, each config its own instance; give one an `id` and it is found by that name. A config without an `id` runs anonymously.
+A feature's name is its naming property: from its config, else the class's declared default, else its class. A feature that other code reaches declares a default (`protected $id = 'proposals';`), so it is found whether it was loaded bare or with config. A feature can also be booted from config as many times as needed, each config its own instance; give one an `id` and it is found by that name. A config with no name anywhere runs anonymously, and a later bare `inst()` warns before building a second instance with every hook again.
 
 ```php
 $this->load_feature('lattice/dev-role');
@@ -105,4 +105,4 @@ Dev_Role::inst();                                    // the unconfigured feature
 \Digitalis\ACF\Focal_Point::inst('event-images');    // that config, from any class
 ```
 
-The name is whichever property `$cache_property` points to, `id` by default; a feature named otherwise sets its own (`'slug'`), and `null` opts out of names altogether. Loading the same name again returns the instance already running; its new config is ignored. Names are scoped to the feature's class, so unrelated features may share one. A family that declares its own `$cache_group` shares one namespace instead, so its base class finds any member by name: `Meta_Box::inst('somm-keywords')` finds the `Keywords_Metabox`. Within a family a name is one instance, whichever subclass asks, so keep names unique there (as meta box ids already are). `create()` stays what it is everywhere: a new instance nothing can find again.
+The name is whichever property `$cache_property` points to, `id` by default; a feature named otherwise sets its own (`'slug'`), and `null` opts out of names altogether. Loading the same name again returns the instance already running; its new config is ignored. Names are scoped to the feature's class, so unrelated features may share one. A family that declares its own `$cache_group` shares one namespace instead, so its base class finds any member by name: `Meta_Box::inst('somm-keywords')` finds the `Keywords_Metabox`. Within a family a name is one instance, whichever subclass asks, so keep names unique there (as meta box ids already are); two classes declaring the same one both run, each found by its class, with a warning. `create()` stays what it is everywhere: a new instance nothing can find again.
