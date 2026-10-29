@@ -283,15 +283,20 @@ class Post extends WP_Model {
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
 
+        // wp_after_insert_post waits for the terms and fields written below.
+        $defer_hooks = $fire_after_hooks && ($tax_input || ($post_array['field_input'] ?? false));
+        $update      = !$this->is_new();
+        $wp_before   = ($update && $defer_hooks) ? get_post($this->get_id()) : null;
+
         if ($this->is_new()) {
 
             if (isset($post_array['ID'])) unset($post_array['ID']);
-            $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
+            $post_id = wp_insert_post($post_array, true, $fire_after_hooks && !$defer_hooks);
 
         } else {
 
             $post_array['ID'] = $this->get_id();
-            $post_id = wp_update_post($post_array, true, $fire_after_hooks);
+            $post_id = wp_update_post($post_array, true, $fire_after_hooks && !$defer_hooks);
 
         }
 
@@ -316,6 +321,8 @@ class Post extends WP_Model {
         }
 
         if ($post_array['field_input'] ?? false) $this->update_fields($post_array['field_input']);
+
+        if ($defer_hooks) wp_after_insert_post($post_id, $update, $wp_before);
 
         // TODO: Add to cache
 
