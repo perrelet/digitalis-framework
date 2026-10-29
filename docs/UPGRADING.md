@@ -237,6 +237,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Visitor::set_cookie_js()` wrote the raw value into `document.cookie`, so a value holding `;` set cookie attributes and one holding a space or non-ASCII was truncated or mangled by the browser | The value is `rawurlencode()`d (encoded like `setcookie()`, with `%20` for a space); PHP decodes it on the next request as before, and a JS reader decodes with `decodeURIComponent()` |
 | `HTML_REST_API::rest_pre_serve_request()` ignored `$served`, so a response another `rest_pre_serve_request` filter had already served was served a second time on an HTML path | Answers `$served` unchanged when it is already true |
 | The `woocommerce-clean` account navigation template echoed each menu label raw where core's template escapes it | `esc_html()` on the label, as `myaccount/navigation.php` in WooCommerce does |
+| `Visitor::get_session_id()` set its cookie without `SameSite` and answered whatever the cookie held | The cookie goes through `set_cookie()`: `SameSite=Lax`, `HttpOnly`, the day-long expiry and the `$_COOKIE` write-back as before; a cookie that is not a 32-character hex id is replaced, and the cookie name follows `$cookie_prefix` (`somm_sid` on somm, which overrides the prefix). Cookies remain UI state: unsigned, and nothing that authorises may trust one |
 
 ### Layout
 

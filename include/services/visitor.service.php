@@ -40,11 +40,12 @@ class Visitor extends Service {
 
     public function get_session_id () {
 
-        if (isset($_COOKIE['digitalis_sid'])) return $_COOKIE['digitalis_sid'];
+        $name = $this->get_cookie_prefix() . 'sid';
+
+        if (is_string($_COOKIE[$name] ?? null) && preg_match('/^[0-9a-f]{32}$/', $_COOKIE[$name])) return $_COOKIE[$name];
 
         $id = bin2hex(random_bytes(16));
-        setcookie('digitalis_sid', $id, time() + DAY_IN_SECONDS, COOKIEPATH, (string) COOKIE_DOMAIN, is_ssl(), true);
-        $_COOKIE['digitalis_sid'] = $id;
+        $this->set_cookie('sid', $id, 'day', ['path' => COOKIEPATH, 'domain' => (string) COOKIE_DOMAIN, 'httponly' => true]);
         return $id;
     
     }
@@ -129,6 +130,7 @@ class Visitor extends Service {
     
     }
 
+    // Cookies are UI state: unsigned, and the browser may rewrite them. Nothing that authorises may trust one.
     public function set_cookie ($key, $value, $ttl = null, $args = []) {
 
         $name  = $this->get_cookie_prefix() . $key;
