@@ -262,6 +262,11 @@ Undo is a write of its own:
 
 WordPress's capabilities decide: the post type's for reading, creating and updating (`read_post` and `edit_post` against the record), publishing needs `publish_posts`, and each action its own. `lattice.resources.allow` (`$allowed, $user, $resource, $operation`) can only refuse.
 
+Another feature has its say over single records:
+
+- `lattice.resources.refuse` (`$reason, $resource, $model, $operation`): a non-empty reason refuses that record as `locked`. `$operation` is `read`, `update` or an action's name.
+- `lattice.resources.query` (`$args, $resource`): the list's query, to leave records out.
+
 ---
 
 ## Limits

@@ -264,14 +264,14 @@ abstract class Model_Resource extends Singleton {
         $statuses = ['draft', 'pending', 'publish', 'future', 'private'];
         $status   = (string) ($args['status'] ?? '');
 
-        return (static::$model_class)::query(array_filter([
+        return (static::$model_class)::query(apply_filters('lattice.resources.query', array_filter([
             'post_status'    => in_array($status, $statuses, true) ? $status : $statuses,
             's'              => (string) ($args['search'] ?? ''),
             'posts_per_page' => $args['per_page'],
             'paged'          => $args['page'],
             'orderby'        => 'modified',
             'order'          => 'DESC',
-        ]));
+        ]), $this));
 
     }
 

@@ -141,7 +141,7 @@ class Resources extends Service {
 
         if (!$readable) return [];
 
-        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !($model = $this->get_resource($row['resource'])->find($row['record_id'])) || $this->get_resource($row['resource'])->can('read', $model)));
+        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !($model = $this->get_resource($row['resource'])->find($row['record_id'])) || !$this->refuse_read($this->get_resource($row['resource']), $model)));
 
     }
 
@@ -237,6 +237,8 @@ class Resources extends Service {
         $changes_record = $definition['changes_record'] ?? true;
 
         if ($refusal = $changes_record ? $this->refuse_update($resource, $model) : $this->refuse_read($resource, $model)) return $refusal;
+
+        if ($refusal = $this->refuse_record($resource, $model, $action)) return $refusal;
 
         if (isset($definition['capability']) && !current_user_can($definition['capability'])) return $this->forbidden($definition['capability']);
         if (!$this->may($resource, $action, $model))                                            return $this->forbidden($action);
@@ -528,7 +530,16 @@ class Resources extends Service {
 
         if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.');
 
-        return null;
+        return $this->refuse_record($resource, $model, 'update');
+
+    }
+
+    // Another feature's say over one record: a reason refuses it.
+    protected function refuse_record (Model_Resource $resource, $model, string $operation) : ?WP_Error {
+
+        $reason = (string) apply_filters('lattice.resources.refuse', '', $resource, $model, $operation);
+
+        return $reason ? $this->error('locked', $reason, 409, ['reason' => $reason]) : null;
 
     }
 
@@ -544,7 +555,7 @@ class Resources extends Service {
 
     protected function refuse_read (Model_Resource $resource, $model) : ?WP_Error {
 
-        return $this->may($resource, 'read', $model) ? null : $this->forbidden($resource->get_capability('read', $model));
+        return $this->may($resource, 'read', $model) ? $this->refuse_record($resource, $model, 'read') : $this->forbidden($resource->get_capability('read', $model));
 
     }
 
