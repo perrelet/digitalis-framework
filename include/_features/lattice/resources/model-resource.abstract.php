@@ -18,7 +18,7 @@ abstract class Model_Resource extends Singleton {
     const POST_FIELDS = ['title', 'status'];
 
     protected $fields;
-    protected ?string $post_type = null;
+    protected $post_type;
     protected $record_fields = [];
 
     public function init () {

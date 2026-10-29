@@ -34,7 +34,7 @@ A resource exposes one model. Every write goes through the model's own save step
 Actions (a model's buttons) are the same code whether wp-admin, REST or the CLI calls them.
 
 ```
-include/features/lattice/resources/
+include/_features/lattice/resources/
 ├── resources.feature.php             Lattice_Resources: hooks, routes, CLI, the Changes screen
 ├── resources.service.php             Resources: guide, list, get, create, update, act, view, undo
 ├── model-resource.abstract.php       Model_Resource: subclass one per model
