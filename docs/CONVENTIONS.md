@@ -94,7 +94,7 @@ class Dashboard_Layout extends Layout {
 
 ### Name a configured feature with `id` when anything needs to reach it
 
-A feature's name is its naming property: from its config, else the class's declared default, else its class. A feature that other code reaches declares a default (`protected $id = 'proposals';`), so it is found whether it was loaded bare or with config. A feature can also be booted from config as many times as needed, each config its own instance; give one an `id` and it is found by that name. A config with no name anywhere runs anonymously, and a later bare `inst()` warns before building a second instance with every hook again.
+A feature's name is its naming property: from its config, else the class's declared default, else its class. A feature that other code reaches declares a default (`protected $id = 'proposals';`), so it is found whether it was loaded bare or with config. A feature can also be booted from config as many times as needed, each config its own instance; give one an `id` and it is found by that name. A config with no name anywhere runs anonymously: a later bare `inst()` cannot find it and builds a second instance with every hook again.
 
 ```php
 $this->load_feature('lattice/dev-role');
