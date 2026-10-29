@@ -43,7 +43,7 @@ class Changes_Page extends Admin_Sub_Page {
         $user     = get_userdata($row['user_id']);
         $resource = Resources::inst()->get_resource($row['resource']);
         $model    = $resource?->find($row['record_id']);
-        $record   = $model ? '<a href="' . esc_url($resource->get_edit_url($model)) . '">' . esc_html($model->get_title() ?: "#{$row['record_id']}") . '</a>' : esc_html("#{$row['record_id']}");
+        $record   = $model ? '<a href="' . esc_url($resource->get_edit_url($model)) . '">' . esc_html($resource->summarise($model)['title'] ?: "#{$row['record_id']}") . '</a>' : esc_html("#{$row['record_id']}");
         $history  = '<a href="' . esc_url(add_query_arg(['resource' => $row['resource'], 'record' => $row['record_id']], $this->get_url())) . '">history</a>';
         $changes  = array_map(fn ($change) => esc_html("{$change['field']}: " . ($change['before'] ?? '∅') . ' → ' . ($change['after'] ?? '∅')), Resources::inst()->diff($row['before'] ?? [], $row['after'] ?? []));
 

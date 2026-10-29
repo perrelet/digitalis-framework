@@ -77,7 +77,7 @@ class Resources extends Service {
         return [
             'name'      => $resource->get_name(),
             'label'     => $resource->get_label(),
-            'post_type' => $resource->get_post_type(),
+            'post_type' => $resource->get_post_type() ?: null,
             'fields'    => array_values(array_map(fn ($field) => $field->describe(), $resource->get_fields())),
             'actions'   => array_map(fn ($action) => array_filter([
                 'label'          => $action['label'] ?? '',
@@ -96,15 +96,7 @@ class Resources extends Service {
         if (!$resource = $this->get_resource($name)) return $this->error('not_found', "No resource {$name}.", 404);
         if (!$this->may($resource, 'list'))           return $this->forbidden($resource->get_capability('list'));
 
-        $status = (string) ($args['status'] ?? '');
-        $models = ($resource->get_model_class())::query(array_filter([
-            'post_status'    => in_array($status, ['draft', 'pending', 'publish', 'future', 'private'], true) ? $status : ['draft', 'pending', 'publish', 'future', 'private'],
-            's'              => (string) ($args['search'] ?? ''),
-            'posts_per_page' => min(static::PER_PAGE, max(1, (int) ($args['per_page'] ?? static::PER_PAGE))),
-            'paged'          => max(1, (int) ($args['page'] ?? 1)),
-            'orderby'        => 'modified',
-            'order'          => 'DESC',
-        ]));
+        $models = $resource->query(['per_page' => min(static::PER_PAGE, max(1, (int) ($args['per_page'] ?? static::PER_PAGE))), 'page' => max(1, (int) ($args['page'] ?? 1))] + $args);
 
         return array_map(fn ($model) => $this->summarise($resource, $model), $models);
 
@@ -140,19 +132,15 @@ class Resources extends Service {
 
         if (!$readable) return [];
 
-        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !get_post((int) $row['record_id']) || current_user_can('read_post', (int) $row['record_id'])));
+        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !($model = $this->get_resource($row['resource'])->find($row['record_id'])) || $this->get_resource($row['resource'])->can('read', $model)));
 
     }
 
     protected function summarise (Model_Resource $resource, $model) : array {
 
-        return [
-            'id'       => $model->get_id(),
-            'title'    => wp_specialchars_decode($model->get_title(), ENT_QUOTES),
-            'status'   => $model->get_status(),
+        return ['id' => $model->get_id()] + $resource->summarise($model) + [
             'states'   => $resource->get_states($model),
             'version'  => $model->get_version(),
-            'modified' => get_post_modified_time('c', true, $model->get_id()),
             'edit_url' => $resource->get_edit_url($model),
         ];
 
@@ -186,24 +174,23 @@ class Resources extends Service {
 
         if ($refusal = $this->refuse_publish($resource, null, $values)) return $refusal;
 
-        $model    = ($resource->get_model_class())::create(['post_status' => 'draft', 'post_title' => (string) ($values['title'] ?? '')]);
+        $model    = $resource->make_model($values);
         $change   = $this->build($resource, 'create', null, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via);
 
         if (!empty($input['dry_run'])) return $change->describe();
 
         $this->writing['new'] = true;
 
-        $saved = $model->save(['post_author' => get_current_user_id()]);
+        $model = $resource->insert_model($model);
 
-        if (is_wp_error($saved)) {
+        if (is_wp_error($model)) {
 
             unset($this->writing['new']);
 
-            return $this->error('not_saved', 'It could not be created: ' . $saved->get_error_message(), 500);
+            return $this->error('not_saved', 'It could not be created: ' . $model->get_error_message(), 500);
 
         }
 
-        $model  = ($resource->get_model_class())::get_instance($model->get_id());
         $result = $this->commit($resource, $model, $values, $change->why, $via, 'create', $model->get_version(), null);
 
         unset($this->writing['new']);
@@ -222,7 +209,7 @@ class Resources extends Service {
 
         [$values, $problems] = $this->take_values($resource, $input, $model);
 
-        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $model->get_status()));
+        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
 
         if ($problems) return $this->invalid($problems);
 
@@ -508,7 +495,7 @@ class Resources extends Service {
 
     protected function refuse_update (Model_Resource $resource, $model) : ?WP_Error {
 
-        if (!$this->may($resource, 'update', $model)) return $this->forbidden('edit_post');
+        if (!$this->may($resource, 'update', $model)) return $this->forbidden($resource->get_capability('update', $model));
 
         if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.');
 
@@ -528,13 +515,13 @@ class Resources extends Service {
 
     protected function refuse_read (Model_Resource $resource, $model) : ?WP_Error {
 
-        return $this->may($resource, 'read', $model) ? null : $this->forbidden('read_post');
+        return $this->may($resource, 'read', $model) ? null : $this->forbidden($resource->get_capability('read', $model));
 
     }
 
     protected function refuse_publish (Model_Resource $resource, $model, array $values) : ?WP_Error {
 
-        if (($values['status'] ?? null) !== 'publish' || $model?->get_status() === 'publish') return null;
+        if (($values['status'] ?? null) !== 'publish' || $resource->get_status($model) === 'publish') return null;
 
         return $this->may($resource, 'publish') ? null : $this->forbidden($resource->get_capability('publish'));
 

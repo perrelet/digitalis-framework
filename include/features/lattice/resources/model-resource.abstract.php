@@ -234,6 +234,53 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // status, search, page, per_page
+    public function query (array $args) : array {
+
+        $statuses = ['draft', 'pending', 'publish', 'future', 'private'];
+        $status   = (string) ($args['status'] ?? '');
+
+        return (static::$model_class)::query(array_filter([
+            'post_status'    => in_array($status, $statuses, true) ? $status : $statuses,
+            's'              => (string) ($args['search'] ?? ''),
+            'posts_per_page' => $args['per_page'],
+            'paged'          => $args['page'],
+            'orderby'        => 'modified',
+            'order'          => 'DESC',
+        ]));
+
+    }
+
+    public function make_model (array $values) : object {
+
+        return (static::$model_class)::create(['post_status' => 'draft', 'post_title' => (string) ($values['title'] ?? '')]);
+
+    }
+
+    public function insert_model ($model) : object {
+
+        $saved = $model->save(['post_author' => get_current_user_id()]);
+
+        return is_wp_error($saved) ? $saved : (static::$model_class)::get_instance($model->get_id());
+
+    }
+
+    public function get_status ($model) : string {
+
+        return (string) $model?->get_status();
+
+    }
+
+    public function summarise ($model) : array {
+
+        return [
+            'title'    => wp_specialchars_decode($model->get_title(), ENT_QUOTES),
+            'status'   => $model->get_status(),
+            'modified' => get_post_modified_time('c', true, $model->get_id()),
+        ];
+
+    }
+
     public function get_edit_url ($model) : string {
 
         return admin_url('post.php?action=edit&post=' . $model->get_id());
@@ -253,24 +300,26 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // With a model, read and update are meta capabilities checked against it.
     public function get_capability (string $operation, $model = null) : string {
 
         $caps = get_post_type_object($this->get_post_type())?->cap;
 
-        return match ($operation) {
-            'list'    => $caps?->edit_posts ?? 'edit_posts',
-            'create'  => $caps?->create_posts ?? 'edit_posts',
-            'publish' => $caps?->publish_posts ?? 'publish_posts',
-            default   => $caps?->edit_posts ?? 'edit_posts',
+        return match (true) {
+            $model && ($operation === 'read')   => 'read_post',
+            $model && ($operation === 'update') => 'edit_post',
+            $operation === 'create'             => $caps?->create_posts ?? 'edit_posts',
+            $operation === 'publish'            => $caps?->publish_posts ?? 'publish_posts',
+            default                             => $caps?->edit_posts ?? 'edit_posts',
         };
 
     }
 
     public function can (string $operation, $model = null) : bool {
 
-        if ($model && in_array($operation, ['read', 'update'], true)) return current_user_can(($operation === 'read') ? 'read_post' : 'edit_post', $model->get_id());
+        $meta = $model && in_array($operation, ['read', 'update'], true);
 
-        return current_user_can($this->get_capability($operation, $model));
+        return current_user_can($this->get_capability($operation, $model), ...($meta ? [$model->get_id()] : []));
 
     }
 
