@@ -72,15 +72,15 @@ abstract class Model_Resource extends Singleton {
         if (!is_null($this->fields)) return $this->fields;
 
         $fields = [
-            'title'  => new Resource_Field('title', 'text', source: 'post', label: 'Title'),
-            'status' => new Resource_Field('status', 'select', source: 'post', label: 'Status', choices: ['draft' => 'Draft', 'publish' => 'Published']),
+            'title'  => new Resource_Field(['name' => 'title', 'type' => 'text', 'label' => 'Title'], 'post'),
+            'status' => new Resource_Field(['name' => 'status', 'type' => 'select', 'label' => 'Status', 'choices' => ['draft' => 'Draft', 'publish' => 'Published']], 'post'),
         ];
 
         foreach ($this->get_declared_fields() ?: $this->get_acf_fields() as $field) $fields[$field->name] = $field;
 
         $computed = array_filter($this->get_computed(), fn ($reader, $path) => is_callable($reader) && !str_contains($path, '.') && !isset($fields[$path]), ARRAY_FILTER_USE_BOTH);
 
-        foreach (array_keys($computed) as $name) $fields[$name] = new Resource_Field($name, 'computed', source: 'reader', computed: true);
+        foreach (array_keys($computed) as $name) $fields[$name] = new Resource_Field(['name' => $name, 'type' => 'computed'], 'reader', computed: true);
 
         return $this->fields = $fields;
 
@@ -95,13 +95,15 @@ abstract class Model_Resource extends Singleton {
     // ACF skips a required field its conditions hide. Conditions name fields by key and compare raw values; one on a field this level lacks counts as met.
     public function is_shown (Resource_Field $field, array $record) : bool {
 
-        if (!$field->shown_when) return true;
+        $conditions = $field->acf['conditional_logic'] ?? null;
+
+        if (!is_array($conditions) || !$conditions) return true;
 
         $names = [];
 
         foreach ($this->get_fields() as $name => $each) if ($each->key) $names[$each->key] = $name;
 
-        foreach ($field->shown_when as $group) if (!array_filter($group, fn ($rule) => isset($names[$rule['field']]) && !$this->meets($rule, $record[$names[$rule['field']]] ?? null))) return true;
+        foreach ($conditions as $group) if (!array_filter($group, fn ($rule) => isset($names[$rule['field']]) && !$this->meets($rule, $record[$names[$rule['field']]] ?? null))) return true;
 
         return false;
 
@@ -110,7 +112,7 @@ abstract class Model_Resource extends Singleton {
     protected function meets (array $rule, $value) : bool {
 
         $values = array_map('strval', is_array($value) ? $value : (in_array($value, [null, ''], true) ? [] : [$value]));
-        $want   = (string) $rule['value'];
+        $want   = (string) ($rule['value'] ?? '');
 
         return match ($rule['operator']) {
             '=='         => in_array($want, $values, true),

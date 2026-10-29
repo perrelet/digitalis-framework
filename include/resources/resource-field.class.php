@@ -2,6 +2,7 @@
 
 namespace Digitalis;
 
+use Closure;
 use DateTime;
 
 final class Resource_Field {
@@ -12,69 +13,52 @@ final class Resource_Field {
         'time_picker'      => 'H:i:s',
     ];
 
+    const CHOICE_TYPES = ['select', 'radio', 'button_group', 'checkbox'];
+
     const MULTIPLE = ['checkbox', 'relationship', 'gallery'];
 
+    const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts'];
+
+    public readonly string $name;
+    public readonly string $type;
+    public readonly string $key;
+    public readonly bool   $required;
+
+    /**
+     * @param array $acf        ACF's field array; a declared field gives the same shape.
+     * @param array $sub_fields Resource_Fields by name.
+     * @param array $layouts    A flexible field's sub-fields, by layout name.
+     */
     public function __construct (
-        public readonly string $name,
-        public readonly string $type,
-        public readonly string $source       = 'acf',
-        public readonly string $key          = '',
-        public readonly string $label        = '',
-        public readonly string $instructions = '',
-        public readonly bool   $required     = false,
-        public readonly array  $choices      = [],
-        public readonly bool   $multiple     = false,
-        public readonly array  $post_types   = [],
-        public readonly string $taxonomy     = '',
-        public readonly array  $roles        = [],
-        public readonly array  $sub_fields   = [],
-        public readonly ?array $shown_when   = null,
-        public readonly bool   $computed     = false,
-        public readonly bool   $action_only  = false,
-    ) {}
+        public readonly array    $acf,
+        public readonly string   $source      = 'acf',
+        public readonly bool     $computed    = false,
+        public readonly bool     $action_only = false,
+        public readonly array    $sub_fields  = [],
+        public readonly array    $layouts     = [],
+        public readonly ?Closure $validate    = null,
+    ) {
+
+        $this->name     = $acf['name'];
+        $this->type     = $acf['type'] ?? 'text';
+        $this->key      = $acf['key'] ?? '';
+        $this->required = !empty($acf['required']);
+
+    }
 
     // Dotted paths: 'stages.stage_key'.
     public static function from_acf (array $field, array $computed = [], array $action_only = [], string $prefix = '') : static {
 
-        $path = $prefix . $field['name'];
+        $path     = $prefix . $field['name'];
+        $children = fn (array $fields) => array_column(array_map(fn ($sub) => static::from_acf($sub, $computed, $action_only, "{$path}."), array_filter($fields, fn ($sub) => ($sub['name'] ?? '') !== '')), null, 'name');
 
         return new static(
-            name:         $field['name'],
-            type:         $field['type'],
-            key:          $field['key'] ?? '',
-            label:        $field['label'] ?? '',
-            instructions: (string) ($field['instructions'] ?? ''),
-            required:     !empty($field['required']),
-            choices:      static::flatten_choices((array) ($field['choices'] ?? [])),
-            multiple:     in_array($field['type'], static::MULTIPLE, true) || !empty($field['multiple']),
-            post_types:   array_values(array_filter((array) ($field['post_type'] ?? []))),
-            taxonomy:     ($field['type'] === 'taxonomy') ? (string) ($field['taxonomy'] ?? '') : '',
-            roles:        array_values(array_filter((array) ($field['role'] ?? []))),
-            sub_fields:   array_column(array_map(fn ($sub) => static::from_acf($sub, $computed, $action_only, "{$path}."), array_filter((array) ($field['sub_fields'] ?? []), fn ($sub) => ($sub['name'] ?? '') !== '')), null, 'name'),
-            shown_when:   static::flatten_conditions($field['conditional_logic'] ?? null),
-            computed:     in_array($path, $computed, true),
-            action_only:  in_array($path, $action_only, true),
+            acf:         $field,
+            computed:    in_array($path, $computed, true),
+            action_only: in_array($path, $action_only, true),
+            sub_fields:  $children((array) ($field['sub_fields'] ?? [])),
+            layouts:     array_map(fn ($layout) => $children((array) ($layout['sub_fields'] ?? [])), array_column((array) ($field['layouts'] ?? []), null, 'name')),
         );
-
-    }
-
-    protected static function flatten_choices (array $choices) : array {
-
-        $flat = [];
-
-        foreach ($choices as $value => $label) is_array($label) ? $flat += static::flatten_choices($label) : $flat[(string) $value] = $label;
-
-        return $flat;
-
-    }
-
-    protected static function flatten_conditions ($logic) : ?array {
-
-        $any = [];
-
-        foreach ((array) ($logic ?: []) as $group) $any[] = array_map(fn ($rule) => ['field' => $rule['field'] ?? '', 'operator' => $rule['operator'] ?? '', 'value' => $rule['value'] ?? ''], (array) $group);
-
-        return $any ?: null;
 
     }
 
@@ -90,74 +74,102 @@ final class Resource_Field {
 
     }
 
+    public function is_flexible () : bool {
+
+        return $this->type === 'flexible_content';
+
+    }
+
+    public function is_multiple () : bool {
+
+        return in_array($this->type, static::MULTIPLE, true) || !empty($this->acf['multiple']);
+
+    }
+
     public function get_format () : string {
 
         return static::STORED_FORMATS[$this->type] ?? '';
 
     }
 
+    public function get_choices () : array {
+
+        $choices = (array) ($this->acf['choices'] ?? []);
+        $flat    = [];
+
+        array_walk_recursive($choices, function ($label, $value) use (&$flat) { $flat[(string) $value] = $label; });
+
+        return $flat;
+
+    }
+
     public function describe () : array {
 
+        $describe = fn (array $fields) => array_values(array_map(fn ($field) => $field->describe(), $fields));
+
         return array_filter([
-            'name'         => $this->name,
-            'label'        => $this->label,
-            'type'         => $this->type,
-            'instructions' => $this->instructions,
-            'required'     => $this->required,
-            'choices'      => $this->choices,
-            'multiple'     => $this->multiple,
-            'post_types'   => $this->post_types,
-            'taxonomy'     => $this->taxonomy,
-            'roles'        => $this->roles,
-            'format'       => $this->get_format(),
-            'shown_when'   => $this->shown_when,
-            'computed'     => $this->computed,
-            'action_only'  => $this->action_only,
-            'sub_fields'   => array_values(array_map(fn ($sub) => $sub->describe(), $this->sub_fields)),
+            ...array_diff_key($this->acf, array_flip(static::INTERNAL)),
+            'format'      => $this->get_format(),
+            'computed'    => $this->computed,
+            'action_only' => $this->action_only,
+            'sub_fields'  => $describe($this->sub_fields),
+            'layouts'     => array_map(fn ($layout) => ['name' => $layout['name'], 'label' => $layout['label'] ?? '', 'sub_fields' => $describe($this->layouts[$layout['name']] ?? [])], array_values((array) ($this->acf['layouts'] ?? []))),
         ], fn ($value) => !in_array($value, ['', [], null, false], true));
 
     }
 
-    // ACF keys raw rows by field key.
+    // Raw shape
+
+    // ACF keys raw rows by field key, and a flexible row's layout by acf_fc_layout.
     public function from_raw ($raw) {
 
-        if ($this->is_rows())  return array_values(array_map(fn ($row) => $this->row_from_raw((array) $row), is_array($raw) ? $raw : []));
-        if ($this->is_group()) return $this->row_from_raw(is_array($raw) ? $raw : []);
+        $rows = is_array($raw) ? $raw : [];
 
-        return $raw;
-
-    }
-
-    protected function row_from_raw (array $row) : array {
-
-        $named = [];
-
-        foreach ($this->sub_fields as $name => $sub) $named[$name] = $sub->from_raw($row[$sub->key] ?? $row[$name] ?? null);
-
-        return $named;
+        return match (true) {
+            $this->is_rows()     => array_values(array_map(fn ($row) => static::row_from_raw($this->sub_fields, (array) $row), $rows)),
+            $this->is_group()    => static::row_from_raw($this->sub_fields, $rows),
+            $this->is_flexible() => array_values(array_map(fn ($row) => ['layout' => $row['acf_fc_layout'] ?? ''] + static::row_from_raw($this->layouts[$row['acf_fc_layout'] ?? ''] ?? [], (array) $row), $rows)),
+            default              => $raw,
+        };
 
     }
 
     public function to_raw ($value) {
 
-        if ($this->is_rows())  return array_values(array_map(fn ($row) => $this->row_to_raw((array) $row), is_array($value) ? $value : []));
-        if ($this->is_group()) return $this->row_to_raw(is_array($value) ? $value : []);
+        $rows = is_array($value) ? $value : [];
 
-        return $value;
+        return match (true) {
+            $this->is_rows()     => array_values(array_map(fn ($row) => static::row_to_raw($this->sub_fields, (array) $row), $rows)),
+            $this->is_group()    => static::row_to_raw($this->sub_fields, $rows),
+            $this->is_flexible() => array_values(array_map(fn ($row) => ['acf_fc_layout' => $row['layout'] ?? ''] + static::row_to_raw($this->layouts[$row['layout'] ?? ''] ?? [], (array) $row), $rows)),
+            default              => $value,
+        };
 
     }
 
-    protected function row_to_raw (array $row) : array {
+    protected static function row_from_raw (array $fields, array $row) : array {
+
+        $named = [];
+
+        foreach ($fields as $name => $field) $named[$name] = $field->from_raw($row[$field->key] ?? $row[$name] ?? null);
+
+        return $named;
+
+    }
+
+    protected static function row_to_raw (array $fields, array $row) : array {
 
         $raw = [];
 
-        foreach ($this->sub_fields as $name => $sub) if (array_key_exists($name, $row)) $raw[$sub->key ?: $name] = $sub->to_raw($row[$name]);
+        foreach ($fields as $name => $field) if (array_key_exists($name, $row)) $raw[$field->key ?: $name] = $field->to_raw($row[$name]);
 
         return $raw;
 
     }
 
-    // $restoring lets undo bring back row keys the record no longer has.
+    // Checks
+
+    // ACF's own first, then what ACF does not check on the server. $restoring lets undo bring back row keys the record no longer has.
     public function check ($value, string $path, $current = null, bool $restoring = false) : array {
 
         if ($this->computed)    return ["{$path} is worked out by the save, never written."];
@@ -169,14 +181,17 @@ final class Resource_Field {
 
     protected function check_shape ($value, string $path, $current = null, bool $restoring = false) : array {
 
-        if (in_array($value, [null, '', []], true)) return $this->required ? ["{$path} is required."] : [];
+        if ($this->validate) return ($this->validate)($value, $path);
 
-        if ($this->is_rows())  return $this->check_rows($value, $path, is_array($current) ? $current : [], $restoring);
-        if ($this->is_group()) return is_array($value) && !array_is_list($value) ? $this->check_row($value, $path) : ["{$path} is an object of " . implode(', ', array_keys($this->sub_fields)) . '.'];
+        if (in_array($value, [null, '', []], true)) return [];
 
-        if ($this->multiple && !(is_array($value) && array_is_list($value))) return ["{$path} is a list."];
+        if ($this->is_rows())     return $this->check_rows($value, $path, is_array($current) ? $current : [], $restoring);
+        if ($this->is_group())    return static::check_row($this->sub_fields, $value, $path);
+        if ($this->is_flexible()) return $this->check_layouts($value, $path);
 
-        foreach ($this->multiple ? $value : [$value] as $one) if ($problem = $this->check_one($one)) return ["{$path} {$problem}."];
+        if ($this->is_multiple() && !(is_array($value) && array_is_list($value))) return ["{$path} is a list."];
+
+        foreach ($this->is_multiple() ? $value : [$value] as $one) if ($problem = $this->check_one($one)) return ["{$path} {$problem}."];
 
         return [];
 
@@ -188,20 +203,16 @@ final class Resource_Field {
 
         $problems = [];
 
-        foreach ($this->sub_fields as $name => $sub) {
-
-            if (!$sub->computed) continue;
+        foreach (array_filter($this->sub_fields, fn ($sub) => $sub->computed) as $name => $sub) {
 
             $known = array_filter(array_map(fn ($row) => (string) ($row[$name] ?? ''), $current));
             $seen  = [];
 
             foreach ($rows as $i => $row) {
 
-                $key = (string) ($row[$name] ?? '');
+                if (($key = (string) ($row[$name] ?? '')) === '') continue;
 
-                if ($key === '') continue;
-
-                if (isset($seen[$key]))                              $problems[] = "{$path}.{$i}.{$name} {$key} is repeated.";
+                if (isset($seen[$key]))                               $problems[] = "{$path}.{$i}.{$name} {$key} is repeated.";
                 elseif (!$restoring && !in_array($key, $known, true)) $problems[] = "{$path}.{$i}.{$name} {$key} is not one of this record's: send a new row without it.";
 
                 $seen[$key] = true;
@@ -210,31 +221,83 @@ final class Resource_Field {
 
         }
 
-        foreach ($rows as $i => $row) array_push($problems, ...(is_array($row) && !array_is_list($row) ? $this->check_row($row, "{$path}.{$i}") : ["{$path}.{$i} is an object of " . implode(', ', array_keys($this->sub_fields)) . '.']));
+        foreach ($rows as $i => $row) array_push($problems, ...static::check_row($this->sub_fields, $row, "{$path}.{$i}"));
 
         return $problems;
 
     }
 
-    protected function check_row (array $row, string $path) : array {
+    protected function check_layouts ($rows, string $path) : array {
+
+        if (!is_array($rows) || !array_is_list($rows)) return ["{$path} is a list of rows."];
 
         $problems = [];
 
-        if ($unknown = array_diff(array_keys($row), array_keys($this->sub_fields))) $problems[] = "{$path} has no " . implode(', ', $unknown) . '.';
+        foreach ($rows as $i => $row) {
 
-        foreach ($row as $name => $value) if (($sub = $this->sub_fields[$name] ?? null) && !$sub->computed) array_push($problems, ...($sub->action_only ? ["{$path}.{$name} changes only through an action."] : $sub->check_shape($value, "{$path}.{$name}")));
+            $layout = is_array($row) ? (string) ($row['layout'] ?? '') : '';
+
+            if (!isset($this->layouts[$layout])) $problems[] = "{$path}.{$i}.layout is one of " . implode(', ', array_keys($this->layouts)) . '.';
+            else array_push($problems, ...static::check_row($this->layouts[$layout], array_diff_key($row, ['layout' => 0]), "{$path}.{$i}"));
+
+        }
 
         return $problems;
+
+    }
+
+    protected static function check_row (array $fields, $row, string $path) : array {
+
+        if (!is_array($row) || ($row && array_is_list($row))) return ["{$path} is an object of " . implode(', ', array_keys($fields)) . '.'];
+
+        $problems = ($unknown = array_diff(array_keys($row), array_keys($fields))) ? ["{$path} has no " . implode(', ', $unknown) . '.'] : [];
+
+        foreach (array_intersect_key($row, $fields) as $name => $value) {
+
+            if ($fields[$name]->action_only) $problems[] = "{$path}.{$name} changes only through an action.";
+            elseif (!$fields[$name]->computed) array_push($problems, ...$fields[$name]->check_shape($value, "{$path}.{$name}"));
+
+        }
+
+        return $problems;
+
+    }
+
+    protected function check_one ($value) : string {
+
+        if (is_array($value) || is_object($value)) return 'is not a list or an object here';
+
+        $id    = is_numeric($value) ? (int) $value : 0;
+        $types = array_filter((array) ($this->acf['post_type'] ?? []));
+
+        return match (true) {
+            in_array($this->type, static::CHOICE_TYPES, true)              => (!empty($this->acf['allow_custom']) || !empty($this->acf['other_choice']) || array_key_exists((string) $value, $this->get_choices())) ? '' : 'is one of ' . implode(', ', array_keys($this->get_choices())),
+            (bool) $this->get_format()                                    => $this->is_formatted((string) $value) ? '' : 'is a date as ' . $this->get_format(),
+            in_array($this->type, ['post_object', 'relationship'], true),
+            ($this->type === 'page_link') && is_numeric($value)           => ($id && get_post_status($id) && (!$types || in_array(get_post_type($id), $types, true))) ? '' : 'is the id of a ' . implode(' or ', $types ?: ['post']),
+            $this->type === 'taxonomy'                                    => ($id && term_exists($id, (string) ($this->acf['taxonomy'] ?? ''))) ? '' : 'is the id of a term in ' . ($this->acf['taxonomy'] ?? 'its taxonomy'),
+            $this->type === 'user'                                        => ($id && get_userdata($id)) ? '' : 'is the id of a user',
+            in_array($this->type, ['image', 'file', 'gallery'], true)     => ($id && get_post_type($id) === 'attachment') ? '' : 'is the id of a file in the media library',
+            default                                                       => '',
+        };
+
+    }
+
+    protected function is_formatted (string $value) : bool {
+
+        $date = DateTime::createFromFormat($this->get_format(), $value);
+
+        return $date && $date->format($this->get_format()) === $value;
 
     }
 
     // ACF reports sub-fields by key.
     protected function check_with_acf ($value, string $path) : array {
 
-        if (!$this->key || !function_exists('acf_validate_value') || !($field = acf_get_field($this->key))) return [];
+        if (($this->source !== 'acf') || !$this->key || !function_exists('acf_validate_value')) return [];
 
         acf_reset_validation_errors();
-        acf_validate_value($this->to_raw($value), $field, $path);
+        acf_validate_value($this->to_raw($value), $this->acf, $path);
 
         $errors = acf_get_validation_errors() ?: [];
 
@@ -250,40 +313,9 @@ final class Resource_Field {
 
         $names = [];
 
-        foreach ($this->sub_fields as $sub) $names += [$sub->key => $sub->name] + $sub->get_names_by_key();
+        foreach ([$this->sub_fields, ...array_values($this->layouts)] as $fields) foreach ($fields as $field) $names += [$field->key => $field->name] + $field->get_names_by_key();
 
         return $names;
-
-    }
-
-    protected function check_one ($value) : string {
-
-        if (is_array($value) || is_object($value)) return 'is not a list or an object here';
-
-        $id = is_numeric($value) ? (int) $value : 0;
-
-        return match ($this->type) {
-            'text', 'textarea', 'wysiwyg', 'password', 'oembed', 'color_picker' => is_string($value) ? '' : 'is text',
-            'email'                                                      => is_email((string) $value) ? '' : 'is an email address',
-            'url'                                                        => filter_var($value, FILTER_VALIDATE_URL) ? '' : 'is a URL',
-            'number', 'range'                                            => is_numeric($value) ? '' : 'is a number',
-            'true_false'                                                 => in_array($value, [0, 1, '0', '1', true, false], true) ? '' : 'is 1 or 0',
-            'select', 'radio', 'button_group', 'checkbox'                => array_key_exists((string) $value, $this->choices) ? '' : 'is one of ' . implode(', ', array_keys($this->choices)),
-            'date_time_picker', 'date_picker', 'time_picker'             => $this->is_formatted((string) $value) ? '' : 'is a date as ' . $this->get_format(),
-            'post_object', 'relationship', 'page_link'                   => ($id && get_post_status($id) && (!$this->post_types || in_array(get_post_type($id), $this->post_types, true))) ? '' : 'is the id of a ' . ($this->post_types ? implode(' or ', $this->post_types) : 'post'),
-            'taxonomy'                                                   => ($id && term_exists($id, $this->taxonomy ?: '')) ? '' : 'is the id of a term' . ($this->taxonomy ? " in {$this->taxonomy}" : ''),
-            'user'                                                       => ($id && get_userdata($id)) ? '' : 'is the id of a user',
-            'image', 'file', 'gallery'                                   => ($id && get_post_type($id) === 'attachment') ? '' : 'is the id of a file in the media library',
-            default                                                      => '',
-        };
-
-    }
-
-    protected function is_formatted (string $value) : bool {
-
-        $date = DateTime::createFromFormat($this->get_format(), $value);
-
-        return $date && $date->format($this->get_format()) === $value;
 
     }
 
