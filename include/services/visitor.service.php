@@ -7,7 +7,7 @@ namespace Lattice;
 class Visitor extends Service {
 
     protected $user;
-    protected $ip;
+    protected $ip = []; // one answer per get_ip() mode: the forwarded headers are read only when asked
 
     protected $cookie_prefix       = 'digitalis_';
     protected $default_cookie_ttl  = MONTH_IN_SECONDS;
@@ -227,7 +227,9 @@ class Visitor extends Service {
 
     public function get_ip ($deep_detect = true) {
 
-        if (is_null($this->ip)) {
+        $mode = $deep_detect ? 1 : 0;
+
+        if (!isset($this->ip[$mode])) {
 
             $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     
@@ -255,11 +257,11 @@ class Visitor extends Service {
     
             }
         
-            $this->ip = $ip ?: '0.0.0.0';
+            $this->ip[$mode] = $ip ?: '0.0.0.0';
 
         }
 
-        return $this->ip;
+        return $this->ip[$mode];
 
     }
 
