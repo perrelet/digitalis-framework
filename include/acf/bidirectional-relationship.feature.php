@@ -28,6 +28,21 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
 
     protected $log = false;
 
+    protected static int $suppressed = 0;
+
+    // While suppressed, no relationship writes a partner: saving a working copy must not link its partners to it.
+    public static function suppress () : void {
+
+        self::$suppressed++;
+
+    }
+
+    public static function restore () : void {
+
+        self::$suppressed = max(0, self::$suppressed - 1);
+
+    }
+
     public function get_hooks () {
 
         $hooks = [
@@ -102,6 +117,8 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
     }
 
     public function sync ($values, $updated_selector, $field) {
+
+        if (self::$suppressed) return $values;
 
         $field_name     = $field['name'];
         $sync_field_key = ($field_name == $this->key_1) ? $this->key_2 : $this->key_1;
