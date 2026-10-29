@@ -34,9 +34,7 @@ class Resources extends Service {
 
     public function get_resource (string $name) : ?Model_Resource {
 
-        $resource = $this->resources[$name] ?? null;
-
-        return ($resource && $resource->is_available()) ? $resource : null;
+        return $this->resources[$name] ?? null;
 
     }
 
@@ -182,7 +180,7 @@ class Resources extends Service {
 
         [$values, $problems] = $this->take_values($resource, $input, null);
 
-        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $values, 'draft'));
+        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'));
 
         if ($problems) return $this->invalid($problems);
 
@@ -224,7 +222,7 @@ class Resources extends Service {
 
         [$values, $problems] = $this->take_values($resource, $input, $model);
 
-        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $values + $resource->read($model), $model->get_status()));
+        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $model->get_status()));
 
         if ($problems) return $this->invalid($problems);
 
@@ -363,6 +361,8 @@ class Resources extends Service {
 
     protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes) : array|WP_Error {
 
+        if ($refusal = $this->refuse_locked($resource, $model, $values)) return $refusal;
+
         $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via);
 
         if (!empty($input['dry_run'])) return $change->describe();
@@ -392,16 +392,12 @@ class Resources extends Service {
         try {
 
             $snapshot = $resource->before_write($model);
-            $post     = [];
 
-            foreach ($values as $name => $value) {
+            foreach ($values as $name => $value) if ($resource->get_field($name)->source === 'acf') $model->update_field($name, $value);
 
-                if ($column = Model_Resource::POST_FIELDS[$name] ?? null) $post[$column] = $value;
-                else $model->update_field($name, $value);
+            $resource->stage_model_values($model, $values);
 
-            }
-
-            if (is_wp_error($saved = $model->save($post))) throw new \RuntimeException($saved->get_error_message());
+            if (is_wp_error($saved = $model->save())) throw new \RuntimeException($saved->get_error_message());
 
             $resource->after_write($model, $snapshot, $why);
 
@@ -520,6 +516,16 @@ class Resources extends Service {
 
     }
 
+    protected function refuse_locked (Model_Resource $resource, $model, array $values) : ?WP_Error {
+
+        if (!$locked = array_intersect_key($resource->get_locked_fields($model), $values)) return null;
+
+        $reason = implode(' ', array_map(fn ($name, $why) => "{$name}: {$why}", array_keys($locked), $locked));
+
+        return $this->error('locked', $reason, 409, ['reason' => $reason, 'fields' => array_keys($locked)]);
+
+    }
+
     protected function refuse_read (Model_Resource $resource, $model) : ?WP_Error {
 
         return $this->may($resource, 'read', $model) ? null : $this->forbidden('read_post');
@@ -561,12 +567,14 @@ class Resources extends Service {
         $values   = array_diff_key($input, array_flip(static::CONTROL));
         $problems = [];
         $current  = $model ? $resource->read($model) : [];
+        $shown    = $resource->get_fields_for($model);
 
         if ($unknown = array_diff(array_keys($values), array_keys($resource->get_fields()))) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
+        if ($hidden = array_diff(array_keys(array_intersect_key($values, $resource->get_fields())), array_keys($shown))) $problems[] = 'Not shown for this record (see applies_when): ' . implode(', ', $hidden) . '.';
 
-        foreach (array_intersect_key($values, $resource->get_fields()) as $name => $value) {
+        foreach (array_intersect_key($values, $shown) as $name => $value) {
 
-            $field = $resource->get_field($name);
+            $field = $shown[$name];
 
             if (in_array($value, [null, '', []], true) && !$resource->is_shown($field, $values + $current)) continue;
 
@@ -579,11 +587,11 @@ class Resources extends Service {
     }
 
     // ACF lets drafts go without their required fields.
-    protected function check_required (Model_Resource $resource, array $record, string $status) : array {
+    protected function check_required (Model_Resource $resource, $model, array $record, string $status) : array {
 
         if (($record['status'] ?? $status) !== 'publish') return [];
 
-        $missing = array_filter($resource->get_fields(), fn ($field) => $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));
+        $missing = array_filter($resource->get_fields_for($model), fn ($field) => $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));
 
         return array_map(fn ($name) => "{$name} is required to publish.", array_keys($missing));
 

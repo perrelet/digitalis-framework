@@ -10,8 +10,6 @@ abstract class Model_Resource extends Singleton {
 
     const ACTION_ONLY = [];
 
-    const POST_FIELDS = ['title' => 'post_title', 'status' => 'post_status'];
-
     protected $fields;
     protected $post_type;
 
@@ -54,41 +52,81 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    public function get_declared_fields () : array {
+    // Through get_{name}() and set_{name}(), or the methods 'get' and 'set' name. A dry run calls the setter: it must only stage.
+    public function get_model_fields () : array {
+
+        return [
+            'title'  => ['type' => 'text', 'label' => 'Title'],
+            'status' => ['type' => 'select', 'label' => 'Status', 'choices' => ['draft' => 'Draft', 'publish' => 'Published']],
+        ];
+
+    }
+
+    // name => why
+    public function get_locked_fields ($model) : array {
 
         return [];
 
     }
 
-    public function is_available () : bool {
+    /** @return Resource_Field[] by name: every field a record of this type can show. */
+    public function get_fields () : array {
 
-        return (bool) $this->get_declared_fields() || function_exists('acf_get_field_groups');
+        return $this->fields ??= $this->build_fields($this->get_type_groups());
 
     }
 
-    /** @return Resource_Field[] by name */
-    public function get_fields () : array {
+    /** @return Resource_Field[] by name: the fields this record shows. */
+    public function get_fields_for ($model) : array {
 
-        if (!is_null($this->fields)) return $this->fields;
+        if (!$model?->get_id() || !function_exists('acf_get_field_groups')) return $this->get_fields();
 
-        $fields = [
-            'title'  => new Resource_Field(['name' => 'title', 'type' => 'text', 'label' => 'Title'], 'post'),
-            'status' => new Resource_Field(['name' => 'status', 'type' => 'select', 'label' => 'Status', 'choices' => ['draft' => 'Draft', 'publish' => 'Published']], 'post'),
-        ];
-
-        foreach ($this->get_declared_fields() ?: $this->get_acf_fields() as $field) $fields[$field->name] = $field;
-
-        $computed = array_filter($this->get_computed(), fn ($reader, $path) => is_callable($reader) && !str_contains($path, '.') && !isset($fields[$path]), ARRAY_FILTER_USE_BOTH);
-
-        foreach (array_keys($computed) as $name) $fields[$name] = new Resource_Field(['name' => $name, 'type' => 'computed'], 'reader', computed: true);
-
-        return $this->fields = $fields;
+        return $this->build_fields(acf_get_field_groups(['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()]));
 
     }
 
     public function get_field (string $name) : ?Resource_Field {
 
         return $this->get_fields()[$name] ?? null;
+
+    }
+
+    protected function build_fields (array $groups) : array {
+
+        $fields = [];
+
+        foreach ($this->get_model_fields() as $name => $settings) $fields[$name] = new Resource_Field(['name' => $name] + array_diff_key($settings, ['validate' => 0]), 'model', validate: $settings['validate'] ?? null);
+
+        foreach ($groups as $group) foreach ((array) acf_get_fields($group) as $field) if (($field['name'] ?? '') !== '') $fields[$field['name']] = Resource_Field::from_acf($field + array_intersect_key($group, ['applies_when' => 0]), array_keys($this->get_computed()), static::ACTION_ONLY);
+
+        foreach ($this->get_computed() as $name => $reader) if (is_callable($reader) && !isset($fields[$name])) $fields[$name] = new Resource_Field(['name' => $name, 'type' => 'computed'], 'reader', computed: true);
+
+        return $fields;
+
+    }
+
+    // ACF matches a group with a term rule only against a record, so the type's own match leaves it out.
+    protected function get_type_groups () : array {
+
+        if (!function_exists('acf_get_field_groups')) return [];
+
+        $groups = array_column(acf_get_field_groups(['post_type' => $this->get_post_type()]), null, 'key');
+
+        foreach (acf_get_field_groups() as $group) if (!isset($groups[$group['key']]) && ($when = array_values(array_filter(array_map([$this, 'get_term_rules'], (array) $group['location']))))) $groups[$group['key']] = $group + ['applies_when' => $when];
+
+        return array_values($groups);
+
+    }
+
+    // Empty unless the rule set asks only for this post type and its terms.
+    protected function get_term_rules (array $rules) : array {
+
+        $type       = $this->get_post_type();
+        $taxonomies = get_object_taxonomies($type);
+        $typed      = array_filter($rules, fn ($rule) => ($rule['param'] === 'post_type') && ($rule['operator'] === '==') && ($rule['value'] === $type));
+        $terms      = array_filter($rules, fn ($rule) => ($rule['param'] === 'post_taxonomy') && in_array(strtok((string) $rule['value'], ':'), $taxonomies, true));
+
+        return ($terms && (count($typed) + count($terms) === count($rules))) ? array_values(array_map(fn ($rule) => array_intersect_key($rule, ['param' => 0, 'operator' => 0, 'value' => 0]), $terms)) : [];
 
     }
 
@@ -128,25 +166,13 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    protected function get_acf_fields () : array {
-
-        if (!function_exists('acf_get_field_groups')) return [];
-
-        $fields = [];
-
-        foreach (acf_get_field_groups(['post_type' => $this->get_post_type()]) as $group) foreach ((array) acf_get_fields($group) as $field) if (($field['name'] ?? '') !== '') $fields[] = Resource_Field::from_acf($field, array_keys($this->get_computed()), static::ACTION_ONLY);
-
-        return $fields;
-
-    }
-
     public function read ($model) : array {
 
         $values  = [];
         $readers = $this->get_computed();
 
-        foreach ($this->get_fields() as $name => $field) $values[$name] = match ($field->source) {
-            'post'   => ($name === 'title') ? $model->get_title() : $model->get_status(),
+        foreach ($this->get_fields_for($model) as $name => $field) $values[$name] = match ($field->source) {
+            'model'  => $model->{$field->acf['get'] ?? "get_{$name}"}(),
             'reader' => $readers[$name]($model),
             default  => $field->from_raw($model->get_field($name, false)),
         };
@@ -165,17 +191,21 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    public function stage_model_values ($model, array $values) : void {
+
+        foreach ($values as $name => $value) if (($field = $this->get_field($name)) && $field->source === 'model') $model->{$field->acf['set'] ?? "set_{$name}"}($value);
+
+    }
+
     public function get_unsaved_copy ($model, array $values) : object {
 
         $copy = $model->get_unsaved_copy($this->to_raw($values));
 
-        if (!$post = array_intersect_key($values, static::POST_FIELDS)) return $copy;
+        if (method_exists($copy, 'get_wp_post') && $copy->get_wp_post()) $copy->set_wp_post(clone $copy->get_wp_post());
 
-        $wp_post = clone $copy->get_wp_post();
+        $this->stage_model_values($copy, $values);
 
-        foreach ($post as $name => $value) $wp_post->{static::POST_FIELDS[$name]} = $value;
-
-        return $copy->set_wp_post($wp_post);
+        return $copy;
 
     }
 

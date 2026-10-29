@@ -17,7 +17,7 @@ final class Resource_Field {
 
     const MULTIPLE = ['checkbox', 'relationship', 'gallery'];
 
-    const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts'];
+    const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set'];
 
     public readonly string $name;
     public readonly string $type;
