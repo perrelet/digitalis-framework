@@ -9,7 +9,8 @@ class Resources extends Service {
     const CONTROL  = ['version', 'why', 'dry_run', 'confirm'];
     const VIAS     = ['rest', 'cli', 'admin', 'other'];
     const PER_PAGE = 50;
-    const RESERVED = ['guide', 'journal', 'undo'];
+    const RESERVED = ['guide', 'journal', 'undo', 'dev'];
+    const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
 
     protected array $resources = [];
     protected array $writing   = [];
@@ -292,6 +293,18 @@ class Resources extends Service {
 
         if ($made) $resource->forget_values($made);
 
+        $after = $resource->read($made ?? $model);
+
+        if (is_wp_error($result) && !$made && ($after === $before)) {
+
+            unset($this->writing[(string) $model->get_id()]);
+
+            $code = isset(static::STATUSES[$result->get_error_code()]) ? $result->get_error_code() : 'not_saved';
+
+            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500);
+
+        }
+
         $journaled = Journal::inst()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
@@ -299,7 +312,7 @@ class Resources extends Service {
             'action'         => $action,
             'why'            => $change->why,
             'before'         => $made ? null : $before,
-            'after'          => $resource->read($made ?? $model),
+            'after'          => $after,
             'version_before' => $made ? 0 : $version_before,
             'version_after'  => ($made ?? $model)->get_version(),
             'undoes'         => $undoes,

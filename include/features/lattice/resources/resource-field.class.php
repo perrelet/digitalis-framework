@@ -233,8 +233,8 @@ final class Resource_Field {
         if (in_array($value, [null, '', []], true)) return [];
 
         if ($this->is_rows())     return $this->check_rows($value, $path, is_array($current) ? $current : [], $restoring);
-        if ($this->is_group())    return static::check_row($this->sub_fields, $value, $path);
-        if ($this->is_flexible()) return $this->check_layouts($value, $path);
+        if ($this->is_group())    return static::check_row($this->sub_fields, $value, $path, (is_array($current) && !array_is_list($current)) ? [$current] : (array) $current, $restoring);
+        if ($this->is_flexible()) return $this->check_layouts($value, $path, is_array($current) ? $current : [], $restoring);
 
         if ($this->is_multiple() && !(is_array($value) && array_is_list($value))) return ["{$path} is a list."];
 
@@ -268,13 +268,13 @@ final class Resource_Field {
 
         }
 
-        foreach ($rows as $i => $row) array_push($problems, ...static::check_row($this->sub_fields, $row, "{$path}.{$i}"));
+        foreach ($rows as $i => $row) array_push($problems, ...static::check_row($this->sub_fields, $row, "{$path}.{$i}", $current, $restoring));
 
         return $problems;
 
     }
 
-    protected function check_layouts ($rows, string $path) : array {
+    protected function check_layouts ($rows, string $path, array $current, bool $restoring) : array {
 
         if (!is_array($rows) || !array_is_list($rows)) return ["{$path} is a list of rows."];
 
@@ -285,7 +285,7 @@ final class Resource_Field {
             $layout = is_array($row) ? (string) ($row['layout'] ?? '') : '';
 
             if (!isset($this->layouts[$layout])) $problems[] = "{$path}.{$i}.layout is one of " . implode(', ', array_keys($this->layouts)) . '.';
-            else array_push($problems, ...static::check_row($this->layouts[$layout], array_diff_key($row, ['layout' => 0]), "{$path}.{$i}"));
+            else array_push($problems, ...static::check_row($this->layouts[$layout], array_diff_key($row, ['layout' => 0]), "{$path}.{$i}", array_values(array_filter($current, fn ($was) => ($was['layout'] ?? '') === $layout)), $restoring));
 
         }
 
@@ -293,7 +293,8 @@ final class Resource_Field {
 
     }
 
-    protected static function check_row (array $fields, $row, string $path) : array {
+    // A nested repeater's row keys are known from its rows under every current parent row, since a row may move between parents.
+    protected static function check_row (array $fields, $row, string $path, array $current = [], bool $restoring = false) : array {
 
         if (!is_array($row) || ($row && array_is_list($row))) return ["{$path} is an object of " . implode(', ', array_keys($fields)) . '.'];
 
@@ -301,8 +302,12 @@ final class Resource_Field {
 
         foreach (array_intersect_key($row, $fields) as $name => $value) {
 
-            if ($fields[$name]->action_only) $problems[] = "{$path}.{$name} changes only through an action.";
-            elseif (!$fields[$name]->computed) array_push($problems, ...$fields[$name]->check_shape($value, "{$path}.{$name}"));
+            $field = $fields[$name];
+            $was   = array_column($current, $name);
+            $was   = $field->is_group() ? array_values(array_filter($was, 'is_array')) : array_merge(...array_map(fn ($rows) => is_array($rows) ? array_values($rows) : [], $was));
+
+            if ($field->action_only) $problems[] = "{$path}.{$name} changes only through an action.";
+            elseif (!$field->computed) array_push($problems, ...$field->check_shape($value, "{$path}.{$name}", $was, $restoring));
 
         }
 
