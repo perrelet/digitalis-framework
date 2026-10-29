@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <?php if ($name): ?>
     <input type='hidden' name='<?= esc_attr($name) ?>' value='<?= esc_attr($null_value) ?>'>
 <?php endif; ?>

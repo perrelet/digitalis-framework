@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <?= $element->open() ?>
 <?php if ($options) foreach ($options as $option => $option_label): ?>
     <?php if (is_array($option_label)): ?>

@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <digitalis-debugger-chip data-index="<?= esc_attr($view_index) ?>">
     🤖 <?= $title ?>
 </digitalis-debugger-chip>

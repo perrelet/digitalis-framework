@@ -242,6 +242,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Visitor::get_session_id()` set its cookie without `SameSite` and answered whatever the cookie held | The cookie goes through `set_cookie()`: `SameSite=Lax`, `HttpOnly`, the day-long expiry and the `$_COOKIE` write-back as before; a cookie that is not a 32-character hex id is replaced, and the cookie name follows `$cookie_prefix` (`somm_sid` on somm, which overrides the prefix). Cookies remain UI state: unsigned, and nothing that authorises may trust one |
 | `Commands_Page` ran arbitrary admin commands over GET with the nonce in the URL | Removed, with its `docs/ADMIN.md` section; no consumer extends it. A consumer that still does keeps its own copy or drops the page |
 | `Debug` ran `params()` (a backtrace and a file read) for every visitor before the administrator gate refused output, and a shipped `dd()` halted administrators only | The gate runs in `pre_validate()`, before `params()`: a visitor pays nothing, and `dd()` halts every request |
+| The 19 templates under `templates/digitalis/` executed on a direct request, printing fragments or a fatal | Each opens with the `ABSPATH` guard and prints nothing outside WordPress |
 
 ### Layout
 

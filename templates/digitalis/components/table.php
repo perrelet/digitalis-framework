@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <table <?= $attributes ?>>
     <?php if ($first_row): ?>
     <thead>

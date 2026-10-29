@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <?php if (($level === 1) && $landmark): ?>
     <<?= $tag ?> <?= $attributes ?>>
         <ul <?= $list_attributes ?>>

@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <?php if ($items_only): ?>
     <?= $content ?>
 <?php else: ?>

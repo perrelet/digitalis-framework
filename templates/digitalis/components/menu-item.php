@@ -1,3 +1,4 @@
+<?php if (!defined('ABSPATH')) exit; ?>
 <?php if ($shape === 'divider'): ?>
     <<?= $tag ?> <?= $attributes ?>></<?= $tag ?>>
 
