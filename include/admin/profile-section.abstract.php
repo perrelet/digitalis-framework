@@ -8,8 +8,7 @@ use Lattice\Component\Table;
 
 abstract class Profile_Section extends Feature {
 
-    protected static $cache_group    = self::class;
-    protected static $cache_property = 'id';
+    protected static $cache_group = self::class;
 
     protected $id       = 'digitalis-profile-section';
     protected $title    = 'Lattice Profile Section';

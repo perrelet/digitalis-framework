@@ -190,7 +190,7 @@ abstract class App extends Factory {
 
             $feature = $this->load_class($path, false);
             if ($feature && class_exists($feature)) {
-                $feature::create($options);
+                $feature::get_instance($options);
                 return $feature;
             }
 

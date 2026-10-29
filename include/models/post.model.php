@@ -185,8 +185,6 @@ class Post extends WP_Model {
 
         if (static::is_digitalis_ajax($wp_query)) $qv->merge($wp_query->query_vars);
 
-        $qv->post_type = static::$post_type ?: 'any';
-
         if (static::$post_status) $qv->post_status = static::$post_status;
 
         if (static::$term) $qv->add_tax_query([
@@ -197,6 +195,11 @@ class Post extends WP_Model {
 
         $qv->merge((is_admin() && !wp_doing_ajax()) ? static::get_admin_query_vars($args) : static::get_query_vars($args), true);
         $qv->merge($args, true);
+
+        // Set the post type last so no merge can widen it. A model always queries its own type; the base class uses the type passed in, or 'any'.
+        if (static::$post_type && array_diff((array) ($args['post_type'] ?? []), (array) static::$post_type)) _doing_it_wrong(static::class . '::query', 'A model queries its own post type: use the base class or the right model.', '');
+
+        $qv->overwrite(['post_type' => static::$post_type ?: ($args['post_type'] ?? 'any')]);
 
         $query = $qv->make_query();
 
@@ -283,18 +286,25 @@ class Post extends WP_Model {
 
         $post_array = wp_parse_args($post_array, get_object_vars($this->wp_post));
 
+        foreach ($this->take_staged_input() as $key => $staged) $post_array[$key] = ($post_array[$key] ?? []) + $staged;
+
         $tax_input = $post_array['tax_input'] ?? []; // Process the 'tax_input' manually as wp_insert_post check's if there user is allowed to add the tax, which fails for cron. (https://core.trac.wordpress.org/ticket/19373)
         if (isset($post_array['tax_input'])) unset($post_array['tax_input']);
+
+        // wp_after_insert_post waits for the terms and fields written below. WordPress unslashes what it is given, hence wp_slash().
+        $defer_hooks = $fire_after_hooks && ($tax_input || ($post_array['field_input'] ?? false));
+        $update      = !$this->is_new();
+        $wp_before   = ($update && $defer_hooks) ? get_post($this->get_id()) : null;
 
         if ($this->is_new()) {
 
             if (isset($post_array['ID'])) unset($post_array['ID']);
-            $post_id = wp_insert_post($post_array, true, $fire_after_hooks);
+            $post_id = wp_insert_post(wp_slash($post_array), true, $fire_after_hooks && !$defer_hooks);
 
         } else {
 
             $post_array['ID'] = $this->get_id();
-            $post_id = wp_update_post($post_array, true, $fire_after_hooks);
+            $post_id = wp_update_post(wp_slash($post_array), true, $fire_after_hooks && !$defer_hooks);
 
         }
 
@@ -319,6 +329,8 @@ class Post extends WP_Model {
         }
 
         if ($post_array['field_input'] ?? false) $this->update_fields($post_array['field_input']);
+
+        if ($defer_hooks) wp_after_insert_post($post_id, $update, $wp_before);
 
         // TODO: Add to cache
 

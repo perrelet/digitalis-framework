@@ -285,21 +285,10 @@ class Route extends Factory {
 
     //
 
-    protected $permission_request;
-    protected $permission_cache;
-
-    // Cached by request identity: rest_send_allow_header() asks again per allowed method with the same request. Redispatching a mutated object reuses the verdict.
     public function permission_wrap (WP_REST_Request $request) {
 
-        if ($this->permission_request !== $request) {
+        return $this->request_inject($request, 'permission');
 
-            $this->permission_request = $request;
-            $this->permission_cache   = $this->request_inject($request, 'permission');
-
-        }
-
-        return $this->permission_cache;
-    
     }
 
     // The discovery instrument for the base permission(): a non-GET request a route serves without ever gating it. Nothing throws.

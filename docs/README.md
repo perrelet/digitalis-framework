@@ -20,6 +20,7 @@ Quick navigation to all framework documentation.
 | [ADMIN.md](./ADMIN.md) | Admin pages, tables, meta boxes, ACF |
 | [UTILITIES.md](./UTILITIES.md) | Query builders, DI, caching, helpers |
 | [AUTOLOADER.md](./AUTOLOADER.md) | Creating new files - naming rules |
+| [RESOURCES.md](./RESOURCES.md) | Exposing a model through REST and WP-CLI |
 
 ---
 
@@ -51,6 +52,9 @@ Quick reference for all model methods: Post, User, Term, Order, Customer. Includ
 
 ### [HOOKS.md](./HOOKS.md)
 WordPress hooks system: `Has_WP_Hooks` trait, Feature and Integration classes, hook naming conventions, framework hooks reference, and common patterns.
+
+### [RESOURCES.md](./RESOURCES.md)
+Model resources: one model through `lattice/v1` and `wp lattice`, with dry runs, a version, a journal with undo and actions shared with wp-admin. Option pages and secret fields included.
 
 ### [ADMIN.md](./ADMIN.md)
 Admin area: Admin_Page, Admin_Sub_Page, Posts_Table, Users_Table, Meta_Box, ACF field groups, ACF blocks, ACF options pages.

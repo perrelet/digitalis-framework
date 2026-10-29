@@ -6,8 +6,7 @@ namespace Lattice;
 
 abstract class Meta_Box extends Feature {
 
-    protected static $cache_group    = self::class;
-    protected static $cache_property = 'id';
+    protected static $cache_group = self::class;
 
     protected $id       = 'digitalis-metabox';
     protected $title    = 'Lattice Metabox';

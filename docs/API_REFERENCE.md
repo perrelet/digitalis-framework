@@ -68,6 +68,8 @@ abstract class Factory extends Creational
 | `$cache_property` | `string\|null` | `null` | Instance property whose value becomes the cache key. |
 | `$instances` | `array` | `[]` | Shared static registry of all cached instances. |
 
+`get_cache_group()` and `get_data_key($data)` are the seams a subclass overrides to change where an instance is stored and how `get_instance($data)` finds it. `Feature` overrides both: each feature class is its own group unless a family declares one, and a config is found by its `$cache_property` (`id` by default). See [CONVENTIONS: Features](./CONVENTIONS.md#features).
+
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `create()` | `static create(mixed $data = []): ?static` | Creates new instance; returns nothing for scalar data |
