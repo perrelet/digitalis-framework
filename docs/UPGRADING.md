@@ -240,6 +240,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | The `woocommerce-clean` account navigation template echoed each menu label raw where core's template escapes it | `esc_html()` on the label, as `myaccount/navigation.php` in WooCommerce does |
 | `Visitor::get_ip()` believed any `X-Forwarded-For`, `Client-IP` or `CF-Connecting-IP` header, so a direct request chose its own address | A forwarded header counts only when `REMOTE_ADDR` is a trusted proxy (Cloudflare's ranges, loopback and the private networks); the rightmost `X-Forwarded-For` hop that is not itself a trusted proxy (the leftmost when every hop is trusted), then `Client-IP`; `CF-Connecting-IP` is not read, since a plain proxy passes a forged one through; `lattice/visitor/trusted_proxies` filters the list; otherwise `REMOTE_ADDR` |
 | `Visitor::get_session_id()` set its cookie without `SameSite` and answered whatever the cookie held | The cookie goes through `set_cookie()`: `SameSite=Lax`, `HttpOnly`, the day-long expiry and the `$_COOKIE` write-back as before; a cookie that is not a 32-character hex id is replaced, and the cookie name follows `$cookie_prefix` (`somm_sid` on somm, which overrides the prefix). Cookies remain UI state: unsigned, and nothing that authorises may trust one |
+| `Commands_Page` ran arbitrary admin commands over GET with the nonce in the URL | Removed, with its `docs/ADMIN.md` section; no consumer extends it. A consumer that still does keeps its own copy or drops the page |
 
 ### Layout
 
