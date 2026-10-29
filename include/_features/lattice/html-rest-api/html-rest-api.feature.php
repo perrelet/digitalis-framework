@@ -92,7 +92,7 @@ class HTML_REST_API extends Feature {
 
     public function rest_pre_serve_request ($served, $result, $request, $wp_rest_server) {
 
-        if (!$this->is_html_rest_path()) return $served;
+        if ($served || !$this->is_html_rest_path()) return $served;
 
         if (is_wp_error($result)) {
 
