@@ -20,6 +20,7 @@ Quick navigation to all framework documentation.
 | [UTILITIES.md](./UTILITIES.md) | Query builders, DI, caching, helpers |
 | [AUTOLOADER.md](./AUTOLOADER.md) | Creating new files - naming rules |
 | [RESOURCES.md](./RESOURCES.md) | Exposing a model through REST and WP-CLI |
+| [PROPOSALS.md](./PROPOSALS.md) | Changes to published records held for review |
 
 ---
 
@@ -52,6 +53,9 @@ WordPress hooks system: `Has_WP_Hooks` trait, Feature and Integration classes, h
 
 ### [RESOURCES.md](./RESOURCES.md)
 Model resources: one model through `lattice/v1` and `wp lattice`, with dry runs, a version, a journal with undo and actions shared with wp-admin. Option pages and secret fields included.
+
+### [PROPOSALS.md](./PROPOSALS.md)
+Proposals: a draft copy of a published record, reviewed and approved through the resources layer.
 
 ### [ADMIN.md](./ADMIN.md)
 Admin area: Admin_Page, Admin_Sub_Page, Posts_Table, Users_Table, Meta_Box, ACF field groups, ACF blocks, ACF options pages.

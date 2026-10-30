@@ -1,0 +1,35 @@
+.lattice-proposal-flag { font-weight: 600; }
+.lattice-proposal-flag.is-proposal { color: #996800; }
+.lattice-proposal-flag.has-proposal { color: #0a4b78; }
+
+.wp-list-table tr:has(.lattice-proposal-flag.is-proposal) { background-color: #fff8e5 !important; }
+.wp-list-table tr:has(.lattice-proposal-flag.is-proposal):hover { background-color: #fbeec4 !important; }
+.wp-list-table tr:has(.lattice-proposal-flag.has-proposal) { background-color: #f0f6fc !important; }
+.wp-list-table tr:has(.lattice-proposal-flag.has-proposal):hover { background-color: #e1ecf8 !important; }
+.wp-list-table tr:has(.lattice-proposal-flag.is-proposal) td.column-title { padding-left: 34px; position: relative; }
+.wp-list-table tr:has(.lattice-proposal-flag.is-proposal) td.column-title::before { content: "\21B3"; position: absolute; left: 14px; top: 8px; color: #996800; font-weight: 700; }
+
+#lattice-proposal-review { border: 1px solid #2271b1; border-left-width: 4px; box-shadow: 0 1px 4px rgba(10, 75, 120, .15); }
+#lattice-proposal-review .postbox-header { background: #f0f6fc; border-bottom: 1px solid #c3d9ed; }
+#lattice-proposal-review .postbox-header .hndle { color: #0a4b78; }
+
+.lattice-proposal-status { margin: 6px 0 10px; padding: 10px; background: #f0f6fc; border: 1px solid #c3d9ed; }
+.lattice-proposal-status p { margin: 0 0 8px; }
+.lattice-proposal-status p:last-child { margin-bottom: 0; }
+.lattice-proposal-status .button { display: block; text-align: center; box-sizing: border-box; }
+
+.lattice-proposal-muted { color: #50575e; }
+.lattice-proposal-note { color: #8a6d3b; }
+.lattice-proposal-gone { color: #b32d2e; font-size: 12px; }
+.lattice-proposal-live { font-size: 12px; color: #646970; text-decoration: none; }
+.lattice-proposal-list { margin: 0; padding-left: 16px; list-style: disc; }
+.lattice-proposal-changes, .lattice-proposal-queue { margin-top: 6px; }
+.lattice-proposal-changes th:first-child { width: 22%; }
+.lattice-proposal-actions { display: flex; gap: 6px; margin-top: 14px; }
+.lattice-proposal-queue .lattice-proposal-actions { margin-top: 0; }
+.lattice-proposal-delete { color: #b32d2e !important; }
+
+.lattice-proposal-pill { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 11px; font-weight: 600; }
+.lattice-proposal-pill.is-awaiting { color: #dba617; background: #fff8e5; }
+.lattice-proposal-pill.is-sent-back, .lattice-proposal-pill.is-stale { color: #b32d2e; background: #fcf0f1; }
+.lattice-proposal-pill.is-writing { color: #50575e; background: #f0f0f1; }
