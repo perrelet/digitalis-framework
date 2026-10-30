@@ -1,14 +1,14 @@
-# Digitalis Autoloader: Comprehensive Analysis
+# Lattice Autoloader: Comprehensive Analysis
 
 > Describes the eager, filename-sorted loader used through 0.4. From v1 the autoloader reads declarations from source and resolves parents lazily; the sorting it analyses no longer exists. Kept as a record of that design. See [AUTOLOADER.md](./AUTOLOADER.md).
 
-A detailed technical analysis of the Digitalis Framework's inheritance-aware autoloading system.
+A detailed technical analysis of Lattice's inheritance-aware autoloading system.
 
 ---
 
 ## 1. Short Summary
 
-The Digitalis Autoloader is a custom PHP class loading system that uses **file naming conventions** to encode inheritance relationships, enabling automatic dependency resolution and correct load ordering. Instead of relying on PSR-4's namespace-to-directory mapping, it parses file names in the format `class-name.parent-class.php` to build an inheritance graph, then topologically sorts files to ensure parent classes are always loaded before their children.
+The Lattice Autoloader is a custom PHP class loading system that uses **file naming conventions** to encode inheritance relationships, enabling automatic dependency resolution and correct load ordering. Instead of relying on PSR-4's namespace-to-directory mapping, it parses file names in the format `class-name.parent-class.php` to build an inheritance graph, then topologically sorts files to ensure parent classes are always loaded before their children.
 
 Key characteristics:
 - **Convention-based** - Inheritance encoded in file names
@@ -66,7 +66,7 @@ Class names are coupled to file names. Renaming a class requires renaming the fi
 IDEs expect PSR-4 conventions. Features like "Go to Definition" may not work correctly without additional configuration.
 
 ### Namespace Independence
-The file-based inheritance resolution is independent of PHP namespaces. A file named `user.user.php` with `class User extends \Digitalis\User` works, but the naming can feel redundant.
+The file-based inheritance resolution is independent of PHP namespaces. A file named `user.user.php` with `class User extends \Lattice\User` works, but the naming can feel redundant.
 
 ### Global State Dependencies
 Conditional `~dir/` loading reads WordPress's own list of the plugins loading on the request (`wp_get_active_and_valid_plugins()`, through `Plugins::is_active()`, memoised per request), so it requires WordPress to be loaded, limiting testability in isolation.
@@ -238,7 +238,7 @@ feature.feature+has-hooks+has-meta.php
 
 ## 7. Overall Reflection
 
-The Digitalis Autoloader represents a thoughtful trade-off between **convention-driven simplicity** and **standards compliance**. It solves real problems in WordPress plugin development:
+The Lattice Autoloader represents a thoughtful trade-off between **convention-driven simplicity** and **standards compliance**. It solves real problems in WordPress plugin development:
 
 1. **Load ordering** - WordPress doesn't provide native dependency resolution
 2. **Conditional code** - Plugin interoperability requires safe loading
@@ -290,7 +290,7 @@ The `~conditional/` and `_skipped/` conventions are particularly clever solution
 
 ## 9. Conclusion
 
-The Digitalis Autoloader is a **domain-specific solution** to WordPress plugin development challenges. It trades universal compatibility for WordPress-native convenience. This is a valid trade-off when:
+The Lattice Autoloader is a **domain-specific solution** to WordPress plugin development challenges. It trades universal compatibility for WordPress-native convenience. This is a valid trade-off when:
 
 - The codebase will primarily run as WordPress plugins
 - Developers are trained in the conventions

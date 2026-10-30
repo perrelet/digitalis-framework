@@ -1,4 +1,4 @@
-# Digitalis Framework: Utilities Reference
+# Lattice: Utilities Reference
 
 Reference for utility classes, traits, and helper patterns.
 
@@ -25,15 +25,15 @@ Static utility for calling methods with class name filtering.
 ### Class Name Resolution
 
 ```php
-use Digitalis\Call;
+use Lattice\Call;
 
 // Get class name (passes through filter)
-$class = Call::get_class_name('Digitalis\Project');
+$class = Call::get_class_name('Lattice\Project');
 
 // Filter allows runtime class swapping
-add_filter('lattice.class.digitalis.project', function($class, $data) {
+add_filter('lattice.class.lattice.project', function($class, $data) {
     if (($data['context'] ?? null) === 'admin') {
-        return 'Digitalis\Admin_Project';
+        return 'Lattice\Admin_Project';
     }
     return $class;
 }, 10, 2);
@@ -43,14 +43,14 @@ add_filter('lattice.class.digitalis.project', function($class, $data) {
 
 ```php
 // Call static method with class name filtering
-Call::static('Digitalis\Project', 'query', ['posts_per_page' => 10]);
+Call::static('Lattice\Project', 'query', ['posts_per_page' => 10]);
 
 // Equivalent to:
-// Digitalis\Project::query(['posts_per_page' => 10])
+// Lattice\Project::query(['posts_per_page' => 10])
 // But allows the class name to be filtered first
 
 // With array of args (for pass-by-reference)
-Call::static_array('Digitalis\View', 'render', [&$params]);
+Call::static_array('Lattice\View', 'render', [&$params]);
 ```
 
 ### Use Cases
@@ -70,7 +70,7 @@ class Dashboard extends View {
 
 // In Meta Boxes - render View dynamically
 class My_Box extends Meta_Box {
-    protected $view = 'Digitalis\Stats_View';
+    protected $view = 'Lattice\Stats_View';
 
     public function render_wrap($object, $args) {
         Call::static($this->view, 'render', $object, $args);
@@ -87,7 +87,7 @@ Base class for creating static lookup lists/enums.
 ### Creating a List
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Status extends List_Utility {
 
@@ -156,7 +156,7 @@ class Priority extends List_Utility {
 ### In Select Fields
 
 ```php
-use Digitalis\Field\Select;
+use Lattice\Field\Select;
 
 echo new Select([
     'name'    => 'status',
@@ -191,7 +191,7 @@ When `$directory` is `null` the log is written to the same directory as PHP's co
 ### Writing
 
 ```php
-use Digitalis\Log;
+use Lattice\Log;
 
 // Via instance
 $log = Log::get_instance('my-plugin.log');
@@ -288,7 +288,7 @@ Query_Vars solves several WP_Query pain points:
 ### Basic Usage
 
 ```php
-use Digitalis\Query_Vars;
+use Lattice\Query_Vars;
 
 $qv = new Query_Vars([
     'post_type'      => 'project',
@@ -565,7 +565,7 @@ Trait for automatic model injection based on type hints.
 ### In Method Calls
 
 ```php
-use Digitalis\Dependency_Injection;
+use Lattice\Dependency_Injection;
 
 class My_Handler {
     use Dependency_Injection;
@@ -602,7 +602,7 @@ class Projects_Table extends Posts_Table {
 ### Array Injection
 
 ```php
-use Digitalis\Dependency_Injection;
+use Lattice\Dependency_Injection;
 
 class My_Class {
     use Dependency_Injection;
@@ -656,7 +656,7 @@ Cache instances in WordPress object cache with TTL.
 ### Using Stashable
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Expensive_Calculation extends Factory {
 
@@ -743,7 +743,7 @@ Automatic class loading and instantiation from directories.
 ### Basic Autoloading
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class My_Plugin extends App {
 
@@ -823,7 +823,7 @@ class My_Model extends Post {
 
 ```php
 // Prevent specific class from instantiating
-add_filter('lattice.instantiate.digitalis.my_feature', '__return_false');
+add_filter('lattice.instantiate.lattice.my_feature', '__return_false');
 
 // Conditional instantiation
 add_filter('lattice.instantiate', function($instantiation, $class, $path) {

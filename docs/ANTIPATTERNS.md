@@ -1,4 +1,4 @@
-# Digitalis Framework: Antipatterns
+# Lattice: Antipatterns
 
 Patterns that look correct but are wrong in this framework. Each entry explains why, not just what.
 
@@ -251,9 +251,9 @@ $query = new Digitalis_Query(['post_type' => 'project']);
 $query->merge($args)->query();
 
 // ✅
-$qv = new \Digitalis\Query_Vars(['post_type' => 'project']);
+$qv = new \Lattice\Query_Vars(['post_type' => 'project']);
 $qv->merge($args);
-$posts = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query());
+$posts = \Lattice\Query_Manager::get_instance()->execute($qv->make_query());
 ```
 ---
 
@@ -270,7 +270,7 @@ $user->update_meta('mycelium_onboarding_source', 'invite');
 $phone = $user->get_field('phone');
 
 // ✅
-class User extends \Digitalis\User {
+class User extends \Lattice\User {
     public function get_onboarding_source(): ?string {
         return $this->get_meta('mycelium_onboarding_source');
     }

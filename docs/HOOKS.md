@@ -1,4 +1,4 @@
-# Digitalis Framework: Hooks System
+# Lattice: Hooks System
 
 Reference for the WordPress hooks integration system.
 
@@ -21,7 +21,7 @@ Reference for the WordPress hooks integration system.
 
 ## Overview
 
-The Digitalis Framework provides a trait-based hook system that wraps WordPress's `add_action`, `add_filter`, `do_action`, and `apply_filters` with additional features:
+Lattice provides a trait-based hook system that wraps WordPress's `add_action`, `add_filter`, `do_action`, and `apply_filters` with additional features:
 
 - **Automatic parameter counting** - No need to specify accepted args; a variadic callback takes every argument the hook passes, and a fourth argument to `add_filter()` / `add_action()` (or a fourth element in a hook map's array) overrides the count
 - **Method name shortcuts** - Use `'method_name'` instead of `[$this, 'method_name']`
@@ -39,7 +39,7 @@ The core trait for working with WordPress hooks.
 ### Using the Trait
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class My_Class {
     use Has_WP_Hooks;
@@ -179,21 +179,21 @@ class My_Feature extends Feature {
     public function get_items() {
         $items = ['a', 'b', 'c'];
 
-        // Hook name: digitalis.my_feature.get_items
+        // Hook name: lattice.my_feature.get_items
         return $this->filter_value($items);
     }
 
     public function get_limit() {
         $limit = 10;
 
-        // Hook name: digitalis.my_feature.get_limit
+        // Hook name: lattice.my_feature.get_limit
         // Additional args passed to filter
         return $this->filter_value($limit, $this->context);
     }
 }
 
 // External code can filter:
-add_filter('digitalis.my_feature.get_items', function($items) {
+add_filter('lattice.my_feature.get_items', function($items) {
     $items[] = 'd';
     return $items;
 });
@@ -208,7 +208,7 @@ Features are hook-enabled factories with a `get_hooks()` method.
 ### Basic Feature
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Custom_Emails extends Feature {
 
@@ -292,7 +292,7 @@ Integrations are singletons for third-party plugin/service integration.
 ### Basic Integration
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Slack_Integration extends Integration {
 
@@ -363,7 +363,7 @@ Hook names are automatically sanitized:
 
 | Input | Output |
 |-------|--------|
-| `Digitalis\My_Feature` | `digitalis.my_feature` |
+| `Lattice\My_Feature` | `lattice.my_feature` |
 | `my-hook-name` | `my.hook.name` |
 | `CamelCase` | `camelcase` |
 | `multiple___underscores` | `multiple.underscores` |
@@ -385,8 +385,8 @@ lattice.{component}.{class}.{property}
 $this->build_hook_name($name);  // Modifies in place
 
 // Array - joined with delimiter
-$name = ['digitalis', 'my_feature', 'action'];
-$this->build_hook_name($name);  // 'digitalis.my_feature.action'
+$name = ['lattice', 'my_feature', 'action'];
+$this->build_hook_name($name);  // 'lattice.my_feature.action'
 ```
 
 ---
@@ -767,7 +767,7 @@ class ACF_Customizations extends Feature {
 
 ```
 Custom hooks:     digitalis/{feature}/{action}
-Class hooks:      digitalis.{class_name}.{method_name}
+Class hooks:      lattice.{class_name}.{method_name}
 Framework hooks:  lattice.{component}.{class}.{property}  (lowercase; a class name's `\` becomes `.`)
 Legacy names:     Digitalis/{Component}/{Class}/{Property}  (forwarded with a deprecation)
 ```

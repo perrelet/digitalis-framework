@@ -1,12 +1,12 @@
-# Digitalis Dependency Injection: Comprehensive Analysis
+# Lattice Dependency Injection: Comprehensive Analysis
 
-A detailed technical analysis of the Digitalis Framework's lightweight dependency injection system.
+A detailed technical analysis of Lattice's lightweight dependency injection system.
 
 ---
 
 ## 1. Short Summary
 
-The Digitalis DI system is a **reflection-based, convention-driven** dependency injection mechanism that automatically converts scalar values (typically IDs) into model instances. It operates on a simple principle: any class with a `get_instance()` method can be injected.
+The Lattice DI system is a **reflection-based, convention-driven** dependency injection mechanism that automatically converts scalar values (typically IDs) into model instances. It operates on a simple principle: any class with a `get_instance()` method can be injected.
 
 Key characteristics:
 - **Lightweight** - Single trait, ~110 lines of code
@@ -395,7 +395,7 @@ protected static $defaults = [
 
 ## 7. Overall Reflection
 
-The Digitalis DI system represents a **pragmatic middle ground** between no DI and full container-based DI. It solves the specific problem of converting WordPress's ID-centric APIs into object-oriented interfaces.
+The Lattice DI system represents a **pragmatic middle ground** between no DI and full container-based DI. It solves the specific problem of converting WordPress's ID-centric APIs into object-oriented interfaces.
 
 ### What It Does Well
 
@@ -421,7 +421,7 @@ The system prioritizes **developer convenience over architectural purity**. It d
 
 ### Assessment: Well-Suited for Its Purpose
 
-The Digitalis DI system is **appropriately scoped** for WordPress plugin development. It provides meaningful benefits without imposing the complexity of full DI containers like PHP-DI or Symfony's Container.
+The Lattice DI system is **appropriately scoped** for WordPress plugin development. It provides meaningful benefits without imposing the complexity of full DI containers like PHP-DI or Symfony's Container.
 
 ### When This Approach Works
 
@@ -448,7 +448,7 @@ The Digitalis DI system is **appropriately scoped** for WordPress plugin develop
 
 | Approach | Complexity | Flexibility | WordPress Fit |
 |----------|------------|-------------|---------------|
-| Digitalis DI | Low | Medium | Excellent |
+| Lattice DI | Low | Medium | Excellent |
 | PHP-DI | Medium | High | Good |
 | Symfony Container | High | Very High | Poor |
 | Manual resolution | Very Low | Low | Native |
@@ -457,7 +457,7 @@ The Digitalis DI system is **appropriately scoped** for WordPress plugin develop
 
 ## 9. Conclusion
 
-The Digitalis Dependency Injection system is a **well-crafted, domain-specific solution** for WordPress model resolution. It trades the flexibility of full DI containers for simplicity and WordPress-native integration.
+The Lattice Dependency Injection system is a **well-crafted, domain-specific solution** for WordPress model resolution. It trades the flexibility of full DI containers for simplicity and WordPress-native integration.
 
 ### Key Strengths
 - Eliminates boilerplate model resolution

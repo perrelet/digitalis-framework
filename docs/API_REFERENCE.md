@@ -1,17 +1,17 @@
-# Digitalis Framework API Reference
+# Lattice API Reference
 
 ## Table of Contents
 
 - [Design Patterns](#design-patterns)
 - [Core Objects](#core-objects)
-  - [Query_Vars](#digitalisquery_vars)
-  - [Query_Manager](#digitalisquery_manager)
-  - [Query_Profile](#digitalisquery_profile)
+  - [Query_Vars](#latticequery_vars)
+  - [Query_Manager](#latticequery_manager)
+  - [Query_Profile](#latticequery_profile)
 - [WordPress Models](#wordpress-models)
 - [Views & Components](#views--components)
-  - [Route](#digitalisroute)
-  - [REST_URL_Builder](#digitalisrest_url_builder)
-  - [HTML_REST_API](#digitalishtml_rest_api)
+  - [Route](#latticeroute)
+  - [REST_URL_Builder](#latticerest_url_builder)
+  - [HTML_REST_API](#latticehtml_rest_api)
 - [Form Fields](#form-fields)
 - [Admin Classes](#admin-classes)
 - [Iterators](#iterators)
@@ -24,7 +24,7 @@
 
 ## Design Patterns
 
-### `Digitalis\Design_Pattern`
+### `Lattice\Design_Pattern`
 
 Base abstract class for all design patterns.
 
@@ -38,7 +38,7 @@ Base abstract class for all design patterns.
 
 ---
 
-### `Digitalis\Singleton`
+### `Lattice\Singleton`
 
 Ensures single instance per class.
 
@@ -54,7 +54,7 @@ abstract class Singleton extends Design_Pattern
 
 ---
 
-### `Digitalis\Factory`
+### `Lattice\Factory`
 
 Creates and manages instances with optional caching. Instances are stored in a shared registry keyed by `$cache_group` + `$cache_property` value.
 
@@ -78,7 +78,7 @@ abstract class Factory extends Creational
 
 ---
 
-### `Digitalis\Creational`
+### `Lattice\Creational`
 
 Base for creational patterns with instance tracking.
 
@@ -94,7 +94,7 @@ abstract class Creational extends Design_Pattern
 
 ## Core Objects
 
-### `Digitalis\Model`
+### `Lattice\Model`
 
 Entity model with auto-resolution and caching.
 
@@ -118,7 +118,7 @@ abstract class Model extends Factory
 
 ---
 
-### `Digitalis\Service`
+### `Lattice\Service`
 
 Service factory without auto-instantiation.
 
@@ -132,7 +132,7 @@ abstract class Service extends Factory
 
 ---
 
-### `Digitalis\Feature`
+### `Lattice\Feature`
 
 Feature factory with WordPress hook support.
 
@@ -147,7 +147,7 @@ abstract class Feature extends Factory
 
 ---
 
-### `Digitalis\Integration`
+### `Lattice\Integration`
 
 Singleton for third-party integrations.
 
@@ -162,7 +162,7 @@ abstract class Integration extends Singleton
 
 ---
 
-### `Digitalis\App`
+### `Lattice\App`
 
 Plugin application base class.
 
@@ -202,7 +202,7 @@ abstract class App extends Factory
 
 ## WordPress Models
 
-### `Digitalis\WP_Model`
+### `Lattice\WP_Model`
 
 Base for WordPress entity models.
 
@@ -223,7 +223,7 @@ abstract class WP_Model extends Model
 
 ---
 
-### `Digitalis\Post`
+### `Lattice\Post`
 
 WordPress post model.
 
@@ -253,12 +253,12 @@ class Post extends WP_Model
 | `get_permalink()` | `public get_permalink(bool $leavename = false): string\|false` | Returns post URL |
 | `get_thumbnail_id()` | `public get_thumbnail_id(): int` | Returns featured image ID |
 | `is_main_query()` | `static is_main_query(?WP_Query $wp_query): bool` | True if the query is the non-ajax main query for this post type. |
-| `is_digitalis_ajax()` | `static is_digitalis_ajax(?WP_Query $wp_query): bool` | True if the query is a Digitalis ajax query for this post type. |
+| `is_digitalis_ajax()` | `static is_digitalis_ajax(?WP_Query $wp_query): bool` | True if the query is a Lattice ajax query for this post type. |
 | `query_is_post_type()` | `static query_is_post_type(WP_Query $wp_query): bool` | True if the query targets this model's `$post_type` (public). |
 
 ---
 
-### `Digitalis\User`
+### `Lattice\User`
 
 WordPress user model.
 
@@ -287,7 +287,7 @@ class User extends WP_Model
 
 ---
 
-### `Digitalis\Term`
+### `Lattice\Term`
 
 WordPress taxonomy term model.
 
@@ -311,7 +311,7 @@ class Term extends WP_Model
 
 ---
 
-### `Digitalis\Post_Type`
+### `Lattice\Post_Type`
 
 Custom post type registration.
 
@@ -353,7 +353,7 @@ A `$filters` key is the taxonomy slug or the ACF field name (the meta key the cl
 
 ---
 
-### `Digitalis\Taxonomy`
+### `Lattice\Taxonomy`
 
 Custom taxonomy registration.
 
@@ -378,7 +378,7 @@ abstract class Taxonomy extends Singleton
 
 ---
 
-### `Digitalis\Query_Vars`
+### `Lattice\Query_Vars`
 
 Fluent builder for `WP_Query` arguments. Implements `ArrayAccess`, `IteratorAggregate`, `JsonSerializable`, `Countable`. Supports property overloading.
 
@@ -426,11 +426,11 @@ $posts = Query_Manager::get_instance()->execute($qv->make_query());
 | `getIterator()` | `public getIterator(): Traversable` | For `foreach`. |
 | `jsonSerialize()` | `public jsonSerialize(): mixed` | For `json_encode()`. |
 | `compare_post_type()` | `static compare_post_type(WP_Query $wp_query, string\|array\|false $post_type): bool` | True if the query targets the post type (handles taxonomy archives, `'any'`, and a list on either side: an array `$post_type` matches when any of its types does). |
-| `is_multiple()` | `static is_multiple(?WP_Query $wp_query = null): bool` | True if query is a listing (archive, search, posts page, or Digitalis ajax). Falls back to global `$wp_query`; `false` when there is none. |
+| `is_multiple()` | `static is_multiple(?WP_Query $wp_query = null): bool` | True if query is a listing (archive, search, posts page, or Lattice ajax). Falls back to global `$wp_query`; `false` when there is none. |
 
 ---
 
-### `Digitalis\Query_Manager`
+### `Lattice\Query_Manager`
 
 Singleton dispatcher that applies `Query_Profile` instances to every `WP_Query` that passes through it. Hooks into `pre_get_posts`, `posts_clauses`, and `posts_results`.
 
@@ -469,7 +469,7 @@ class Query_Manager extends Singleton
 
 ---
 
-### `Digitalis\Query_Profile`
+### `Lattice\Query_Profile`
 
 Profile that self-registers with `Query_Manager` on construction. Declares when it applies and what it does.
 
@@ -497,7 +497,7 @@ class Query_Profile extends Factory
 
 ## Views & Components
 
-### `Digitalis\View`
+### `Lattice\View`
 
 Base view class with template rendering.
 
@@ -526,7 +526,7 @@ abstract class View implements ArrayAccess
 
 ---
 
-### `Digitalis\Component`
+### `Lattice\Component`
 
 UI component with element rendering.
 
@@ -553,7 +553,7 @@ class Component extends View
 
 ---
 
-### `Digitalis\Route`
+### `Lattice\Route`
 
 REST API endpoint registration and handling.
 
@@ -628,7 +628,7 @@ Set `'class' => Model::class` on any arg. If the param is present in the request
 
 ---
 
-### `Digitalis\REST_URL_Builder`
+### `Lattice\REST_URL_Builder`
 
 Singleton URL builder for `Route` instances. Manages named format strategies.
 
@@ -645,7 +645,7 @@ Built-in formats: `'json'` (registered by default), `'html'` (registered when `H
 
 ---
 
-### `Digitalis\HTML_REST_API`
+### `Lattice\HTML_REST_API`
 
 Feature that intercepts REST responses and serves raw HTML instead of JSON. Enables clean HTMX integration without a separate HTML endpoint.
 
@@ -683,9 +683,9 @@ Registers the `'html'` format with `REST_URL_Builder`.
 
 ## Form Fields
 
-All fields extend `Digitalis\Field`.
+All fields extend `Lattice\Field`.
 
-### `Digitalis\Field`
+### `Lattice\Field`
 
 Base form field class.
 
@@ -733,7 +733,7 @@ class Field extends Component
 
 ## Admin Classes
 
-### `Digitalis\Admin_Page`
+### `Lattice\Admin_Page`
 
 Admin menu page.
 
@@ -757,7 +757,7 @@ abstract class Admin_Page extends Singleton
 
 ---
 
-### `Digitalis\Admin_Sub_Page`
+### `Lattice\Admin_Sub_Page`
 
 Admin submenu page.
 
@@ -771,7 +771,7 @@ abstract class Admin_Sub_Page extends Admin_Page
 
 ---
 
-### `Digitalis\Admin_Table`
+### `Lattice\Admin_Table`
 
 WP_List_Table wrapper.
 
@@ -787,7 +787,7 @@ abstract class Admin_Table extends Singleton
 
 ---
 
-### `Digitalis\Meta_Box`
+### `Lattice\Meta_Box`
 
 Post meta box registration.
 
@@ -812,7 +812,7 @@ abstract class Meta_Box extends Feature
 
 ## Iterators
 
-### `Digitalis\Iterator`
+### `Lattice\Iterator`
 
 Batch processing base class.
 
@@ -853,7 +853,7 @@ abstract class Iterator extends Singleton
 
 ## WooCommerce
 
-### `Digitalis\Customer`
+### `Lattice\Customer`
 
 WooCommerce customer model.
 
@@ -868,7 +868,7 @@ class Customer extends User
 
 ---
 
-### `Digitalis\Order`
+### `Lattice\Order`
 
 WooCommerce order model.
 
@@ -886,7 +886,7 @@ class Order extends Model
 
 ---
 
-### `Digitalis\Order_Item`
+### `Lattice\Order_Item`
 
 WooCommerce order item model.
 
@@ -964,7 +964,7 @@ Property inheritance from parent classes.
 
 ## Utilities
 
-### `Digitalis\Call`
+### `Lattice\Call`
 
 Dynamic call utilities.
 
@@ -973,7 +973,7 @@ Dynamic call utilities.
 | `method()` | `static method(object $obj, string $method, array $args = []): mixed` | Calls method dynamically |
 | `static_method()` | `static static_method(string $class, string $method, array $args = []): mixed` | Calls static method |
 
-### `Digitalis\List_Utility`
+### `Lattice\List_Utility`
 
 Array/list operations.
 
@@ -983,7 +983,7 @@ Array/list operations.
 | `group_by()` | `static group_by(array $list, string $key): array` | Groups by key |
 | `filter()` | `static filter(array $list, callable $callback): array` | Filters list |
 
-### `Digitalis\Plugins`
+### `Lattice\Plugins`
 
 Which plugins WordPress is loading on this request (UTILITIES.md).
 
@@ -1007,7 +1007,7 @@ Every framework hook, with its arguments, is in the table in [HOOKS.md](./HOOKS.
 The framework includes `Woo_Account_Page` for custom WooCommerce account area pages.
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 // Custom account page with icon and access control
 class Dashboard_Account_Page extends Woo_Account_Page {
@@ -1043,7 +1043,7 @@ class Dashboard_Account_Page extends Woo_Account_Page {
 ### Custom Order Status Flow
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 // Register custom order status
 class Order_Status_Approved extends Order_Status {
@@ -1082,7 +1082,7 @@ class Order_Status_Handler extends Feature {
 ### REST API with HTMX Support
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 // API route that returns HTML for HTMX
 class Project_Status_Route extends Route {
@@ -1112,7 +1112,7 @@ class Project_Status_Route extends Route {
 ### Model Relationships
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project extends Post {
     protected static $post_type = 'project';
@@ -1154,7 +1154,7 @@ class Project extends Post {
 ### View Components with Conditional Display
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Order_Actions_View extends View {
     protected static $defaults = [
@@ -1199,7 +1199,7 @@ class Order_Actions_View extends View {
 ### Batch Processing with Iterator
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Sync_Projects_Iterator extends Iterator {
     protected static $title      = 'Sync Project Statuses';

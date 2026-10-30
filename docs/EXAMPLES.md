@@ -1,4 +1,4 @@
-# Digitalis Framework Examples
+# Lattice Examples
 
 For standard copy-paste patterns (models, views, forms, routes, admin, etc.) see [CHEATSHEET.md](./CHEATSHEET.md).
 
@@ -16,7 +16,7 @@ Create a modern account dashboard with widget grid:
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Custom dashboard account page
@@ -80,7 +80,7 @@ Implement custom order statuses for an estimate/approval workflow:
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Estimate order status
@@ -145,12 +145,12 @@ Implement granular permissions with `$user->can()`:
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Extended User model with custom permissions
  */
-class User extends \Digitalis\User {
+class User extends \Lattice\User {
 
     /**
      * Check custom capabilities
@@ -230,7 +230,7 @@ Create REST routes that return HTML for HTMX swapping:
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Estimate approval route (HTMX compatible)
@@ -318,7 +318,7 @@ Automatically sync relationships between models:
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Set up bidirectional relationships
@@ -351,7 +351,7 @@ class Setup_Relationships extends Feature {
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 class Account extends Post {
     protected static $post_type = 'account';
@@ -395,7 +395,7 @@ Create flexible dashboard layouts:
 
 ```php
 <?php
-namespace Digitalis;
+namespace Lattice;
 
 /**
  * Widget grid container

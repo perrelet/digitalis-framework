@@ -1,4 +1,4 @@
-# Digitalis Framework: Admin Reference
+# Lattice: Admin Reference
 
 Reference for admin pages, tables, meta boxes, and ACF integration.
 
@@ -29,7 +29,7 @@ Create top-level admin menu pages.
 **File:** `include/admin/settings.admin-page.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Settings_Page extends Admin_Page {
 
@@ -133,7 +133,7 @@ Create submenu pages under a parent menu.
 **File:** `include/admin/advanced-settings.admin-sub-page.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Advanced_Settings extends Admin_Sub_Page {
 
@@ -210,7 +210,7 @@ A specialized `Admin_Sub_Page` for viewing and clearing log files in the WP admi
 **Location:** `include/admin/logs-page.abstract.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Plugin_Logs_Page extends Logs_Page {
 
@@ -263,7 +263,7 @@ Customize the admin posts list table with columns and filters.
 **File:** `include/admin/projects-table.posts-table.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Projects_Table extends Posts_Table {
 
@@ -403,7 +403,7 @@ class Projects_Table extends Posts_Table {
             'priority' => [
                 'type'           => 'meta',
                 'args'           => [
-                    'field'      => \Digitalis\Field\Select::class,
+                    'field'      => \Lattice\Field\Select::class,
                     'options'    => ['low' => 'Low', 'medium' => 'Medium', 'high' => 'High'],
                     'placeholder' => 'Priority',
                 ],
@@ -461,7 +461,7 @@ Customize the admin users list table.
 **File:** `include/admin/accounts-table.users-table.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Accounts_Table extends Users_Table {
 
@@ -515,7 +515,7 @@ class Accounts_Table extends Users_Table {
             'has_projects' => [
                 'type'           => 'field',
                 'args'           => [
-                    'field'   => \Digitalis\Field\Select::class,
+                    'field'   => \Lattice\Field\Select::class,
                     'key'     => 'has_projects',
                     'options' => ['' => 'All', '1' => 'Has Projects', '0' => 'No Projects'],
                 ],
@@ -552,7 +552,7 @@ Customize taxonomy term list tables.
 **File:** `include/admin/categories-table.terms-table.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Categories_Table extends Terms_Table {
 
@@ -580,7 +580,7 @@ Add custom meta boxes to post edit screens.
 **File:** `include/admin/project-details.meta-box.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Details_Box extends Meta_Box {
 
@@ -606,7 +606,7 @@ class Project_Details_Box extends Meta_Box {
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `$id` | `string` | `'digitalis-metabox'` | Unique ID |
-| `$title` | `string` | `'Digitalis Metabox'` | Box title |
+| `$title` | `string` | `'Lattice Metabox'` | Box title |
 | `$screen` | `string\|array\|null` | `null` | Post type(s) or screen |
 | `$context` | `string` | `'advanced'` | Position: normal, side, advanced |
 | `$priority` | `string` | `'default'` | Priority: high, core, default, low |
@@ -678,7 +678,7 @@ Register ACF field groups programmatically.
 **File:** `include/acf/project-fields.feature.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Fields extends Feature {
 
@@ -750,7 +750,7 @@ Create a centralized place to load all ACF configurations.
 **File:** `include/acf/acf-config.feature.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class ACF_Config extends Feature {
 
@@ -923,7 +923,7 @@ Create Gutenberg blocks with ACF fields.
 **File:** `include/blocks/testimonial.acf-block.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Testimonial_Block extends ACF_Block {
 
@@ -1056,7 +1056,7 @@ Create settings pages with ACF fields.
 **File:** `include/acf/theme-options.feature.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Theme_Options extends Feature {
 

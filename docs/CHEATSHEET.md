@@ -1,4 +1,4 @@
-# Digitalis Framework Cheatsheet
+# Lattice Cheatsheet
 
 Copy-paste patterns for common tasks.
 
@@ -30,7 +30,7 @@ Copy-paste patterns for common tasks.
 **File:** `include/models/project.post.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project extends Post {
 
@@ -57,7 +57,7 @@ class Project extends Post {
 **File:** `include/models/account.user.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Account extends User {
 
@@ -93,7 +93,7 @@ class Account extends User {
 **File:** `include/models/project-category.term.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Category extends Term {
 
@@ -141,7 +141,7 @@ $post = Post::get_instance($id, false);
 **File:** `include/post-types/project.post-type.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Post_Type extends Post_Type {
 
@@ -166,7 +166,7 @@ class Project_Post_Type extends Post_Type {
 **File:** `include/taxonomies/project-category.taxonomy.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Category_Taxonomy extends Taxonomy {
 
@@ -183,7 +183,7 @@ class Project_Category_Taxonomy extends Taxonomy {
 **File:** `include/user-roles/account.user-role.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Account_Role extends User_Role {
 
@@ -209,7 +209,7 @@ class Account_Role extends User_Role {
 **File:** `include/views/invoice.view.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Invoice_View extends View {
 
@@ -251,7 +251,7 @@ echo new Invoice_View(['order' => $order_id]);
 **File:** `include/views/project-card.view.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Card extends View {
 
@@ -341,7 +341,7 @@ class Project_Card extends Card {
 ### Basic Component
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Alert extends Component {
 
@@ -418,7 +418,7 @@ class Card extends Component {
 ### Link Component
 
 ```php
-use Digitalis\Component\Link;
+use Lattice\Component\Link;
 
 echo new Link([
     'href'    => '/dashboard',
@@ -431,7 +431,7 @@ echo new Link([
 ### HTMX Component
 
 ```php
-use Digitalis\Component\HTMX;
+use Lattice\Component\HTMX;
 
 echo new HTMX([
     'tag'         => 'button',
@@ -450,12 +450,12 @@ echo new HTMX([
 ### Complete Form
 
 ```php
-use Digitalis\Component\Form;
-use Digitalis\Field\Input;
-use Digitalis\Field\Select;
-use Digitalis\Field\Textarea;
-use Digitalis\Field\Checkbox;
-use Digitalis\Field\Submit;
+use Lattice\Component\Form;
+use Lattice\Field\Input;
+use Lattice\Field\Select;
+use Lattice\Field\Textarea;
+use Lattice\Field\Checkbox;
+use Lattice\Field\Submit;
 
 echo new Form([
     'action' => admin_url('admin-post.php'),
@@ -520,7 +520,7 @@ echo new Select([
 ]);
 
 // Enhanced select with search
-use Digitalis\Field\Select_Nice;
+use Lattice\Field\Select_Nice;
 echo new Select_Nice([
     'name'    => 'user',
     'label'   => 'Assign User',
@@ -528,7 +528,7 @@ echo new Select_Nice([
 ]);
 
 // Checkbox group
-use Digitalis\Field\Checkbox_Group;
+use Lattice\Field\Checkbox_Group;
 echo new Checkbox_Group([
     'name'    => 'features',
     'label'   => 'Features',
@@ -537,7 +537,7 @@ echo new Checkbox_Group([
 ]);
 
 // Radio buttons
-use Digitalis\Field\Radio;
+use Lattice\Field\Radio;
 echo new Radio([
     'name'    => 'priority',
     'label'   => 'Priority',
@@ -546,7 +546,7 @@ echo new Radio([
 ]);
 
 // Date picker
-use Digitalis\Field\Date_Picker;
+use Lattice\Field\Date_Picker;
 echo new Date_Picker([
     'name'  => 'due_date',
     'label' => 'Due Date',
@@ -554,14 +554,14 @@ echo new Date_Picker([
 ]);
 
 // Hidden field
-use Digitalis\Field\Hidden;
+use Lattice\Field\Hidden;
 echo new Hidden([
     'name'  => 'action',
     'value' => 'process_form',
 ]);
 
 // Number with min/max
-use Digitalis\Field\Number;
+use Lattice\Field\Number;
 echo new Number([
     'name'  => 'quantity',
     'label' => 'Quantity',
@@ -587,7 +587,7 @@ echo new Input([
 ### Basic Table
 
 ```php
-use Digitalis\Component\Table;
+use Lattice\Component\Table;
 
 echo new Table([
     'columns' => [
@@ -639,7 +639,7 @@ echo new Table([
 **File:** `include/admin/settings.admin-page.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Settings_Page extends Admin_Page {
 
@@ -664,7 +664,7 @@ class Settings_Page extends Admin_Page {
 **File:** `include/admin/advanced-settings.admin-sub-page.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Advanced_Settings extends Admin_Sub_Page {
 
@@ -684,7 +684,7 @@ class Advanced_Settings extends Admin_Sub_Page {
 **File:** `include/admin/projects-table.posts-table.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Projects_Table extends Posts_Table {
 
@@ -726,7 +726,7 @@ class Projects_Table extends Posts_Table {
 **File:** `include/rest/projects.route.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Projects_Route extends Route {
 
@@ -752,7 +752,7 @@ class Projects_Route extends Route {
 **File:** `include/rest/project.route.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Route extends Route {
 
@@ -818,7 +818,7 @@ A `Shortcode` is a thin wrapper that hands `[slug atts]` off to a `View` — the
 **File:** `include/shortcodes/project-card.shortcode.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Card_Shortcode extends Shortcode {
 
@@ -827,7 +827,7 @@ class Project_Card_Shortcode extends Shortcode {
 }
 ```
 
-**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])` (through the `lattice.class.digitalis.project_card` filter, as `View::render()` does; a swapped class's `$defaults` gate the atts).
+**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])` (through the `lattice.class.lattice.project_card` filter, as `View::render()` does; a swapped class's `$defaults` gate the atts).
 
 ---
 
@@ -838,7 +838,7 @@ class Project_Card_Shortcode extends Shortcode {
 **File:** `include/woocommerce/account-pages/projects.woo-account-page.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Projects_Account_Page extends Woo_Account_Page {
 
@@ -866,7 +866,7 @@ class Projects_Account_Page extends Woo_Account_Page {
 **File:** `include/woocommerce/order-statuses/estimate.order-status.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Order_Status_Estimate extends Order_Status {
 
@@ -891,7 +891,7 @@ class Order_Status_Estimate extends Order_Status {
 **File:** `include/woocommerce/invoice.order.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Invoice extends Order {
 
@@ -921,7 +921,7 @@ class Invoice extends Order {
 **File:** `include/views/product-page.page-view.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Product_Page extends Page_View {
     protected static $context   = 'single';
@@ -938,7 +938,7 @@ class Product_Page extends Page_View {
 **File:** `include/views/fullscreen-page.page-view.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Fullscreen_Page extends Page_View {
     protected static $context = 'page';
@@ -963,7 +963,7 @@ class Fullscreen_Page extends Page_View {
 **File:** `include/views/dashboard-layout.layout.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Dashboard_Layout extends Layout {
     protected static $context = 'page';
@@ -991,7 +991,7 @@ class Dashboard_Layout extends Layout {
 **File:** `include/views/not-found.page-view.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Not_Found extends Page_View {
     protected static $context = '404';
@@ -1056,7 +1056,7 @@ $accounts = Account::query([
 ### Direct Query_Vars
 
 ```php
-$qv = new \Digitalis\Query_Vars([
+$qv = new \Lattice\Query_Vars([
     'post_type'      => 'project',
     'posts_per_page' => 10,
     'meta_key'       => 'project_priority',
@@ -1064,7 +1064,7 @@ $qv = new \Digitalis\Query_Vars([
     'order'          => 'ASC',
 ]);
 
-$projects = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query());
+$projects = \Lattice\Query_Manager::get_instance()->execute($qv->make_query());
 ```
 
 ---
@@ -1078,7 +1078,7 @@ $projects = \Digitalis\Query_Manager::get_instance()->execute($qv->make_query())
 **File:** `include/iterators/republish-projects.post-iterator.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Republish_Projects extends Post_Iterator {
 
@@ -1105,7 +1105,7 @@ class Republish_Projects extends Post_Iterator {
 **File:** `include/iterators/import-accounts.csv-iterator.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Import_Accounts extends CSV_Iterator {
 
@@ -1154,7 +1154,7 @@ class Nightly_Sync extends Post_Iterator {
 **File:** `include/features/custom-emails.feature.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Custom_Emails extends Feature {
 
@@ -1183,7 +1183,7 @@ class Custom_Emails extends Feature {
 **File:** `include/integrations/slack.integration.php`
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Slack_Integration extends Integration {
 

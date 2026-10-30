@@ -1,6 +1,6 @@
-# Digitalis Framework Dependency Injection
+# Lattice Dependency Injection
 
-The Digitalis Framework provides lightweight dependency injection through the `Dependency_Injection` trait. It uses PHP reflection to automatically resolve type-hinted parameters to model instances via their `get_instance()` methods.
+Lattice provides lightweight dependency injection through the `Dependency_Injection` trait. It uses PHP reflection to automatically resolve type-hinted parameters to model instances via their `get_instance()` methods.
 
 ---
 

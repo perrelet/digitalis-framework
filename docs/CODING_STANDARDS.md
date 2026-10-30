@@ -1,8 +1,8 @@
-# Digitalis Framework Coding Standards
+# Lattice Coding Standards
 
 ## Overview
 
-This document outlines the coding standards and best practices for developing with the Digitalis Framework. Following these standards ensures consistency, maintainability, and security across all projects.
+This document outlines the coding standards and best practices for developing with Lattice. Following these standards ensures consistency, maintainability, and security across all projects.
 
 ---
 
@@ -40,10 +40,10 @@ The framework follows PSR standards with WordPress-specific adaptations:
 
 ### Namespace
 
-All framework classes use the `Digitalis` namespace:
+All framework classes use the `Lattice` namespace:
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class My_Class extends Model {
     // ...
@@ -115,11 +115,11 @@ Every PHP file should begin with:
  *
  * Brief description of the class purpose.
  *
- * @package Digitalis
+ * @package Lattice
  * @since   1.0.0
  */
 
-namespace Digitalis;
+namespace Lattice;
 ```
 
 ---
@@ -360,7 +360,7 @@ All classes and public methods require DocBlocks:
  * Extends the base User model with customer-specific
  * functionality like order history and preferences.
  *
- * @package Digitalis
+ * @package Lattice
  * @since   1.0.0
  */
 class Customer extends User {
@@ -629,7 +629,7 @@ class Database_Migration {
 Use typed exceptions:
 
 ```php
-namespace Digitalis\Exceptions;
+namespace Lattice\Exceptions;
 
 class ValidationException extends \Exception {}
 class NotFoundException extends \Exception {}
@@ -656,7 +656,7 @@ class Logger {
     public static function error(string $message, array $context = []): void {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
-                '[Digitalis Error] %s | Context: %s',
+                '[Lattice Error] %s | Context: %s',
                 $message,
                 wp_json_encode($context)
             ));
@@ -666,7 +666,7 @@ class Logger {
     public static function debug(string $message, array $context = []): void {
         if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
             error_log(sprintf(
-                '[Digitalis Debug] %s | Context: %s',
+                '[Lattice Debug] %s | Context: %s',
                 $message,
                 wp_json_encode($context)
             ));

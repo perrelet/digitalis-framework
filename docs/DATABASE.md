@@ -1,6 +1,6 @@
-# Digitalis Framework: Database
+# Lattice: Database
 
-Custom database tables, schema versioning, and migrations under the `Digitalis\DB` namespace.
+Custom database tables, schema versioning, and migrations under the `Lattice\DB` namespace.
 
 ---
 
@@ -26,14 +26,14 @@ Custom database tables, schema versioning, and migrations under the `Digitalis\D
 
 ## Overview
 
-The `Digitalis\DB` system provides structured custom database table management:
+The `Lattice\DB` system provides structured custom database table management:
 
 - **Tables** declare their columns, indexes, and scope (site vs. network).
 - **Schemas** group tables and declare a target version with an ordered list of migrations.
 - **Migrations** are versioned classes that run `up()` once and are never re-run.
 - **Migration_Runner** checks the installed version against the schema target, acquires a lock, and runs only the needed migrations in order.
 
-All classes live in the `Digitalis\DB` namespace.
+All classes live in the `Lattice\DB` namespace.
 
 ```
 include/db/
@@ -54,10 +54,10 @@ include/db/
 
 ## Defining a Table
 
-Extend `Digitalis\DB\Table` and override the three static properties and two static methods.
+Extend `Lattice\DB\Table` and override the three static properties and two static methods.
 
 ```php
-namespace Digitalis\DB;
+namespace Lattice\DB;
 
 class Log_Table extends Table {
 
@@ -127,7 +127,7 @@ Index::index('status_idx', ['status', 'id']) // KEY `status_idx` (`status`, `id`
 A `Schema` groups a set of tables under a slug and version, and maps integer version numbers to migration classes.
 
 ```php
-namespace Digitalis\DB;
+namespace Lattice\DB;
 
 class My_Plugin_Schema extends Schema {
 
@@ -158,10 +158,10 @@ class My_Plugin_Schema extends Schema {
 
 ## Writing Migrations
 
-Each migration is a class extending `Digitalis\DB\Migration` that implements `up()`.
+Each migration is a class extending `Lattice\DB\Migration` that implements `up()`.
 
 ```php
-namespace Digitalis\DB;
+namespace Lattice\DB;
 
 class Create_Log_Table_Migration extends Migration {
 
@@ -284,10 +284,10 @@ class My_Plugin extends App {
 
     public function ensure_schema () : void {
 
-        $tables = new \Digitalis\DB\Table_Registry();
-        $logger = new \Digitalis\DB\Option_Migration_Logger('my_plugin_migrations_log');
+        $tables = new \Lattice\DB\Table_Registry();
+        $logger = new \Lattice\DB\Option_Migration_Logger('my_plugin_migrations_log');
 
-        (new \Digitalis\DB\Migration_Runner($tables, $logger))
+        (new \Lattice\DB\Migration_Runner($tables, $logger))
             ->migrate_module(My_Plugin_Schema::class);
 
     }
@@ -338,7 +338,7 @@ The option is stored with `autoload: false`.
 `DB_Context::get_wpdb()` retrieves and filters the global `$wpdb` instance. Used internally but also available for direct use.
 
 ```php
-$wpdb = \Digitalis\DB\DB_Context::get_wpdb();
+$wpdb = \Lattice\DB\DB_Context::get_wpdb();
 ```
 
 **Filter: `lattice.db.wpdb`**
@@ -358,7 +358,7 @@ If the filter returns anything other than a `wpdb` instance a `RuntimeException`
 ## Quick Reference
 
 ```php
-use Digitalis\DB\{
+use Lattice\DB\{
     Table, Column, Index,
     Schema, Migration, Schema_Context,
     Migration_Runner, Table_Registry,

@@ -1,6 +1,6 @@
-# Digitalis Framework: View System
+# Lattice: View System
 
-The Digitalis Framework provides a powerful view system for rendering UI components with dependency injection, parameter inheritance, and lifecycle hooks.
+Lattice provides a powerful view system for rendering UI components with dependency injection, parameter inheritance, and lifecycle hooks.
 
 ---
 
@@ -1229,8 +1229,8 @@ Fields extend Component for form inputs.
 ### Basic Usage
 
 ```php
-use Digitalis\Field\Input;
-use Digitalis\Field\Select;
+use Lattice\Field\Input;
+use Lattice\Field\Select;
 
 echo new Input([
     'name'        => 'email',
@@ -1288,7 +1288,7 @@ Fields render with row/wrapper structure:
 ### Creating Custom Fields
 
 ```php
-class Price_Field extends \Digitalis\Field\Input {
+class Price_Field extends \Lattice\Field\Input {
     protected static $defaults = [
         'prefix' => '$',
         'classes' => ['price-field'],
@@ -1353,7 +1353,7 @@ class Account_Switcher extends View {
         }
 
         echo "<form method='post' class='account-switcher'>";
-        echo new \Digitalis\Field\Hidden([
+        echo new \Lattice\Field\Hidden([
             'name'  => 'nonce',
             'value' => wp_create_nonce('switch-account'),
         ]);

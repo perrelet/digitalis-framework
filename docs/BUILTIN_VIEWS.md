@@ -1,6 +1,6 @@
-# Digitalis Framework: Built-in Views Reference
+# Lattice: Built-in Views Reference
 
-Complete documentation of all views, components, and fields shipped with the Digitalis Framework.
+Complete documentation of all views, components, and fields shipped with Lattice.
 
 ---
 
@@ -74,7 +74,7 @@ All built-in views follow the same patterns documented in [VIEW_SYSTEM.md](./VIE
 
 ### Layout
 
-**Namespace:** `Digitalis\Layout`
+**Namespace:** `Lattice\Layout`
 **File:** `include/views/layout.view.php`
 **Extends:** `View` (uses `Resolvable` trait)
 
@@ -93,7 +93,7 @@ Subclass for different shell structures. Override shell parts via Page_View `$la
 
 ### Page_View
 
-**Namespace:** `Digitalis\Page_View`
+**Namespace:** `Lattice\Page_View`
 **File:** `include/views/page-view.view.php`
 **Extends:** `View` (uses `Resolvable` trait)
 
@@ -105,7 +105,7 @@ protected static $layout = [];  // optional layout overrides, e.g. ['header' => 
 
 ### Header
 
-**Namespace:** `Digitalis\Header`
+**Namespace:** `Lattice\Header`
 **File:** `include/views/header.component.php`
 **Extends:** `Component`
 
@@ -113,7 +113,7 @@ Default header shell part. Renders a `<header>` element. Shell parts carry `prot
 
 ### Footer
 
-**Namespace:** `Digitalis\Footer`
+**Namespace:** `Lattice\Footer`
 **File:** `include/views/footer.component.php`
 **Extends:** `Component`
 
@@ -121,7 +121,7 @@ Default footer shell part. Renders a `<footer>` element. Same `$shell` rule as `
 
 ### Modals
 
-**Namespace:** `Digitalis\Modals`
+**Namespace:** `Lattice\Modals`
 **File:** `include/views/modals.component.php`
 **Extends:** `Component`
 
@@ -135,7 +135,7 @@ Standalone `Feature` classes shipped with the framework that are available for o
 
 ### Turn_Off_Emojicons
 
-**Namespace:** `Digitalis\Turn_Off_Emojicons`
+**Namespace:** `Lattice\WP\Turn_Off_Emojicons`
 **File:** `include/features/wp/turn-off-emojicons.feature.php`
 
 Completely disables WordPress's emoji detection and loading across the front end, admin, and login screens. Removes the inline detection script, emoji CSS, TinyMCE plugin, DNS prefetch hint, and `wp_mail` emoji conversion.
@@ -146,15 +146,15 @@ Instantiate it once during your plugin or theme boot:
 
 ```php
 // In App::boot_shared() or similar
-new \Digitalis\Turn_Off_Emojicons();
+new \Lattice\WP\Turn_Off_Emojicons();
 ```
 
 Or if loaded via the framework autoloader, create an instance in your plugin's `include/` directory:
 
 ```php
 // include/turn-off-emojicons.feature.php
-namespace Digitalis;
-class Turn_Off_Emojicons extends \Digitalis\Turn_Off_Emojicons {}
+namespace Lattice;
+class Turn_Off_Emojicons extends \Lattice\WP\Turn_Off_Emojicons {}
 ```
 
 There are no configuration options — instantiation is all that is required.
@@ -165,7 +165,7 @@ There are no configuration options — instantiation is all that is required.
 
 ### Debug
 
-**Namespace:** `Digitalis\Debug`
+**Namespace:** `Lattice\Debug`
 **File:** `include/views/debug.view.php`
 
 A powerful debugging view that displays variables in a collapsible debugger panel. Only visible to administrators.
@@ -202,8 +202,8 @@ js_log($variable);
 #### Direct Usage
 
 ```php
-use Digitalis\Debug;
-use Digitalis\Debug_Options;
+use Lattice\Debug;
+use Lattice\Debug_Options;
 
 // Basic usage
 Debug::write($user, $order, $items);
@@ -228,7 +228,7 @@ Debug::write($data, new Debug_Options([
 
 ### Debug_Code_Block
 
-**Namespace:** `Digitalis\Debug_Code_Block`
+**Namespace:** `Lattice\Debug_Code_Block`
 **File:** `include/views/debug-code-block.view.php`
 
 A sub-component used by Debug to render individual code blocks in the debugger panel.
@@ -244,7 +244,7 @@ A sub-component used by Debug to render individual code blocks in the debugger p
 
 ### Archive
 
-**Namespace:** `Digitalis\Archive`
+**Namespace:** `Lattice\Archive`
 **File:** `include/views/archive.view.php`
 
 Abstract base class for rendering paginated lists of items with filtering controls.
@@ -309,7 +309,7 @@ Product_Archive::render([
 
 ### Post_Archive
 
-**Namespace:** `Digitalis\Post_Archive`
+**Namespace:** `Lattice\Post_Archive`
 **File:** `include/views/post-archive.archive.php`
 
 Archive implementation for WordPress posts with WP_Query pagination.
@@ -340,7 +340,7 @@ Post_Archive::render([
 
 ### Term_Archive
 
-**Namespace:** `Digitalis\Term_Archive`
+**Namespace:** `Lattice\Term_Archive`
 **File:** `include/views/term-archive.archive.php`
 
 Abstract archive implementation for WordPress terms.
@@ -357,7 +357,7 @@ Abstract archive implementation for WordPress terms.
 
 ### Iterator_UI
 
-**Namespace:** `Digitalis\Iterator_UI`
+**Namespace:** `Lattice\Iterator_UI`
 **File:** `include/views/iterator-ui.view.php`
 
 Renders progress UI for batch processing iterators.
@@ -389,7 +389,7 @@ Iterator_UI::render(['iterator' => $iterator]);
 
 ### Query_Filters
 
-**Namespace:** `Digitalis\Query_Filters`
+**Namespace:** `Lattice\Query_Filters`
 **File:** `include/views/query-filters.view.php`
 
 Abstract field group for AJAX-powered archive filtering. Renders filter fields and bootstraps the JavaScript query module inline.
@@ -522,7 +522,7 @@ Alternatively, override `selectors.items` on the `Query_Filters` subclass to poi
 
 ### Component (Base)
 
-**Namespace:** `Digitalis\Component`
+**Namespace:** `Lattice\Component`
 **File:** `include/views/component.view.php`
 
 Base class for HTML components with element and attribute handling.
@@ -560,7 +560,7 @@ class Card extends Component {
 
 ### Field_Group
 
-**Namespace:** `Digitalis\Field_Group`
+**Namespace:** `Lattice\Component\Field_Group`
 **File:** `include/views/components/field-group.component.php`
 
 Renders a group of form fields together.
@@ -624,7 +624,7 @@ Field_Group::render([
 
 ### Form
 
-**Namespace:** `Digitalis\Form`
+**Namespace:** `Lattice\Component\Form`
 **File:** `include/views/components/form.field-group.php`
 
 Field group with `<form>` tag and form attributes.
@@ -660,7 +660,7 @@ Form::render([
 
 ### HTMX
 
-**Namespace:** `Digitalis\Component\HTMX`
+**Namespace:** `Lattice\Component\HTMX`
 **File:** `include/views/components/htmx.component.php`
 
 Component pre-configured for HTMX interactions.
@@ -686,7 +686,7 @@ Component pre-configured for HTMX interactions.
 #### Usage
 
 ```php
-use Digitalis\Component\HTMX;
+use Lattice\Component\HTMX;
 
 HTMX::render([
     'content' => 'Load More',
@@ -713,7 +713,7 @@ HTMX::render([
 
 ### Link
 
-**Namespace:** `Digitalis\Component\Link`
+**Namespace:** `Lattice\Component\Link`
 **File:** `include/views/components/link.component.php`
 
 Simple link component.
@@ -728,7 +728,7 @@ Simple link component.
 #### Usage
 
 ```php
-use Digitalis\Component\Link;
+use Lattice\Component\Link;
 
 Link::render([
     'href'    => '/products',
@@ -741,7 +741,7 @@ Link::render([
 
 ### Table
 
-**Namespace:** `Digitalis\Component\Table`
+**Namespace:** `Lattice\Component\Table`
 **File:** `include/views/components/table.component.php`
 
 Data table with automatic header/attribute handling.
@@ -766,7 +766,7 @@ Data table with automatic header/attribute handling.
 #### Usage
 
 ```php
-use Digitalis\Component\Table;
+use Lattice\Component\Table;
 
 Table::render([
     'rows' => [
@@ -803,7 +803,7 @@ $table->print();
 
 ### Menu
 
-**Namespace:** `Digitalis\Menu`
+**Namespace:** `Lattice\Component\Menu`
 **File:** `include/views/components/menu.component.php`
 **Full spec:** [`docs/specs/menu/SPEC.md`](specs/menu/SPEC.md) · **Active state:** [`docs/specs/menu/ACTIVE_STATE.md`](specs/menu/ACTIVE_STATE.md)
 
@@ -877,10 +877,10 @@ Marks emit as `data-current='true'` / `data-ancestor='true'` on the `<li>` and `
 
 #### Model layer
 
-`Digitalis\Nav_Menu` (wraps `nav_menu` term) and `Digitalis\Nav_Menu_Item` (wraps `nav_menu_item` post) provide the model layer. `Nav_Menu_Item::get_instance($id)` auto-decorates via `wp_setup_nav_menu_item()` through the `Has_WP_Post::prepare_wp_post()` hook. Subclass `Nav_Menu_Item` and override `as_menu_item_params()` to surface ACF / project-specific fields onto each item:
+`Lattice\Nav_Menu` (wraps `nav_menu` term) and `Lattice\Nav_Menu_Item` (wraps `nav_menu_item` post) provide the model layer. `Nav_Menu_Item::get_instance($id)` auto-decorates via `wp_setup_nav_menu_item()` through the `Has_WP_Post::prepare_wp_post()` hook. Subclass `Nav_Menu_Item` and override `as_menu_item_params()` to surface ACF / project-specific fields onto each item:
 
 ```php
-class My_Nav_Menu_Item extends Digitalis\Nav_Menu_Item {
+class My_Nav_Menu_Item extends Lattice\Nav_Menu_Item {
     public function as_menu_item_params () {
         $item = parent::as_menu_item_params();
         $item['icon'] = $this->get_field('icon');
@@ -893,7 +893,7 @@ class My_Nav_Menu_Item extends Digitalis\Nav_Menu_Item {
 
 ### Menu_Item
 
-**Namespace:** `Digitalis\Menu_Item`
+**Namespace:** `Lattice\Component\Menu_Item`
 **File:** `include/views/components/menu-item.component.php`
 
 A single `<li>` whose interactive shape is decided from its params. Six shapes total: link, disclosure-only, link + disclosure, mega-menu, mega-link, plus structural `divider` and `heading`.
@@ -946,7 +946,7 @@ Pass `'item_class' => My_Menu_Item::class` to `Menu` to use a subclass throughou
 
 ### Menu_Drawer
 
-**Namespace:** `Digitalis\Menu_Drawer`
+**Namespace:** `Lattice\Component\Menu_Drawer`
 **Status:** Deferred to stage 6 — not yet implemented. See [SPEC.md §3.3](specs/menu/SPEC.md).
 
 Composition wrapper for off-canvas / mobile drawer chrome — a toggle `<button>` + a `<div>` drawer containing a `Menu`. Will own focus trap, body scroll lock, Escape-close, click-outside-close, and breakpoint-based visibility. Composition over inheritance — not a `Menu` subclass.
@@ -957,7 +957,7 @@ Composition wrapper for off-canvas / mobile drawer chrome — a toggle `<button>
 
 ### Field (Base)
 
-**Namespace:** `Digitalis\Field`
+**Namespace:** `Lattice\Field`
 **File:** `include/views/field.view.php`
 
 Base class for all form fields.
@@ -996,7 +996,7 @@ Base class for all form fields.
 
 ### Input
 
-**Namespace:** `Digitalis\Field\Input`
+**Namespace:** `Lattice\Field\Input`
 **File:** `include/views/fields/input.field.php`
 
 Standard text input field.
@@ -1012,7 +1012,7 @@ Standard text input field.
 #### Usage
 
 ```php
-use Digitalis\Field\Input;
+use Lattice\Field\Input;
 
 Input::render([
     'name'        => 'email',
@@ -1034,7 +1034,7 @@ Input::render([
 
 ### Textarea
 
-**Namespace:** `Digitalis\Field\Textarea`
+**Namespace:** `Lattice\Field\Textarea`
 **File:** `include/views/fields/textarea.field.php`
 
 Multi-line text input.
@@ -1050,7 +1050,7 @@ Multi-line text input.
 #### Usage
 
 ```php
-use Digitalis\Field\Textarea;
+use Lattice\Field\Textarea;
 
 Textarea::render([
     'name'        => 'description',
@@ -1066,7 +1066,7 @@ Textarea::render([
 
 Option and optgroup labels are text (`esc_html`); `Radio` and `Checkbox` labels are HTML by contract.
 
-**Namespace:** `Digitalis\Field\Select`
+**Namespace:** `Lattice\Field\Select`
 **File:** `include/views/fields/select.field.php`
 
 Dropdown select field.
@@ -1081,7 +1081,7 @@ Dropdown select field.
 #### Usage
 
 ```php
-use Digitalis\Field\Select;
+use Lattice\Field\Select;
 
 // Simple options
 Select::render([
@@ -1121,7 +1121,7 @@ Select::render([
 
 Exposes `data-js-var` = `{name}_nice` and registers the instance at `nice_selects[js_var]` for other scripts.
 
-**Namespace:** `Digitalis\Field\Select_Nice`
+**Namespace:** `Lattice\Field\Select_Nice`
 **File:** `include/views/fields/select-nice.field.php`
 
 Enhanced select with search (uses Nice Select 2 library).
@@ -1146,7 +1146,7 @@ Enhanced select with search (uses Nice Select 2 library).
 #### Usage
 
 ```php
-use Digitalis\Field\Select_Nice;
+use Lattice\Field\Select_Nice;
 
 Select_Nice::render([
     'name'    => 'user',
@@ -1163,7 +1163,7 @@ Select_Nice::render([
 
 ### Checkbox
 
-**Namespace:** `Digitalis\Field\Checkbox`
+**Namespace:** `Lattice\Field\Checkbox`
 **File:** `include/views/fields/checkbox.field.php`
 
 Single checkbox field.
@@ -1178,7 +1178,7 @@ Single checkbox field.
 #### Usage
 
 ```php
-use Digitalis\Field\Checkbox;
+use Lattice\Field\Checkbox;
 
 Checkbox::render([
     'name'  => 'agree_terms',
@@ -1198,7 +1198,7 @@ Checkbox::render([
 
 ### Checkbox_Group
 
-**Namespace:** `Digitalis\Field\Checkbox_Group`
+**Namespace:** `Lattice\Field\Checkbox_Group`
 **File:** `include/views/fields/checkbox-group.field.php`
 
 Multiple checkboxes for multi-select.
@@ -1214,7 +1214,7 @@ Multiple checkboxes for multi-select.
 #### Usage
 
 ```php
-use Digitalis\Field\Checkbox_Group;
+use Lattice\Field\Checkbox_Group;
 
 Checkbox_Group::render([
     'name'    => 'categories',
@@ -1244,7 +1244,7 @@ Checkbox_Group::render([
 
 ### Checkbox_Buttons
 
-**Namespace:** `Digitalis\Field\Checkbox_Buttons`
+**Namespace:** `Lattice\Field\Checkbox_Buttons`
 **File:** `include/views/fields/checkbox-buttons.field.php`
 
 Checkbox group styled as buttons.
@@ -1255,7 +1255,7 @@ Same parameters as Checkbox_Group, different visual styling.
 
 ### Radio
 
-**Namespace:** `Digitalis\Field\Radio`
+**Namespace:** `Lattice\Field\Radio`
 **File:** `include/views/fields/radio.field.php`
 
 Radio button group for single selection.
@@ -1270,7 +1270,7 @@ Radio button group for single selection.
 #### Usage
 
 ```php
-use Digitalis\Field\Radio;
+use Lattice\Field\Radio;
 
 Radio::render([
     'name'    => 'size',
@@ -1288,7 +1288,7 @@ Radio::render([
 
 ### Radio_Buttons
 
-**Namespace:** `Digitalis\Field\Radio_Buttons`
+**Namespace:** `Lattice\Field\Radio_Buttons`
 **File:** `include/views/fields/radio-buttons.field.php`
 
 Radio group styled as buttons.
@@ -1299,7 +1299,7 @@ Same parameters as Radio, different visual styling.
 
 ### Hidden
 
-**Namespace:** `Digitalis\Field\Hidden`
+**Namespace:** `Lattice\Field\Hidden`
 **File:** `include/views/fields/hidden.field.php`
 
 Hidden input field.
@@ -1314,7 +1314,7 @@ Hidden input field.
 #### Usage
 
 ```php
-use Digitalis\Field\Hidden;
+use Lattice\Field\Hidden;
 
 Hidden::render([
     'name'  => 'action',
@@ -1331,7 +1331,7 @@ Hidden::render([
 
 ### Hidden_Group
 
-**Namespace:** `Digitalis\Field\Hidden_Group`
+**Namespace:** `Lattice\Field\Hidden_Group`
 **File:** `include/views/fields/hidden-group.field.php`
 
 Multiple hidden fields from key-value data.
@@ -1345,7 +1345,7 @@ Multiple hidden fields from key-value data.
 #### Usage
 
 ```php
-use Digitalis\Field\Hidden_Group;
+use Lattice\Field\Hidden_Group;
 
 Hidden_Group::render([
     'data' => [
@@ -1362,7 +1362,7 @@ Hidden_Group::render([
 
 ### Button
 
-**Namespace:** `Digitalis\Field\Button`
+**Namespace:** `Lattice\Field\Button`
 **File:** `include/views/fields/button.field.php`
 
 Button element.
@@ -1377,7 +1377,7 @@ Button element.
 #### Usage
 
 ```php
-use Digitalis\Field\Button;
+use Lattice\Field\Button;
 
 Button::render([
     'text'    => 'Click Me',
@@ -1392,7 +1392,7 @@ Button::render([
 
 ### Submit
 
-**Namespace:** `Digitalis\Field\Submit`
+**Namespace:** `Lattice\Field\Submit`
 **File:** `include/views/fields/submit.field.php`
 
 Form submit button.
@@ -1407,7 +1407,7 @@ Form submit button.
 #### Usage
 
 ```php
-use Digitalis\Field\Submit;
+use Lattice\Field\Submit;
 
 Submit::render([
     'text'    => 'Save Changes',
@@ -1419,7 +1419,7 @@ Submit::render([
 
 ### Number
 
-**Namespace:** `Digitalis\Field\Number`
+**Namespace:** `Lattice\Field\Number`
 **File:** `include/views/fields/number.field.php`
 
 Numeric input with min/max/step.
@@ -1436,7 +1436,7 @@ Numeric input with min/max/step.
 #### Usage
 
 ```php
-use Digitalis\Field\Number;
+use Lattice\Field\Number;
 
 Number::render([
     'name'    => 'quantity',
@@ -1459,7 +1459,7 @@ Number::render([
 
 ### Range
 
-**Namespace:** `Digitalis\Field\Range`
+**Namespace:** `Lattice\Field\Range`
 **File:** `include/views/fields/range.field.php`
 
 Range slider with optional value display.
@@ -1478,7 +1478,7 @@ Range slider with optional value display.
 #### Usage
 
 ```php
-use Digitalis\Field\Range;
+use Lattice\Field\Range;
 
 Range::render([
     'name'         => 'volume',
@@ -1504,7 +1504,7 @@ Range::render([
 
 ### File
 
-**Namespace:** `Digitalis\Field\File`
+**Namespace:** `Lattice\Field\File`
 **File:** `include/views/fields/file.field.php`
 
 File upload input.
@@ -1519,7 +1519,7 @@ File upload input.
 #### Usage
 
 ```php
-use Digitalis\Field\File;
+use Lattice\Field\File;
 
 File::render([
     'name'   => 'document',
@@ -1539,7 +1539,7 @@ File::render([
 
 ### Date
 
-**Namespace:** `Digitalis\Field\Date`
+**Namespace:** `Lattice\Field\Date`
 **File:** `include/views/fields/date.field.php`
 
 Native HTML5 date input.
@@ -1553,7 +1553,7 @@ Native HTML5 date input.
 #### Usage
 
 ```php
-use Digitalis\Field\Date;
+use Lattice\Field\Date;
 
 Date::render([
     'name'    => 'birth_date',
@@ -1566,7 +1566,7 @@ Date::render([
 
 ### Date_Picker
 
-**Namespace:** `Digitalis\Field\Date_Picker`
+**Namespace:** `Lattice\Field\Date_Picker`
 **File:** `include/views/fields/date-picker.field.php`
 
 Enhanced date picker (uses Vanilla JS Datepicker).
@@ -1589,7 +1589,7 @@ Enhanced date picker (uses Vanilla JS Datepicker).
 #### Usage
 
 ```php
-use Digitalis\Field\Date_Picker;
+use Lattice\Field\Date_Picker;
 
 Date_Picker::render([
     'name'        => 'event_date',
@@ -1605,7 +1605,7 @@ Date_Picker::render([
 
 ### Date_Range
 
-**Namespace:** `Digitalis\Field\Date_Range`
+**Namespace:** `Lattice\Field\Date_Range`
 **File:** `include/views/fields/date-range.field.php`
 
 Date range picker with start and end dates.
@@ -1625,7 +1625,7 @@ Date range picker with start and end dates.
 #### Usage
 
 ```php
-use Digitalis\Field\Date_Range;
+use Lattice\Field\Date_Range;
 
 Date_Range::render([
     'name'          => 'booking',
@@ -1693,17 +1693,17 @@ View (abstract)
 ### Importing Classes
 
 ```php
-use Digitalis\Field\Input;
-use Digitalis\Field\Select;
-use Digitalis\Field\Textarea;
-use Digitalis\Field\Checkbox;
-use Digitalis\Field\Hidden;
-use Digitalis\Field\Submit;
-use Digitalis\Field_Group;
-use Digitalis\Form;
-use Digitalis\Component\Table;
-use Digitalis\Component\HTMX;
-use Digitalis\Menu;
+use Lattice\Field\Input;
+use Lattice\Field\Select;
+use Lattice\Field\Textarea;
+use Lattice\Field\Checkbox;
+use Lattice\Field\Hidden;
+use Lattice\Field\Submit;
+use Lattice\Component\Field_Group;
+use Lattice\Component\Form;
+use Lattice\Component\Table;
+use Lattice\Component\HTMX;
+use Lattice\Component\Menu;
 ```
 
 ### Common Field Usage

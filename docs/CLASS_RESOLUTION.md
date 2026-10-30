@@ -1,6 +1,6 @@
-# Digitalis Framework: Model Class Resolution
+# Lattice: Model Class Resolution
 
-The Digitalis Framework includes an automatic class resolution system that determines the most specific model subclass when retrieving instances. This enables polymorphic model handling where base class factory methods return the appropriate specialized subclass.
+Lattice includes an automatic class resolution system that determines the most specific model subclass when retrieving instances. This enables polymorphic model handling where base class factory methods return the appropriate specialized subclass.
 
 ---
 
@@ -36,10 +36,10 @@ if ($post->post_type === 'project') {
 
 ### The Solution
 
-The Digitalis class resolution system automatically determines and returns the most specific class:
+The Lattice class resolution system automatically determines and returns the most specific class:
 
 ```php
-// Digitalis - returns the appropriate class
+// Lattice - returns the appropriate class
 $model = Post::get_instance(123);
 
 // If post 123 is type 'project' → Project instance
@@ -267,16 +267,16 @@ public static function static_init() {
 
 ```php
 Model::$class_map = [
-    'Digitalis\Post' => [
+    'Lattice\Post' => [
         'Digitalis_Co\Project'        => 1,
         'Digitalis_Co\Document'       => 1,
         'Digitalis_Co\Gateway'        => 1,
         'Digitalis_Co\Portfolio_Item' => 1,
     ],
-    'Digitalis\User' => [
+    'Lattice\User' => [
         'Digitalis_Co\Account' => 1,
     ],
-    'Digitalis\Model' => [
+    'Lattice\Model' => [
         'Digitalis_Co\Project'        => 1,
         'Digitalis_Co\Document'       => 1,
         'Digitalis_Co\Account'        => 1,
@@ -296,9 +296,9 @@ class Project extends Post { protected static $post_type = 'project'; }
 class Active_Project extends Project { protected static $post_status = 'active'; }
 
 // Active_Project registers with:
-Model::$class_map['Digitalis\Post']['Active_Project'] = 11;
-Model::$class_map['Digitalis\WP_Model']['Active_Project'] = 11;
-Model::$class_map['Digitalis\Model']['Active_Project'] = 11;
+Model::$class_map['Lattice\Post']['Active_Project'] = 11;
+Model::$class_map['Lattice\WP_Model']['Active_Project'] = 11;
+Model::$class_map['Lattice\Model']['Active_Project'] = 11;
 ```
 
 ---
@@ -627,7 +627,7 @@ Factory::$cache = [
 **Debug:**
 ```php
 // Check what's registered
-var_dump(Model::$class_map['Digitalis\Post']);
+var_dump(Model::$class_map['Lattice\Post']);
 
 // Check validation
 var_dump(Project::validate_id(123));

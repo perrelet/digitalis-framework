@@ -1,6 +1,6 @@
-# Digitalis Framework Autoloader
+# Lattice Autoloader
 
-The Digitalis Framework uses a custom inheritance-aware autoloader that automatically resolves class dependencies and loads files in the correct order based on inheritance hierarchies encoded in file names.
+Lattice uses a custom inheritance-aware autoloader that automatically resolves class dependencies and loads files in the correct order based on inheritance hierarchies encoded in file names.
 
 ---
 
@@ -124,19 +124,19 @@ Common parent class identifiers used in file names:
 
 | Identifier | Framework Class | Example File |
 |------------|-----------------|--------------|
-| `post` | `Digitalis\Post` | `project.post.php` |
-| `user` | `Digitalis\User` | `customer.user.php` |
-| `term` | `Digitalis\Term` | `category.term.php` |
-| `order` | `Digitalis\Order` | `subscription.order.php` |
-| `view` | `Digitalis\View` | `card.view.php` |
-| `route` | `Digitalis\Route` | `api-endpoint.route.php` |
-| `feature` | `Digitalis\Feature` | `notifications.feature.php` |
-| `integration` | `Digitalis\Integration` | `stripe.integration.php` |
-| `singleton` | `Digitalis\Singleton` | `cache-manager.singleton.php` |
-| `post-type` | `Digitalis\Post_Type` | `event.post-type.php` |
-| `taxonomy` | `Digitalis\Taxonomy` | `event-category.taxonomy.php` |
-| `order-status` | `Digitalis\Order_Status` | `estimate.order-status.php` |
-| `woo-account-page` | `Digitalis\Woo_Account_Page` | `orders.woo-account-page.php` |
+| `post` | `Lattice\Post` | `project.post.php` |
+| `user` | `Lattice\User` | `customer.user.php` |
+| `term` | `Lattice\Term` | `category.term.php` |
+| `order` | `Lattice\Order` | `subscription.order.php` |
+| `view` | `Lattice\View` | `card.view.php` |
+| `route` | `Lattice\Route` | `api-endpoint.route.php` |
+| `feature` | `Lattice\Feature` | `notifications.feature.php` |
+| `integration` | `Lattice\Integration` | `stripe.integration.php` |
+| `singleton` | `Lattice\Singleton` | `cache-manager.singleton.php` |
+| `post-type` | `Lattice\Post_Type` | `event.post-type.php` |
+| `taxonomy` | `Lattice\Taxonomy` | `event-category.taxonomy.php` |
+| `order-status` | `Lattice\Order_Status` | `estimate.order-status.php` |
+| `woo-account-page` | `Lattice\Woo_Account_Page` | `orders.woo-account-page.php` |
 
 ---
 
@@ -268,7 +268,7 @@ After loading a class, the autoloader can optionally instantiate it. This is con
 ### The `Auto_Instantiate` Trait
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 trait Auto_Instantiate {
     public static function get_auto_instantiation() {
@@ -410,7 +410,7 @@ add_filter('lattice.instantiate.digitalis_co.my_feature', function($instantiatio
 <?php
 namespace My_Plugin;
 
-use Digitalis\App;
+use Lattice\App;
 
 class My_Plugin extends App {
 
@@ -471,10 +471,10 @@ digitalis-co/
 │   ├── digitalis-co.app.php           # Main App class
 │   │
 │   ├── models/
-│   │   ├── user.user.php              # User extends \Digitalis\User
+│   │   ├── user.user.php              # User extends \Lattice\User
 │   │   ├── account.user.php           # Account extends User
 │   │   ├── project.post.php           # Project extends Post
-│   │   └── order.order.php            # Order extends \Digitalis\Order
+│   │   └── order.order.php            # Order extends \Lattice\Order
 │   │
 │   ├── post-types/
 │   │   ├── project.post-type.php
@@ -513,7 +513,7 @@ digitalis-co/
 
 ```
 Framework:
-  Digitalis\Woo_Account_Page (base)
+  Lattice\Woo_Account_Page (base)
 
 Plugin (loaded in order):
   1. account-page.woo-account-page.php
@@ -533,11 +533,11 @@ Plugin (loaded in order):
 
 ```
 Framework:
-  Digitalis\Route (base)
+  Lattice\Route (base)
 
 Plugin (loaded in order):
   1. route.route.php
-     → Route extends \Digitalis\Route (namespace override)
+     → Route extends \Lattice\Route (namespace override)
 
   2. order-route.route.php
      → Order_Route extends Route

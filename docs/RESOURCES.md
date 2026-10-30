@@ -1,4 +1,4 @@
-# Digitalis Framework: Resources
+# Lattice: Resources
 
 Read and change models through one layer, the way wp-admin does: REST (`lattice/v1`) and WP-CLI (`wp lattice`) over one service.
 
@@ -74,15 +74,15 @@ The feature creates its journal table, schedules a daily prune and registers its
 The model uses both traits; the resource sits beside it as `offer.model-resource.php`.
 
 ```php
-class Offer extends \Digitalis\Post {
+class Offer extends \Lattice\Post {
 
-    use \Digitalis\Has_Version, \Digitalis\Has_Unsaved_Copies;
+    use \Lattice\Has_Version, \Lattice\Has_Unsaved_Copies;
 
     public function forget_derived () : void { $this->flush(); }
 
 }
 
-class Offer_Resource extends \Digitalis\Model_Resource {
+class Offer_Resource extends \Lattice\Model_Resource {
 
     protected static $name        = 'offer';
     protected static $model_class = Offer::class;
@@ -205,7 +205,7 @@ The API answers flat paths (`stages.1.ends`). For people, `$change->present()` (
 One ACF options page is one record, its slug its id:
 
 ```php
-class Hub_Settings_Resource extends \Digitalis\Options_Page_Resource {
+class Hub_Settings_Resource extends \Lattice\Options_Page_Resource {
 
     protected static $name = 'hub_settings';
     protected static $page = 'somm-hub';

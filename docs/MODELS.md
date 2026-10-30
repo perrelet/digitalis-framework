@@ -1,4 +1,4 @@
-# Digitalis Framework: Model Reference
+# Lattice: Model Reference
 
 Quick reference for model classes and their available methods.
 
@@ -440,7 +440,7 @@ The `Archive` view auto-detects which to use based on `item_model::is_main_query
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `is_main_query(WP_Query $wp_query)` | `bool` | True if this is WordPress's main query |
-| `is_digitalis_ajax(WP_Query $wp_query)` | `bool` | True if this is a Digitalis AJAX request |
+| `is_digitalis_ajax(WP_Query $wp_query)` | `bool` | True if this is a Lattice AJAX request |
 | `query_is_post_type(WP_Query $wp_query)` | `bool` | True if the query is for this post type |
 | `get_from_main_query(&$wp_query)` | `static[]` | Wraps `$GLOBALS['wp_query']->posts` as model instances |
 
@@ -1037,7 +1037,7 @@ $post->delete_meta('_custom_key');
 ### Custom Post Type Model
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project extends Post {
     protected static $post_type = 'project';
@@ -1067,7 +1067,7 @@ class Project extends Post {
 ### Custom User Model
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Account extends User {
     protected static $role = 'account';
@@ -1098,7 +1098,7 @@ class Account extends User {
 ### Custom Term Model
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project_Category extends Term {
     protected static $taxonomy = 'project_category';
@@ -1121,7 +1121,7 @@ class Project_Category extends Term {
 ### Custom Order Model
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Invoice extends Order {
     public function get_account(): ?Account {
@@ -1146,7 +1146,7 @@ class Invoice extends Order {
 ### Custom ACF_Row Model
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Milestone extends ACF_Row {
     protected static $repeater = 'milestones';

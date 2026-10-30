@@ -1,8 +1,8 @@
-# Digitalis Framework Architecture
+# Lattice Architecture
 
 ## Overview
 
-The Digitalis Framework is a modern, object-oriented PHP framework built on top of WordPress. It implements MVC-like patterns with a focus on:
+Lattice is a modern, object-oriented PHP framework built on top of WordPress. It implements MVC-like patterns with a focus on:
 
 - **Model abstraction** for WordPress entities (posts, users, terms)
 - **Factory patterns** for efficient instance management
@@ -95,7 +95,7 @@ framework/
 Ensures only one instance of a class exists. Used for services and managers.
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Singleton extends Design_Pattern {
     protected static $instances = [];
@@ -119,7 +119,7 @@ abstract class Singleton extends Design_Pattern {
 Creates and caches instances with optional property-based caching. Instances are stored in a shared registry keyed by `$cache_group` and the value of `$cache_property` on the instance. Features scope that registry per class and name configs by `id`: see [CONVENTIONS: Features](./CONVENTIONS.md#features).
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Factory extends Creational {
     protected static $cache_group    = '__global__'; // Namespace for instance storage
@@ -295,10 +295,10 @@ is useful documentation.
 Hooks are namespaced using the class name:
 
 ```php
-// Class: Digitalis\My_Feature
-// Hook name: digitalis.my_feature.method_name
+// Class: Lattice\My_Feature
+// Hook name: lattice.my_feature.method_name
 $this->add_hook('my_event', 'handle_event');
-// Registers: digitalis.my_feature.my_event
+// Registers: lattice.my_feature.my_event
 ```
 
 ---
@@ -329,7 +329,7 @@ Theme index.php → App::render()
 
 ### App Coordination
 
-`App` extends `Factory` (not `Singleton`). All Apps share a single cache group (`protected static $cache_group = self::class`) so the base `Digitalis\App` can discover all active plugin Apps.
+`App` extends `Factory` (not `Singleton`). All Apps share a single cache group (`protected static $cache_group = self::class`) so the base `Lattice\App` can discover all active plugin Apps.
 
 `App::render()` is static — called from the theme. It iterates all registered Apps via `render_app()`, then resolves and renders the page:
 
@@ -392,7 +392,7 @@ An abstract `View` using `Resolvable`. Owns the body content. Declares request c
 ### Post Type Registration
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 abstract class Post_Type extends Singleton {
     protected static $slug = '';        // Post type slug
@@ -510,9 +510,9 @@ class My_Plugin extends App {
 
     // Hook database migrations
     public function ensure_schema () {
-        (new \Digitalis\DB\Migration_Runner(
-            new \Digitalis\DB\Table_Registry(),
-            new \Digitalis\DB\Option_Migration_Logger()
+        (new \Lattice\DB\Migration_Runner(
+            new \Lattice\DB\Table_Registry(),
+            new \Lattice\DB\Option_Migration_Logger()
         ))->migrate_module(My_Schema::class);
     }
 
@@ -874,7 +874,7 @@ digitalis-co/
 ### Custom Post Types (Real Example)
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Project extends Singleton {
     protected static $slug     = 'project';
@@ -895,7 +895,7 @@ class Project extends Singleton {
 ### Domain Models (Real Example)
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Account extends Post {
     protected static $post_type = 'account';
@@ -925,7 +925,7 @@ class Account extends Post {
 ### Custom Order Statuses
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Order_Status_Estimate extends Singleton {
     protected static $slug  = 'wc-estimate';
@@ -943,7 +943,7 @@ class Order_Status_Estimate extends Singleton {
 ### WooCommerce Account Pages
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Projects_Account_Page extends Woo_Account_Page {
     protected static $slug     = 'projects';
@@ -974,9 +974,9 @@ class Projects_Account_Page extends Woo_Account_Page {
 ### Permission System
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
-class User extends \Digitalis\User {
+class User extends \Lattice\User {
 
     // Custom capability checks
     public function can(string $capability, $object_id = null): bool {
@@ -1006,7 +1006,7 @@ class User extends \Digitalis\User {
 ### REST API Routes
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Invoice_Route extends Route {
     protected $route = 'invoice/(?P<id>\d+)';
@@ -1031,7 +1031,7 @@ class Invoice_Route extends Route {
 ### ACF Bidirectional Relationships
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 // Automatically syncs Account <-> Project relationships
 Bidirectional_Relationship::create([
@@ -1049,7 +1049,7 @@ Bidirectional_Relationship::create([
 ### Dashboard Widgets
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Box_Link_Widget extends View {
     protected static $defaults = [

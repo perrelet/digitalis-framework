@@ -1,4 +1,4 @@
-# Digitalis Framework — Conventions
+# Lattice — Conventions
 
 Preferred patterns where more than one syntax is valid. These won't break anything, but new code should follow the preferred form for consistency.
 
@@ -48,14 +48,14 @@ Buffering markup with `ob_start()` inside `params()` is a lifecycle bypass — s
 ```php
 // Supported, but not preferred
 [
-    'field'       => \Digitalis\Field\Input::class,
+    'field'       => \Lattice\Field\Input::class,
     'name'        => 'first_name',
     'label'       => 'First Name',
     'type'        => 'text',
 ],
 
 // Preferred — instantiate directly
-new \Digitalis\Field\Input([
+new \Lattice\Field\Input([
     'name'        => 'first_name',
     'label'       => 'First Name',
     'type'        => 'text',
@@ -102,7 +102,7 @@ $this->load_feature('acf/acf-focal-point.feature.php', ['id' => 'event-images', 
 $this->load_feature('acf/acf-focal-point.feature.php', ['id' => 'teacher-photos', 'group_key' => 'group_teacher_photo']);
 
 Dev_Role::inst();                                    // the unconfigured feature
-\Digitalis\ACF\Focal_Point::inst('event-images');    // that config, from any class
+\Lattice\ACF\Focal_Point::inst('event-images');    // that config, from any class
 ```
 
 The name is whichever property `$cache_property` points to, `id` by default; a feature named otherwise sets its own (`'slug'`), and `null` opts out of names altogether. Loading the same name again returns the instance already running; its new config is ignored. Names are scoped to the feature's class, so unrelated features may share one. A family that declares its own `$cache_group` shares one namespace instead, so its base class finds any member by name: `Meta_Box::inst('somm-keywords')` finds the `Keywords_Metabox`. Within a family a name is one instance, whichever subclass asks, so keep names unique there (as meta box ids already are); two classes declaring the same one both run, each found by its class, with a warning. `create()` stays what it is everywhere: a new instance nothing can find again.

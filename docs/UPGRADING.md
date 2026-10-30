@@ -86,7 +86,7 @@ Measured on the live consumers before release:
 
 | Violation | Mechanical fix |
 |---|---|
-| Two unrelated classes validate the same id at equal specificity (thrown at resolution) | Narrow one `validate_id()` or add a distinguishing static. A subclass already beats its ancestor and a consumer model beats the framework's, so `class Page extends \Digitalis\Post` alongside `Lattice\Page`, or `class Event extends \Eventropy\Event`, resolves without change |
+| Two unrelated classes validate the same id at equal specificity (thrown at resolution) | Narrow one `validate_id()` or add a distinguishing static. A subclass already beats its ancestor and a consumer model beats the framework's, so `class Page extends \Lattice\Post` alongside `Lattice\Page`, or `class Event extends \Eventropy\Event`, resolves without change |
 | `validate_id()` re-enters resolution (calls `get_instance()` on its own family) | Cheap checks only in `validate_id()`; resolve models after validation |
 | `static_init()` override never calls `parent::static_init()` (checked at boot) | Call `parent::static_init()` first |
 | `$post->get_type()` (throws at the call) | `get_post_type()` |

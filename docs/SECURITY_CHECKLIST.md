@@ -1,6 +1,6 @@
-# Digitalis Framework Security Checklist
+# Lattice Security Checklist
 
-A comprehensive security checklist for WordPress development with the Digitalis Framework.
+A comprehensive security checklist for WordPress development with Lattice.
 
 ---
 
@@ -210,7 +210,7 @@ if (!current_user_can('edit_post', $post_id)) {
     wp_die('You cannot edit this post.');
 }
 
-// Custom capability check with Digitalis User model
+// Custom capability check with the Lattice User model
 $user = User::current();
 if (!$user || !$user->can('approve_estimate', $order_id)) {
     wp_die('Permission denied.');
@@ -220,9 +220,9 @@ if (!$user || !$user->can('approve_estimate', $order_id)) {
 ### Framework Permission Pattern
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
-class User extends \Digitalis\User {
+class User extends \Lattice\User {
 
     public function can(string $capability, $context = null): bool {
         switch ($capability) {
@@ -389,7 +389,7 @@ A `Route` answers `GET` only, with an open `permission()`, until it says otherwi
 ### Secure Route Definition
 
 ```php
-namespace Digitalis;
+namespace Lattice;
 
 class Secure_Route extends Route {
 
