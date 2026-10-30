@@ -467,6 +467,28 @@ add_filter('digitalis_woocommerce_account_page_icon', function($icon, $slug, $pa
 }, 10, 3);
 ```
 
+### Lattice Hooks
+
+Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are used exactly as written.
+
+| Hook | Type | Arguments | Use |
+|------|------|-----------|-----|
+| `lattice.feature.paths` | Filter | `$paths` | Base paths `App::load_feature()` searches, in order |
+| `lattice.view.editors` | Filter | `$editors`, `$class` | Editors a view is published to |
+| `lattice.view.controls` | Filter | `$controls`, `$class` | A view's controls inside an editor |
+| `lattice.post.duplicate.exclude_meta` | Filter | `$keys`, `$post` | Meta keys kept off every copy `Post::duplicate()` makes |
+| `lattice.relationship.partner_updated` | Action | `$type`, `$id`, `$key`, `$relationship` | After `ACF\Bidirectional_Relationship` writes a partner's meta, which is not a save |
+| `lattice.keywords.collected` | Filter | `$keywords`, `$model` | Keywords before `Has_Keywords` writes them |
+| `lattice.keywords.updated` | Action | `$model`, `$keywords` | After the keywords are written |
+| `lattice.resources.allow` | Filter | `$allowed`, `$user`, `$resource`, `$operation` | Refuse an operation on a resource; it can never grant one |
+| `lattice.resources.refuse` | Filter | `$reason`, `$resource`, `$model`, `$operation` | A non-empty reason refuses one record as `locked` |
+| `lattice.resources.query` | Filter | `$args`, `$resource` | A resource list's query, to leave records out |
+| `lattice.resources.journal` | Filter | `$journal`, `$resource`, `$model` | `false` keeps a record's changes out of the journal |
+| `lattice.resources.present` | Filter | `$lines`, `$resource`, `$before`, `$after`, `$model` | Add to a change presented for people |
+| `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
+
+The resources hooks are described in [RESOURCES.md](./RESOURCES.md#policy).
+
 ---
 
 ## Common Patterns
@@ -718,6 +740,7 @@ class ACF_Customizations extends Feature {
 | `Digitalis/Taxonomy/{Class}/Args` | Filter | Taxonomy args |
 | `Digitalis/Field_Group/Field` | Filter | Field_Group fields |
 | `digitalis_woocommerce_account_page_icon` | Filter | Account page icons |
+| `lattice.*` | Filter, Action | Features, copies, relationships, keywords and resources: see [Lattice Hooks](#lattice-hooks) |
 
 ### Naming Convention
 

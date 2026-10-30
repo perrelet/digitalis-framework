@@ -589,7 +589,7 @@ Invoice_Route::get_instance();
 | `permission()` | `public permission(WP_REST_Request $request): mixed` | Override to add permission logic. Supports DI from `$args`. Default: `true`. |
 | `callback()` | `public callback(WP_REST_Request $request): mixed` | Override for route logic. Supports DI from `$args`. |
 | `handle()` | `public handle(WP_REST_Request $request): mixed` | Default handler — delegates to `callback()` via `request_inject()`. |
-| `permission_wrap()` | `public permission_wrap(WP_REST_Request $request): mixed` | WP callback — calls and caches `permission()`. |
+| `permission_wrap()` | `public permission_wrap(WP_REST_Request $request): mixed` | WP callback: calls `permission()` with DI, fresh for every request. |
 | `callback_wrap()` | `public callback_wrap(WP_REST_Request $request): mixed` | WP callback — checks nonce, calls handler, renders view if set. |
 | `get_url()` | `public get_url(array $params = [], ?bool $nonce = null, ?string $format = null): string` | Build URL via `REST_URL_Builder`. Respects `$require_nonce` and `$format` by default. |
 | `get_nonce()` | `public get_nonce(): string` | Returns (cached) `wp_rest` nonce. |

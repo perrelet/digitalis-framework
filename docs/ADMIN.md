@@ -1210,6 +1210,8 @@ class Header_View extends View {
 }
 ```
 
+An options page exposed as a resource ([RESOURCES.md](./RESOURCES.md#option-pages)) cannot show these global reads the values of a dry run. Code that should see what a change would do reads through the page's model, `$page->get_field('site_logo')`, which an unsaved copy answers.
+
 ---
 
 ## Quick Reference
