@@ -152,7 +152,7 @@ class Lattice_Resources extends Feature {
 
         $how = ['rest' => 'through the API', 'cli' => 'through WP-CLI', 'admin' => 'in wp-admin'][$row['via']] ?? '';
 
-        return implode(', ', array_filter([get_userdata($row['user_id'])?->display_name ?: 'someone', $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
+        return implode(', ', array_filter([(get_userdata($row['user_id']) ?: null)?->display_name ?: 'someone', $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
 
     }
 
@@ -188,13 +188,16 @@ class Lattice_Resources extends Feature {
 
         $resource->forget_values($model);
 
-        $this->before[$post_id] = ['status' => get_post_status($post_id), 'values' => $resource->read($model), 'version' => $model->get_version()];
+        // The editor's form has claimed the version already.
+        $this->before[$post_id] = ['status' => get_post_status($post_id), 'values' => $resource->read($model), 'version' => $model->get_version() - ($model->is_claimed() ? 1 : 0)];
 
         $resource->forget_values($model);
 
     }
 
     public function settle_save ($post_id, $wp_post, $update) {
+
+        $this->last_save = null;
 
         $before = $this->before[$post_id] ?? null;
 

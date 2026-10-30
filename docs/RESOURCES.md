@@ -293,6 +293,7 @@ Another feature has its say over single records:
 - An editor save claimed and then stopped before WordPress writes (another plugin's `wp_die` on `admin_action_editpost`) leaves the version raised once: that form is refused next time and its page needs reloading.
 - A restore's row is written as `update` and completed as `restore` milliseconds later, in the same request: only a journal read at that moment sees it half done.
 - Undo never touches action-only fields, so undoing a restore leaves anything the restore's listeners switched by action as they left it (an Email it switched off stays off).
+- Preview saves one's own draft without raising the version, so the form stays valid; another editor's form opened before it is not refused. WordPress's post lock keeps two people off one draft.
 - Only the classic editor and options pages refuse a stale save. The block editor, Quick Edit and Bulk Edit raise the version, so the layer refuses whatever read before them, but are not themselves refused.
 - An option page's dry run cannot see code that reads its options through the global `get_field($name, 'option')`.
 - Consequences are written by each resource: a resource that puts a secret's value in one leaks it there.
