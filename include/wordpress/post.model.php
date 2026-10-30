@@ -353,7 +353,7 @@ class Post extends WP_Model {
 
         } finally {
 
-            kses_init_filters();
+            kses_init(); // kses_init_filters() would switch them on for a trusted account.
 
         }
 
