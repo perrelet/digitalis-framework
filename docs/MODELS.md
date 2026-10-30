@@ -1048,6 +1048,7 @@ A count in meta that every change raises, so a write based on a stale read can b
 | `get_version_key()` | `string` | Static; the meta key, `_lattice_version` unless overridden to keep an existing one |
 | `get_version()` | `int` | The count; `0` before the first raise |
 | `claim_version($seen)` | `bool` | Raises the count only if it is still `$seen` (compare-and-set), and marks the record mid-write |
+| `is_claimed()` | `bool` | Whether this request has claimed the record and not yet finished |
 | `finish_version()` | `void` | Raises once more after a claimed write, so anyone who read mid-write is stale too |
 | `raise_version()` | `void` | One raise outside a write; does nothing while the record is mid-write |
 
@@ -1061,6 +1062,7 @@ A clone that answers `get_field()` from values not yet written, so code can see 
 |--------|---------|-------------|
 | `get_unsaved_copy($values)` | `static` | A clone answering `get_field()` from `$values` (raw ACF values by field name), formatted as ACF would |
 | `is_unsaved_copy()` | `bool` | Whether this instance is such a clone |
+| `has_unsaved_value($selector)` | `bool` | Whether the copy holds a value for that field |
 | `forget_derived()` | `void` | Override to clear whatever the model remembers from its fields; a copy calls it when made |
 
 Only `$this->get_field()` sees the unsaved values. A global `get_field()`, `get_post_meta()` or the same record fetched again by id reads what is saved.

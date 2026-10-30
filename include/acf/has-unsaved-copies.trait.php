@@ -25,11 +25,17 @@ trait Has_Unsaved_Copies {
 
     }
 
+    public function has_unsaved_value (string $selector) : bool {
+
+        return array_key_exists($selector, $this->unsaved_values ?? []);
+
+    }
+
     public function forget_derived () : void {}
 
     public function get_field ($selector, $format_value = true, $escape_html = false) {
 
-        if (is_null($this->unsaved_values) || !array_key_exists($selector, $this->unsaved_values)) return parent::get_field($selector, $format_value, $escape_html);
+        if (!$this->has_unsaved_value($selector)) return parent::get_field($selector, $format_value, $escape_html);
 
         $value = $this->unsaved_values[$selector];
 

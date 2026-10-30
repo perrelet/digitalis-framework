@@ -19,6 +19,9 @@ final class Resource_Field {
 
     const REFERENCES = ['post_object', 'relationship', 'page_link', 'taxonomy', 'user', 'image', 'file', 'gallery'];
 
+    // A flexible row's own keys beside its sub-fields, named as ACF posts them.
+    const ROW_FLAGS = ['disabled' => 'acf_fc_layout_disabled', 'label' => 'acf_fc_layout_custom_label'];
+
     const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set', 'validate'];
 
     public readonly string $name;
@@ -82,6 +85,15 @@ final class Resource_Field {
 
     }
 
+    // ACF reads a flexible field inside another field through that field, which drops its disabled rows.
+    public function holds_flexible () : bool {
+
+        foreach ([$this->sub_fields, ...array_values($this->layouts)] as $fields) foreach ($fields as $field) if ($field->is_flexible() || $field->holds_flexible()) return true;
+
+        return false;
+
+    }
+
     public function is_multiple () : bool {
 
         return in_array($this->type, static::MULTIPLE, true) || !empty($this->acf['multiple']);
@@ -121,6 +133,7 @@ final class Resource_Field {
             'secret'      => $this->is_secret(),
             'computed'    => $this->computed,
             'action_only' => $this->action_only,
+            'row_flags'   => $this->is_flexible() ? array_keys(static::ROW_FLAGS) : [],
             'sub_fields'  => $describe($this->sub_fields),
             'layouts'     => array_map(fn ($layout) => ['name' => $layout['name'], 'label' => $layout['label'] ?? '', 'sub_fields' => $describe($this->layouts[$layout['name']] ?? [])], array_values((array) ($this->acf['layouts'] ?? []))),
         ], fn ($value) => !in_array($value, ['', [], null, false], true));
@@ -163,9 +176,22 @@ final class Resource_Field {
 
             if (is_null($was))    $lines[] = ['field' => "{$path}.{$i}", 'label' => $row, 'before' => '', 'after' => 'Added'];
             elseif (is_null($is)) $lines[] = ['field' => "{$path}.{$i}", 'label' => $row, 'before' => 'Removed', 'after' => ''];
-            else array_push($lines, ...static::present_row($fields, (array) $was, (array) $is, $row, "{$path}.{$i}"));
+            else array_push($lines, ...static::present_row($fields, (array) $was, (array) $is, $row, "{$path}.{$i}"), ...$this->present_flags((array) $was, (array) $is, $row, "{$path}.{$i}"));
 
         }
+
+        return $lines;
+
+    }
+
+    protected function present_flags (array $before, array $after, string $label, string $path) : array {
+
+        if (!$this->is_flexible()) return [];
+
+        $shown = fn ($flag, $value) => ($flag === 'disabled') ? ($value ? 'Yes' : 'No') : (string) $value;
+        $lines = [];
+
+        foreach (['disabled' => 'Disabled', 'label' => 'Label'] as $flag => $name) if (($before[$flag] ?? null) !== ($after[$flag] ?? null)) $lines[] = ['field' => "{$path}.{$flag}", 'label' => "{$label} › {$name}", 'before' => $shown($flag, $before[$flag] ?? null), 'after' => $shown($flag, $after[$flag] ?? null)];
 
         return $lines;
 
@@ -270,6 +296,30 @@ final class Resource_Field {
 
     // Raw shape
 
+    // ACF drops disabled rows outside wp-admin, its raw rows never carry the flags and it caches them on its field object, so each row is read from meta.
+    public function read_rows ($acf_id) : array {
+
+        $layouts = acf_get_metadata($acf_id, $this->name);
+        $flags   = (array) acf_get_metadata($acf_id, "_{$this->name}_layout_meta");
+        $rows    = [];
+
+        foreach (is_array($layouts) ? $layouts : [] as $i => $layout) {
+
+            $row = ['acf_fc_layout' => $layout];
+
+            foreach ($this->layouts[$layout] ?? [] as $name => $sub) $row[$sub->key] = acf_get_value($acf_id, ['name' => "{$this->name}_{$i}_{$name}"] + $sub->acf);
+
+            $rows[] = $row + array_filter([
+                static::ROW_FLAGS['disabled'] => in_array($i, (array) ($flags['disabled'] ?? []), true),
+                static::ROW_FLAGS['label']    => (string) ($flags['renamed'][$i] ?? ''),
+            ]);
+
+        }
+
+        return $rows;
+
+    }
+
     // ACF keys raw rows by field key, and a flexible row's layout by acf_fc_layout.
     public function from_raw ($raw) {
 
@@ -278,7 +328,7 @@ final class Resource_Field {
         return match (true) {
             $this->is_rows()     => array_values(array_map(fn ($row) => static::row_from_raw($this->sub_fields, (array) $row), $rows)),
             $this->is_group()    => static::row_from_raw($this->sub_fields, $rows),
-            $this->is_flexible() => array_values(array_map(fn ($row) => ['layout' => $row['acf_fc_layout'] ?? ''] + static::row_from_raw($this->layouts[$row['acf_fc_layout'] ?? ''] ?? [], (array) $row), $rows)),
+            $this->is_flexible() => array_values(array_map(fn ($row) => ['layout' => $row['acf_fc_layout'] ?? ''] + static::row_from_raw($this->layouts[$row['acf_fc_layout'] ?? ''] ?? [], (array) $row) + array_filter(['disabled' => !empty($row[static::ROW_FLAGS['disabled']]), 'label' => (string) ($row[static::ROW_FLAGS['label']] ?? '')]), $rows)),
             default              => $raw,
         };
 
@@ -291,7 +341,7 @@ final class Resource_Field {
         return match (true) {
             $this->is_rows()     => array_values(array_map(fn ($row) => static::row_to_raw($this->sub_fields, (array) $row), $rows)),
             $this->is_group()    => static::row_to_raw($this->sub_fields, $rows),
-            $this->is_flexible() => array_values(array_map(fn ($row) => ['acf_fc_layout' => $row['layout'] ?? ''] + static::row_to_raw($this->layouts[$row['layout'] ?? ''] ?? [], (array) $row), $rows)),
+            $this->is_flexible() => array_values(array_map(fn ($row) => ['acf_fc_layout' => $row['layout'] ?? ''] + static::row_to_raw($this->layouts[$row['layout'] ?? ''] ?? [], (array) $row) + array_filter([static::ROW_FLAGS['disabled'] => !empty($row['disabled']), static::ROW_FLAGS['label'] => (string) ($row['label'] ?? '')]), $rows)),
             default              => $value,
         };
 
@@ -388,7 +438,10 @@ final class Resource_Field {
             $layout = is_array($row) ? (string) ($row['layout'] ?? '') : '';
 
             if (!isset($this->layouts[$layout])) $problems[] = "{$path}.{$i}.layout is one of " . implode(', ', array_keys($this->layouts)) . '.';
-            else array_push($problems, ...static::check_row($this->layouts[$layout], array_diff_key($row, ['layout' => 0]), "{$path}.{$i}", array_values(array_filter($current, fn ($was) => ($was['layout'] ?? '') === $layout)), $restoring));
+            else array_push($problems, ...static::check_row($this->layouts[$layout], array_diff_key($row, ['layout' => 0] + static::ROW_FLAGS), "{$path}.{$i}", array_values(array_filter($current, fn ($was) => ($was['layout'] ?? '') === $layout)), $restoring));
+
+            if (is_array($row) && array_key_exists('disabled', $row) && !is_bool($row['disabled'])) $problems[] = "{$path}.{$i}.disabled is true or false.";
+            if (is_array($row) && array_key_exists('label', $row) && !is_string($row['label']))   $problems[] = "{$path}.{$i}.label is text.";
 
         }
 

@@ -35,7 +35,7 @@ class Lattice_Resources extends Feature {
             'pre_post_update'                                 => 'take_before',
             'wp_after_insert_post'                            => ['settle_save', 100],
             'post_submitbox_misc_actions'                     => 'print_version',
-            'admin_action_editpost'                           => 'refuse_stale_edit',
+            'admin_action_editpost'                           => 'claim_from_editor',
             'acf/save_post'                                   => ['take_page_before', 5],
             'acf/options_page/submitbox_before_major_actions' => 'print_page_version',
             'acf/options_page/save'                           => 'settle_page_save',
@@ -81,15 +81,22 @@ class Lattice_Resources extends Feature {
 
     }
 
+    // Preview posts the editor's form and saves one's own draft, while the form stays open.
+    protected function is_preview ($post_id) : bool {
+
+        return (($_POST['wp-preview'] ?? '') === 'dopreview') && ((int) ($_POST['post_ID'] ?? 0) === (int) $post_id);
+
+    }
+
     // Version
 
     public function raise_version ($post_id) {
 
-        if ($this->is_autosave() || Resources::inst()->is_writing($post_id)) return;
+        if ($this->is_autosave() || $this->is_preview($post_id) || Resources::inst()->is_writing($post_id)) return;
 
         [, $model] = $this->find($post_id);
 
-        $model?->claim_version($model->get_version());
+        if ($model && !$model->is_claimed()) $model->claim_version($model->get_version());
 
     }
 
@@ -101,13 +108,22 @@ class Lattice_Resources extends Feature {
 
     }
 
-    public function refuse_stale_edit () {
+    // Before edit_post() writes anything, _edit_last included. post.php checks the nonce itself, but only after this.
+    public function claim_from_editor () {
 
         if (!isset($_POST[static::VERSION_FIELD])) return;
 
-        [$resource, $model] = $this->find((int) ($_POST['post_ID'] ?? 0));
+        $post_id = (int) ($_POST['post_ID'] ?? 0);
 
-        if ($model) $this->refuse_if_stale($resource, $model);
+        [$resource, $model] = $this->find($post_id);
+
+        if (!$model || !wp_verify_nonce((string) ($_POST['_wpnonce'] ?? ''), "update-post_{$post_id}") || !current_user_can('edit_post', $post_id)) return;
+
+        $seen = (int) $_POST[static::VERSION_FIELD];
+
+        if ($this->is_preview($post_id) ? ($seen === $model->get_version()) : $model->claim_version($seen)) return;
+
+        $this->refuse_stale($resource, $post_id, $seen);
 
     }
 
@@ -117,11 +133,24 @@ class Lattice_Resources extends Feature {
 
     }
 
-    protected function refuse_if_stale (Model_Resource $resource, $model) : void {
+    protected function refuse_stale (Model_Resource $resource, $record_id, int $seen) : void {
 
-        if (!isset($_POST[static::VERSION_FIELD]) || ((int) $_POST[static::VERSION_FIELD] === $model->get_version())) return;
+        $by = $this->describe_change($resource, $record_id, $seen);
 
-        wp_die(esc_html("This {$resource->get_label()} changed after you opened it, so your edit was not saved. Open it again to see the change, then make yours."), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
+        wp_die(esc_html("This {$resource->get_label()} changed after you opened it" . ($by ? " ({$by})" : '') . ', so your edit was not saved. Open it again to see the change, then make yours.'), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
+
+    }
+
+    // Who, how and when, from the latest journal row newer than what the form showed.
+    protected function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
+
+        $row = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
+
+        if (!$row || ($row['version_after'] <= $seen)) return '';
+
+        $how = ['rest' => 'through the API', 'cli' => 'through WP-CLI', 'admin' => 'in wp-admin'][$row['via']] ?? '';
+
+        return implode(', ', array_filter([get_userdata($row['user_id'])?->display_name ?: 'someone', $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
 
     }
 
@@ -211,13 +240,14 @@ class Lattice_Resources extends Feature {
 
         if (!$model = $resource?->find($plugin_page)) return;
 
-        $this->refuse_if_stale($resource, $model);
+        // ACF has checked the page's nonce.
+        $seen = isset($_POST[static::VERSION_FIELD]) ? (int) $_POST[static::VERSION_FIELD] : $model->get_version();
+
+        if (!$model->claim_version($seen)) $this->refuse_stale($resource, $plugin_page, $seen);
 
         $resource->forget_values($model);
 
-        $this->before[$plugin_page] = ['values' => $resource->read($model), 'version' => $model->get_version()];
-
-        $model->claim_version($model->get_version());
+        $this->before[$plugin_page] = ['values' => $resource->read($model), 'version' => $seen];
 
     }
 

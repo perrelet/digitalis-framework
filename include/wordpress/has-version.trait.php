@@ -28,10 +28,16 @@ trait Has_Version {
 
     }
 
+    public function is_claimed () : bool {
+
+        return isset(static::$writing_version[$this->get_id()]);
+
+    }
+
     // Anyone who read mid-write is stale too.
     public function finish_version () : void {
 
-        if (!isset(static::$writing_version[$this->get_id()])) return;
+        if (!$this->is_claimed()) return;
 
         unset(static::$writing_version[$this->get_id()]);
 
@@ -41,7 +47,7 @@ trait Has_Version {
 
     public function raise_version () : void {
 
-        if (!isset(static::$writing_version[$this->get_id()])) $this->step_version($this->get_version());
+        if (!$this->is_claimed()) $this->step_version($this->get_version());
 
     }
 

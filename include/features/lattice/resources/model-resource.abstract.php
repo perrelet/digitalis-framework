@@ -220,7 +220,7 @@ abstract class Model_Resource extends Singleton {
             $value  = match ($field->source) {
                 'model'  => ($getter instanceof \Closure) ? $getter($model) : $model->$getter(),
                 'reader' => $readers[$name]($model),
-                default  => $field->from_raw($model->get_field($name, false)),
+                default  => $field->from_raw(($field->is_flexible() && !$model->has_unsaved_value($name)) ? $field->read_rows($model->get_acf_id()) : $model->get_field($name, false)),
             };
 
             $values[$name] = $mask ? $field->mask($value) : $value;

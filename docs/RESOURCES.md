@@ -142,6 +142,7 @@ A model field's setter must only stage: a dry run calls it on the unsaved copy.
 
 - **Groups.** The guide lists the post type's groups and those that depend on one of its terms, marked `applies_when` with ACF's rules. A record reads and writes the groups its own edit screen shows; a field it does not show is refused.
 - **References.** A post, term, user or file field takes an id; `0` means none.
+- **Flexible rows** are `layout` and the layout's fields by name, plus `disabled: true` and `label` (ACF's renamed row) where set, read in any request. A row sent without them is enabled and unnamed, since rows have no identity to keep a flag by. A layout's own sub-fields named `layout`, `disabled` or `label` are not reachable.
 - **Checks.** ACF validates each value (`acf_validate_value()`: lengths, min and max, rows, a site's filters). The layer adds what ACF does not check on the server: choices, that a referenced post, term, user or file exists, a date's stored format, a repeater's computed row keys. A field its conditions hide is never required.
 - **Action-only** (`ACTION_ONLY`, dotted paths): changed only by an action.
 - **Locked** (`get_locked_fields($model)`, `name => why`): refused in the record's present state; other fields in the same write go through. `get_lock($model)` is the record-wide form: a capability updating needs.
@@ -223,7 +224,7 @@ Fields come from the groups on that page; the capability is the page's; create i
 
 Relationship sync (`ACF\Bidirectional_Relationship`) writes a partner's meta without saving it, so the feature raises the partner's version itself.
 
-wp-admin's classic editor and options pages carry the version in a hidden field and refuse a save from a page opened before another change, before anything is written. Copies never inherit it (`lattice.post.duplicate.exclude_meta`).
+wp-admin's classic editor and options pages carry the version in a hidden field (`lattice_version`) and claim it, so a save from a page opened before another change is refused before anything is written, naming the change from the journal ("Jamie, through the API, 30 Oct 14:02"). The editor claims at `admin_action_editpost`, after checking the nonce and `edit_post` itself, since WordPress checks them only afterwards; an options page at `acf/save_post` 5. Preview compares the version and never raises it: it saves one's own draft while the form stays open. Autosave neither claims nor raises. Copies never inherit it (`lattice.post.duplicate.exclude_meta`).
 
 ---
 
@@ -286,6 +287,8 @@ Another feature has its say over single records:
 
 ## Limits
 
+- A flexible field inside a repeater, group or another flexible field is read through its parent, which drops disabled rows outside wp-admin, so a field holding one is locked to the layer's writes.
+- An editor save claimed and then stopped before WordPress writes (another plugin's `wp_die` on `admin_action_editpost`) leaves the version raised once: that form is refused next time and its page needs reloading.
 - Only the classic editor and options pages refuse a stale save. The block editor, Quick Edit and Bulk Edit raise the version, so the layer refuses whatever read before them, but are not themselves refused.
 - An option page's dry run cannot see code that reads its options through the global `get_field($name, 'option')`.
 - Consequences are written by each resource: a resource that puts a secret's value in one leaks it there.

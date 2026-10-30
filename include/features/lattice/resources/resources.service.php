@@ -181,6 +181,7 @@ class Resources extends Service {
 
         if ($problems) return $this->invalid($problems);
 
+        if ($refusal = $this->refuse_locked($resource, null, $values)) return $refusal;
         if ($refusal = $this->refuse_publish($resource, null, $values)) return $refusal;
 
         $model    = $resource->make_model($values);
@@ -412,7 +413,7 @@ class Resources extends Service {
             $fields = $resource->get_fields_for($model, $values);
 
             // By key: finding a field by name asks the saved record's groups, which a term in this write may change.
-            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, $value);
+            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, $fields[$name]->to_raw($value));
 
             $resource->stage_model_values($model, $values);
 
@@ -552,7 +553,9 @@ class Resources extends Service {
 
     protected function refuse_locked (Model_Resource $resource, $model, array $values) : ?WP_Error {
 
-        if (!$locked = array_intersect_key($resource->get_locked_fields($model), $values)) return null;
+        $nested = array_map(fn () => 'it holds a flexible field the layer cannot yet write without losing its rows.', array_filter($resource->get_fields_for($model, $values), fn ($field) => $field->holds_flexible()));
+
+        if (!$locked = array_intersect_key(($model ? $resource->get_locked_fields($model) : []) + $nested, $values)) return null;
 
         $reason = implode(' ', array_map(fn ($name, $why) => "{$name}: {$why}", array_keys($locked), $locked));
 
