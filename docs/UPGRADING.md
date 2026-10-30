@@ -260,6 +260,8 @@ The iterator pass rebuilt `Iterator`'s completion model as a run record in the s
 | `$halt_on_fail` was decided by the page script, so a cron run never halted | `iterate()` halts: status `halted`, the cron flag cleared, one error line; Start resumes it from its index; the batch that reaches the end completes instead |
 | `get_total_items()` defaulted to `1000`, and a total of `0` or `false` read as "no items" | Defaults to `null`, unknown: the page prints `?`, the bar runs indeterminate, the run completes when a batch answers nothing; every `iterate()` response carries `total`, `status` and `stalled` |
 | `Post_Iterator`, `Order_Iterator` and `Product_Iterator` counted their totals by fetching every id (`posts_per_page => -1`, `limit => -1`) | They count from one row: `posts_per_page => 1` and `found_posts`; `limit => 1, paginate => true` and the result's `total` |
+| `CSV_Iterator::get_items()` resumed with `fseek()` on whatever `ftell()` had stored, so a `false` offset threw a TypeError (the file declares strict types) | A resume needs an int offset; otherwise the batch is read by skipping `index` rows from the top |
+| `CSV_Iterator::validate_upload()` indexed `$upload_errors` with the upload's error code, so a file input named `csv[]` (every member an array) threw a TypeError | It answers a notice: one file at a time |
 
 ### Layout
 

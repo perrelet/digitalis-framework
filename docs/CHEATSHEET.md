@@ -1130,6 +1130,8 @@ class Import_Accounts extends CSV_Iterator {
 }
 ```
 
+> **Non-obvious:** `CSV_Iterator` stores a byte cursor per batch (`cursor` in the store) and resumes with `fseek()`; a cursor whose offset is not an int (a failed `ftell()`) is ignored and the batch skips `index` rows from the top. The total is counted once at upload, not per page view. The upload form takes one file: an input named `csv[]` is refused with a notice. `reset()` deletes the upload; `reset_progress()` (cron) keeps it and drops the cursor.
+
 ### Scheduled (Cron-Driven) Iterator
 
 ```php

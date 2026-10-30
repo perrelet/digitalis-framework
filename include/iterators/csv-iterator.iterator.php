@@ -63,7 +63,7 @@ abstract class CSV_Iterator extends Iterator {
 
         // Resume from the byte offset where the last batch stopped rather than rescanning the file.
         $cursor = $this->store['cursor'] ?? [];
-        $resume = ($cursor['index'] ?? null) === $this->index;
+        $resume = ($cursor['index'] ?? null) === $this->index && is_int($cursor['offset'] ?? null); // a failed ftell() stored false: skip from the top instead
         $skip   = $resume ? 0 : $this->index;
 
         if ($resume) fseek($handle, $cursor['offset']);
@@ -209,6 +209,7 @@ abstract class CSV_Iterator extends Iterator {
         if (!$nonce = $_POST['nonce'] ?? 0)                      return '🤡 No funny business please.';
         if (!wp_verify_nonce($nonce, $this->key))                return '🕒 This page has expired, please refresh and try again.';
         if ($this->get_store()['file'] ?? 0)                     return '⏳ A file is already loaded, reset the import before uploading another.';
+        if (!is_string($path))                                   return '📄 Please upload one file at a time.'; // an input named csv[] makes every member an array; the error lookup below would throw
         if ($code = $csv['error'] ?? 0)                          return '📤 ' . ($this->upload_errors[$code] ?? "Upload failed with error code {$code}.");
         if (!filesize($path))                                    return '👻 The uploaded file is empty.';
         if (!in_array(mime_content_type($path), $this->mime_types)) return '📄 Please upload a valid .csv file.';
