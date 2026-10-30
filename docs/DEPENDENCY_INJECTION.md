@@ -15,7 +15,7 @@ Lattice provides lightweight dependency injection through the `Dependency_Inject
 - [Meta Box Injection](#meta-box-injection)
 - [Hook Injection](#hook-injection)
 - [Factory/Constructor Injection](#factoryconstructor-injection)
-- [Real-World Examples](#real-world-examples)
+- [Basic Example](#basic-example)
 - [Troubleshooting](#troubleshooting)
 
 ---

@@ -68,28 +68,28 @@ Auto-instantiated classes (Feature, Route, Post_Type, etc.) require no manual bo
 
 ## Getting started
 
-Require the framework and extend `App`:
+Require the framework, declare an `App` subclass in `include/` and ask for its instance. The sandbox plugin in this repository's parent does exactly this:
 
 ```php
+// my-plugin.php
+namespace My_Plugin;
+
+require_once __DIR__ . '/framework/load.php';
+require_once __DIR__ . '/include/my-plugin.app.php';
+
+Plugin::get_instance();
+```
+
+```php
+// include/my-plugin.app.php
 namespace My_Plugin;
 
 use Lattice\App;
 
-require_once __DIR__ . '/framework/load.php';
-
-class Plugin extends App {
-
-    protected static $dir  = __DIR__;
-    protected static $name = 'my-plugin';
-
-    public function boot(): void {
-        $this->load(__DIR__ . '/include');
-    }
-
-}
+class Plugin extends App {}
 ```
 
-Everything in `include/` loads automatically from that point. File naming drives instantiation; parents load on demand. See [`docs/AUTOLOADER.md`](./docs/AUTOLOADER.md).
+`App` hooks its `boot()` on `plugins_loaded` from its constructor, and the default `load()` autoloads the directory the subclass's file sits in, so the class goes in `include/` and needs no body. Everything in `include/` loads automatically from that point. File naming drives instantiation; parents load on demand. See [`docs/AUTOLOADER.md`](./docs/AUTOLOADER.md).
 
 ---
 

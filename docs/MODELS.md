@@ -17,7 +17,7 @@ Quick reference for model classes and their available methods.
 - [Customer Model](#customer-model)
 - [ACF_Row Model](#acf_row-model)
 - [Shared Methods](#shared-methods)
-- [ACF Fields](#acf-fields)
+- [Custom Fields](#custom-fields)
 - [Meta Data](#meta-data)
 - [Extending Models](#extending-models)
 
