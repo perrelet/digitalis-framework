@@ -814,7 +814,7 @@ abstract class Meta_Box extends Feature
 
 ### `Lattice\Iterator`
 
-Batch processing base class.
+Batch processing base class: an admin page under Tools with Start, Stop and Reset, an AJAX loop and an optional WP-cron loop, the run recorded in one option (`iterator_{$key}`, the store).
 
 ```php
 abstract class Iterator extends Singleton
@@ -822,22 +822,56 @@ abstract class Iterator extends Singleton
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `$title` | `string` | `''` | Iterator title |
-| `$key` | `string` | `''` | Unique key |
-| `$batch_size` | `int` | `50` | Items per batch |
-| `$capability` | `string` | `'manage_options'` | Required capability |
-| `$halt_on_fail` | `bool` | `false` | Stop on error |
-| `$dynamic_total` | `bool` | `false` | Recalculate total each batch |
-| `$cron` | `bool` | `false` | Enable cron scheduling |
-| `$cron_schedule` | `string` | `'hourly'` | Cron schedule |
+| `$title` | `string` | `'Iterator'` | Page and menu title |
+| `$key` | `string` | `'digitalis_iterator'` | Unique: keys the AJAX action, the store option and the cron actions |
+| `$batch_size` | `int` | `1` | Items per tick |
+| `$capability` | `string` | `'administrator'` | Required for the page and the AJAX tasks |
+| `$menu_slug` | `string\|null` | `null` | Defaults to `iterator_{$key}` |
+| `$parent_menu_slug` | `string` | `'tools.php'` | Parent admin menu |
+| `$timezone` | `string` | `'UCT'` | Log timestamps and `$cron_time` |
+| `$description` | `string\|false` | `false` | Printed above the controls |
+| `$halt_on_fail` | `bool` | `false` | Stop when a batch has a failed item |
+| `$dynamic_total` | `bool` | `false` | Recount the total after every batch |
+| `$print_results` | `bool` | `false` | The UI log prints every processed id |
+| `$cron` | `bool` | `false` | Schedule the run (`cron_condition()` reads it) |
+| `$cron_time` | `string` | `'00:00:00'` | `H:i:s` in `$timezone`: the first start |
+| `$cron_schedule` | `string` | `'daily'` | Schedule of the start event |
+| `$cron_loop_schedule` | `string` | `'every_minute'` | Schedule of the tick event while a cron run is going |
+| `$labels` | `array` | `['single' => 'item', 'plural' => 'items']` | Both keys |
+| `$ui_options` | `array` | `[]` | Passed to `Iterator_UI` |
+| `$default_store` | `array` | the per-run keys | See the store keys below |
+
+Override points:
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_items()` | `abstract public get_items(): array` | Returns items to process |
-| `process_item()` | `abstract public process_item(mixed $item): bool` | Processes single item |
-| `get_total_items()` | `public get_total_items(): int` | Returns total count |
-| `get_item_id()` | `public get_item_id(mixed $item): mixed` | Returns item identifier |
-| `cron_condition()` | `public cron_condition(): bool` | Check if cron should run |
+| `get_items()` | `public get_items(): array` | The next batch: from `$this->index`, at most `$batch_size` items |
+| `process_item()` | `public process_item(mixed $item): bool` | `false` marks the item failed |
+| `get_total_items()` | `public get_total_items(): int\|null` | The count behind the progress bar (base: `1000`) |
+| `get_item_id()` | `public get_item_id(mixed $item): mixed` | Recorded in the store's id arrays; `null` falls back to the index |
+| `cron_condition()` | `public cron_condition(): bool` | Whether the cron events are scheduled (base: `$cron`) |
+| `on_start()`, `on_batch_complete()`, `on_complete()` | `protected on_batch_complete(int $count, array $results): void` | Lifecycle hooks; the base logs a line |
+| `get_default_store()` | `public get_default_store(): array` | The per-run keys; add your own buckets here |
+| `pre_get_store()`, `pre_update_store()` | `public pre_get_store(array &$store): void` | Around the option read and write |
+
+The run:
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `iterate()` | `public iterate(bool $return_store = false): array` | One tick: `get_items()`, the loop, the store write; answers the AJAX response, or the store |
+| `get_status()` | `public get_status(): string` | `idle`, `running`, `complete` or `halted` |
+| `has_total()` | `public has_total(): bool` | Whether the total has been computed for this run |
+| `get_total()` | `public get_total(): ?int` | The stored total; `null` when unknown or not computed |
+| `refresh_total()` | `public refresh_total(): ?int` | Calls `get_total_items()` and stores the answer |
+| `get_progress()` | `public get_progress(): float` | `index / total`, at most 1; a complete run with no total reads 1 |
+| `is_complete()` | `public is_complete(): bool` | |
+| `reset()` | `public reset(): array` | The UI's Reset: the store becomes `get_default_store()` |
+| `reset_progress()` | `public reset_progress(): array` | The cron start: restores the keys `get_default_store()` declares and drops the total; every other key survives |
+| `get_store()`, `update_store()` | `public get_store(): array` | The option; `update_store()` writes the index and merges this request's log lines |
+| `skip_item()`, `skip_items()` | `public skip_item(mixed $item = null): void` | Ids the loop skips |
+| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | The cron flag (`iterator_{$key} cron`) |
+
+Store keys: `index`, the id arrays `processed`, `skip` and `failed`, `log`, `errors`, `status` and `stalled` are per run (`$default_store`); `total` is absent until computed and `null` when unknown.
 
 ### Iterator Types
 

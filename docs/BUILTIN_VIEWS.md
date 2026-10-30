@@ -368,6 +368,8 @@ Renders progress UI for batch processing iterators.
 |-----------|------|---------|-------------|
 | `iterator` | `Iterator\|null` | `null` | Iterator instance |
 
+`params()` adds `store`, `index`, `total`, `status` and `stalled` from the iterator's run record for the template; the total is read from the record and computed only when it never was.
+
 #### Usage
 
 ```php

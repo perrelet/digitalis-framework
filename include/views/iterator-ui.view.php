@@ -25,9 +25,14 @@ class Iterator_UI extends View {
 
         if (($p['iterator'] instanceof Iterator)) {
 
-            $p['store'] = $p['iterator']->get_store();
-            $p['index'] = $p['iterator']->get_index();
-            $p['total'] = $p['iterator']->get_total_items_wrap();
+            $iterator = $p['iterator'];
+
+            // The total is computed once per run, not once per render.
+            $p['total']   = $iterator->has_total() ? $iterator->get_total() : $iterator->refresh_total();
+            $p['index']   = $iterator->get_index();
+            $p['store']   = $iterator->get_store();
+            $p['status']  = $iterator->get_status();
+            $p['stalled'] = (bool) ($p['store']['stalled'] ?? false);
 
         }
     

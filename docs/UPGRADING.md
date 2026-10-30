@@ -246,6 +246,17 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Debug` ran `params()` (a backtrace and a file read) for every visitor before the administrator gate refused output, and a shipped `dd()` halted administrators only | The gate runs in `pre_validate()`, before `params()`: a visitor pays nothing, and `dd()` halts every request |
 | The 19 templates under `templates/digitalis/` executed on a direct request, printing fragments or a fatal | Each opens with the `ABSPATH` guard and prints nothing outside WordPress |
 
+### Iterators
+
+The iterator pass rebuilt `Iterator`'s completion model as a run record in the store (the status, the total and a stalled flag beside the index and the id arrays), read by the UI and the cron loop alike:
+
+| Was | Now |
+|---|---|
+| The total lived in its own autoloaded option `iterator_{$key} total`, written by the UI's Start and by `iterate()`, and `reset()` never cleared it | It is the store's `total` key: `get_total()`, `has_total()` and `refresh_total()` (the `get_total_option()`, `set_total_option()` and `get_total_items_wrap()` facades still answer); the legacy option is read into the store once and deleted; `reset()` clears it with the rest of the store |
+| A store had no status | `get_status()`; a pre-upgrade store derives it once on first read: index 0 is idle, an index below the total (or without one) is running, an index at the total is complete |
+| `cron_start()` called `reset()`, so a cron run unlinked a `CSV_Iterator` upload and dropped every key a consumer had put in the store | `cron_start()` calls `reset_progress()`: the keys `get_default_store()` declares are restored and every other key (the upload, a consumer's settings) survives; declare per-run buckets in `get_default_store()` |
+| `Iterator_UI` recounted the total on every render, and a `CSV_Iterator` page rescanned the file per view | The page computes a never-computed total once; a CSV counts its rows at upload |
+
 ### Layout
 
 | Violation | Mechanical fix |

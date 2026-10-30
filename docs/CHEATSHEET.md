@@ -1071,7 +1071,7 @@ $projects = \Lattice\Query_Manager::get_instance()->execute($qv->make_query());
 
 ## Iterators
 
-> **Non-obvious:** `Iterator` is a `Singleton` — configuring properties (`$title`, `$key`, `$batch_size`, …) are **non-static instance properties**. `$key` must be unique across iterators — it keys the AJAX action and the option blob that tracks progress. The framework auto-registers an admin page under Tools by default.
+> **Non-obvious:** `Iterator` is a `Singleton` — configuring properties (`$title`, `$key`, `$batch_size`, …) are **non-static instance properties**. `$key` must be unique across iterators — it keys the AJAX action and the option blob that tracks progress. The framework auto-registers an admin page under Tools by default. The option (the store) holds the run: the keys `get_default_store()` declares are per-run and a cron start resets them (`reset_progress()`); a key added anywhere else (a CSV upload, a setting read from `$_POST`) is a setting and survives until the UI's Reset. The total is computed once per run (`refresh_total()`: the page's first render, the Start button or the first tick) and stored beside the index; `$dynamic_total` recounts it after every batch.
 
 ### Batch Process Posts
 

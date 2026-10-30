@@ -46,6 +46,8 @@ abstract class Iterator extends Singleton {
         'failed'    => [],
         'log'       => [],
         'errors'    => [],
+        'status'    => 'idle',
+        'stalled'   => false,
     ];
 
     protected $items = [];
@@ -153,7 +155,7 @@ abstract class Iterator extends Singleton {
     public function cron_start () {
 
         $this->set_doing_cron(true);
-        $this->reset();
+        $this->reset_progress();
         $this->iterate();
     
     }
@@ -177,6 +179,8 @@ abstract class Iterator extends Singleton {
         ];
 
         $this->warm_up();
+
+        $this->store['status'] = 'running';
 
         $this->items = $this->get_items();
 
@@ -223,6 +227,7 @@ abstract class Iterator extends Singleton {
 
         if ($this->is_complete() || !$this->items) { // an empty first batch set the total to 0, which get_progress() reads as 0: a cron iterator with nothing to do looped for ever
 
+            $this->store['status'] = 'complete';
             $this->on_complete();
             $this->set_doing_cron(false);
 
@@ -351,8 +356,67 @@ abstract class Iterator extends Singleton {
     
         $total = $this->get_total_option();
 
-        return $total ? ($this->get_index() / $total) : 0;
+        if (!$total) return $this->get_status() === 'complete' ? 1.0 : 0.0;
+
+        return min(1.0, (int) $this->get_index() / $total);
     
+    }
+
+    public function get_status () {
+
+        $status = $this->get_store()['status'] ?? null;
+
+        return is_string($status) ? $status : 'idle';
+
+    }
+
+    // The run record: `total` absent = never computed, null = computed and unknown, int = known.
+    public function has_total () {
+
+        return array_key_exists('total', $this->get_store());
+
+    }
+
+    public function get_total () {
+
+        $total = $this->get_store()['total'] ?? null;
+
+        return is_int($total) ? $total : null;
+
+    }
+
+    // Writes bare rather than through update_store(), which would store a null $index from the AJAX total task and re-merge this request's log.
+    public function refresh_total () {
+
+        $this->get_index();
+
+        $this->store['total'] = $this->normalise_total($this->get_total_items());
+
+        update_option($this->get_option_key(), $this->store, false);
+
+        return $this->store['total'];
+
+    }
+
+    protected function normalise_total ($total) {
+
+        return is_numeric($total) ? (int) $total : null;
+
+    }
+
+    // Keys get_default_store() declares are per-run; anything else in the store (a CSV upload, a consumer's settings) survives.
+    public function reset_progress () {
+
+        $this->get_store();
+
+        $this->store = array_merge($this->store, $this->get_default_store());
+        $this->index = 0;
+        unset($this->store['total']);
+
+        update_option($this->get_option_key(), $this->store, false);
+
+        return $this->store;
+
     }
 
     public function is_complete () {
@@ -372,10 +436,7 @@ abstract class Iterator extends Singleton {
 
     public function get_total_items_wrap () {
 
-        $total = $this->get_total_items();
-        $this->set_total_option($total);
-
-        return $total;
+        return $this->refresh_total();
 
     }
 
@@ -391,6 +452,8 @@ abstract class Iterator extends Singleton {
 
             $store = get_option($this->get_option_key(), $this->get_default_store());
             if (!is_array($store) || !array_key_exists('index', $store)) $store = $this->get_default_store();
+
+            $this->migrate_store($store);
 
             $this->store = $store;
             $this->pre_get_store($this->store);
@@ -415,6 +478,30 @@ abstract class Iterator extends Singleton {
 
     }
 
+    // The total lived in its own autoloaded option until the run record; a store without a status key predates it.
+    protected function migrate_store (array &$store) {
+
+        $legacy = get_option($this->get_option_key('total'), false);
+        if ($legacy !== false) delete_option($this->get_option_key('total'));
+
+        if (array_key_exists('status', $store)) return;
+
+        $index = (int) $store['index'];
+        $total = $legacy === false ? null : $this->normalise_total($legacy);
+
+        // A legacy 0 at index 0 is not a count: iterate() once wrote the index as the total and reset() never cleared it.
+        if ($legacy !== false && !($index === 0 && $total === 0)) $store['total'] = $total;
+
+        if ($index === 0)                                   $store['status'] = 'idle';
+        elseif (is_int($total) && $index >= $total)         $store['status'] = 'complete';
+        else                                                $store['status'] = 'running';
+
+        $store['stalled'] = false;
+
+        update_option($this->get_option_key(), $store, false);
+
+    }
+
     public function pre_get_store (&$store) {}
     public function pre_update_store (&$store) {}
 
@@ -427,30 +514,30 @@ abstract class Iterator extends Singleton {
     }
 
     public function get_total_option () {
-    
-        $total = get_option($this->get_option_key('total'), false);
 
-        if ($total === false) $total = $this->get_total_items_wrap();
-
-        return $total;
+        return $this->has_total() ? $this->get_total() : $this->refresh_total();
     
     }
 
     public function set_total_option ($total) {
-    
-        update_option($this->get_option_key('total'), $total);
+
+        $this->get_index();
+
+        $this->store['total'] = $this->normalise_total($total);
+
+        update_option($this->get_option_key(), $this->store, false);
     
     }
 
     public function is_doing_cron () {
     
-        return get_option($this->get_option_key('cron'), false);
+        return (bool) get_option($this->get_option_key('cron'), false);
     
     }
 
     public function set_doing_cron ($state) {
     
-        update_option($this->get_option_key('cron'), (bool) $state);
+        update_option($this->get_option_key('cron'), (bool) $state, false);
     
     }
 

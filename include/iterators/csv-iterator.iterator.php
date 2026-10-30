@@ -246,6 +246,10 @@ abstract class CSV_Iterator extends Iterator {
             'path' => $file_path,
         ];
         $this->update_store();
+
+        // Count the rows once, here: every later render reads the stored total.
+        $this->file = $file_path;
+        $this->refresh_total();
     
     }
 
@@ -330,9 +334,20 @@ abstract class CSV_Iterator extends Iterator {
     
         $rows = [];
         if ($file_name = $this->store['file']['name'] ?? 0) $rows[] = ['File:', $file_name];
-        if ($total     = $this->get_total_items_wrap())     $rows[] = ['Rows:', $total];
+        if ($total     = $this->get_total())                $rows[] = ['Rows:', $total];
         return $rows;
     
+    }
+
+    public function reset_progress () {
+
+        parent::reset_progress();
+
+        unset($this->store['cursor']);
+        update_option($this->get_option_key(), $this->store, false);
+
+        return $this->store;
+
     }
 
     public function reset () {
