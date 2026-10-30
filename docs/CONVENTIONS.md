@@ -125,4 +125,4 @@ class Proposals extends Feature {
 }
 ```
 
-A requirement loads with its defaults. A site that configures one loads it first; the later load returns that instance. A requirement that can't be found, a circular one or a refused condition stops the feature, and `load_feature()` reports it with `_doing_it_wrong()`, which reaches the debug log in every context. Don't check for another feature with `class_exists()`: the class exists as soon as its file is included, whether or not the feature runs.
+A requirement loads with its defaults. A site that configures one loads it first; configuring it after it loaded as a requirement is reported, since its options are ignored. A requirement that can't be found, a circular one or a refused condition stops the feature, and `load_feature()` reports it with `_doing_it_wrong()`, which reaches the debug log in every context. Don't check for another feature with `class_exists()`: the class exists as soon as its file is included, whether or not the feature runs.
