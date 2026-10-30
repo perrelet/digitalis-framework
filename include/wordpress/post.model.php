@@ -334,7 +334,8 @@ class Post extends WP_Model {
 
     public function duplicate ($overrides = [], $exclude_meta = []) {
 
-        $wp_post = $this->get_wp_post();
+        $wp_post  = $this->get_wp_post();
+        $filtered = (bool) has_filter('content_save_pre', 'wp_filter_post_kses');
 
         kses_remove_filters(); // Preserve block delimiters for users without unfiltered_html.
 
@@ -353,7 +354,7 @@ class Post extends WP_Model {
 
         } finally {
 
-            kses_init(); // kses_init_filters() would switch them on for a trusted account.
+            if ($filtered) kses_init_filters();
 
         }
 
