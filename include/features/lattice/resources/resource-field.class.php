@@ -19,7 +19,6 @@ final class Resource_Field {
 
     const REFERENCES = ['post_object', 'relationship', 'page_link', 'taxonomy', 'user', 'image', 'file', 'gallery'];
 
-    // A flexible row's own keys beside its sub-fields, named as ACF posts them.
     const ROW_FLAGS = ['disabled' => 'acf_fc_layout_disabled', 'label' => 'acf_fc_layout_custom_label'];
 
     const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set', 'validate'];
@@ -85,7 +84,7 @@ final class Resource_Field {
 
     }
 
-    // ACF reads a flexible field inside another field through that field, which drops its disabled rows.
+    // Read through its parent, a nested flexible field loses its disabled rows.
     public function holds_flexible () : bool {
 
         foreach ([$this->sub_fields, ...array_values($this->layouts)] as $fields) foreach ($fields as $field) if ($field->is_flexible() || $field->holds_flexible()) return true;
@@ -296,7 +295,7 @@ final class Resource_Field {
 
     // Raw shape
 
-    // ACF drops disabled rows outside wp-admin, its raw rows never carry the flags and it caches them on its field object, so each row is read from meta.
+    // ACF's own read drops disabled rows outside wp-admin and never carries their flags.
     public function read_rows ($acf_id) : array {
 
         $layouts = acf_get_metadata($acf_id, $this->name);

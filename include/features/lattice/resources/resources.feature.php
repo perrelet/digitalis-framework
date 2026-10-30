@@ -84,7 +84,7 @@ class Lattice_Resources extends Feature {
 
     }
 
-    // Preview posts the editor's form and saves one's own draft, while the form stays open.
+    // Preview posts the editor's form and may save the draft.
     protected function is_preview ($post_id) : bool {
 
         return (($_POST['wp-preview'] ?? '') === 'dopreview') && ((int) ($_POST['post_ID'] ?? 0) === (int) $post_id);
@@ -111,7 +111,7 @@ class Lattice_Resources extends Feature {
 
     }
 
-    // Before edit_post() writes anything, _edit_last included. post.php checks the nonce itself, but only after this.
+    // post.php checks the nonce only after this.
     public function claim_from_editor () {
 
         if (!isset($_POST[static::VERSION_FIELD])) return;
@@ -144,7 +144,6 @@ class Lattice_Resources extends Feature {
 
     }
 
-    // Who, how and when, from the latest journal row newer than what the form showed.
     protected function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
 
         $row = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
