@@ -383,6 +383,7 @@ $copy = $product->duplicate([], ['_my_plugin_pointer']);          // keep a key 
 Three properties are load-bearing:
 
 - **Meta is copied raw.** No ACF write happens, so nothing downstream of one fires — notably a `Bidirectional_Relationship` sync, which would otherwise wire the original's partners to the copy. A copy holds the original's relationship values one-way until its first real save.
+- **The copy is whole when its hooks run.** Meta goes in through `meta_input`, so `save_post` already sees it; terms go in through `tax_input`, so `wp_after_insert_post` sees them. A key with several values is added after the save, since `meta_input` holds one value per key.
 - **The slug is never copied.** A copy must not contend for the original's URL; WP assigns a fresh unique slug from the title.
 - **Placement columns are not copied.** `post_parent`, `menu_order` and friends stay out because whether a copy belongs in the same structural position depends on why it's being made. Pass them through `$overrides` when it matters.
 
