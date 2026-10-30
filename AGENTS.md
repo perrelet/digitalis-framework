@@ -1,8 +1,8 @@
-# Digitalis Framework — Agent Primer
+# Lattice — Agent Primer
 
 OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes instances through a Factory/Singleton system, wraps WP entities (Post, User, Term) and WC entities (Order, Customer), and provides a View system for rendering.
 
-**Namespace:** `Digitalis\` throughout. Framework files live in `include/`. Plugin files mirror this structure.
+**Namespace:** `Lattice\`, one sub-namespace per family (`Lattice\Component`, `Lattice\Field`, `Lattice\DB`, `Lattice\WP`, `Lattice\Woo`, `Lattice\ACF`, `Lattice\Oxygen`). A `Digitalis\…` name still resolves through `compat/digitalis-namespace.php` (a lazy `class_alias` over classes, interfaces and traits, the `DIGITALIS_*` constants defined beside the `LATTICE_*` ones), so an unmoved consumer boots; new code writes `Lattice\`. Framework files live in `include/`. Plugin files mirror this structure.
 
 ---
 
@@ -224,33 +224,33 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
 | Identifier | Framework class |
 |------------|----------------|
-| `post` | `Digitalis\Post` |
-| `user` | `Digitalis\User` |
-| `term` | `Digitalis\Term` |
-| `order` | `Digitalis\Order` |
-| `view` | `Digitalis\View` |
-| `route` | `Digitalis\Route` |
-| `feature` | `Digitalis\Feature` |
-| `integration` | `Digitalis\Integration` |
-| `singleton` | `Digitalis\Singleton` |
-| `post-type` | `Digitalis\Post_Type` |
-| `taxonomy` | `Digitalis\Taxonomy` |
-| `user-taxonomy` | `Digitalis\User_Taxonomy` |
-| `post-status` | `Digitalis\Post_Status` |
-| `order-status` | `Digitalis\Order_Status` |
-| `user-role` | `Digitalis\User_Role` |
-| `woo-account-page` | `Digitalis\Woo_Account_Page` |
-| `acf-block` | `Digitalis\ACF_Block` |
-| `shortcode` | `Digitalis\Shortcode` |
-| `layout` | `Digitalis\Layout` |
-| `page-view` | `Digitalis\Page_View` |
-| `iterator` | `Digitalis\Iterator` |
-| `post-iterator` | `Digitalis\Post_Iterator` |
-| `user-iterator` | `Digitalis\User_Iterator` |
-| `csv-iterator` | `Digitalis\CSV_Iterator` |
-| `order-iterator` | `Digitalis\Order_Iterator` |
-| `admin-page` | `Digitalis\Admin_Page` |
-| `query-profile` | `Digitalis\Query_Profile` |
+| `post` | `Lattice\Post` |
+| `user` | `Lattice\User` |
+| `term` | `Lattice\Term` |
+| `order` | `Lattice\Order` |
+| `view` | `Lattice\View` |
+| `route` | `Lattice\Route` |
+| `feature` | `Lattice\Feature` |
+| `integration` | `Lattice\Integration` |
+| `singleton` | `Lattice\Singleton` |
+| `post-type` | `Lattice\Post_Type` |
+| `taxonomy` | `Lattice\Taxonomy` |
+| `user-taxonomy` | `Lattice\User_Taxonomy` |
+| `post-status` | `Lattice\Post_Status` |
+| `order-status` | `Lattice\Order_Status` |
+| `user-role` | `Lattice\User_Role` |
+| `woo-account-page` | `Lattice\Woo_Account_Page` |
+| `acf-block` | `Lattice\ACF_Block` |
+| `shortcode` | `Lattice\Shortcode` |
+| `layout` | `Lattice\Layout` |
+| `page-view` | `Lattice\Page_View` |
+| `iterator` | `Lattice\Iterator` |
+| `post-iterator` | `Lattice\Post_Iterator` |
+| `user-iterator` | `Lattice\User_Iterator` |
+| `csv-iterator` | `Lattice\CSV_Iterator` |
+| `order-iterator` | `Lattice\Order_Iterator` |
+| `admin-page` | `Lattice\Admin_Page` |
+| `query-profile` | `Lattice\Query_Profile` |
 | `.abstract.php` | Abstract class (no framework parent) |
 | `.trait.php` | Trait |
 | `.class.php` | Standalone class |
@@ -453,7 +453,7 @@ Override `params()`, not `render()`, for computed params — `render()` owns the
 `$is_preview` placeholder and link-neutralising, and reimplementing it loses both.
 See [ADMIN.md — ACF Blocks](./docs/ADMIN.md#acf-blocks).
 
-### Schema / Migration (Namespace: `Digitalis\DB`)
+### Schema / Migration (Namespace: `Lattice\DB`)
 
 ```php
 // Schema — one per plugin; define tables and migration sequence
@@ -577,7 +577,7 @@ Registrar labels compose `sprintf(__('Add New %s', 'lattice'), __($this->singula
 `View::render()` is supported but not preferred. Use `<?= new My_View([...]) ?>` for echoing and `(string) new My_View([...])` when a string is needed explicitly.
 
 **Instantiate `Field_Group` fields with `new` — don't use the array `'field'` shorthand.**
-`['field' => Input::class, 'name' => '...']` is supported but not preferred. Use `new \Digitalis\Field\Input(['name' => '...'])` directly.
+`['field' => Input::class, 'name' => '...']` is supported but not preferred. Use `new \Lattice\Field\Input(['name' => '...'])` directly.
 
 ---
 

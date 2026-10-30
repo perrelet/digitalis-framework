@@ -1,4 +1,4 @@
-# Digitalis Framework Documentation
+# Lattice Documentation
 
 Quick navigation to all framework documentation.
 

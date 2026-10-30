@@ -6,6 +6,8 @@ What a consumer plugin meets when it moves onto a new framework version. Each se
 
 Strict mode (`LATTICE_STRICT`, default `WP_DEBUG`) throws `Strict_Violation` at documented mistakes. Boot audits run during the autoload walk and list every problem in one exception; render checks throw at the offending call. Messages read `Class (dir/file.php): problem. Fix.` A walk aborted by a throw drops the violations it had queued; what was thrown is the finding.
 
+The namespace is `Lattice\`, one sub-namespace per family (`Lattice\Component\Form`, `Lattice\Field\Input`, `Lattice\DB\Table`). Every `Digitalis\…` name a consumer writes resolves through `compat/digitalis-namespace.php`, a lazy `class_alias` that covers classes, interfaces and traits, and the four `DIGITALIS_*` constants are defined beside the `LATTICE_*` ones, so nothing has to move to boot. Write `Lattice\` in new code; the aliases go at 2.0.
+
 Framework hooks fire under lowercase dot-delimited names (`lattice.post_type.{class}.args` for `Digitalis/Post_Type/{Class}/Args`; the table in [HOOKS.md](./HOOKS.md#framework-hooks-summary)). `Hook::filter()` runs the legacy `Digitalis/...` name through `apply_filters_deprecated()` before the live one, so a callback on the old name keeps working and logs a deprecation; move it to the dotted name.
 
 ### View lifecycle

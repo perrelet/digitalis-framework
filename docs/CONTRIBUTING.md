@@ -1,4 +1,4 @@
-# Contributing to Digitalis Framework
+# Contributing to Lattice
 
 Welcome, brave soul. You've decided to contribute to the framework. Before you do, there are sacred traditions to uphold, ancient rites to perform, and exactly three emojis to choose.
 
@@ -292,7 +292,7 @@ But that's probably just the caffeine talking.
 
 - **Self-documenting code** over comments
 - **Descriptive names** over explanatory comments
-- **PSR-4 autoloading** with Digitalis conventions
+- **PSR-4 autoloading** with Lattice conventions
 - **Fluent interfaces** where sensible
 - **Traits** for shared behavior
 - **Static properties** for class configuration

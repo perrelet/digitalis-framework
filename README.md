@@ -73,9 +73,9 @@ Require the framework and extend `App`:
 ```php
 namespace My_Plugin;
 
-use Digitalis\App;
+use Lattice\App;
 
-require_once WP_PLUGIN_DIR . '/digitalis-co/framework/load.php';
+require_once __DIR__ . '/framework/load.php';
 
 class Plugin extends App {
 
