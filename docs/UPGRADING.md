@@ -146,7 +146,7 @@ PHPStan runs in CI (`.github/workflows/phpstan.yml`) at level 0 over the whole t
 | `Menu` with a `source` and `Field_Group` (so every `Query_Filters`) fataled on `v1` since the namespace-per-family commit: `Nav_Menu` and `Hook` were resolved inside `Lattice\Component` | Both import their class; the fixtures in `~/lattice-v1-tests` render them |
 | `Term::get_by_name()` always returned null (it passed an undefined variable) | Works; the `get_by_*` helpers no longer pass a third argument `get_by()` ignored |
 | `Table::add_rows()` dropped per-row classes and attributes (no row index) | Indexed |
-| `Field\Hidden_Group` (a dead field view; its only caller is the retired mesla) | Removed |
+| `Field\Hidden_Group` was removed as dead code (its only known caller was the retired mesla) | Restored 30 October; lattice-mail's preferences form builds its hidden inputs with it |
 | `Admin_Table::get_acf_field()` read a `$post_type` only `Posts_Table` declares | `Posts_Table` owns the post lookup; the base resolves field keys only |
 | `Visitor::get_request_time()` warned and answered 0.0 when `REQUEST_TIME_FLOAT` was absent (the cast bound before the fallbacks, and `microtime()` without `true` is the "msec sec" string; PHP sets the key on every SAPI, so only a harness that unsets `$_SERVER` met it) | Falls back to `REQUEST_TIME`, then `microtime(true)` |
 | `Order_Item::get_siblings()` fataled when the item's order row was gone (`get_order()` answered `wc_get_order()`'s false) or, with a product type, when a sibling's product was deleted (`get_product()` false); `get_customer_id()` passed the false order into `method_exists()` | No siblings for a gone order; a sibling without a product is skipped by the type filter; `null` for a gone order's customer |

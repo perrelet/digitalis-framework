@@ -1332,7 +1332,7 @@ Hidden::render([
 ### Hidden_Group
 
 **Namespace:** `Digitalis\Field\Hidden_Group`
-**File:** `include/views/fields/hidden-group.field-group.php`
+**File:** `include/views/fields/hidden-group.field.php`
 
 Multiple hidden fields from key-value data.
 
