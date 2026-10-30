@@ -847,7 +847,7 @@ Override points:
 |--------|-----------|-------------|
 | `get_items()` | `public get_items(): array` | The next batch: from `$this->index`, at most `$batch_size` items |
 | `process_item()` | `public process_item(mixed $item): bool` | `false` marks the item failed |
-| `get_total_items()` | `public get_total_items(): int\|null` | The count behind the progress bar (base: `1000`) |
+| `get_total_items()` | `public get_total_items(): int\|null` | The count behind the progress bar; `null` is unknown (the base default) |
 | `get_item_id()` | `public get_item_id(mixed $item): mixed` | Recorded in the store's id arrays; `null` falls back to the index |
 | `cron_condition()` | `public cron_condition(): bool` | Whether the cron events are scheduled (base: `$cron`) |
 | `on_start()`, `on_batch_complete()`, `on_complete()` | `protected on_batch_complete(int $count, array $results): void` | Lifecycle hooks; the base logs a line |

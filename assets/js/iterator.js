@@ -53,7 +53,7 @@
             this.batch_log(`Starting batch at index ${this.params.index}.`);
             this.request('total', this.start_total.bind(this));
             this.els.iterator.classList.add('running');
-            this.els.iterator.classList.remove('err');
+            this.els.iterator.classList.remove('err', 'is-paused', 'is-halted', 'is-stalled', 'is-complete');
 
         },
 
@@ -65,9 +65,16 @@
 
         set_total: function (total) {
 
-            this.els.total.innerHTML = total;
+            this.apply_total(total);
 
-            if (this.total = total) {
+            if (total === null) {
+
+                this.els.status.innerHTML = 'Running';
+                return true;
+
+            }
+
+            if (total) {
 
                 if (this.params.index < total) { 
 
@@ -93,11 +100,20 @@
 
         },
 
+        // A null total is unknown: the bar runs indeterminate until the server completes the run.
+        apply_total: function (total) {
+
+            this.total = total;
+            this.els.total.innerHTML = total === null ? '?' : total;
+            this.els.iterator.classList.toggle('is-indeterminate', total === null);
+
+        },
+
         iterate: function (response) {
 
             console.log(response);
 
-            if (response.hasOwnProperty('total')) this.set_total(response.total);
+            this.apply_total(response.total);
 
             this.update_progress(response.index);
             this.params.index = response.index;
@@ -113,19 +129,25 @@
 
             }
 
-            if (response.results.failed.length && this.params.halt_on_fail) {
-                
-                this.els.status.innerHTML = 'Failed';
-                this.error(`Failed to process ${response.results.failed.length} ${this.params.labels.plural} - Halting batch process.`, true);
-                
-            }
-
             this.batch_log(`${response.count} ${this.params.labels.plural} processed (${response.results.skipped.length} skipped, ${response.results.failed.length} failed) in ${this.delta}ms:`);
 
-            if (response.index >= this.total) {
+            if (response.status == 'complete') {
 
                 this.els.status.innerHTML = 'Finished!';
                 this.batch_log(`Batch completed in: ${this.time}ms.`);
+                this.els.iterator.classList.remove('running');
+
+            } else if (response.status == 'halted') {
+
+                this.els.status.innerHTML = 'Halted';
+                this.batch_log(`Batch halted after ${this.time}ms - press Start to resume.`);
+                this.els.iterator.classList.add('err');
+                this.els.iterator.classList.remove('running');
+
+            } else if (response.stalled) {
+
+                this.els.status.innerHTML = 'Stalled';
+                this.batch_log(`Batch stalled after ${this.time}ms - press Start to retry.`);
                 this.els.iterator.classList.remove('running');
 
             } else if (this.flags.stop) {
@@ -208,8 +230,11 @@
             this.params.index = 0;
             this.time = 0;
 
+            this.apply_total(null);
             this.update_progress(response.index);
-            
+
+            this.els.iterator.classList.remove('err', 'is-paused', 'is-halted', 'is-stalled', 'is-complete');
+
             this.els.status.innerHTML = 'Reset';
             this.els.time.innerHTML = '00:00:00';
 
@@ -219,7 +244,7 @@
 
         request: function (task, callback) {
 
-            if (task == 'iterate') this.batch_log(`Requesting batch process at ${this.params.labels.single} ${this.params.index} of ${this.total}.`);
+            if (task == 'iterate') this.batch_log(`Requesting batch process at ${this.params.labels.single} ${this.params.index} of ${this.total === null ? '?' : this.total}.`);
 
             var http = new XMLHttpRequest();
 
@@ -278,7 +303,15 @@
 
             this.els.index.innerHTML = index;
 
-            let percent = index ? (100 * index / this.total) : 0;
+            if (this.total === null) {
+
+                this.els.percent.innerHTML = '';
+                this.els.progress.style.width = '';
+                return;
+
+            }
+
+            let percent = (index && this.total) ? Math.min(100, 100 * index / this.total) : 0;
             this.els.percent.innerHTML = Math.floor(percent) + "%";
             this.els.progress.style.width = percent + "%";
 

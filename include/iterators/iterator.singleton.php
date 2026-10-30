@@ -66,9 +66,10 @@ abstract class Iterator extends Singleton {
     
     }
 
+    // null is "unknown": the bar runs indeterminate and the run completes when a batch answers nothing.
     public function get_total_items () {
 
-        return 1000;
+        return null;
 
     }
 
@@ -180,11 +181,14 @@ abstract class Iterator extends Singleton {
 
         $this->warm_up();
 
-        $this->store['status'] = 'running';
+        // Before get_items(): a source that fills itself in get_total_items() is read fresh by the batch that follows.
+        if (!$this->has_total()) $this->refresh_total();
 
         $this->items = $this->get_items();
 
-        if ($this->index == 0) $this->on_start();
+        if ($this->index == 0 && $this->get_status() === 'idle') $this->on_start();
+
+        $this->store['status'] = 'running';
 
         if ($this->items) foreach ($this->items as $item) {
 
@@ -223,13 +227,44 @@ abstract class Iterator extends Singleton {
 
         $this->on_batch_complete($count, $results);
 
-        if (!$this->items) $this->set_total_option($this->index);
+        if ($this->dynamic_total) $this->refresh_total();
 
-        if ($this->is_complete() || !$this->items) { // an empty first batch set the total to 0, which get_progress() reads as 0: a cron iterator with nothing to do looped for ever
+        $total     = $this->get_total();
+        $remaining = is_null($total) ? null : $total - $this->index;
+        $halt      = $this->halt_on_fail && $results['failed'];
+        $failed    = count($results['failed']) . " {$this->labels['plural']} failed";
 
-            $this->store['status'] = 'complete';
+        // Complete wins over halted: the UI's Start refuses an index at the total, so a run halted on its last batch could never resume.
+        if ((!$this->items && ($remaining ?? 0) <= 0) || (!is_null($total) && $this->index >= $total)) {
+
+            if (is_null($total)) $this->store['total'] = $this->index;
+
+            $this->store['status']  = 'complete';
+            $this->store['stalled'] = false;
+
+            if ($halt) $this->error("{$failed}.", true);
+
             $this->on_complete();
             $this->set_doing_cron(false);
+
+        } elseif ($halt) {
+
+            $this->store['status']  = 'halted';
+            $this->store['stalled'] = false;
+
+            $this->error("Halted: {$failed}.", true);
+            $this->set_doing_cron(false);
+
+        } elseif (!$this->items) {
+
+            // Items remain and the source answered none: the run stays running, retries every tick and logs once per stall.
+            if (empty($this->store['stalled'])) $this->error("No {$this->labels['plural']} returned with {$remaining} remaining; the run resumes when they return.", true);
+
+            $this->store['stalled'] = true;
+
+        } else {
+
+            $this->store['stalled'] = false;
 
         }
 
@@ -247,10 +282,10 @@ abstract class Iterator extends Singleton {
                 'count'     => $count,
                 'log'       => $this->log,
                 'errors'    => $this->errors,
+                'status'    => $this->get_status(),
+                'stalled'   => !empty($this->store['stalled']),
+                'total'     => $this->get_total(),
             ];
-
-            if ($this->dynamic_total) $response['total'] = $this->get_total_items_wrap();
-            if (!$this->items)        $response['total'] = $this->index;
 
             return $response;
 
@@ -420,9 +455,9 @@ abstract class Iterator extends Singleton {
     }
 
     public function is_complete () {
-    
-        return $this->get_progress() >= 1;
-    
+
+        return $this->get_status() === 'complete';
+
     }
 
     public function get_option_key ($suffix = false) {

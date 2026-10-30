@@ -190,6 +190,8 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `CSV_Iterator` | `Iterator` | Batch process CSV rows | yes |
 | `Order_Iterator` | `Iterator` | Batch process WC orders | yes |
 
+The run record (status, total, stalled), the stall rule and `$halt_on_fail` are in [CHEATSHEET.md#iterators](./docs/CHEATSHEET.md#iterators).
+
 ### Query
 
 | Class | Extends | Purpose | Auto |
@@ -422,7 +424,7 @@ protected $cron       = false;            // set true to enable WP cron scheduli
 // Override points
 public function get_items(): array              // return full list of items to process
 public function process_item($item): bool       // process one item; return false = failed
-public function get_total_items(): int          // optional; used for progress bar
+public function get_total_items(): ?int         // optional; null = unknown (the default)
 public function get_item_id($item): mixed       // optional; for deduplication tracking
 public function on_start(): void                // optional; called before first batch
 ```

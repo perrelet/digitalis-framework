@@ -256,6 +256,9 @@ The iterator pass rebuilt `Iterator`'s completion model as a run record in the s
 | A store had no status | `get_status()`; a pre-upgrade store derives it once on first read: index 0 is idle, an index below the total (or without one) is running, an index at the total is complete |
 | `cron_start()` called `reset()`, so a cron run unlinked a `CSV_Iterator` upload and dropped every key a consumer had put in the store | `cron_start()` calls `reset_progress()`: the keys `get_default_store()` declares are restored and every other key (the upload, a consumer's settings) survives; declare per-run buckets in `get_default_store()` |
 | `Iterator_UI` recounted the total on every render, and a `CSV_Iterator` page rescanned the file per view | The page computes a never-computed total once; a CSV counts its rows at upload |
+| An empty batch completed the run whatever the total said (the standing-items row above), so a source that answered nothing once ended a cron run early | An empty batch with items remaining stalls: the run stays running, retries every tick and logs one error line per stall; it completes when the total is unknown or reached |
+| `$halt_on_fail` was decided by the page script, so a cron run never halted | `iterate()` halts: status `halted`, the cron flag cleared, one error line; Start resumes it from its index; the batch that reaches the end completes instead |
+| `get_total_items()` defaulted to `1000`, and a total of `0` or `false` read as "no items" | Defaults to `null`, unknown: the page prints `?`, the bar runs indeterminate, the run completes when a batch answers nothing; every `iterate()` response carries `total`, `status` and `stalled` |
 
 ### Layout
 

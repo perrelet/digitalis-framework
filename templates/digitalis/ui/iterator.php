@@ -1,5 +1,21 @@
-<?php if (!defined('ABSPATH')) exit; ?>
-<div class='digitalis-iterator iterator iterator-<?= esc_attr($iterator->get_key()); ?><?= $iterator->is_doing_cron() ? ' doing_cron running' : '' ?>'>
+<?php if (!defined('ABSPATH')) exit;
+
+$cron     = $iterator->is_doing_cron();
+$progress = $iterator->get_progress();
+$labels   = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Paused'];
+$states   = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-paused']];
+
+// The cron flag outranks the record (a UI run the Stop button interrupted stays running in the store); a stall outranks the flag.
+$label   = $stalled ? 'Stalled' : ($cron ? 'Running' : ($labels[$status] ?? 'Ready'));
+$classes = ['digitalis-iterator', 'iterator', 'iterator-' . $iterator->get_key()];
+
+if ($cron)              $classes = array_merge($classes, ['doing_cron', 'running']);
+if ($stalled)           $classes[] = 'is-stalled';
+elseif (!$cron)         $classes = array_merge($classes, $states[$status] ?? []);
+if (is_null($total))    $classes[] = 'is-indeterminate';
+
+?>
+<div class='<?= esc_attr(implode(' ', $classes)) ?>'>
 
     <?= $before_description ?>
     <?php if ($description = $iterator->get_description()): ?>
@@ -18,15 +34,15 @@
     <?= $before_progress ?>
     <div class='iterator-panel progress'>
         <div class='status-bar'>
-            <div class='index-total'>Progress: <span class='index'><?= $index ?></span> / <span class='total'><?= $total; ?></span></div>
-            <div class="status"><?= $iterator->is_doing_cron() ? 'Running' : 'Ready' ?></div>
+            <div class='index-total'>Progress: <span class='index'><?= $index ?></span> / <span class='total'><?= $total ?? '?' ?></span></div>
+            <div class="status"><?= $label ?></div>
         </div>
         <div class='progress-track'>
-            <div class='progress-bar' style='width: <?= $total ? (100 * $index / $total) : 0; ?>%;'></div>
+            <div class='progress-bar'<?= is_null($total) ? '' : " style='width: " . (100 * $progress) . "%;'" ?>></div>
         </div>
         <div class='status-bar'>
-            <div class='percent'><?= $total ? floor(100 * $index / $total) : 0 ?>%</div>
-            <div class='time'><?= $iterator->is_doing_cron() ? 'Cron Task' : '00:00:00' ?></div>
+            <div class='percent'><?= is_null($total) ? '' : floor(100 * $progress) . '%' ?></div>
+            <div class='time'><?= $cron ? 'Cron Task' : '00:00:00' ?></div>
         </div>
     </div>
     <?= $after_progress ?>
