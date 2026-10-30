@@ -79,6 +79,8 @@ A site's roles grant the first two.
 
 One record has one open proposal (`get_open_proposal()`). Only that draft clears it. A draft restored from the Trash, or submitted, takes it back when no other proposal is open. Deleting the record deletes its draft. Drafts idle past `lattice.proposal.cleanup_days` (90) are deleted daily; submitted ones wait.
 
+A draft is a different post, so ACF field groups located by which record this is (`post`, `page`, `page_type` and `page_parent` rules, such as the front page or a page's children) match the live record instead: Proposals answers `acf/location/match_rule/type={param}` for a draft by matching the rule against the record it proposes for, ignoring the parent the editor posts. Every other rule (post type, template, terms) matches the draft, so a proposed term still brings its fields.
+
 A stale proposal stays stale: its version is the record's when it was made. Discard it and propose again on the current version.
 
 ### What approving writes

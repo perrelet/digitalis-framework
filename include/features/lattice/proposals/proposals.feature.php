@@ -48,6 +48,8 @@ class Proposals extends Feature {
             'lattice.resources.journal'           => 'journal_drafts',
         ];
 
+        foreach (['post', 'page', 'page_type', 'page_parent'] as $param) $hooks["acf/location/match_rule/type={$param}"] = 'match_original';
+
         // Resources register as the app loads, after this.
         if (is_admin()) $hooks['init'] = 'load_admin';
 
@@ -164,6 +166,17 @@ class Proposals extends Feature {
     public function exclude_meta ($keys) {
 
         return [...(array) $keys, ...array_values(Proposal::META)];
+
+    }
+
+    // Field groups located by which record this is follow the live record. The editor posts the draft's own parent.
+    public function match_original ($result, $rule, $screen, $field_group) {
+
+        if (!($draft = Proposal::find_model($screen['post_id'] ?? 0))?->is_proposal()) return $result;
+
+        unset($screen['page_parent']);
+
+        return acf_get_location_type($rule['param'])->match($rule, ['post_id' => $draft->get_proposed_for_id()] + $screen, $field_group);
 
     }
 
