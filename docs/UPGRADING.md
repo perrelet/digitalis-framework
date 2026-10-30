@@ -262,6 +262,9 @@ The iterator pass rebuilt `Iterator`'s completion model as a run record in the s
 | `Post_Iterator`, `Order_Iterator` and `Product_Iterator` counted their totals by fetching every id (`posts_per_page => -1`, `limit => -1`) | They count from one row: `posts_per_page => 1` and `found_posts`; `limit => 1, paginate => true` and the result's `total` |
 | `CSV_Iterator::get_items()` resumed with `fseek()` on whatever `ftell()` had stored, so a `false` offset threw a TypeError (the file declares strict types) | A resume needs an int offset; otherwise the batch is read by skipping `index` rows from the top |
 | `CSV_Iterator::validate_upload()` indexed `$upload_errors` with the upload's error code, so a file input named `csv[]` (every member an array) threw a TypeError | It answers a notice: one file at a time |
+| A cron iterator whose `$cron_time` was not `H:i:s` was a fatal (`getTimestamp()` on `false`) on every page load, and `Cron_Scheduler` the same for a task's `time` | Under strict a violation at construction naming the property or the task, in production one log line; nothing is scheduled, the loop event included |
+| `every_minute`, the loop schedule, was registered by nobody in the framework: outside a site that declared it the loop never scheduled (`wp_schedule_event()` answered `false`, unchecked) and a cron run did one batch | The framework registers it when a cron iterator is constructed (a site's own schedule under that name is kept); a schedule no `cron_schedules` filter registers is a violation / log line and schedules nothing; a `false` from `wp_schedule_event()` is logged |
+| `Iterator` had no strict audit | `Strict::audit()` reads the declarations: `$labels` carries string `single` and `plural`, `$cron_time` is `H:i:s` |
 
 ### Layout
 

@@ -9,6 +9,9 @@ use DateTimeZone;
 
 abstract class Cron_Scheduler extends Singleton {
 
+    // H:i:s and nothing else: createFromFormat() would accept '9:00:00' and roll '25:61:61' over to tomorrow without a word.
+    public const TIME_PATTERN = '/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d\z/';
+
     protected $timezone = null;
 
     protected $tasks = [
@@ -109,6 +112,14 @@ abstract class Cron_Scheduler extends Singleton {
 
             $date_string = (new DateTime)->format('Y-m-d') . ' ' . $task['time'];
             $date_time   = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
+
+            if (!preg_match(self::TIME_PATTERN, (string) $task['time']) || !$date_time) {
+
+                Strict::violation(static::class, "declares task '{$key}' at '{$task['time']}', which is not an H:i:s time.", "Declare the task's 'time' as 'H:i:s', '01:45:00' for example.");
+                Strict::log_once(static::class, "task '{$key}' time '{$task['time']}' is not an H:i:s time; it is not scheduled.");
+                continue;
+
+            }
 
             wp_schedule_event($date_time->getTimestamp(), $task['schedule'], $action);
 

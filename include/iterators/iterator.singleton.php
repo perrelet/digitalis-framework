@@ -94,6 +94,23 @@ abstract class Iterator extends Singleton {
 
         if ($this->cron_condition()) {
 
+            $date_string = (new DateTime)->format('Y-m-d') . ' ' . $this->cron_time;
+            $date_time   = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
+
+            if (!preg_match(Cron_Scheduler::TIME_PATTERN, (string) $this->cron_time) || !$date_time) {
+
+                Strict::violation(static::class, "declares \$cron_time '{$this->cron_time}', which is not an H:i:s time.", "Declare \$cron_time as 'H:i:s', '02:00:00' for example.");
+                Strict::log_once(static::class, "\$cron_time '{$this->cron_time}' is not an H:i:s time; nothing is scheduled.");
+                return;
+
+            }
+
+            // Core registers no every_minute schedule; a site's own 60-second one under that name is kept.
+            add_filter('cron_schedules', function ($schedules) {
+                $schedules['every_minute'] ??= ['interval' => 60, 'display' => 'Every Minute'];
+                return $schedules;
+            });
+
             $cron_action_start = $this->get_option_key() . '_start';
             $cron_action_loop  = $this->get_option_key() . '_loop';
 
@@ -102,25 +119,61 @@ abstract class Iterator extends Singleton {
 
             if (!wp_next_scheduled($cron_action_start)) {
 
-                $date_string = (new DateTime)->format('Y-m-d') . ' ' . $this->cron_time;
-                $date_time = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
-
                 // If today's slot has already passed, push to tomorrow — otherwise wp_schedule_event
                 // accepts the past timestamp and WP-cron fires it immediately on the next poll, locking
                 // the first run to "now" instead of the intended time.
                 if ($date_time->getTimestamp() < time()) $date_time->modify('+1 day');
 
-                wp_schedule_event($date_time->getTimestamp(), $this->cron_schedule, $cron_action_start);
+                $this->schedule_event($date_time->getTimestamp(), $this->cron_schedule, $cron_action_start);
 
             }
 
-            if (!wp_next_scheduled($cron_action_loop)) {
-
-                wp_schedule_event(time(), $this->cron_loop_schedule, $cron_action_loop);
-
-            }
+            if (!wp_next_scheduled($cron_action_loop)) $this->schedule_event(time(), $this->cron_loop_schedule, $cron_action_loop);
 
         }
+
+    }
+
+    // An unregistered schedule is a declaration error: core answers false, nothing fires, and a run would do one batch and stop.
+    protected function schedule_event ($timestamp, $schedule, $action) {
+
+        if (!isset(wp_get_schedules()[$schedule])) {
+
+            Strict::violation(static::class, "schedules '{$action}' on '{$schedule}', which no cron_schedules filter registers.", "Declare a registered schedule, or register '{$schedule}' with a cron_schedules filter.");
+            Strict::log_once(static::class, "schedule '{$schedule}' is not registered; '{$action}' is not scheduled.");
+            return false;
+
+        }
+
+        if (wp_schedule_event($timestamp, $schedule, $action) !== true) {
+
+            error_log('Lattice: ' . static::class . ": '{$action}' was not scheduled on '{$schedule}' (a pre_schedule_event veto or a WP_Error).");
+            return false;
+
+        }
+
+        return true;
+
+    }
+
+    public static function strict_audit (string $class) {
+
+        $reflection = new \ReflectionClass($class);
+
+        if ($reflection->isAbstract()) return;
+
+        $defaults = $reflection->getDefaultProperties();
+        $labels   = is_array($defaults['labels'] ?? null) ? $defaults['labels'] : [];
+
+        foreach (['single', 'plural'] as $key) {
+
+            if (!is_string($labels[$key] ?? null) || $labels[$key] === '') Strict::violation($class, "declares \$labels without a string '{$key}'.", "Declare \$labels with string 'single' and 'plural' keys.");
+
+        }
+
+        $cron_time = $defaults['cron_time'] ?? null;
+
+        if (!is_string($cron_time) || !preg_match(Cron_Scheduler::TIME_PATTERN, $cron_time)) Strict::violation($class, "declares \$cron_time " . var_export($cron_time, true) . ", which is not an H:i:s time.", "Declare \$cron_time as 'H:i:s', '02:00:00' for example.");
 
     }
 
