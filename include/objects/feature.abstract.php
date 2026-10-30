@@ -11,6 +11,15 @@ abstract class Feature extends Factory {
 
     protected $id = null;
 
+    // Library feature paths that load_feature() loads first.
+    protected static $requires = [];
+
+    public static function get_requirements () : array {
+
+        return static::$requires;
+
+    }
+
     public static function load () {
 
         return call_user_func_array([static::class, 'get_instance'], func_get_args());

@@ -106,3 +106,23 @@ Dev_Role::inst();                                    // the unconfigured feature
 ```
 
 The name is whichever property `$cache_property` points to, `id` by default; a feature named otherwise sets its own (`'slug'`), and `null` opts out of names altogether. Loading the same name again returns the instance already running; its new config is ignored. Names are scoped to the feature's class, so unrelated features may share one. A family that declares its own `$cache_group` shares one namespace instead, so its base class finds any member by name: `Meta_Box::inst('somm-keywords')` finds the `Keywords_Metabox`. Within a family a name is one instance, whichever subclass asks, so keep names unique there (as meta box ids already are); two classes declaring the same one both run, each found by its class, with a warning. `create()` stays what it is everywhere: a new instance nothing can find again.
+
+### Declare what a feature needs: `$requires` for features, `instance_condition()` for everything else
+
+A library feature that needs another lists it by path. `load_feature()` loads each requirement before the feature, so a site loads features in any order. A feature that needs a plugin or a function says so in `instance_condition()`, the gate `get_instance()` already asks: refused, it never exists, so there is nothing to half-disable.
+
+```php
+class Proposals extends Feature {
+
+    protected static $requires = ['lattice/resources', 'wp/stored-markup'];
+
+    public static function instance_condition ($data = []) {
+
+        return function_exists('acf_get_field') && parent::instance_condition($data);
+
+    }
+
+}
+```
+
+A requirement loads with its defaults. A site that configures one loads it first; the later load returns that instance. A requirement that can't be found, a circular one or a refused condition stops the feature, and `load_feature()` reports it with `_doing_it_wrong()`, which reaches the debug log in every context. Don't check for another feature with `class_exists()`: the class exists as soon as its file is included, whether or not the feature runs.
