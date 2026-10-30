@@ -28,12 +28,15 @@ class Lattice_Resources extends Feature {
 
     protected array $before = [];
 
+    protected ?array $last_save = null;
+
     public function get_hooks () {
 
         return [
             'save_post'                                       => 'raise_version',
             'pre_post_update'                                 => 'take_before',
             'wp_after_insert_post'                            => ['settle_save', 100],
+            'wp_restore_post_revision'                        => ['settle_restore', 100],
             'post_submitbox_misc_actions'                     => 'print_version',
             'admin_action_editpost'                           => 'claim_from_editor',
             'acf/save_post'                                   => ['take_page_before', 5],
@@ -211,11 +214,14 @@ class Lattice_Resources extends Feature {
 
         $created = !$update || $before['status'] === 'auto-draft';
         $after   = $resource->read($model);
+        $via     = is_admin() ? 'admin' : 'other';
+
+        $this->last_save = $created ? null : ['post_id' => (int) $post_id, 'values' => $before['values'], 'version' => $before['version'], 'via' => $via, 'row' => 0];
 
         if ((!$created && $after === $before['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
 
-        Journal::inst()->write([
-            'via'            => is_admin() ? 'admin' : 'other',
+        $row = Journal::inst()->write([
+            'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $post_id,
             'action'         => $created ? 'create' : 'update',
@@ -224,6 +230,32 @@ class Lattice_Resources extends Feature {
             'version_before' => $created ? 0 : $before['version'],
             'version_after'  => $model->get_version(),
         ]);
+
+        if (!$created) $this->last_save['row'] = $row;
+
+    }
+
+    // WordPress restores the fields after this post's save.
+    public function settle_restore ($post_id) {
+
+        $save = (($this->last_save['post_id'] ?? 0) === (int) $post_id) ? $this->last_save : null;
+
+        $this->last_save = null;
+
+        [$resource, $model] = $this->find($post_id);
+
+        if (!$save || !$model) return;
+
+        $model->raise_version();
+        $resource->forget_values($model);
+        $model->reload();
+
+        if ((($after = $resource->read($model)) === $save['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
+
+        $row = ['action' => 'restore', 'after' => $after, 'version_after' => $model->get_version()];
+
+        if ($save['row']) Journal::inst()->amend($save['row'], $row);
+        else Journal::inst()->write($row + ['via' => $save['via'], 'resource' => $resource->get_name(), 'record_id' => $post_id, 'before' => $save['values'], 'version_before' => $save['version']]);
 
     }
 

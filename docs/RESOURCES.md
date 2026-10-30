@@ -220,7 +220,7 @@ Fields come from the groups on that page; the capability is the page's; create i
 
 ## The Version
 
-`Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. `raise_version()` is a single step for raises outside a save.
+`Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. A restored revision raises it once more, after its fields come back. `raise_version()` is a single step for raises outside a save. The count is only ever compared, never counted.
 
 Relationship sync (`ACF\Bidirectional_Relationship`) writes a partner's meta without saving it, so the feature raises the partner's version itself.
 
@@ -232,9 +232,11 @@ wp-admin's classic editor and options pages carry the version in a hidden field 
 
 `{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`).
 
+A restored revision is one row, `restore`. WordPress saves the post's columns, then its `wp_restore_post_revision` listeners bring the fields back (its own, ACF's, a site's); the feature journals the save as it would any, then completes that row at priority 100, once the fields are in (`Journal::amend()`, used only for a row written earlier in the same request). Rows are otherwise never changed.
+
 Undo is a write of its own:
 
-- an update row writes back the fields it changed, while each still holds that row's after (any save raises the version, so fields are compared, not versions);
+- an update or restore row writes back the fields it changed, while each still holds that row's after (any save raises the version, so fields are compared, not versions);
 - an action row runs its `undo` action, while the record is at that row's version;
 - create, an action without `undo`, and secrets are refused.
 
@@ -289,6 +291,8 @@ Another feature has its say over single records:
 
 - A flexible field inside a repeater, group or another flexible field is read through its parent, which drops disabled rows outside wp-admin, so a field holding one is locked to the layer's writes.
 - An editor save claimed and then stopped before WordPress writes (another plugin's `wp_die` on `admin_action_editpost`) leaves the version raised once: that form is refused next time and its page needs reloading.
+- A restore's row is written as `update` and completed as `restore` milliseconds later, in the same request: only a journal read at that moment sees it half done.
+- Undo never touches action-only fields, so undoing a restore leaves anything the restore's listeners switched by action as they left it (an Email it switched off stays off).
 - Only the classic editor and options pages refuse a stale save. The block editor, Quick Edit and Bulk Edit raise the version, so the layer refuses whatever read before them, but are not themselves refused.
 - An option page's dry run cannot see code that reads its options through the global `get_field($name, 'option')`.
 - Consequences are written by each resource: a resource that puts a secret's value in one leaks it there.

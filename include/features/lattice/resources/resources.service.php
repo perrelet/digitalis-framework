@@ -341,7 +341,7 @@ class Resources extends Service {
         $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id])]);
 
         // Any save raises the version, so an update row compares the fields it restores.
-        if (in_array($row['action'], ['update', 'undo'], true) && is_array($row['before'])) {
+        if (in_array($row['action'], ['update', 'undo', 'restore'], true) && is_array($row['before'])) {
 
             if ($refusal = $this->refuse_update($resource, $model)) return $refusal;
 

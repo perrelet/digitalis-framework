@@ -39,6 +39,17 @@ class Journal extends Service {
 
     }
 
+    // Only for a row written earlier in this request.
+    public function amend (int $id, array $changes) : bool {
+
+        global $wpdb;
+
+        foreach (array_intersect_key($changes, ['before' => 0, 'after' => 0]) as $column => $value) $changes[$column] = is_null($value) ? null : wp_json_encode($value);
+
+        return (bool) $wpdb->update($this->get_table(), $changes, ['id' => $id]);
+
+    }
+
     public function find (int $id) : ?array {
 
         global $wpdb;
