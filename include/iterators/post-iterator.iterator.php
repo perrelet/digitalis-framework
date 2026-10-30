@@ -50,7 +50,7 @@ abstract class Post_Iterator extends Iterator {
     public function get_total_items () {
 
         $args = wp_parse_args([
-            'posts_per_page' => -1,
+            'posts_per_page' => 1, // found_posts is the total; one row is fetched instead of every id
             'offset'         => false,
             'fields'         => 'ids',
             'no_found_rows'  => false, // a subclass's no_found_rows => true answered 0 and the iterator never completed

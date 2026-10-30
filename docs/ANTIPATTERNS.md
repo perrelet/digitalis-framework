@@ -357,6 +357,31 @@ class Product_Page extends Page_View {
 ```
 ---
 
+## Iterator
+
+### Filter on what `process_item()` leaves alone
+
+`get_items()` pages by offset (`$this->index` and `$this->batch_size`). When `process_item()` changes the field the query filters on, the processed items leave the result set, the next page starts `batch_size` items past the ones that moved, and every other batch is skipped. Order by ID and filter on a field the task does not change, or query everything and return early per item.
+
+```php
+// ❌ processing clears the flag the query selects on
+public function get_query_vars ($vars) { return $vars + ['meta_key' => 'needs_sync', 'meta_value' => '1']; }
+public function process_post ($wp_post) { update_post_meta($wp_post->ID, 'needs_sync', '0'); }
+
+// ✅ select every post and decide per item
+public function process_post ($wp_post) { if (!get_post_meta($wp_post->ID, 'needs_sync', true)) return; /* sync */ }
+```
+
+### `get_items()` honours the index
+
+A `get_items()` that fetches everything (`posts_per_page => -1`, a bare `Model::query()`) ignores `$this->index`, so every tick reprocesses the whole set from the start and the run ends only because the index passes the total. Page by `$this->index` and `$this->batch_size`, as `get_default_query_vars()` does.
+
+### `get_total_items()` counts, it does not fetch
+
+A total built as `count()` of every id loads the whole table on every Start. Count from one row: `posts_per_page => 1` with `found_posts`, `limit => 1, paginate => true` with the result's `total`, `number => 1, count_total => true` with `get_total()`.
+
+---
+
 ## General PHP / Framework
 
 ### Prefix vendor model variables — reserve short names for framework models

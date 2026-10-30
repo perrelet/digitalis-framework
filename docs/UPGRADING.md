@@ -259,6 +259,7 @@ The iterator pass rebuilt `Iterator`'s completion model as a run record in the s
 | An empty batch completed the run whatever the total said (the standing-items row above), so a source that answered nothing once ended a cron run early | An empty batch with items remaining stalls: the run stays running, retries every tick and logs one error line per stall; it completes when the total is unknown or reached |
 | `$halt_on_fail` was decided by the page script, so a cron run never halted | `iterate()` halts: status `halted`, the cron flag cleared, one error line; Start resumes it from its index; the batch that reaches the end completes instead |
 | `get_total_items()` defaulted to `1000`, and a total of `0` or `false` read as "no items" | Defaults to `null`, unknown: the page prints `?`, the bar runs indeterminate, the run completes when a batch answers nothing; every `iterate()` response carries `total`, `status` and `stalled` |
+| `Post_Iterator`, `Order_Iterator` and `Product_Iterator` counted their totals by fetching every id (`posts_per_page => -1`, `limit => -1`) | They count from one row: `posts_per_page => 1` and `found_posts`; `limit => 1, paginate => true` and the result's `total` |
 
 ### Layout
 

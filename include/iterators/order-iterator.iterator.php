@@ -45,12 +45,15 @@ abstract class Order_Iterator extends Iterator {
     public function get_total_items () {
 
         $args = wp_parse_args([
-            'limit'  => -1,
-            'offset' => false,
-            'return' => 'ids',
+            'limit'    => 1, // the paginated result's total; one row is fetched instead of every id
+            'offset'   => false,
+            'paginate' => true,
+            'return'   => 'ids',
         ], $this->get_query_vars($this->get_default_query_vars()));
 
-        return count((new WC_Order_Query($args))->get_orders());
+        $result = (new WC_Order_Query($args))->get_orders();
+
+        return is_object($result) ? (int) $result->total : null; // a data store that ignores paginate answers the one row, not a total: unknown
 
     }
 
