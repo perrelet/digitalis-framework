@@ -22,6 +22,8 @@ class Proposal {
     protected $original = false;
     protected $changes;
     protected $policy;
+    protected $held;
+    protected $removed = [];
 
     public function __construct (protected Post $draft) {}
 
@@ -33,15 +35,33 @@ class Proposal {
 
     }
 
+    public static function is_moderated (Model_Resource $resource) : bool {
+
+        $class  = $resource->get_model_class();
+        $traits = array_merge(...array_map('class_uses', [$class, ...array_values(class_parents($class))]));
+
+        while ($trait = array_shift($traits)) {
+
+            if ($trait === Has_Proposals::class) return true;
+
+            array_push($traits, ...array_values(class_uses($trait)));
+
+        }
+
+        return false;
+
+    }
+
     public static function get_resource_for (string $post_type) : ?Model_Resource {
 
         return in_array($post_type, static::get_post_types(), true) ? Resources::inst()->get_resource_for_post_type($post_type) : null;
 
     }
 
-    public static function find_model (int $post_id) : ?Post {
+    // An options page resource's id is its slug.
+    public static function find_model ($post_id) : ?Post {
 
-        return ($post_id > 0) ? static::get_resource_for((string) get_post_type($post_id))?->find($post_id) : null;
+        return (is_numeric($post_id) && ($post_id > 0)) ? static::get_resource_for((string) get_post_type((int) $post_id))?->find((int) $post_id) : null;
 
     }
 
@@ -67,6 +87,22 @@ class Proposal {
         ], $args));
 
         return array_values(array_filter(array_map(fn ($draft) => static::find($draft->get_id()), $drafts)));
+
+    }
+
+    // Every draft linked to a record, wherever its status.
+    public static function find_drafts_for (int $original_id) : array {
+
+        if (!$types = static::get_post_types()) return [];
+
+        return Post::query([
+            'post_type'      => $types,
+            'post_status'    => array_keys(get_post_stati()),
+            'posts_per_page' => -1,
+            'no_found_rows'  => true,
+            '_suppress'      => true,
+            'meta_query'     => [['key' => static::META['FOR'], 'value' => $original_id]],
+        ]);
 
     }
 
@@ -186,6 +222,8 @@ class Proposal {
         $this->original = false;
         $this->changes  = null;
         $this->policy   = null;
+        $this->held     = null;
+        $this->removed  = [];
 
         $this->draft->reload();
 
@@ -216,12 +254,16 @@ class Proposal {
     // name => why approving leaves it out
     public function get_held_back () : array {
 
+        if (isset($this->held)) return $this->held;
+
         $fields = $this->get_resource()?->get_fields_for($this->draft) ?? [];
         $held   = array_map(fn () => 'it changes only through an action', array_filter(array_intersect_key($fields, $this->get_changes()), fn ($field) => $field->action_only));
 
+        foreach (array_intersect_key($this->get_changes(), array_flip(Resources::CONTROL)) as $name => $value) $held[$name] ??= 'the resources layer reserves its name';
+
         if ($this->get_markup_policy() === 'exclude') foreach (array_keys($this->find_markup_removed(array_keys($this->get_changes()))) as $name) $held[$name] ??= 'approving would take markup off the live version';
 
-        return $held;
+        return $this->held = $held;
 
     }
 
@@ -273,6 +315,10 @@ class Proposal {
 
     protected function find_markup_removed (array $names) : array {
 
+        $key = implode(',', $names);
+
+        if (isset($this->removed[$key])) return $this->removed[$key];
+
         if (!($resource = $this->get_resource()) || !($original = $this->get_original())) return [];
 
         $live    = array_intersect_key(static::read_filtered($resource, $original), array_flip($names));
@@ -281,7 +327,7 @@ class Proposal {
 
         foreach ($live as $name => $value) if (($markup = static::count_markup($value)) && ($lost = static::subtract_markup($markup, static::count_markup($draft[$name] ?? null)))) $removed[$name] = $lost;
 
-        return $removed;
+        return $this->removed[$key] = $removed;
 
     }
 
@@ -459,7 +505,7 @@ class Proposal {
 
         if (!($resource = $this->get_resource()) || !($original = $this->get_original())) return new WP_Error('not_found', 'The live version is gone.', ['status' => 404]);
 
-        return Resources::inst()->update($resource->get_name(), $original->get_id(), $this->get_values() + ['version' => $this->draft->get_proposal_base_version(), 'why' => $this->get_why()] + $input, 'admin');
+        return Resources::inst()->update($resource->get_name(), $original->get_id(), $input + ['version' => $this->draft->get_proposal_base_version(), 'why' => $this->get_why()] + $this->get_values(), 'admin');
 
     }
 
@@ -480,7 +526,7 @@ class Proposal {
 
         if ($reason = static::refuse_proposer($original, $author->get_id())) return new WP_Error('locked', $reason);
 
-        $draft = $original->duplicate(['post_status' => 'draft', 'post_author' => $author->get_id(), 'meta_input' => $original::make_proposal_meta($original, $author)], $original::get_proposal_meta_keys());
+        $draft = $original->duplicate(['post_status' => 'draft', 'post_author' => $author->get_id(), 'meta_input' => $original::make_proposal_meta($original, $author)]);
 
         if (is_wp_error($draft)) return $draft;
 

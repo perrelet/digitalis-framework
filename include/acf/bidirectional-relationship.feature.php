@@ -133,9 +133,9 @@ abstract class Bidirectional_Relationship extends \Digitalis\Feature {
         $sync_field     = acf_get_field($sync_field_key);
         $updated_id     = $self_type->id_from_selector($updated_selector);
 
-        if (!$this->allows_sync($values, $updated_selector, $field))    return $values;
         if (!$self_type->matches($updated_selector))                    return $values;
         if (!$self_type->passes_filter($updated_selector))              return $values;
+        if (!$this->allows_sync($values, $updated_selector, $field))    return $values;
         if (!$this->check_global_flag('updating'))                      return $values;
 
         // Unresolved partner field means we're about to write its value blind

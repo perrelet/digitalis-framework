@@ -83,7 +83,7 @@ class Proposals extends Feature {
 
         if (!isset($this->types[$key])) {
 
-            $moderated = array_values(array_filter(array_map(fn ($resource) => method_exists($resource->get_model_class(), 'get_proposal') ? $resource->get_post_type() : '', $resources)));
+            $moderated = array_values(array_filter(array_map(fn ($resource) => Proposal::is_moderated($resource) ? $resource->get_post_type() : '', $resources)));
 
             $this->types[$key] = is_null($this->post_types) ? $moderated : array_values(array_intersect((array) $this->post_types, $moderated));
 
@@ -139,7 +139,7 @@ class Proposals extends Feature {
         if (!$model = Proposal::find_model($post_id)) return;
 
         if ($model->is_proposal()) $this->release_record($post_id);
-        elseif (($proposal = $model->get_open_proposal()) && $proposal->get_draft()->get_proposed_for_id() === $model->get_id()) $proposal->get_draft()->delete(true);
+        else foreach (Proposal::find_drafts_for($model->get_id()) as $draft) $draft->delete(true);
 
     }
 

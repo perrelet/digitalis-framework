@@ -120,7 +120,7 @@ class Proposals_Admin extends Feature {
 
         $result = $proposal->approve(sanitize_text_field(wp_unslash($_REQUEST['confirm'] ?? '')));
 
-        if (!is_wp_error($result)) $this->redirect(get_edit_post_link($original->get_id(), 'raw'), 'approved');
+        if (!is_wp_error($result)) $this->redirect(get_edit_post_link($original->get_id(), 'raw') ?: Proposal::get_queue_url(), 'approved');
 
         // Resources answers stale for a moved version and for a dry run that no longer matches.
         $proposal->forget();
@@ -189,7 +189,9 @@ class Proposals_Admin extends Feature {
 
         }
 
-        if ($notice = static::NOTICES[sanitize_key($_GET[static::NOTICE] ?? '')] ?? null) {
+        $code = sanitize_key($_GET[static::NOTICE] ?? '');
+
+        if ($notice = static::NOTICES[$code] ?? null) {
 
             [$type, $message] = $notice;
 
@@ -197,7 +199,7 @@ class Proposals_Admin extends Feature {
 
             delete_transient(static::REFUSED . $user);
 
-            echo new Proposal_Notice(['type' => $type, 'dismissible' => true, 'message' => trim($message . (($type === 'error') ? ' ' . $refusal : ''))]);
+            echo new Proposal_Notice(['type' => $type, 'dismissible' => true, 'message' => trim($message . (($code === 'refused') ? ' ' . $refusal : ''))]);
 
         }
 

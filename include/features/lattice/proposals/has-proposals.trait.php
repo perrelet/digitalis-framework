@@ -4,12 +4,6 @@ namespace Digitalis;
 
 trait Has_Proposals {
 
-    public static function get_proposal_meta_keys () : array {
-
-        return array_values(Proposal::META);
-
-    }
-
     public static function make_proposal_meta (Post $original, User $author) : array {
 
         return [
