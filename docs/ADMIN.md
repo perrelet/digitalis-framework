@@ -250,7 +250,7 @@ class Plugin_Logs_Page extends Logs_Page {
 ]
 ```
 
-The page renders the log tail with pagination. The `theme` values are validated against the page's `get_syntax_rules()` allowlist — unrecognised values are ignored.
+The page renders the log tail with pagination, inside a `<div class='lattice'>` scope: the log switcher is core's tab strip (`nav-tab-wrapper`, `nav-tab`, `nav-tab-active`), the actions are core buttons, and the styles come from `assets/css/logs.css` (handle `lattice-logs`, depending on `lattice-tokens`, enqueued on `admin_enqueue_scripts` for the page's own request and from `callback()` elsewhere). The dark reading surface declares a `--log-*` token group on `.digitalis-log` for retuning. The `theme` values are validated against the page's `get_syntax_rules()` allowlist — unrecognised values are ignored.
 
 ---
 

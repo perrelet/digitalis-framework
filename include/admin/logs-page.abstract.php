@@ -40,7 +40,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     public function enqueue_style () {
 
-        wp_enqueue_style('lattice-logs', LATTICE_URI . 'assets/css/logs.css', [], LATTICE_VERSION);
+        wp_enqueue_style('lattice-tokens', LATTICE_URI . 'assets/css/admin-tokens.css', [], LATTICE_VERSION);
+        wp_enqueue_style('lattice-logs', LATTICE_URI . 'assets/css/logs.css', ['lattice-tokens'], LATTICE_VERSION);
 
     }
 
@@ -232,7 +233,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         if ($pagination) $pagination = "<span class='pagination-links'>{$pagination}</span>";
 
-        echo "<div class='digitalis-logs'>";
+        echo "<div class='lattice'><div class='digitalis-logs'>"; // the token scope: admin-tokens.css styles nothing outside it
 
             echo "<span id='hash-top'></span>";
             
@@ -240,7 +241,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             if (!($current['permissions']['view'] ?? 0) || !current_user_can($current['permissions']['view'])) {
 
-                echo "<div class='notice notice-error'><p>You do no thave permission to view this log file.</p></div>";
+                echo "<div class='notice notice-error'><p>You do not have permission to view this log file.</p></div>";
+                echo "</div></div>";
                 return;
     
             }
@@ -290,25 +292,25 @@ abstract class Logs_Page extends Admin_Sub_Page {
                 
                 if (($current['permissions']['clear'] ?? 0) && current_user_can($current['permissions']['clear'])) {
 
-                    echo "<button class='button' type='submit' name='clear-log' value='1' onclick='return confirm(`Are you sure you want to empty this log file?`)'>🗑️ Clear Log</button>";
+                    echo "<button class='button clear' type='submit' name='clear-log' value='1' onclick='return confirm(`Are you sure you want to empty this log file?`)'>🗑️ Clear Log</button>";
         
                 }
                 
             echo "</form>";
 
-        echo "</div>";
+        echo "</div></div>";
     
     }
 
     protected function render_menu ($logs, $current = null) {
     
-        echo "<nav class='digitalis-logs-nav'>";
+        echo "<nav class='digitalis-logs-nav nav-tab-wrapper'>";
 
             foreach ($logs as $log) {
         
                 $url = add_query_arg('log', $log['slug'], remove_query_arg(['paged', 'clear-log']));
 
-                $class = ($current['slug'] == $log['slug']) ? 'selected' : 'none';
+                $class = ($current['slug'] == $log['slug']) ? 'nav-tab nav-tab-active' : 'nav-tab';
 
                 echo "<a href='" . esc_url($url) . "' class='" . esc_attr($class) . "'>" . esc_html($log['name']) . "</a>";
             
