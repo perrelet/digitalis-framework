@@ -90,6 +90,7 @@ abstract class Iterator extends Singleton {
     public function __construct () {
 
         add_action('admin_menu', [$this, 'add_admin_page'], 99);
+        add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_assets']);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
 
         if ($this->cron_condition()) {
@@ -408,17 +409,30 @@ abstract class Iterator extends Singleton {
 
     }
 
+    // The iterator's own screen (the CSV intake state included) gets the stylesheet in the head; a host rendering the controller
+    // elsewhere gets it from the footer. The script stays with the controller: it prints in the footer either way and must not
+    // load without the params the controller localizes.
+    public function maybe_enqueue_assets () {
+
+        if (($_GET['page'] ?? 0) == $this->get_menu_slug()) $this->enqueue_style();
+
+    }
+
+    public function enqueue_style () {
+
+        wp_enqueue_style('lattice-iterator', LATTICE_URI . 'assets/css/iterator.css', [], LATTICE_VERSION);
+
+    }
+
     public function render_controller () {
 
-        wp_enqueue_script('digitalis-iterator', LATTICE_URI . 'assets/js/iterator.js', [], LATTICE_VERSION, true);
-        wp_localize_script('digitalis-iterator', 'iterator_params', [
+        $this->enqueue_style();
+        wp_enqueue_script('lattice-iterator', LATTICE_URI . 'assets/js/iterator.js', [], LATTICE_VERSION, true);
+        wp_localize_script('lattice-iterator', 'iterator_params', [
             'ajax_url'      => admin_url('admin-ajax.php'),
             'nonce'         => wp_create_nonce("iterator_{$this->key}"),
             'key'           => $this->key,
             'index'         => $this->index,
-            'batch_size'    => $this->batch_size,
-            'halt_on_fail'  => $this->halt_on_fail,
-            'dynamic_total' => $this->dynamic_total,
             'print_results' => $this->print_results,
             'doing_cron'    => $this->is_doing_cron(),
             'labels'        => $this->labels,

@@ -44,10 +44,4 @@ class Iterator_UI extends View {
     
     }
 
-    public function before_first () {
-
-        echo "<style>" . file_get_contents(LATTICE_PATH . '/assets/css/iterator.css') . "</style>";
-
-    }
-
 }

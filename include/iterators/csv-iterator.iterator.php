@@ -300,7 +300,7 @@ abstract class CSV_Iterator extends Iterator {
 
         if (!$this->file) {
 
-            echo "<style>" . file_get_contents(LATTICE_PATH . '/assets/css/iterator.css') . "</style>";
+            $this->enqueue_style();
 
             $fields   = $this->get_fields();
             $fields[] = $this->get_submit_field();
