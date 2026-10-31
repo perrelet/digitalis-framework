@@ -121,7 +121,7 @@
 
                 if (response.results.processed.length)  for (const id of response.results.processed)    this.batch_log(` - OK: #${id}`);
                 if (response.results.skipped.length)    for (const id of response.results.skipped)      this.batch_log(` - Skipped: #${id}`);
-                if (response.results.failed.length)     for (const id of response.results.failed)       this.error(` - Failed: #${id}`, false);
+                if (response.results.failed.length)     for (const id of response.results.failed)       this.error(` - Failed: #${id}`, false, true);
 
             }
 
@@ -262,17 +262,17 @@
 
                         case 400:
 
-                            this.error(`AJAX Error: ${http.status} - Bad request trying to reach ${http.responseURL}`, true);
+                            this.error(`AJAX Error: ${http.status} - Bad request trying to reach ${http.responseURL}`, true, true);
                             return;
 
                         case 401:
 
-                            this.error(`AJAX Error: ${http.status} - ${http.responseText}`, true);
+                            this.error(`AJAX Error: ${http.status} - ${http.responseText}`, true, true);
                             return;
 
                         default:
 
-                            this.error(`AJAX Error: ${http.status} - ${http.responseText}`, true);
+                            this.error(`AJAX Error: ${http.status} - ${http.responseText}`, true, true);
                             return;
 
                     }
@@ -333,11 +333,11 @@
 
         },
 
-        log: function (msg, type = 'item') {
+        log: function (msg, type = 'item', text = false) {
 
             let item = document.createElement("div");
             item.classList.add('log-' + type);
-            item.innerHTML = msg;
+            if (text) item.textContent = msg; else item.innerHTML = msg;
 
             this.els.log.prepend(item);
 
@@ -345,11 +345,11 @@
 
         batch_log: function (msg) {
 
-            this.log(msg, 'batch');
+            this.log(msg, 'batch', true);
 
         },
 
-        error: function (error, halt = false) {
+        error: function (error, halt = false, text = false) {
 
             if (halt) {
 
@@ -359,7 +359,7 @@
             }
 
 
-            this.log(error, 'error');
+            this.log(error, 'error', text);
 
         },
 

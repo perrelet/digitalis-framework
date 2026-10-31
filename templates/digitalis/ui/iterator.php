@@ -51,8 +51,7 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
     <div class='iterator-panel log-wrap'>
         <label>Batch log</label>
         <div class='iterator-log' role='log' aria-label='Batch log'>
-            <?php if ($store['errors']) echo "<div class='log-error'>" . implode("</div><div class='log-error'>", array_reverse($store['errors'])) . "</div>"; ?>
-            <?php if ($store['log']) echo "<div class='log-item'>" . implode("</div><div class='log-item'>", array_reverse($store['log'])) . "</div>"; ?>
+            <?php foreach (['error' => $store['errors'], 'item' => $store['log']] as $type => $lines) foreach (array_reverse($lines) as $line) echo "<div class='log-{$type}'>" . wp_kses((string) $line, $iterator::LOG_TAGS) . "</div>"; ?>
         </div>
     </div>
     <?= $after_log ?>

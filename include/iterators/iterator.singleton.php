@@ -39,6 +39,13 @@ abstract class Iterator extends Singleton {
         'plural'    => 'items',
     ];
 
+    // What a log line may carry: a consumer colours a span, nothing scripts. The prefix is built after the filter.
+    const LOG_TAGS = [
+        'span'   => ['style' => true],
+        'b'      => [], 'strong' => [], 'em' => [], 'i' => [], 'code' => [], 'br' => [],
+        'a'      => ['href' => true],
+    ];
+
     protected $default_store = [
         'index'     => 0,
         'processed' => [],
@@ -715,16 +722,17 @@ abstract class Iterator extends Singleton {
     }
 
     protected function line ($msg, $global = false) {
-        
+
+        $msg  = wp_kses(print_r($msg, true), static::LOG_TAGS);
         $line = '[' . (new DateTime('now', new DateTimeZone($this->get_timezone())))->format('Y-m-d H:i:s') . '] ';
 
         if ($global) {
 
-            $line .= print_r($msg, true);
+            $line .= $msg;
 
         } else {
 
-            $line .= ucfirst($this->labels['single']) . " #{$this->item_id}: " . print_r($msg, true);
+            $line .= ucfirst($this->labels['single']) . ' #' . esc_html((string) $this->item_id) . ': ' . $msg;
 
         }
 
