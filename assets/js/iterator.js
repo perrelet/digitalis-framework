@@ -17,9 +17,6 @@
             this.params = params;
             this.params.index = parseInt(this.params.index);
 
-            //console.log("hello");
-            //console.log(this.params);
-
             this.els.iterator = document.querySelector(".digitalis-iterator");
             this.els.start = document.querySelector(".iterator button[data-task='start']");
             this.els.stop = document.querySelector(".iterator button[data-task='stop']");
@@ -29,6 +26,7 @@
             this.els.percent = document.querySelector(".iterator .percent");
             this.els.time = document.querySelector(".iterator .time");
             this.els.progress = document.querySelector(".iterator .progress-bar");
+            this.els.track = document.querySelector(".iterator .progress-track");
             this.els.status = document.querySelector(".iterator .status");
             this.els.log = document.querySelector(".iterator .iterator-log");
 
@@ -42,14 +40,12 @@
             if (this.els.stop) this.els.stop.addEventListener('click', this.maybe_stop.bind(this));
             if (this.els.reset) this.els.reset.addEventListener('click', this.maybe_reset.bind(this));
 
-            console.log(this.els);
-
         },
 
         start: function () {
 
             this.last_time = new Date().getTime();
-            this.els.status.innerHTML = 'Starting';
+            this.els.status.textContent = 'Starting';
             this.batch_log(`Starting batch at index ${this.params.index}.`);
             this.request('total', this.start_total.bind(this));
             this.els.iterator.classList.add('running');
@@ -69,7 +65,7 @@
 
             if (total === null) {
 
-                this.els.status.innerHTML = 'Running';
+                this.els.status.textContent = 'Running';
                 return true;
 
             }
@@ -78,12 +74,13 @@
 
                 if (this.params.index < total) { 
 
-                    this.els.status.innerHTML = 'Running';
+                    this.els.status.textContent = 'Running';
                     return true;
 
                 } else {
 
-                    this.els.status.innerHTML = 'Already Complete!';
+                    this.els.status.textContent = 'Already Complete!';
+                    this.els.iterator.classList.add('is-complete');
                     this.els.iterator.classList.remove('running');
                     return false;
 
@@ -91,7 +88,7 @@
 
             } else {
 
-                this.els.status.innerHTML = `No ${this.params.labels.plural}`;
+                this.els.status.textContent = `No ${this.params.labels.plural}`;
                 this.batch_log(`Batch could not run as there are no ${this.params.labels.plural} to process.`);
                 this.els.iterator.classList.remove('running');
                 return false;
@@ -104,14 +101,13 @@
         apply_total: function (total) {
 
             this.total = total;
-            this.els.total.innerHTML = total === null ? '?' : total;
+            this.els.total.textContent = total === null ? '?' : total;
             this.els.iterator.classList.toggle('is-indeterminate', total === null);
+            this.update_aria(this.params.index);
 
         },
 
         iterate: function (response) {
-
-            console.log(response);
 
             this.apply_total(response.total);
 
@@ -133,26 +129,31 @@
 
             if (response.status == 'complete') {
 
-                this.els.status.innerHTML = 'Finished!';
+                this.els.status.textContent = 'Finished!';
                 this.batch_log(`Batch completed in: ${this.time}ms.`);
+                this.els.iterator.classList.add('is-complete');
                 this.els.iterator.classList.remove('running');
+                this.flags.stop = false; // a Stop that landed during this batch has nothing left to stop
 
             } else if (response.status == 'halted') {
 
-                this.els.status.innerHTML = 'Halted';
+                this.els.status.textContent = 'Halted';
                 this.batch_log(`Batch halted after ${this.time}ms - press Start to resume.`);
-                this.els.iterator.classList.add('err');
+                this.els.iterator.classList.add('err', 'is-halted');
                 this.els.iterator.classList.remove('running');
+                this.flags.stop = false;
 
             } else if (response.stalled) {
 
-                this.els.status.innerHTML = 'Stalled';
+                this.els.status.textContent = 'Stalled';
                 this.batch_log(`Batch stalled after ${this.time}ms - press Start to retry.`);
+                this.els.iterator.classList.add('is-stalled');
                 this.els.iterator.classList.remove('running');
+                this.flags.stop = false;
 
             } else if (this.flags.stop) {
 
-                this.els.status.innerHTML = 'Stopped';
+                this.els.status.textContent = 'Stopped';
                 this.batch_log(`Batch stopped after ${this.time}ms.`);
                 this.flags.stop = false;
 
@@ -170,7 +171,7 @@
 
                 if (confirm("Are you sure you want to cancel the current cron task?")) {
 
-                    this.els.status.innerHTML = 'Stopping Cron Task';
+                    this.els.status.textContent = 'Stopping Cron Task';
                     this.batch_log(`Stopping cron task.`);
                     this.request('stop_cron', this.stop_cron_complete.bind(this));
 
@@ -186,7 +187,7 @@
 
         stop_cron_complete: function () {
 
-            this.els.status.innerHTML = 'Cron Task Stopped';
+            this.els.status.textContent = 'Cron Task Stopped';
             this.batch_log(`Cron task stopped.`);
             this.params.doing_cron = false;
             this.els.iterator.classList.remove('running');
@@ -197,7 +198,7 @@
 
             if (this.els.iterator.classList.contains('running')) {
 
-                this.els.status.innerHTML = 'Stopping';
+                this.els.status.textContent = 'Stopping';
                 this.batch_log(`Stopping batch.`);
                 this.flags.stop = true;
                 this.els.iterator.classList.remove('running');
@@ -215,15 +216,13 @@
         reset: function () {
 
             this.stop();
-            this.els.status.innerHTML = 'Resetting';
+            this.els.status.textContent = 'Resetting';
             this.batch_log(`Resetting batch process...`);
             this.request('reset', this.reset_complete.bind(this));
 
         },
 
         reset_complete: function (response) {
-
-            //console.log(response);
 
             if (response.hasOwnProperty(`reload`)) window.location.reload();
 
@@ -235,8 +234,8 @@
 
             this.els.iterator.classList.remove('err', 'is-paused', 'is-halted', 'is-stalled', 'is-complete');
 
-            this.els.status.innerHTML = 'Reset';
-            this.els.time.innerHTML = '00:00:00';
+            this.els.status.textContent = 'Reset';
+            this.els.time.textContent = '00:00:00';
 
             this.els.log.innerHTML = '';
 
@@ -258,7 +257,6 @@
 
                         case 200:
 
-                            // console.log(http.responseText);
                             callback(JSON.parse(http.responseText));
                             return;
 
@@ -284,7 +282,6 @@
             }.bind(this);
 
             let url = `${this.params.ajax_url}?action=iterator_${this.params.key}&task=${task}&nonce=${this.params.nonce}`;
-            console.log(url);
             http.open('GET', url, true);
             http.send();
 
@@ -299,21 +296,40 @@
             let secs = Math.floor(this.time / 1000);
             let mins = Math.floor(secs / 60);
             let hours = Math.floor(mins / 60);
-            this.els.time.innerHTML = String(hours).padStart(2, 0) + ":" + String(mins % 60).padStart(2, 0) + ":" + String(secs % 60).padStart(2, 0);
+            this.els.time.textContent = String(hours).padStart(2, 0) + ":" + String(mins % 60).padStart(2, 0) + ":" + String(secs % 60).padStart(2, 0);
 
-            this.els.index.innerHTML = index;
+            this.els.index.textContent = index;
+            this.update_aria(index);
 
             if (this.total === null) {
 
-                this.els.percent.innerHTML = '';
+                this.els.percent.textContent = '';
                 this.els.progress.style.width = '';
                 return;
 
             }
 
             let percent = (index && this.total) ? Math.min(100, 100 * index / this.total) : 0;
-            this.els.percent.innerHTML = Math.floor(percent) + "%";
+            this.els.percent.textContent = Math.floor(percent) + "%";
             this.els.progress.style.width = percent + "%";
+
+        },
+
+        update_aria: function (index) {
+
+            if (this.total === null) {
+
+                this.els.track.removeAttribute('aria-valuenow');
+                this.els.track.removeAttribute('aria-valuemax');
+                this.els.track.setAttribute('aria-valuetext', `${index} of unknown`);
+
+            } else {
+
+                this.els.track.removeAttribute('aria-valuetext');
+                this.els.track.setAttribute('aria-valuenow', index);
+                this.els.track.setAttribute('aria-valuemax', this.total);
+
+            }
 
         },
 
@@ -339,11 +355,9 @@
 
                 this.stop();
                 this.els.iterator.classList.add('err');
-                console.error(error)
 
             }
 
-            //this.els.errors.value = error + '\n' + this.els.errors.value ;
 
             this.log(error, 'error');
 
