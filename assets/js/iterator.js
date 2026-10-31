@@ -25,6 +25,10 @@
             this.els.reset = document.querySelector(".iterator button[data-task='reset']");
             this.els.retry = document.querySelector(".iterator button[data-task='retry']");
             this.els.dismiss = document.querySelector(".iterator button[data-task='dismiss']");
+            this.els.once = document.querySelector(".iterator button[data-task='once']");
+            this.els.options = document.querySelector(".iterator .run-options");
+            this.els.batch_size = document.querySelector(".iterator .run-options [data-param='batch_size']");
+            this.els.dry_run = document.querySelector(".iterator .run-options [data-param='dry_run']");
             this.els.failed = document.querySelector(".iterator .failed-wrap");
             this.els.failed_count = document.querySelector(".iterator .failed-count");
             this.els.failed_list = document.querySelector(".iterator .failed-list");
@@ -54,16 +58,27 @@
             if (this.els.reset) this.els.reset.addEventListener('click', this.maybe_reset.bind(this));
             if (this.els.retry) this.els.retry.addEventListener('click', this.maybe_retry.bind(this));
             if (this.els.dismiss) this.els.dismiss.addEventListener('click', this.maybe_dismiss.bind(this));
+            if (this.els.once) this.els.once.addEventListener('click', this.start.bind(this, true));
 
         },
 
-        start: function () {
+        // The running class and the run options move together; every chain ending clears the one-batch flag.
+        set_running: function (on) {
 
+            this.els.iterator.classList.toggle('running', on);
+            if (this.els.options) this.els.options.disabled = on;
+            if (!on) this.flags.once = false;
+
+        },
+
+        start: function (once) {
+
+            this.flags.once = once === true;
             this.last_time = new Date().getTime();
             this.els.status.textContent = 'Starting';
             this.batch_log(`Starting batch at index ${this.params.index}.`);
             this.request('total', this.start_total.bind(this));
-            this.els.iterator.classList.add('running');
+            this.set_running(true);
             this.els.iterator.classList.remove('err', 'is-paused', 'is-halted', 'is-stalled', 'is-complete');
 
         },
@@ -96,7 +111,7 @@
 
                     this.els.status.textContent = 'Already Complete!';
                     this.els.iterator.classList.add('is-complete');
-                    this.els.iterator.classList.remove('running');
+                    this.set_running(false);
                     return false;
 
                 }
@@ -105,7 +120,7 @@
 
                 this.els.status.textContent = `No ${this.params.labels.plural}`;
                 this.batch_log(`Batch could not run as there are no ${this.params.labels.plural} to process.`);
-                this.els.iterator.classList.remove('running');
+                this.set_running(false);
                 return false;
 
             }
@@ -150,7 +165,7 @@
                 this.els.status.textContent = 'Finished!';
                 this.batch_log(`Batch completed in: ${this.time}ms.`);
                 this.els.iterator.classList.add('is-complete');
-                this.els.iterator.classList.remove('running');
+                this.set_running(false);
                 this.flags.stop = false; // a Stop that landed during this batch has nothing left to stop
 
             } else if (response.status == 'halted') {
@@ -159,7 +174,7 @@
                 this.update_eta(null);
                 this.batch_log(`Batch halted after ${this.time}ms - press Start to resume.`);
                 this.els.iterator.classList.add('err', 'is-halted');
-                this.els.iterator.classList.remove('running');
+                this.set_running(false);
                 this.flags.stop = false;
 
             } else if (response.stalled) {
@@ -168,7 +183,7 @@
                 this.update_eta(null);
                 this.batch_log(`Batch stalled after ${this.time}ms - press Start to retry.`);
                 this.els.iterator.classList.add('is-stalled');
-                this.els.iterator.classList.remove('running');
+                this.set_running(false);
                 this.flags.stop = false;
 
             } else if (this.flags.stop) {
@@ -177,6 +192,14 @@
                 this.update_eta(null);
                 this.batch_log(`Batch stopped after ${this.time}ms.`);
                 this.flags.stop = false;
+
+            } else if (this.flags.once) {
+
+                this.els.status.textContent = 'Paused';
+                this.update_eta(null);
+                this.batch_log(`One batch run - press Start to continue.`);
+                this.els.iterator.classList.add('is-paused');
+                this.set_running(false);
 
             } else {
 
@@ -211,7 +234,7 @@
             this.els.status.textContent = 'Cron Task Stopped';
             this.batch_log(`Cron task stopped.`);
             this.params.doing_cron = false;
-            this.els.iterator.classList.remove('running');
+            this.set_running(false);
 
         },
 
@@ -222,7 +245,7 @@
                 this.els.status.textContent = 'Stopping';
                 this.batch_log(`Stopping batch.`);
                 this.flags.stop = true;
-                this.els.iterator.classList.remove('running');
+                this.set_running(false);
 
             }
 
@@ -241,7 +264,7 @@
             this.last_time = new Date().getTime();
             this.els.status.textContent = 'Retrying';
             this.batch_log(`Retrying the failed ${this.params.labels.plural}.`);
-            this.els.iterator.classList.add('running');
+            this.set_running(true);
             this.request('retry', this.retry_start.bind(this));
 
         },
@@ -275,7 +298,7 @@
 
             this.retrying = false;
             this.flags.stop = false;
-            this.els.iterator.classList.remove('running');
+            this.set_running(false);
             this.els.status.textContent = response && labels[response.status] ? labels[response.status] : 'Retried';
             this.batch_log(`Retry finished after ${this.time}ms.`);
 
@@ -413,6 +436,13 @@
             }.bind(this);
 
             let url = `${this.params.ajax_url}?action=iterator_${this.params.key}&task=${task}&nonce=${this.params.nonce}`;
+
+            if (task == 'iterate') {
+
+                if (this.els.batch_size && this.els.batch_size.value !== '') url += `&batch_size=${encodeURIComponent(this.els.batch_size.value)}`;
+                if (this.els.dry_run) url += `&dry_run=${this.els.dry_run.checked ? 1 : 0}`;
+
+            }
             http.open('GET', url, true);
             http.send();
 

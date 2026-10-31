@@ -43,7 +43,8 @@ abstract class Iterator extends Singleton {
         'plural'    => 'items',
     ];
 
-    const LOG_TAIL = 200;
+    const LOG_TAIL       = 200;
+    const MAX_BATCH_SIZE = 1000;
 
     // What a log line may carry: a consumer colours a span, nothing scripts. The prefix is built after the filter.
     const LOG_TAGS = [
@@ -216,6 +217,7 @@ abstract class Iterator extends Singleton {
                 wp_send_json($this->get_total_items_wrap());
 
             case "iterate":
+                $this->read_request($_REQUEST);
                 wp_send_json($this->iterate());
 
             case "reset":
@@ -891,6 +893,34 @@ abstract class Iterator extends Singleton {
     
     }
 
+    public function get_batch_size () {
+
+        return $this->batch_size;
+
+    }
+
+    // The page's run options, for this request only: the cron loop keeps the class value. The dry-run flag reaches the record only
+    // when the key is present ('1' or '0'), so a page that never sent it leaves a consumer's own setting alone.
+    public function read_request (array $request) : void {
+
+        if (is_scalar($request['batch_size'] ?? null) && $request['batch_size'] !== '') $this->set_batch_size(max(1, min(static::MAX_BATCH_SIZE, (int) $request['batch_size'])));
+
+        if (in_array($request['dry_run'] ?? null, ['0', '1'], true)) {
+
+            $this->get_store();
+            $this->store['dry_run'] = $request['dry_run'] === '1';
+
+        }
+
+    }
+
+    // Only a flag and a log prefix: the framework cannot know what process_item() writes, so a consumer asks before it writes.
+    public function is_dry_run () : bool {
+
+        return (bool) ($this->get_store()['dry_run'] ?? false);
+
+    }
+
     public function set_batch_size ($batch_size) {
 
         $this->batch_size = $batch_size;
@@ -954,7 +984,7 @@ abstract class Iterator extends Singleton {
     protected function line ($msg, $global = false) {
 
         $msg  = wp_kses(print_r($msg, true), static::LOG_TAGS);
-        $line = $this->stamp();
+        $line = $this->stamp() . ($this->is_dry_run() ? '[dry run] ' : '');
 
         if ($global) {
 

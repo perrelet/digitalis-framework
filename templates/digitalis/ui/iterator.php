@@ -34,8 +34,13 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
     <?= $before_controls ?>
     <div class='iterator-panel controls'>
         <button type='button' class='button button-primary' data-task='start'>Start</button>
+        <button type='button' class='button' data-task='once'>Run one batch</button>
         <button type='button' class='button' data-task='stop'>Stop</button>
         <button type='button' class='button' data-task='reset'>Reset</button>
+        <fieldset class='run-options'<?= $cron ? ' disabled' : '' ?>>
+            <label>Batch size <input type='number' data-param='batch_size' min='1' max='<?= $iterator::MAX_BATCH_SIZE ?>' step='1' value='<?= (int) $iterator->get_batch_size() ?>'></label>
+            <label><input type='checkbox' data-param='dry_run' value='1'<?= !empty($store['dry_run']) ? ' checked' : '' ?>> Dry run</label>
+        </fieldset>
     </div>
     <?= $after_controls ?>
 
