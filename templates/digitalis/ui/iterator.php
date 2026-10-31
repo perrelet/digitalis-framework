@@ -1,33 +1,9 @@
-<?php if (!defined('ABSPATH')) exit;
-
-$cron     = $iterator->is_doing_cron();
-$progress = $iterator->get_progress();
-$counts   = $iterator->get_counts();
-$elapsed  = (int) floor($iterator->get_elapsed());
-$started  = $iterator->get_started_at();
-$eta      = ($cron && $status === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
-$clock    = sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
-$failed   = $iterator->get_failed_items();
-$log_url  = ($log_url && ($log = $iterator->get_log()) && is_file($log->get_path())) ? $log_url : null; // the full log, when there is one to link
-$about    = fn ($s) => $s < 60 ? "{$s}s" : ($s < 3600 ? intdiv($s, 60) . 'm' : intdiv($s, 3600) . 'h ' . (intdiv($s, 60) % 60) . 'm');
-$labels   = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Paused'];
-$states   = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-paused']];
-
-// The cron flag outranks the record (a UI run the Stop button interrupted stays running in the store); a stall outranks the flag.
-$label   = $stalled ? 'Stalled' : ($cron ? 'Running' : ($labels[$status] ?? 'Ready'));
-$classes = ['digitalis-iterator', 'iterator', 'iterator-' . $iterator->get_key()];
-
-if ($cron)              $classes = array_merge($classes, ['doing_cron', 'running']);
-if ($stalled)           $classes[] = 'is-stalled';
-elseif (!$cron)         $classes = array_merge($classes, $states[$status] ?? []);
-if (is_null($total))    $classes[] = 'is-indeterminate';
-
-?>
-<div class='<?= esc_attr(implode(' ', $classes)) ?>'>
+<?php if (!defined('ABSPATH')) exit; ?>
+<div class='<?= esc_attr($classes) ?>'>
 
     <?= $before_description ?>
-    <?php if ($description = $iterator->get_description()): ?>
-        <div class='iterator-panel description'><?= $description ?></div>
+    <?php if ($iterator->get_description()): ?>
+        <div class='iterator-panel description'><?= $iterator->get_description() ?></div>
     <?php endif; ?>
     <?= $after_description ?>
 
@@ -51,19 +27,19 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
             <div class='status' aria-live='polite'><?= $label ?></div>
         </div>
         <div class='progress-track' role='progressbar' aria-label='Progress' aria-valuemin='0'<?= is_null($total) ? " aria-valuetext='{$index} of unknown'" : " aria-valuenow='{$index}' aria-valuemax='{$total}'" ?>>
-            <div class='progress-bar'<?= is_null($total) ? '' : " style='width: " . (100 * $progress) . "%;'" ?>></div>
+            <div class='progress-bar'<?= is_null($total) ? '' : " style='width: " . (100 * $iterator->get_progress()) . "%;'" ?>></div>
         </div>
         <div class='status-bar'>
-            <div class='percent'><?= is_null($total) ? '' : floor(100 * $progress) . '%' ?></div>
-            <div class='time'><?= $cron ? 'Cron task' . ($started ? ' · started ' . $iterator->format_time($started) : '') : $clock ?></div>
+            <div class='percent'><?= is_null($total) ? '' : floor(100 * $iterator->get_progress()) . '%' ?></div>
+            <div class='time'><?= $time ?></div>
         </div>
         <div class='status-bar'>
             <div class='counts'>
-                <span class='chip count-processed'>Processed <b><?= $counts['processed'] ?></b></span>
-                <span class='chip count-skipped'>Skipped <b><?= $counts['skipped'] ?></b></span>
-                <span class='chip count-failed<?= $counts['failed'] ? ' is-nonzero' : '' ?>'>Failed <b><?= $counts['failed'] ?></b></span>
+                <span class='chip count-processed'>Processed <b><?= $iterator->get_counts()['processed'] ?></b></span>
+                <span class='chip count-skipped'>Skipped <b><?= $iterator->get_counts()['skipped'] ?></b></span>
+                <span class='chip count-failed<?= $iterator->get_counts()['failed'] ? ' is-nonzero' : '' ?>'>Failed <b><?= $iterator->get_counts()['failed'] ?></b></span>
             </div>
-            <div class='eta'><?= is_null($eta) ? '' : 'about ' . $about($eta) . ' left' ?></div>
+            <div class='eta'><?= $eta ?></div>
         </div>
     </div>
     <?= $after_progress ?>
