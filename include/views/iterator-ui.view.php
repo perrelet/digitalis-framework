@@ -19,6 +19,7 @@ class Iterator_UI extends View {
         'after_progress'     => '',
         'before_log'         => '',
         'after_log'          => '',
+        'log_url'            => '',
     ];
 
     public function params (array &$p) {

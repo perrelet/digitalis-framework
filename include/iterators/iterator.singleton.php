@@ -19,6 +19,10 @@ abstract class Iterator extends Singleton {
     protected $parent_menu_slug   = 'tools.php';
     protected $timezone           = 'UCT';
     protected $description        = false;
+
+    // Opt in: a file name, and the run is appended to it line by line while the record keeps the last LOG_TAIL lines.
+    protected $log_file           = null;
+    protected $log_directory      = null;
   
     protected $halt_on_fail       = false;
     protected $dynamic_total      = false;
@@ -38,6 +42,8 @@ abstract class Iterator extends Singleton {
         'single'    => 'item',
         'plural'    => 'items',
     ];
+
+    const LOG_TAIL = 200;
 
     // What a log line may carry: a consumer colours a span, nothing scripts. The prefix is built after the filter.
     const LOG_TAGS = [
@@ -73,6 +79,8 @@ abstract class Iterator extends Singleton {
 
     protected $log = [];
     protected $errors = [];
+    protected $buffer = [];       // every line since the last store write, appended to the file in one write per tick
+    protected $log_handle = false; // false until resolved, then ?Log
 
     public function get_items () { return []; }
 
@@ -743,6 +751,7 @@ abstract class Iterator extends Singleton {
         unset($this->store['total']);
 
         update_option($this->get_option_key(), $this->store, false);
+        $this->mark('--- reset ---');
 
         return $this->store;
 
@@ -802,8 +811,10 @@ abstract class Iterator extends Singleton {
         $this->get_store();
 
         $this->store['index']  = $this->index;
-        $this->store['log']    = array_merge($this->store['log'], $this->log);
-        $this->store['errors'] = array_merge($this->store['errors'], $this->errors);
+        $this->store['log']    = array_slice(array_merge($this->store['log'], $this->log), -static::LOG_TAIL);
+        $this->store['errors'] = array_slice(array_merge($this->store['errors'], $this->errors), -static::LOG_TAIL);
+
+        $this->flush_buffer();
 
         $this->pre_update_store($this->store);
 
@@ -907,6 +918,7 @@ abstract class Iterator extends Singleton {
         $this->index = 0;
 
         update_option($this->get_option_key(), $this->store, false);
+        $this->mark('--- reset ---');
 
         return $this->store;
 
@@ -942,7 +954,7 @@ abstract class Iterator extends Singleton {
     protected function line ($msg, $global = false) {
 
         $msg  = wp_kses(print_r($msg, true), static::LOG_TAGS);
-        $line = '[' . (new DateTime('now', new DateTimeZone($this->get_timezone())))->format('Y-m-d H:i:s') . '] ';
+        $line = $this->stamp();
 
         if ($global) {
 
@@ -954,7 +966,53 @@ abstract class Iterator extends Singleton {
 
         }
 
+        $this->buffer[] = $line;
+
         return $line;
+
+    }
+
+    protected function stamp () : string {
+
+        return '[' . (new DateTime('now', new DateTimeZone((string) $this->get_timezone())))->format('Y-m-d H:i:s') . '] ';
+
+    }
+
+    // A stamped line straight to the file, outside the record: a reset is a new run in the same history.
+    protected function mark (string $text) : void {
+
+        if ($log = $this->get_log()) $log->write($this->stamp() . $text);
+
+    }
+
+    protected function flush_buffer () : void {
+
+        if ($this->buffer && ($log = $this->get_log())) $log->write(implode(PHP_EOL, $this->buffer));
+        $this->buffer = [];
+
+    }
+
+    // The directory: $log_directory, else the lattice.iterator.log_directory filter (one place for every iterator on a site), else
+    // Log's own default when the error_log ini is absolute. A relative path would land in the cwd, so it is refused instead.
+    public function get_log () : ?Log {
+
+        if (!$this->log_file) return null;
+        if ($this->log_handle !== false) return $this->log_handle;
+
+        $directory = $this->log_directory ?: apply_filters('lattice.iterator.log_directory', null, $this);
+        if (!$directory) $directory = dirname((string) ini_get('error_log'));
+
+        if (!is_string($directory) || !path_is_absolute($directory)) {
+
+            $problem = "declares \$log_file '{$this->log_file}' but no absolute directory resolves for it.";
+            Strict::violation(static::class, $problem, "Declare \$log_directory, add a lattice.iterator.log_directory filter, or set an absolute error_log ini.");
+            Strict::log_once(static::class, "{$problem} The run is not written to a file.");
+
+            return $this->log_handle = null;
+
+        }
+
+        return $this->log_handle = Log::get_instance(['file' => $this->log_file, 'directory' => $directory, 'name' => $this->title]);
 
     }
 

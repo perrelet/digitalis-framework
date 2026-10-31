@@ -8,6 +8,7 @@ $started  = $iterator->get_started_at();
 $eta      = ($cron && $status === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
 $clock    = sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
 $failed   = $iterator->get_failed_items();
+$log_url  = ($log_url && ($log = $iterator->get_log()) && is_file($log->get_path())) ? $log_url : null; // the full log, when there is one to link
 $about    = fn ($s) => $s < 60 ? "{$s}s" : ($s < 3600 ? intdiv($s, 60) . 'm' : intdiv($s, 3600) . 'h ' . (intdiv($s, 60) % 60) . 'm');
 $labels   = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Paused'];
 $states   = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-paused']];
@@ -78,7 +79,7 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
 
     <?= $before_log ?>
     <div class='iterator-panel log-wrap'>
-        <label>Batch log</label>
+        <label>Batch log<?php if ($log_url) echo " <span class='log-note'>Last " . $iterator::LOG_TAIL . " lines · <a href='" . esc_url($log_url) . "'>Full log</a></span>"; ?></label>
         <div class='iterator-log' role='log' aria-label='Batch log'>
             <?php foreach (['error' => $store['errors'], 'item' => $store['log']] as $type => $lines) foreach (array_reverse($lines) as $line) echo "<div class='log-{$type}'>" . wp_kses((string) $line, $iterator::LOG_TAGS) . "</div>"; ?>
         </div>
