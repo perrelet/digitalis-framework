@@ -50,11 +50,16 @@ abstract class Iterator extends Singleton {
         'index'     => 0,
         'processed' => [],
         'skip'      => [],
+        'skipped'   => [],
         'failed'    => [],
         'log'       => [],
         'errors'    => [],
         'status'    => 'idle',
         'stalled'   => false,
+        'started_at'  => null,
+        'updated_at'  => null,
+        'finished_at' => null,
+        'elapsed'     => 0.0,
     ];
 
     protected $items = [];
@@ -240,6 +245,8 @@ abstract class Iterator extends Singleton {
             'skipped'   => [],
         ];
 
+        $tick = microtime(true);
+
         $this->warm_up();
 
         // Before get_items(): a source that fills itself in get_total_items() is read fresh by the batch that follows.
@@ -247,9 +254,16 @@ abstract class Iterator extends Singleton {
 
         $this->items = $this->get_items();
 
-        if ($this->index == 0 && $this->get_status() === 'idle') $this->on_start();
+        if ($this->index == 0 && $this->get_status() === 'idle') {
 
-        $this->store['status'] = 'running';
+            $this->store['started_at'] = time();
+            $this->store['elapsed']    = 0.0;
+            $this->on_start();
+
+        }
+
+        $this->store['status']      = 'running';
+        $this->store['finished_at'] = null;
 
         if ($this->items) foreach ($this->items as $item) {
 
@@ -282,7 +296,7 @@ abstract class Iterator extends Singleton {
         foreach ($results as $key => $result) {
 
             $count += count($result);
-            if (isset($this->store[$key])) $this->store[$key] = array_merge($this->store[$key], $result);
+            $this->store[$key] = array_merge(is_array($this->store[$key] ?? null) ? $this->store[$key] : [], $result);
 
         }
 
@@ -305,13 +319,15 @@ abstract class Iterator extends Singleton {
 
             if ($halt) $this->error("{$failed}.", true);
 
+            $this->store['finished_at'] = time();
             $this->on_complete();
             $this->set_doing_cron(false);
 
         } elseif ($halt) {
 
-            $this->store['status']  = 'halted';
-            $this->store['stalled'] = false;
+            $this->store['status']      = 'halted';
+            $this->store['stalled']     = false;
+            $this->store['finished_at'] = time();
 
             $this->error("Halted: {$failed}.", true);
             $this->set_doing_cron(false);
@@ -329,6 +345,9 @@ abstract class Iterator extends Singleton {
 
         }
 
+        $this->store['updated_at'] = time();
+        $this->store['elapsed']    = round($this->get_elapsed() + (microtime(true) - $tick), 3);
+
         $this->update_store();
 
         if ($return_store) {
@@ -341,11 +360,13 @@ abstract class Iterator extends Singleton {
                 'index'     => $this->index,
                 'results'   => $results,
                 'count'     => $count,
+                'counts'    => $this->get_counts(),
                 'log'       => $this->log,
                 'errors'    => $this->errors,
                 'status'    => $this->get_status(),
                 'stalled'   => !empty($this->store['stalled']),
                 'total'     => $this->get_total(),
+                'elapsed'   => $this->get_elapsed(),
             ];
 
             return $response;
@@ -444,6 +465,7 @@ abstract class Iterator extends Singleton {
             'index'         => $this->index,
             'print_results' => $this->print_results,
             'doing_cron'    => $this->is_doing_cron(),
+            'elapsed'       => $this->get_elapsed(),
             'labels'        => $this->labels,
         ]);
 
@@ -475,6 +497,74 @@ abstract class Iterator extends Singleton {
 
         return min(1.0, (int) $this->get_index() / $total);
     
+    }
+
+    // The run's figures: counts derive from the id arrays, the times are the record's or null for a run that predates them.
+    public function get_counts () {
+
+        $store = $this->get_store();
+
+        return [
+            'processed' => is_array($store['processed'] ?? null) ? count($store['processed']) : 0,
+            'skipped'   => is_array($store['skipped'] ?? null)   ? count($store['skipped'])   : 0,
+            'failed'    => is_array($store['failed'] ?? null)    ? count($store['failed'])    : 0,
+        ];
+
+    }
+
+    public function get_elapsed () {
+
+        $elapsed = $this->get_store()['elapsed'] ?? 0;
+
+        return is_numeric($elapsed) ? (float) $elapsed : 0.0;
+
+    }
+
+    public function get_started_at () {
+
+        $at = $this->get_store()['started_at'] ?? null;
+
+        return is_int($at) ? $at : null;
+
+    }
+
+    public function get_updated_at () {
+
+        $at = $this->get_store()['updated_at'] ?? null;
+
+        return is_int($at) ? $at : null;
+
+    }
+
+    public function get_finished_at () {
+
+        $at = $this->get_store()['finished_at'] ?? null;
+
+        return is_int($at) ? $at : null;
+
+    }
+
+    // Seconds remaining at the run's pace: server time per item, or for a cron run, whose pace is the scheduler's gap between
+    // ticks rather than the work inside them, the wall time from the start to the last tick (the record, not the clock, so the
+    // page reads the same figure until the next tick). Null until a batch has run against a known total.
+    public function get_eta ($wall = false) {
+
+        $total = $this->get_total();
+        $index = $this->get_index();
+        $since = $this->get_started_at();
+        $until = $this->get_updated_at();
+        $spent = $wall ? (is_int($since) && is_int($until) ? (float) ($until - $since) : 0.0) : $this->get_elapsed();
+
+        if (is_null($total) || $index <= 0 || $index >= $total || $spent <= 0) return null;
+
+        return (int) round(($total - $index) * $spent / $index);
+
+    }
+
+    public function format_time (int $timestamp, string $format = 'H:i') {
+
+        return (new DateTime('@' . $timestamp))->setTimezone(new DateTimeZone((string) $this->get_timezone()))->format($format);
+
     }
 
     public function get_status () {
@@ -519,12 +609,13 @@ abstract class Iterator extends Singleton {
 
     }
 
-    // Keys get_default_store() declares are per-run; anything else in the store (a CSV upload, a consumer's settings) survives.
+    // The base property's keys and the keys get_default_store() declares are per-run; anything else in the store (a CSV
+    // upload, a consumer's settings) survives.
     public function reset_progress () {
 
         $this->get_store();
 
-        $this->store = array_merge($this->store, $this->get_default_store());
+        $this->store = array_merge($this->store, $this->default_store, $this->get_default_store());
         $this->index = 0;
         unset($this->store['total']);
 

@@ -59,6 +59,13 @@
 :where(.lattice) .status-bar .index-total        { color: var(--text-1); font-size: 13px; font-weight: 500; }
 :where(.lattice) .status-bar .index-total .index { margin-left: 4px; }
 
+:where(.lattice) .status-bar .counts                     { display: flex; flex-wrap: wrap; gap: 0 8px; color: var(--text-2); }
+:where(.lattice) .status-bar .counts .chip b             { color: var(--text-1); font-weight: 600; }
+:where(.lattice) .status-bar .counts .chip + .chip::before { content: '·'; margin-right: 8px; color: var(--text-3); }
+:where(.lattice) .status-bar .counts .is-nonzero,
+:where(.lattice) .status-bar .counts .is-nonzero b       { color: var(--err); }
+:where(.lattice) .status-bar .eta                        { white-space: nowrap; }
+
 :where(.lattice) .status {
     display: inline-flex;
     align-items: center;

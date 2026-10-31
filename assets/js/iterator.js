@@ -16,6 +16,7 @@
 
             this.params = params;
             this.params.index = parseInt(this.params.index);
+            this.time = Math.round(parseFloat(this.params.elapsed || 0) * 1000);
 
             this.els.iterator = document.querySelector(".digitalis-iterator");
             this.els.start = document.querySelector(".iterator button[data-task='start']");
@@ -25,6 +26,12 @@
             this.els.total = document.querySelector(".iterator .total");
             this.els.percent = document.querySelector(".iterator .percent");
             this.els.time = document.querySelector(".iterator .time");
+            this.els.eta = document.querySelector(".iterator .eta");
+            this.els.counts = {
+                processed: document.querySelector(".iterator .count-processed"),
+                skipped:   document.querySelector(".iterator .count-skipped"),
+                failed:    document.querySelector(".iterator .count-failed"),
+            };
             this.els.progress = document.querySelector(".iterator .progress-bar");
             this.els.track = document.querySelector(".iterator .progress-track");
             this.els.status = document.querySelector(".iterator .status");
@@ -113,6 +120,8 @@
 
             this.update_progress(response.index);
             this.params.index = response.index;
+            this.update_counts(response.counts);
+            this.update_eta(response.status == 'running' && !response.stalled ? response.index : null);
 
             if (response.hasOwnProperty('log') && response.log) for (const line of response.log) this.log(line);
             if (response.hasOwnProperty('errors') && response.errors) for (const line of response.errors) this.error(line, false);
@@ -138,6 +147,7 @@
             } else if (response.status == 'halted') {
 
                 this.els.status.textContent = 'Halted';
+                this.update_eta(null);
                 this.batch_log(`Batch halted after ${this.time}ms - press Start to resume.`);
                 this.els.iterator.classList.add('err', 'is-halted');
                 this.els.iterator.classList.remove('running');
@@ -146,6 +156,7 @@
             } else if (response.stalled) {
 
                 this.els.status.textContent = 'Stalled';
+                this.update_eta(null);
                 this.batch_log(`Batch stalled after ${this.time}ms - press Start to retry.`);
                 this.els.iterator.classList.add('is-stalled');
                 this.els.iterator.classList.remove('running');
@@ -154,6 +165,7 @@
             } else if (this.flags.stop) {
 
                 this.els.status.textContent = 'Stopped';
+                this.update_eta(null);
                 this.batch_log(`Batch stopped after ${this.time}ms.`);
                 this.flags.stop = false;
 
@@ -236,6 +248,8 @@
 
             this.els.status.textContent = 'Reset';
             this.els.time.textContent = '00:00:00';
+            this.update_counts({ processed: 0, skipped: 0, failed: 0 });
+            this.update_eta(null);
 
             this.els.log.innerHTML = '';
 
@@ -290,8 +304,10 @@
         update_progress: function (index) {
 
             let time = new Date().getTime();
-            this.delta = time - this.last_time;
-            this.time += this.delta;
+            if (this.last_time !== null) {
+                this.delta = time - this.last_time;
+                this.time += this.delta;
+            }
             this.last_time = time;
             let secs = Math.floor(this.time / 1000);
             let mins = Math.floor(secs / 60);
@@ -312,6 +328,40 @@
             let percent = (index && this.total) ? Math.min(100, 100 * index / this.total) : 0;
             this.els.percent.textContent = Math.floor(percent) + "%";
             this.els.progress.style.width = percent + "%";
+
+        },
+
+        update_counts: function (counts) {
+
+            if (!counts) return;
+
+            for (const key of ['processed', 'skipped', 'failed']) {
+
+                const el = this.els.counts[key];
+                if (!el) continue;
+                el.querySelector('b').textContent = counts[key];
+                if (key == 'failed') el.classList.toggle('is-nonzero', counts[key] > 0);
+
+            }
+
+        },
+
+        // The pace is the page's own wall clock across the run, so the estimate counts the network the user is waiting on.
+        update_eta: function (index) {
+
+            if (!this.els.eta) return;
+
+            if (index === null || this.total === null || index <= 0 || index >= this.total || this.time <= 0) {
+
+                this.els.eta.textContent = '';
+                return;
+
+            }
+
+            const s = Math.round((this.total - index) * (this.time / 1000) / index);
+            const about = s < 60 ? `${s}s` : (s < 3600 ? `${Math.floor(s / 60)}m` : `${Math.floor(s / 3600)}h ${Math.floor(s / 60) % 60}m`);
+
+            this.els.eta.textContent = `about ${about} left`;
 
         },
 
