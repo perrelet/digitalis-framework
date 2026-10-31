@@ -368,7 +368,7 @@ Renders progress UI for batch processing iterators.
 |-----------|------|---------|-------------|
 | `iterator` | `Iterator\|null` | `null` | Iterator instance |
 
-`params()` adds `store`, `index`, `total`, `status` and `stalled` from the iterator's run record for the template. The stylesheet and script are enqueued by the iterator (`Iterator::enqueue_style()` and `render_controller()`), not by the view; the total is read from the record and computed only when it never was.
+`params()` adds `store`, `index`, `total`, `status` and `stalled` from the iterator's run record for the template. The stylesheets (`lattice-tokens`, the admin token layer, and `lattice-iterator`) and the script are enqueued by the iterator (`Iterator::enqueue_style()` and `render_controller()`), not by the view; the total is read from the record and computed only when it never was.
 
 #### Usage
 

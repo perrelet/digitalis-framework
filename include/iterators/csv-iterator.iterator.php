@@ -285,7 +285,8 @@ abstract class CSV_Iterator extends Iterator {
     public function get_submit_field () {
     
         return new Field\Submit([
-            'text' => 'Upload',
+            'text'    => 'Upload',
+            'classes' => ['digitalis-field', 'field', 'button', 'button-primary'],
         ]);
     
     }
@@ -305,6 +306,7 @@ abstract class CSV_Iterator extends Iterator {
             $fields   = $this->get_fields();
             $fields[] = $this->get_submit_field();
 
+            echo "<div class='lattice'>";
             Form::render([
                 'classes' => ['iterator-panel', 'intake'],
                 'action'  => $_SERVER['REQUEST_URI'],
@@ -314,16 +316,17 @@ abstract class CSV_Iterator extends Iterator {
                 ],
                 'fields' => $fields,
             ]);
+            echo "</div>";
 
         } else {
 
-            echo "<div class='iterator-panel csv-info'>";
+            echo "<div class='lattice'><div class='iterator-panel csv-info'>";
             Table::render([
                 'rows'      => $this->get_csv_info_rows(),
                 'first_row' => false,
                 'first_col' => true,
             ]);
-            echo "</div>";
+            echo "</div></div>";
 
             parent::render_controller();
 

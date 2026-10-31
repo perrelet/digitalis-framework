@@ -1,210 +1,146 @@
-.digitalis-iterator-wrap {
+/* The iterator screen, on the admin tokens (admin-tokens.css). Selectors sit under :where(.lattice) at (0,1,0) so a consumer
+   overrides without a fight. State is cascade-driven: --state is the colour of the badge and the bar, set once per state. */
 
-    .digitalis-iterator {
-
-        margin-top: 1rem;
-
-        &:not(.running) button[data-task='stop'] { display:none; }
-        &.running button[data-task='start']      { display:none; }
-        &.running button[data-task='reset']      { display:none; }
-        
-        &.running .status-bar   { color: #00b199; }
-        &.running .progress-bar { color: #00ffdc; }
-        
-        &.err .progress-bar { color: #be0000; }
-
-        &.is-indeterminate .progress-bar {
-
-            width: 100%;
-            background: repeating-linear-gradient(-45deg, currentColor 0 12px, transparent 12px 24px);
-            background-size: 34px 100%;
-            animation: iterator-stripe 0.8s linear infinite;
-
-        }
-
-    }
-
-    .iterator-panel {
-    
-        background: white;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.3rem;
-        box-shadow: 0px 1px 12px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.05);
-    
-    }
-
-    .controls {
-    
-        display: flex;
-        flex-direction: row;
-        gap: 1rem;
-    
-    }
-
-    button {
-
-        --bg: #595959;
-        --c: white;
-    
-        padding: 0.75rem 1.5rem;
-        cursor: pointer;
-        transition: 0.1s;
-
-        background: var(--bg);
-        color: var(--c);
-
-        border: 0;
-        border-radius: 0.25rem;
-        box-shadow: 0px 0px 12px rgba(0,0,0,0.1), 0px 1px 2px rgba(0,0,0,0.1);
-
-        font-size: 1.4em;
-        font-weight: 400;
-
-        &:hover { --bg: #1d2327; }
-        &:active { transform: scale(0.98); }
-
-        &[data-task='start'] {
-
-            --bg: #2dae73;
-            &:hover { --bg: #1d9c62; }
-        
-        }
-
-        &[data-task='stop'] {
-
-            --bg: #d04060;
-            &:hover { --bg: #a42642; }
-        
-        }
-    
-    }
-    
-    .status-bar {
-    
-        font-weight: 500;
-        color: #939393;
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-    
-    }
-    
-    .progress-track {
-    
-        width: 100%;
-        border-radius: 6px;
-        box-shadow: 0px 0px 12px rgba(0,0,0,0.1) inset, 0px 1px 2px rgba(0,0,0,0.1) inset;
-        overflow: hidden;
-        margin-bottom: 0.5rem;
-        margin-top: 0.5rem;
-    
-    }
-    
-    .progress-bar {
-    
-        height: 22px;
-        background: currentColor;
-        /* border-radius: 6px; */
-        transition: 0.1s;
-        box-shadow: 0px 1px 2px currentColor inset, 0px -3px 10px rgba(0,0,0,0.3) inset, 0px 6px 4px rgba(255,255,255,0.7) inset;
-        color: #ababab;
-        width: 1%;
-    
-    }
-    
-    .log-wrap {
-
-        label {
-    
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 0.5em;
-            display: block;
-        
-        }
-
-        .iterator-log {
-    
-            width: 100%;
-            resize: vertical;
-            height: 75vh;
-            border: #f0f0f1 4px solid;
-            font-family: monospace;
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-sizing: border-box;
-            overflow: scroll;
-
-            .log-error { color: #c31111; }
-            .log-batch { color: #a6a6a6; }
-        
-        }
-
-    }
-
-    .field-group {
-
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-
-        .field-row {
-
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-
-            label {
-
-                font-weight: bold;
-                color: #868686;
-                font-size: 0.9em;
-
-            }
-
-            .nice-select {
-
-                min-width: 300px;
-
-            }
-
-            &.row-checkbox {
-
-                flex-direction: row;
-                cursor: pointer;
-
-                label {
-
-                    order: 1;
-
-                }
-
-            }
-
-        }
-
-    }
-
-    table {
-
-        tr {
-
-            th {
-
-                text-align: left;
-                padding-right: 1rem;
-
-            }
-
-        }
-
-    }
-
+:where(.lattice) .digitalis-iterator {
+    --state: var(--text-3);
 }
 
-@keyframes iterator-stripe { to { background-position: 34px 0; } }
+:where(.lattice) .digitalis-iterator.running     { --state: var(--running); }
+:where(.lattice) .digitalis-iterator.is-complete { --state: var(--ok); }
+:where(.lattice) .digitalis-iterator.is-halted,
+:where(.lattice) .digitalis-iterator.err         { --state: var(--err); }
+:where(.lattice) .digitalis-iterator.is-stalled  { --state: var(--warn); }
+
+/* Surfaces: standalone panels are cards; the panels inside the iterator join into one surface with hairlines between. */
+
+:where(.lattice) .iterator-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin: 0 0 16px;
+    color: var(--text-2);
+    font-size: 13px;
+}
+
+:where(.lattice) .digitalis-iterator > .iterator-panel                    { margin: 0; border-radius: 0; }
+:where(.lattice) .digitalis-iterator > .iterator-panel + .iterator-panel  { border-top: 0; }
+:where(.lattice) .digitalis-iterator > .iterator-panel:first-child        { border-radius: var(--radius) var(--radius) 0 0; }
+:where(.lattice) .digitalis-iterator > .iterator-panel:last-child         { border-radius: 0 0 var(--radius) var(--radius); }
+
+/* Controls: core buttons; Stop is the one destructive act. */
+
+:where(.lattice) .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+
+:where(.lattice) .digitalis-iterator:not(.running) button[data-task='stop'] { display: none; }
+:where(.lattice) .digitalis-iterator.running button[data-task='start'],
+:where(.lattice) .digitalis-iterator.running button[data-task='reset']     { display: none; }
+
+:where(.lattice) .controls button[data-task='stop'] { color: var(--err); border-color: var(--err); }
+:where(.lattice) .controls button[data-task='stop']:hover,
+:where(.lattice) .controls button[data-task='stop']:focus {
+    color: var(--err);
+    border-color: var(--err);
+    background: color-mix(in srgb, var(--err) 8%, var(--surface));
+}
+
+/* Progress: one row of figures, a badge, a thin track. */
+
+:where(.lattice) .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-3);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+:where(.lattice) .status-bar .index-total        { color: var(--text-1); font-size: 13px; font-weight: 500; }
+:where(.lattice) .status-bar .index-total .index { margin-left: 4px; }
+
+:where(.lattice) .status {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--state) 50%, var(--text-1)); /* AA on the tint for every scheme; warn alone needs the 50 */
+    background: color-mix(in srgb, var(--state) 12%, transparent);
+}
+
+:where(.lattice) .progress-track {
+    height: 8px;
+    margin: 10px 0;
+    border-radius: 4px;
+    background: var(--surface-2);
+    box-shadow: inset 0 0 0 1px var(--border-subtle);
+    overflow: hidden;
+}
+
+:where(.lattice) .progress-bar {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--state);
+    transition: width .2s ease;
+}
+
+:where(.lattice) .is-indeterminate .progress-bar {
+    width: 100%;
+    background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--state) 60%, transparent) 0 8px, transparent 8px 16px);
+    background-size: 22.63px 100%; /* one 16px period along a 45° stripe */
+}
+
+:where(.lattice) .running.is-indeterminate .progress-bar { animation: iterator-stripe .6s linear infinite; }
+
+@keyframes iterator-stripe { to { background-position: 22.63px 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    :where(.lattice) .running.is-indeterminate .progress-bar { animation: none; }
+}
+
+/* Log */
+
+:where(.lattice) .log-wrap label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--text-3);
+}
+
+:where(.lattice) .iterator-log {
+    height: 50vh;
+    min-height: 160px;
+    resize: vertical;
+    overflow: auto;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text-1);
+    font: 12px/1.6 var(--font-mono);
+}
+
+:where(.lattice) .iterator-log .log-error { color: var(--err); }
+:where(.lattice) .iterator-log .log-batch { color: var(--text-3); }
+
+/* The CSV intake form and info table, rendered by the Form and Table views inside an .iterator-panel. */
+
+:where(.lattice) .field-group { display: flex; flex-direction: column; gap: 12px; }
+:where(.lattice) .field-row   { display: flex; flex-direction: column; gap: 4px; }
+:where(.lattice) .field-row label { font-size: 13px; font-weight: 600; color: var(--text-1); }
+:where(.lattice) .field-row.row-checkbox       { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; }
+:where(.lattice) .field-row.row-checkbox label { order: 1; }
+:where(.lattice) .nice-select { min-width: 300px; }
+
+:where(.lattice) .csv-info th { text-align: left; padding-right: 16px; font-weight: 500; color: var(--text-3); }
+:where(.lattice) .csv-info td { color: var(--text-1); }

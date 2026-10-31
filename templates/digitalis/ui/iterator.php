@@ -25,19 +25,19 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
 
     <?= $before_controls ?>
     <div class='iterator-panel controls'>
-        <button data-task='start'>Start</button>
-        <button data-task='stop'>Stop</button>
-        <button data-task='reset'>Reset</button>
+        <button type='button' class='button button-primary' data-task='start'>Start</button>
+        <button type='button' class='button' data-task='stop'>Stop</button>
+        <button type='button' class='button' data-task='reset'>Reset</button>
     </div>
     <?= $after_controls ?>
 
     <?= $before_progress ?>
     <div class='iterator-panel progress'>
         <div class='status-bar'>
-            <div class='index-total'>Progress: <span class='index'><?= $index ?></span> / <span class='total'><?= $total ?? '?' ?></span></div>
-            <div class="status"><?= $label ?></div>
+            <div class='index-total'>Progress <span class='index'><?= $index ?></span> / <span class='total'><?= $total ?? '?' ?></span></div>
+            <div class='status' aria-live='polite'><?= $label ?></div>
         </div>
-        <div class='progress-track'>
+        <div class='progress-track' role='progressbar' aria-label='Progress' aria-valuemin='0'<?= is_null($total) ? " aria-valuetext='{$index} of unknown'" : " aria-valuenow='{$index}' aria-valuemax='{$total}'" ?>>
             <div class='progress-bar'<?= is_null($total) ? '' : " style='width: " . (100 * $progress) . "%;'" ?>></div>
         </div>
         <div class='status-bar'>
@@ -49,8 +49,8 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
 
     <?= $before_log ?>
     <div class='iterator-panel log-wrap'>
-        <label>Batch Log:</label>
-        <div class='iterator-log'>
+        <label>Batch log</label>
+        <div class='iterator-log' role='log' aria-label='Batch log'>
             <?php if ($store['errors']) echo "<div class='log-error'>" . implode("</div><div class='log-error'>", array_reverse($store['errors'])) . "</div>"; ?>
             <?php if ($store['log']) echo "<div class='log-item'>" . implode("</div><div class='log-item'>", array_reverse($store['log'])) . "</div>"; ?>
         </div>

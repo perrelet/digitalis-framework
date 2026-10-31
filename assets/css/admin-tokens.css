@@ -1,0 +1,29 @@
+/* Lattice admin tokens: the semantic layer a Lattice admin screen reads. Scoped to .lattice, never :root, so nothing leaks into
+   other screens. The values are wp-admin's own. The accent follows the user's colour scheme by hand because core defines no
+   custom property on a plain admin page (the scheme accents live in an unregistered sheet, dist/base-styles/admin-schemes.css). */
+
+.lattice {
+    --text-1:        #1d2327;
+    --text-2:        #50575e;
+    --text-3:        #646970;
+    --surface:       #fff;
+    --surface-2:     #f6f7f7;
+    --border:        #c3c4c7;
+    --border-subtle: #dcdcde;
+    --accent:        #2271b1;
+    --running:       var(--accent); /* the live colour; a scheme whose accent is red names another */
+    --ok:            #00a32a;
+    --err:           #d63638;
+    --warn:          #dba617;
+    --radius:        4px;
+    --font-mono:     Consolas, Monaco, monospace;
+}
+
+body.admin-color-light     .lattice { --accent: #0085ba; }
+body.admin-color-modern    .lattice { --accent: #3858e9; }
+body.admin-color-blue      .lattice { --accent: #096484; }
+body.admin-color-coffee    .lattice { --accent: #46403c; }
+body.admin-color-ectoplasm .lattice { --accent: #523f6d; }
+body.admin-color-midnight  .lattice { --accent: #e14d43; --running: #69a8bb; }
+body.admin-color-ocean     .lattice { --accent: #627c83; }
+body.admin-color-sunrise   .lattice { --accent: #dd823b; }

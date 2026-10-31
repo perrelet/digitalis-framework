@@ -420,7 +420,9 @@ abstract class Iterator extends Singleton {
 
     public function enqueue_style () {
 
-        wp_enqueue_style('lattice-iterator', LATTICE_URI . 'assets/css/iterator.css', [], LATTICE_VERSION);
+        wp_enqueue_style('lattice-tokens',   LATTICE_URI . 'assets/css/admin-tokens.css', [], LATTICE_VERSION);
+
+        wp_enqueue_style('lattice-iterator', LATTICE_URI . 'assets/css/iterator.css', ['lattice-tokens'], LATTICE_VERSION);
 
     }
 
@@ -441,7 +443,11 @@ abstract class Iterator extends Singleton {
         $ui_options = $this->get_ui_options();
         $ui_options['iterator'] = $this;
 
+        echo "<div class='lattice'>"; // the token scope: admin-tokens.css styles nothing outside it
+
         Iterator_UI::render($ui_options);
+
+        echo "</div>";
 
     }
 
