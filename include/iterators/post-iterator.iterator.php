@@ -60,6 +60,25 @@ abstract class Post_Iterator extends Iterator {
 
     }
 
+    // The id keys are applied last, so a subclass's get_query_vars() still shapes the rest of the query.
+    public function get_items_by_id (array $ids) {
+
+        if (!$ids) return [];
+
+        $vars = ['post__in' => $ids, 'posts_per_page' => count($ids), 'offset' => 0, 'ignore_sticky_posts' => true] + $this->get_query_vars($this->get_default_query_vars());
+
+        return (new WP_Query($vars))->get_posts();
+
+    }
+
+    public function get_item_url ($id) {
+
+        $url = get_edit_post_link((int) $id, 'raw');
+
+        return is_string($url) && $url !== '' ? $url : null;
+
+    }
+
     public function get_item_id ($item) {
 
         return $item->ID;

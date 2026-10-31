@@ -51,6 +51,24 @@ abstract class User_Iterator extends Iterator {
 
     }
 
+    public function get_items_by_id (array $ids) {
+
+        if (!$ids) return [];
+
+        $vars = ['include' => $ids, 'number' => count($ids), 'offset' => 0] + $this->get_query_vars($this->get_default_query_vars());
+
+        return (new WP_User_Query($vars))->get_results();
+
+    }
+
+    public function get_item_url ($id) {
+
+        $url = get_edit_user_link((int) $id);
+
+        return $url !== '' ? $url : null;
+
+    }
+
     public function get_item_id ($item) {
 
         return $item->ID;

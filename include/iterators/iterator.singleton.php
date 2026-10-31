@@ -52,6 +52,7 @@ abstract class Iterator extends Singleton {
         'skip'      => [],
         'skipped'   => [],
         'failed'    => [],
+        'retry'     => [],
         'log'       => [],
         'errors'    => [],
         'status'    => 'idle',
@@ -62,7 +63,10 @@ abstract class Iterator extends Singleton {
         'elapsed'     => 0.0,
     ];
 
+    const FAILED_LIST = 50; // ids the page lists; the rest is a count
+
     protected $items = [];
+    protected $retrying = false;
     protected $store;
     protected $index;
     protected $item_id;
@@ -211,6 +215,11 @@ abstract class Iterator extends Singleton {
 
             case "stop_cron":
                 wp_send_json($this->stop_cron());
+            case "retry":
+                if (!$this->supports_retry()) wp_send_json_error('This iterator cannot serve items by id.', 422);
+                wp_send_json($this->retry());
+            case "dismiss":
+                wp_send_json($this->dismiss());
 
             default:
                 wp_send_json_error('Unknown task.', 422);
@@ -249,21 +258,33 @@ abstract class Iterator extends Singleton {
 
         $this->warm_up();
 
-        // Before get_items(): a source that fills itself in get_total_items() is read fresh by the batch that follows.
-        if (!$this->has_total()) $this->refresh_total();
+        // A retry tick serves the queued ids and leaves the index, the status and the run's own tests alone.
+        $this->retrying = is_array($this->store['retry'] ?? null) && $this->store['retry'];
 
-        $this->items = $this->get_items();
+        if ($this->retrying) {
 
-        if ($this->index == 0 && $this->get_status() === 'idle') {
+            $ids = array_splice($this->store['retry'], 0, $this->batch_size);
+            $this->items = $this->get_items_by_id($ids) ?? [];
 
-            $this->store['started_at'] = time();
-            $this->store['elapsed']    = 0.0;
-            $this->on_start();
+        } else {
+
+            // Before get_items(): a source that fills itself in get_total_items() is read fresh by the batch that follows.
+            if (!$this->has_total()) $this->refresh_total();
+
+            $this->items = $this->get_items();
+
+            if ($this->index == 0 && $this->get_status() === 'idle') {
+
+                $this->store['started_at'] = time();
+                $this->store['elapsed']    = 0.0;
+                $this->on_start();
+
+            }
+
+            $this->store['status']      = 'running';
+            $this->store['finished_at'] = null;
 
         }
-
-        $this->store['status']      = 'running';
-        $this->store['finished_at'] = null;
 
         if ($this->items) foreach ($this->items as $item) {
 
@@ -288,19 +309,26 @@ abstract class Iterator extends Singleton {
 
             }
 
-            $this->index++;
+            if (!$this->retrying) $this->index++;
 
         }
 
         $count = 0;
-        foreach ($results as $key => $result) {
+        foreach ($results as $result) $count += count($result);
 
-            $count += count($result);
-            $this->store[$key] = array_merge(is_array($this->store[$key] ?? null) ? $this->store[$key] : [], $result);
+        if ($this->retrying) {
+
+            $this->move_retried($results);
+
+        } else {
+
+            foreach ($results as $key => $result) $this->store[$key] = array_merge(is_array($this->store[$key] ?? null) ? $this->store[$key] : [], $result);
 
         }
 
         $this->on_batch_complete($count, $results);
+
+        if ($this->retrying) return $this->finish_tick($tick, $results, $count, $return_store);
 
         if ($this->dynamic_total) $this->refresh_total();
 
@@ -345,6 +373,12 @@ abstract class Iterator extends Singleton {
 
         }
 
+        return $this->finish_tick($tick, $results, $count, $return_store);
+
+    }
+
+    protected function finish_tick ($tick, $results, $count, $return_store) {
+
         $this->store['updated_at'] = time();
         $this->store['elapsed']    = round($this->get_elapsed() + (microtime(true) - $tick), 3);
 
@@ -357,21 +391,110 @@ abstract class Iterator extends Singleton {
         } else {
 
             $response = [
-                'index'     => $this->index,
-                'results'   => $results,
-                'count'     => $count,
-                'counts'    => $this->get_counts(),
-                'log'       => $this->log,
-                'errors'    => $this->errors,
-                'status'    => $this->get_status(),
-                'stalled'   => !empty($this->store['stalled']),
-                'total'     => $this->get_total(),
-                'elapsed'   => $this->get_elapsed(),
+                'index'           => $this->index,
+                'results'         => $results,
+                'count'           => $count,
+                'counts'          => $this->get_counts(),
+                'failed'          => $this->get_failed_items(),
+                'log'             => $this->log,
+                'errors'          => $this->errors,
+                'status'          => $this->get_status(),
+                'stalled'         => !empty($this->store['stalled']),
+                'total'           => $this->get_total(),
+                'elapsed'         => $this->get_elapsed(),
+                'retrying'        => $this->retrying,
+                'retry_remaining' => is_array($this->store['retry'] ?? null) ? count($this->store['retry']) : 0,
             ];
 
             return $response;
 
         }
+
+    }
+
+    // A retry tick moves ids instead of merging them: a success leaves the failed list for processed once, a failure stays
+    // once, an id on the skip list leaves the failed list and is reported skipped.
+    protected function move_retried (array $results) {
+
+        $gone = array_merge($results['processed'], $results['skipped']);
+
+        foreach (['failed', 'processed', 'skipped'] as $key) {
+
+            $have = is_array($this->store[$key] ?? null) ? $this->store[$key] : [];
+            if ($key === 'failed') $have = array_diff($have, $gone);
+
+            // Only the incoming ids are deduplicated: a run that met an id twice keeps its own record.
+            $this->store[$key] = array_values(array_merge($have, array_diff(array_unique($results[$key]), $have)));
+
+        }
+
+    }
+
+    public function is_retry () {
+
+        return $this->retrying;
+
+    }
+
+    // Opt-in: a subclass that can serve items by id implements this (and a stable get_item_id()); the base cannot.
+    public function get_items_by_id (array $ids) {
+
+        return null;
+
+    }
+
+    public function get_item_url ($id) {
+
+        return null;
+
+    }
+
+    // Both methods must be the subclass's: the base id is the index, which a retry tick freezes, so every retried item
+    // would carry one id and the record could never clear.
+    public function supports_retry () {
+
+        foreach (['get_items_by_id', 'get_item_id'] as $method) {
+
+            if ((new \ReflectionMethod($this, $method))->getDeclaringClass()->getName() === self::class) return false;
+
+        }
+
+        return true;
+
+    }
+
+    public function get_failed_items () {
+
+        $failed = $this->get_store()['failed'] ?? null;
+        $failed = is_array($failed) ? array_values($failed) : [];
+        $items  = [];
+
+        foreach (array_slice($failed, 0, static::FAILED_LIST) as $id) $items[] = ['id' => $id, 'url' => $this->get_item_url($id)];
+
+        return ['count' => count($failed), 'items' => $items];
+
+    }
+
+    public function retry () {
+
+        $failed = $this->get_store()['failed'] ?? null;
+
+        $this->store['retry'] = is_array($failed) ? array_values(array_unique($failed)) : [];
+        update_option($this->get_option_key(), $this->store, false);
+
+        return ['retry_remaining' => count($this->store['retry']), 'failed' => $this->get_failed_items(), 'counts' => $this->get_counts()];
+
+    }
+
+    public function dismiss () {
+
+        $this->get_store();
+
+        $this->store['failed'] = [];
+        $this->store['retry']  = [];
+        update_option($this->get_option_key(), $this->store, false);
+
+        return ['failed' => $this->get_failed_items(), 'counts' => $this->get_counts()];
 
     }
 
@@ -640,7 +763,11 @@ abstract class Iterator extends Singleton {
 
     }
 
+    // Start's first call: a retry queue a stopped chain left behind would otherwise be drained at a frozen index.
     public function get_total_items_wrap () {
+
+        $this->get_store();
+        $this->store['retry'] = [];
 
         return $this->refresh_total();
 

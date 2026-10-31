@@ -7,6 +7,7 @@ $elapsed  = (int) floor($iterator->get_elapsed());
 $started  = $iterator->get_started_at();
 $eta      = ($cron && $status === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
 $clock    = sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
+$failed   = $iterator->get_failed_items();
 $about    = fn ($s) => $s < 60 ? "{$s}s" : ($s < 3600 ? intdiv($s, 60) . 'm' : intdiv($s, 3600) . 'h ' . (intdiv($s, 60) % 60) . 'm');
 $labels   = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Paused'];
 $states   = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-paused']];
@@ -60,6 +61,20 @@ if (is_null($total))    $classes[] = 'is-indeterminate';
         </div>
     </div>
     <?= $after_progress ?>
+
+    <div class='iterator-panel failed-wrap<?= $failed['count'] ? '' : ' is-empty' ?>'>
+        <div class='failed-head'>
+            <label>Failed <span class='failed-count'><?= $failed['count'] ?></span></label>
+            <div class='failed-actions'>
+                <?php if ($iterator->supports_retry()): ?><button type='button' class='button' data-task='retry'>Retry failed</button><?php endif; ?>
+                <button type='button' class='button' data-task='dismiss'>Dismiss</button>
+            </div>
+        </div>
+        <ul class='failed-list'>
+            <?php foreach ($failed['items'] as $item) echo "<li>" . ($item['url'] ? "<a href='" . esc_url($item['url']) . "'>#" . esc_html((string) $item['id']) . "</a>" : '#' . esc_html((string) $item['id'])) . "</li>"; ?>
+            <?php if ($failed['count'] > count($failed['items'])) echo "<li class='failed-more'>and " . ($failed['count'] - count($failed['items'])) . " more</li>"; ?>
+        </ul>
+    </div>
 
     <?= $before_log ?>
     <div class='iterator-panel log-wrap'>

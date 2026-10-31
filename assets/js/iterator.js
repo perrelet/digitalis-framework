@@ -11,6 +11,7 @@
         flags: {
             stop: false,
         },
+        retrying: false,
 
         init: function (params) {
 
@@ -22,6 +23,11 @@
             this.els.start = document.querySelector(".iterator button[data-task='start']");
             this.els.stop = document.querySelector(".iterator button[data-task='stop']");
             this.els.reset = document.querySelector(".iterator button[data-task='reset']");
+            this.els.retry = document.querySelector(".iterator button[data-task='retry']");
+            this.els.dismiss = document.querySelector(".iterator button[data-task='dismiss']");
+            this.els.failed = document.querySelector(".iterator .failed-wrap");
+            this.els.failed_count = document.querySelector(".iterator .failed-count");
+            this.els.failed_list = document.querySelector(".iterator .failed-list");
             this.els.index = document.querySelector(".iterator .index");
             this.els.total = document.querySelector(".iterator .total");
             this.els.percent = document.querySelector(".iterator .percent");
@@ -46,6 +52,8 @@
             if (this.els.start) this.els.start.addEventListener('click', this.start.bind(this));
             if (this.els.stop) this.els.stop.addEventListener('click', this.maybe_stop.bind(this));
             if (this.els.reset) this.els.reset.addEventListener('click', this.maybe_reset.bind(this));
+            if (this.els.retry) this.els.retry.addEventListener('click', this.maybe_retry.bind(this));
+            if (this.els.dismiss) this.els.dismiss.addEventListener('click', this.maybe_dismiss.bind(this));
 
         },
 
@@ -121,6 +129,7 @@
             this.update_progress(response.index);
             this.params.index = response.index;
             this.update_counts(response.counts);
+            this.render_failed(response.failed);
             this.update_eta(response.status == 'running' && !response.stalled ? response.index : null);
 
             if (response.hasOwnProperty('log') && response.log) for (const line of response.log) this.log(line);
@@ -219,6 +228,113 @@
 
         },
 
+        // A retry runs its own chain: no total step, no "Already Complete" gate, the index and the run's status untouched.
+        maybe_retry: function () {
+
+            if (!this.els.iterator.classList.contains('running')) this.retry();
+
+        },
+
+        retry: function () {
+
+            this.retrying = true;
+            this.last_time = new Date().getTime();
+            this.els.status.textContent = 'Retrying';
+            this.batch_log(`Retrying the failed ${this.params.labels.plural}.`);
+            this.els.iterator.classList.add('running');
+            this.request('retry', this.retry_start.bind(this));
+
+        },
+
+        retry_start: function (response) {
+
+            this.render_failed(response.failed);
+
+            if (response.retry_remaining) this.request('iterate', this.retry_tick.bind(this)); else this.retry_end(null);
+
+        },
+
+        retry_tick: function (response) {
+
+            this.update_progress(response.index);
+            this.update_counts(response.counts);
+            this.render_failed(response.failed);
+
+            if (response.hasOwnProperty('log') && response.log) for (const line of response.log) this.log(line);
+            if (response.hasOwnProperty('errors') && response.errors) for (const line of response.errors) this.error(line, false);
+
+            this.batch_log(`${response.count} ${this.params.labels.plural} retried (${response.results.failed.length} failed again) in ${this.delta}ms.`);
+
+            if (response.retry_remaining && !this.flags.stop) this.request('iterate', this.retry_tick.bind(this)); else this.retry_end(response);
+
+        },
+
+        retry_end: function (response) {
+
+            const labels = { complete: 'Finished!', halted: 'Halted' };
+
+            this.retrying = false;
+            this.flags.stop = false;
+            this.els.iterator.classList.remove('running');
+            this.els.status.textContent = response && labels[response.status] ? labels[response.status] : 'Retried';
+            this.batch_log(`Retry finished after ${this.time}ms.`);
+
+        },
+
+        maybe_dismiss: function () {
+
+            if (confirm(`Dismiss the failed ${this.params.labels.plural}? They stay out of the run.`)) this.request('dismiss', this.dismiss_complete.bind(this));
+
+        },
+
+        dismiss_complete: function (response) {
+
+            this.render_failed(response.failed);
+            this.update_counts(response.counts);
+            this.batch_log(`Failed ${this.params.labels.plural} dismissed.`);
+
+        },
+
+        render_failed: function (failed) {
+
+            if (!this.els.failed || !failed) return;
+
+            this.els.failed.classList.toggle('is-empty', !failed.count);
+            this.els.failed_count.textContent = failed.count;
+            this.els.failed_list.textContent = '';
+
+            for (const item of failed.items) {
+
+                const li = document.createElement('li');
+
+                if (item.url) {
+
+                    const a = document.createElement('a');
+                    a.href = item.url;
+                    a.textContent = `#${item.id}`;
+                    li.appendChild(a);
+
+                } else {
+
+                    li.textContent = `#${item.id}`;
+
+                }
+
+                this.els.failed_list.appendChild(li);
+
+            }
+
+            if (failed.count > failed.items.length) {
+
+                const li = document.createElement('li');
+                li.classList.add('failed-more');
+                li.textContent = `and ${failed.count - failed.items.length} more`;
+                this.els.failed_list.appendChild(li);
+
+            }
+
+        },
+
         maybe_reset: function () {
 
             if (confirm("Are you sure the want to reset this batch process?")) this.reset();
@@ -249,6 +365,7 @@
             this.els.status.textContent = 'Reset';
             this.els.time.textContent = '00:00:00';
             this.update_counts({ processed: 0, skipped: 0, failed: 0 });
+            this.render_failed({ count: 0, items: [] });
             this.update_eta(null);
 
             this.els.log.innerHTML = '';
@@ -257,7 +374,7 @@
 
         request: function (task, callback) {
 
-            if (task == 'iterate') this.batch_log(`Requesting batch process at ${this.params.labels.single} ${this.params.index} of ${this.total === null ? '?' : this.total}.`);
+            if (task == 'iterate') this.batch_log(this.retrying ? `Requesting a retry batch.` : `Requesting batch process at ${this.params.labels.single} ${this.params.index} of ${this.total === null ? '?' : this.total}.`);
 
             var http = new XMLHttpRequest();
 
@@ -404,6 +521,8 @@
             if (halt) {
 
                 this.stop();
+                this.flags.stop = false;
+                this.retrying = false;
                 this.els.iterator.classList.add('err');
 
             }
