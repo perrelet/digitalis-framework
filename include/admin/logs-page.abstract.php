@@ -24,6 +24,26 @@ abstract class Logs_Page extends Admin_Sub_Page {
     protected $logs = [];
     protected $_logs;
 
+    public function __construct () {
+
+        parent::__construct();
+        add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_style']);
+
+    }
+
+    // The screen's own request gets the stylesheet in the head; a host rendering callback() elsewhere gets it from the footer.
+    public function maybe_enqueue_style () {
+
+        if (($_GET['page'] ?? 0) == $this->slug) $this->enqueue_style();
+
+    }
+
+    public function enqueue_style () {
+
+        wp_enqueue_style('lattice-logs', LATTICE_URI . 'assets/css/logs.css', [], LATTICE_VERSION);
+
+    }
+
     protected function filter_logs (&$logs) {
     
         $logs[] = [
@@ -106,12 +126,12 @@ abstract class Logs_Page extends Admin_Sub_Page {
     
         return [
             'basic' => [
-                'single-quote'      => "\'.*?\'",                   // '...'
+                'single-quote'      => "(?<!\w)&#039;.*?&#039;(?!\w)", // '...' (the line is escaped before the rules run; an apostrophe in prose opens nothing)
                 'double-quote'      => "&quot;.*?&quot;",           // "..."
                 'path'              => "\s\/[^ ]*",                 // /some/path
                 'square-brackets'   => "\[.*?\]",                   // [...]
                 //'brackets'        => "\(.*?\)",                   // (...)
-                'hash-integer'      => "#\d+",                      // #n
+                'hash-integer'      => "(?<!&)#\d+",                 // #n, not the #039 inside an entity
             ],
             'php' => [
                 'function'          => "\s[^ \/.]+\(.*?\)",         // function(...)
@@ -144,7 +164,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     public function callback () {
 
-        $this->css();
+        $this->enqueue_style();
 
         echo "<h1>Logs</h1>";
 
@@ -235,7 +255,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 echo "<div class='log-info'>";
                     echo "<div class='path'>" . esc_html($current['path']) . "</div>";
-                    echo "<div class='size'>" . esc_html($size) . "<span class='goto bottom' onclick='window.scrollTo(0, document.querySelector(`#hash-bottom`).offsetTop);'></span></div>";
+                    echo "<div class='size'>" . esc_html($size) . "<a class='goto bottom' href='#hash-bottom' aria-label='Jump to bottom'></a></div>";
                 echo "</div>";
 
                 echo "<div class='lines'>";
@@ -252,7 +272,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 echo "<div class='log-info'>";
                     echo "<div class='path'>" . esc_html($current['path']) . "</div>";
-                    echo "<div class='size'>" . esc_html($size) . "<span class='goto top' onclick='window.scrollTo(0, document.querySelector(`#hash-top`).offsetTop);'></span></div>";
+                    echo "<div class='size'>" . esc_html($size) . "<a class='goto top' href='#hash-top' aria-label='Jump to top'></a></div>";
                 echo "</div>";
 
                 echo "<span id='hash-bottom'></span>";
@@ -266,11 +286,11 @@ abstract class Logs_Page extends Admin_Sub_Page {
             echo "<form method='post' class='actions'>";
 
                 echo "<input type='hidden' name='nonce' value='" . wp_create_nonce('clear-log') . "'></input>";
-                echo "<button classs='button' onclick='location.reload(); return false;'>♻️ Refresh Log</button>";
+                echo "<button type='button' class='button' onclick='location.reload();'>♻️ Refresh Log</button>";
                 
                 if (($current['permissions']['clear'] ?? 0) && current_user_can($current['permissions']['clear'])) {
 
-                    echo "<button classs='button' type='submit' name='clear-log' value='1' onclick='return confirm(`Are you sure you want to empty this log file?`)'>🗑️ Clear Log</button>";
+                    echo "<button class='button' type='submit' name='clear-log' value='1' onclick='return confirm(`Are you sure you want to empty this log file?`)'>🗑️ Clear Log</button>";
         
                 }
                 
@@ -342,209 +362,5 @@ abstract class Logs_Page extends Admin_Sub_Page {
     
     }
 
-    protected function css () {
-    
-        ?><style>
-
-            @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
-
-            .digitalis-logs {
-
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-
-                .digitalis-logs-nav {
-
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.5rem;
-
-                    a {
-
-                        padding: 0.25rem 1rem;
-                        border: 0;
-                        background: #dfdfdf;
-                        border-radius: 4px;
-                        color: inherit;
-                        text-decoration: none;
-
-                        &:hover {
-
-                            background: #ffffff;
-
-                        }
-
-                        &.selected {
-
-                            background: #606060;
-                            color: white;
-
-                            &:hover {
-
-                                background: #404040;
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
-                .pagination-links {
-
-                    font-size: 1.2em;
-                    font-weight: bold;
-
-                    .page-numbers {
-
-                        text-decoration: none;
-                        color: inherit;
-                        padding: 0.25rem 0.5rem;
-                        border-radius: 2px;
-
-                    }
-
-                    a.page-numbers:hover {
-
-                        background: #dfdfdf;
-
-                    }
-
-                    .current {
-
-                        background: #606060;
-                        color: white;
-
-
-                    }
-
-                }
-
-                .digitalis-log {
-
-                    background: #1d2327;
-                    border-radius: 4px;
-                    font-family: "Roboto Mono", monospace;
-                    color: #f4f4f4;
-                    overflow: hidden;
-
-                    .log-info {
-
-                        display: flex;
-                        gap: 1rem;
-                        justify-content: space-between;
-                        padding: 0.5rem;
-                        background: #3b3b3b;
-
-                        .goto {
-
-                            --c: currentColor;
-
-                            display: inline-block;
-                            border: 0.5em solid transparent;
-                            margin-left: 0.5rem;
-                            cursor: pointer;
-
-                            &:hover {
-
-                                --c: #999;
-
-                            }
-
-                            &.bottom {
-
-                                border-top-color: var(--c);
-                                margin-bottom: -0.4em;
-
-                            }
-
-                            &.top {
-
-                                border-bottom-color: var(--c);
-
-                            }
-
-                        }
-
-                    }
-
-                    .lines {
-
-                        padding: 0.5rem;
-                        border-bottom: 1px solid #5c5c5c;
-                        border-top: 1px solid #5c5c5c;
-
-                        .line {
-
-                            line-height: 1.2;
-                            text-wrap: wrap;
-                            font-family: inherit;
-                            margin-top: 0;
-                            margin-bottom: 0.25em;
-
-                            span:before {
-
-                                padding-right: 0.2em;
-                                font-size: 0.9em;
-
-                            }
-
-                            .x-single-quote    { color: #f7e6bd; }
-                            .x-double-quote    { color: #fff5ce; }
-                            .x-path            { color: #cacac0; font-style: italic; }
-                            .x-function        { color: #aad7ff; }
-                            .x-static-method   { color: #49dcf9; }
-                            .x-method          { color: #56ffd8; }
-                            .x-square-brackets { color: #c6a6ff; }
-                            .x-brackets        { color: #b9eff6; }
-                            .x-hash-integer    { color: #dcd8ac; }
-                            .x-error           { background: #fb7c7c; color: #1d2327; font-weight: bold; border-radius: 2px; padding: 0px 0.2em; }
-                            .x-error:before    { content: '❌' }
-                            .x-warning         { background: #daba54; color: #1d2327; font-weight: bold; border-radius: 2px; padding: 0px 0.2em; }
-                            .x-warning:before  { content: '⚠️' }
-
-                        }
-
-                    }
-
-                }
-
-                form.actions {
-
-                    display: flex;
-                    gap: 0.5rem;
-
-                    button {
-
-                        background: white;
-                        border: 1px solid #ddd;
-                        padding: 0.5rem;
-                        border-radius: 0.25rem;
-                        cursor: pointer;
-
-                        &:focus,
-                        &:hover {
-
-                            background: #fbfbfb;
-                            border-color: #aaa;
-
-                        }
-
-                        &:active {
-
-                            background: #f6f6f6;
-
-                        }
-
-                    }
-
-                }
-
-            }
-        </style><?php
-    
-    }
 
 }
