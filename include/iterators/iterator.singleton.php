@@ -246,7 +246,8 @@ abstract class Iterator extends Singleton {
                 wp_send_json($handover, empty($handover['refused']) ? 200 : 409);
 
             case "reset":
-                wp_send_json($this->reset());
+                $reset = $this->reset();
+                wp_send_json($reset, empty($reset['refused']) ? 200 : 409);
 
             case "stop_cron":
                 wp_send_json($this->stop_cron());
@@ -304,6 +305,7 @@ abstract class Iterator extends Singleton {
     // continues the run. When the run has ended, or the lock is no longer a cron one, a non-cron iterator unschedules its loop.
     public function cron_loop () {
 
+        $this->get_store(); // migrates a pre-upgrade cron flag into the lock
         $lock = $this->read_lock();
 
         if (!$lock || $lock['run_by'] !== 'cron') {
@@ -404,7 +406,12 @@ abstract class Iterator extends Singleton {
 
         }
 
+        $touched = time();
+        $half    = intdiv($this->get_lock_window(), 2); // a batch longer than the window would read as stale mid-way
+
         if ($this->items) foreach ($this->items as $item) {
+
+            if (time() - $touched >= $half) { $this->check_lock(true); $touched = time(); }
 
             $this->item_id = $this->get_item_id($item);
             if (is_null($this->item_id)) $this->item_id = $this->index;
@@ -467,7 +474,6 @@ abstract class Iterator extends Singleton {
 
             $this->store['finished_at'] = time();
             $this->on_complete();
-            if ($this->holds_lock()) $this->release_lock();
 
         } elseif ($halt) {
 
@@ -476,7 +482,6 @@ abstract class Iterator extends Singleton {
             $this->store['finished_at'] = time();
 
             $this->error("Halted: {$failed}.", true);
-            if ($this->holds_lock()) $this->release_lock();
 
         } elseif (!$this->items) {
 
@@ -501,6 +506,8 @@ abstract class Iterator extends Singleton {
         $this->store['elapsed']    = round($this->get_elapsed() + (microtime(true) - $tick), 3);
 
         $this->update_store();
+
+        if (in_array($this->store['status'], ['complete', 'halted'], true) && $this->holds_lock()) $this->release_lock(); // after the write that records the end
 
         if ($return_store) {
 
@@ -1011,6 +1018,7 @@ abstract class Iterator extends Singleton {
     // One truth: a cron run is the lock held as cron and not stale.
     public function is_doing_cron () {
 
+        $this->get_store();
         $lock = $this->read_lock();
 
         return $lock !== null && $lock['run_by'] === 'cron' && !$this->is_lock_stale($lock);
@@ -1049,6 +1057,7 @@ abstract class Iterator extends Singleton {
     public function release_lock () : void {
 
         $this->row_delete($this->get_lock_name());
+        $this->token = null; // released, this request is bare again
 
     }
 
@@ -1065,12 +1074,13 @@ abstract class Iterator extends Singleton {
 
     }
 
-    // Whether this request may drive the run: it holds the lock, or nobody does (a stale lock is nobody's). A held lock is touched on request.
+    // Whether this request may drive the run: it holds the lock, or nobody does (a stale lock is nobody's). A held lock is touched on
+    // request. No row is free for a request that never took one (a direct call); a driver whose lock was deleted under it has lost it.
     public function check_lock (bool $touch = false) : bool {
 
         $lock = $this->read_lock();
 
-        if (!$lock) return true;
+        if (!$lock) return $this->token === null;
 
         if ($this->token !== null && $lock['run'] === $this->token) {
 
@@ -1270,6 +1280,8 @@ abstract class Iterator extends Singleton {
     }
 
     public function reset () {
+
+        if (!$this->check_lock()) return $this->lock_refusal() + ['refused' => true];
 
         $this->release_lock();
 

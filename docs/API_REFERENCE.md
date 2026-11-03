@@ -880,7 +880,7 @@ The run:
 | `refresh_total()` | `public refresh_total(): ?int` | Calls `get_total_items()` and stores the answer |
 | `get_progress()` | `public get_progress(): float` | `index / total`, at most 1; a complete run with no total reads 1 |
 | `is_complete()` | `public is_complete(): bool` | |
-| `reset()` | `public reset(): array` | The UI's Reset: the store becomes `get_default_store()` |
+| `reset()` | `public reset(): array` | The UI's Reset: the store becomes `get_default_store()`. Under another driver's live lock it answers `lock_refusal() + [refused => true]` (the task 409s): Stop first |
 | `reset_progress()` | `public reset_progress(): array` | The cron start: restores the keys `get_default_store()` declares and drops the total; every other key survives |
 | `get_store()`, `update_store()` | `public get_store(): array` | The option; `update_store()` writes the index and merges this request's log lines |
 | `skip_item()`, `skip_items()` | `public skip_item(mixed $item = null): void` | Ids the loop skips |
@@ -902,7 +902,7 @@ The run:
 | `stop()` | `public stop(): array` | The chain's end: releases the lock when this request's token holds it (`released`) |
 | `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | A cron run: the lock held as `cron` and not stale; `stop_cron()` releases it and unschedules a non-cron iterator's loop |
 | `take_lock()`, `release_lock()` | `public take_lock(string $run_by): string\|false` | The run lock (`iterator_{$key} lock`, its own row): `ui` or `cron`; the token, or `false` under a live lock. A stale lock is taken over |
-| `get_lock()`, `holds_lock()`, `check_lock()` | `public get_lock(): ?array` | `run_by`, `taken_at`, `seen_at` and `stale` for the page (never the token); whether this request holds the lock; whether it may write (holds it, or nobody does) |
+| `get_lock()`, `holds_lock()`, `check_lock()` | `public get_lock(): ?array` | `run_by`, `taken_at`, `seen_at` and `stale` for the page (never the token); whether this request holds the lock; whether it may write (holds it, or nobody does; no row at all is free only for a request that never took one, so a driver whose lock went under it is refused). A held lock is touched at the tick, at the write and between items once half the window has passed |
 | `get_lock_window()`, `is_lock_stale()`, `lock_refusal()` | `public get_lock_window(): int` | `$lock_window`, else `max(LOCK_STALE, max_execution_time + 30)`, or `LOCK_STALE_UNLIMITED` when the limit is 0; the 409 body `{status, run_by, message}` |
 
 Store keys: `index`, the id arrays `processed`, `skip`, `skipped`, `failed` and `retry`, `log` and `errors` (the last `LOG_TAIL` lines each), `status`, `stalled`, `started_at`, `updated_at`, `finished_at` and `elapsed` are per run (`$default_store`); `total` is absent until computed and `null` when unknown; `dry_run` is the page's checkbox, written by `read_request()`, and survives a cron reset like any other setting.
