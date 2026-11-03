@@ -32,6 +32,7 @@ abstract class Iterator extends Singleton {
     protected $cron_time          = '00:00:00';
     protected $cron_schedule      = 'daily';
     protected $cron_loop_schedule = 'every_minute';
+    protected $cron_budget        = 20; // seconds of batches per loop fire
 
     protected $cron_run_action  = false;
     protected $cron_loop_action = false;
@@ -125,6 +126,15 @@ abstract class Iterator extends Singleton {
         add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_assets']);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
 
+        // The loop is every iterator's, since Run in background hands any run to it; the scheduled start stays a $cron iterator's.
+        // Core registers no every_minute schedule; a site's own 60-second one under that name is kept.
+        add_filter('cron_schedules', function ($schedules) {
+            $schedules['every_minute'] ??= ['interval' => 60, 'display' => 'Every Minute'];
+            return $schedules;
+        });
+
+        add_action($this->get_loop_action(), [$this, 'cron_loop']);
+
         if ($this->cron_condition()) {
 
             $date_string = (new DateTime)->format('Y-m-d') . ' ' . $this->cron_time;
@@ -138,17 +148,10 @@ abstract class Iterator extends Singleton {
 
             }
 
-            // Core registers no every_minute schedule; a site's own 60-second one under that name is kept.
-            add_filter('cron_schedules', function ($schedules) {
-                $schedules['every_minute'] ??= ['interval' => 60, 'display' => 'Every Minute'];
-                return $schedules;
-            });
-
-            $cron_action_start = $this->get_option_key() . '_start';
-            $cron_action_loop  = $this->get_option_key() . '_loop';
+            $cron_action_start = $this->get_start_action();
+            $cron_action_loop  = $this->get_loop_action();
 
             add_action($cron_action_start, [$this, 'cron_start']);
-            add_action($cron_action_loop,  [$this, 'cron_loop']);
 
             if (!wp_next_scheduled($cron_action_start)) {
 
@@ -166,6 +169,9 @@ abstract class Iterator extends Singleton {
         }
 
     }
+
+    public function get_start_action () : string { return $this->get_option_key() . '_start'; }
+    public function get_loop_action ()  : string { return $this->get_option_key() . '_loop';  }
 
     // An unregistered schedule is a declaration error: core answers false, nothing fires, and a run would do one batch and stop.
     protected function schedule_event ($timestamp, $schedule, $action) {
@@ -235,6 +241,10 @@ abstract class Iterator extends Singleton {
             case "stop":
                 wp_send_json($this->stop());
 
+            case "background":
+                $handover = $this->background();
+                wp_send_json($handover, empty($handover['refused']) ? 200 : 409);
+
             case "reset":
                 wp_send_json($this->reset());
 
@@ -273,14 +283,78 @@ abstract class Iterator extends Singleton {
 
     }
 
-    // The loop adopts the cron run's token, stale or not: a fire that died leaves its lock behind and the next fire continues the run.
+    // Run in background: the run continues from where it stands under the loop, the lock held as cron (cron_start() keeps its reset
+    // for the scheduled start). WP-cron fires on traffic: a quiet site wants a system cron hitting wp-cron.php.
+    public function background () {
+
+        if ($this->get_status() === 'complete') return ['refused' => true, 'status' => 'complete', 'run_by' => null, 'message' => 'The run is complete; Reset first.'];
+        if ($this->take_lock('cron') === false) return $this->lock_refusal() + ['refused' => true];
+
+        if (!wp_next_scheduled($this->get_loop_action())) $this->schedule_event(time(), $this->cron_loop_schedule, $this->get_loop_action());
+
+        $this->mark('--- handed to the background loop ---');
+
+        return ['status' => $this->get_status(), 'doing_cron' => true, 'next' => wp_next_scheduled($this->get_loop_action())];
+
+    }
+
+    // One fire does up to $cron_budget seconds of batches. A second row, iterator_{key} fire, holds the next fire off while this
+    // one runs (WP-cron's own lock lasts 60 s, and a budget plus a long batch crosses it), stale after the lock window so a fire
+    // that died clears itself. The loop adopts the cron run's token, stale or not: a dead fire leaves its lock and the next
+    // continues the run. When the run has ended, or the lock is no longer a cron one, a non-cron iterator unschedules its loop.
     public function cron_loop () {
 
         $lock = $this->read_lock();
-        if (!$lock || $lock['run_by'] !== 'cron') return;
+
+        if (!$lock || $lock['run_by'] !== 'cron') {
+
+            if (!$this->cron_condition()) wp_unschedule_hook($this->get_loop_action());
+            return;
+
+        }
+
+        if (!$this->take_fire()) return;
 
         $this->token = $lock['run'];
-        $this->iterate();
+        $until       = microtime(true) + $this->cron_budget;
+
+        try {
+
+            do {
+
+                $tick = $this->iterate();
+
+            } while (empty($tick['refused']) && $this->get_status() === 'running' && empty($this->store['stalled']) && microtime(true) < $until);
+
+        } finally {
+
+            $this->release_fire();
+
+        }
+
+        if ($this->get_status() !== 'running' && !$this->cron_condition()) wp_unschedule_hook($this->get_loop_action());
+
+    }
+
+    protected function take_fire () : bool {
+
+        $name = $this->get_option_key('fire');
+        $fire = ['taken_at' => time()];
+
+        if ($this->row_insert($name, $fire)) return true;
+
+        $held = $this->row_read($name);
+
+        if (!$held) return $this->row_insert($name, $fire);
+        if (time() - (int) ($held['taken_at'] ?? 0) <= $this->get_lock_window()) return false;
+
+        return $this->row_swap($name, $fire, $held);
+
+    }
+
+    protected function release_fire () : void {
+
+        $this->row_delete($this->get_option_key('fire'));
 
     }
 
@@ -878,6 +952,17 @@ abstract class Iterator extends Singleton {
         $legacy = get_option($this->get_option_key('total'), false);
         if ($legacy !== false) delete_option($this->get_option_key('total'));
 
+        // The cron flag lived in its own option until the run lock; a true flag at upgrade is a cron run in progress, taken as its lock.
+        $cron = get_option($this->get_option_key('cron'), null);
+
+        if ($cron !== null) {
+
+            delete_option($this->get_option_key('cron'));
+
+            if ($cron) { $token = $this->token; $this->take_lock('cron'); $this->token = $token; }
+
+        }
+
         if (array_key_exists('status', $store)) return;
 
         $index = (int) $store['index'];
@@ -941,27 +1026,19 @@ abstract class Iterator extends Singleton {
 
     //
 
-    // The run lock is its own option row, iterator_{key} lock: {run, run_by, taken_at, seen_at}. It is taken with INSERT IGNORE and
-    // the affected rows (add_option() decides "exists" from the cache, so two readers of "absent" would both succeed), read and
-    // deleted by direct queries (the options and notoptions caches would answer this request's earlier copy), and taken over only
-    // when stale, by compare-and-swap against the row just read, so two takers of one stale lock cannot both win.
+    // The run lock is its own row, iterator_{key} lock: {run, run_by, taken_at, seen_at}, taken over only when stale (the row helpers below).
     public function take_lock (string $run_by, bool $retry = true) {
-
-        global $wpdb;
 
         $token = bin2hex(random_bytes(8));
         $now   = time();
         $lock  = ['run' => $token, 'run_by' => $run_by, 'taken_at' => $now, 'seen_at' => $now];
 
-        $rows = $wpdb->query($wpdb->prepare("INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')", $this->get_lock_name(), serialize($lock)));
-        $this->forget_lock_cache();
-
-        if ($rows === 1) return $this->token = $token;
+        if ($this->row_insert($this->get_lock_name(), $lock)) return $this->token = $token;
 
         $held = $this->read_lock();
 
         if (!$held) return $retry ? $this->take_lock($run_by, false) : false; // released between the insert and the read
-        if (!$this->is_lock_stale($held) || !$this->write_lock($lock, $held)) return false;
+        if (!$this->is_lock_stale($held) || !$this->row_swap($this->get_lock_name(), $lock, $held)) return false;
 
         $this->mark("--- took over a stale {$held['run_by']} lock, last seen " . ($now - $held['seen_at']) . "s ago ---");
 
@@ -971,38 +1048,20 @@ abstract class Iterator extends Singleton {
 
     public function release_lock () : void {
 
-        global $wpdb;
-
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name = %s", $this->get_lock_name()));
-        $this->forget_lock_cache();
+        $this->row_delete($this->get_lock_name());
 
     }
 
     public function read_lock () : ?array {
 
-        global $wpdb;
+        $lock = $this->row_read($this->get_lock_name());
 
-        $raw  = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", $this->get_lock_name()));
-        $lock = is_string($raw) ? maybe_unserialize($raw) : null;
-
-        if (!is_array($lock) || !is_string($lock['run'] ?? null) || !is_string($lock['run_by'] ?? null)) return null;
+        if (!$lock || !is_string($lock['run'] ?? null) || !is_string($lock['run_by'] ?? null)) return null;
 
         $lock['taken_at'] = (int) ($lock['taken_at'] ?? 0);
         $lock['seen_at']  = (int) ($lock['seen_at'] ?? 0);
 
         return $lock;
-
-    }
-
-    // A compare-and-swap: the row is rewritten only while it still reads as $expected; zero affected rows is a refusal.
-    protected function write_lock (array $lock, array $expected) : bool {
-
-        global $wpdb;
-
-        $rows = $wpdb->query($wpdb->prepare("UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", serialize($lock), $this->get_lock_name(), serialize($expected)));
-        $this->forget_lock_cache();
-
-        return $rows === 1;
 
     }
 
@@ -1015,7 +1074,7 @@ abstract class Iterator extends Singleton {
 
         if ($this->token !== null && $lock['run'] === $this->token) {
 
-            if ($touch) $this->write_lock(array_replace($lock, ['seen_at' => time()]), $lock);
+            if ($touch) $this->row_swap($this->get_lock_name(), array_replace($lock, ['seen_at' => time()]), $lock);
 
             return true;
 
@@ -1078,9 +1137,55 @@ abstract class Iterator extends Singleton {
 
     }
 
-    protected function forget_lock_cache () : void {
+    //
 
-        $name = $this->get_lock_name();
+    // The lock and fire rows live in the options table but outside the options API: taken with INSERT IGNORE and the affected rows
+    // (add_option() decides "exists" from the cache, so two readers of "absent" would both succeed), read and deleted by direct
+    // queries (the options and notoptions caches would answer this request's earlier copy), and rewritten by compare-and-swap
+    // against the row just read, so two takers of one stale row cannot both win.
+    protected function row_insert (string $name, array $value) : bool {
+
+        global $wpdb;
+
+        $rows = $wpdb->query($wpdb->prepare("INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')", $name, serialize($value)));
+        $this->forget_row_cache($name);
+
+        return $rows === 1;
+
+    }
+
+    protected function row_read (string $name) : ?array {
+
+        global $wpdb;
+
+        $raw   = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", $name));
+        $value = is_string($raw) ? maybe_unserialize($raw) : null;
+
+        return is_array($value) ? $value : null;
+
+    }
+
+    protected function row_swap (string $name, array $value, array $expected) : bool {
+
+        global $wpdb;
+
+        $rows = $wpdb->query($wpdb->prepare("UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", serialize($value), $name, serialize($expected)));
+        $this->forget_row_cache($name);
+
+        return $rows === 1;
+
+    }
+
+    protected function row_delete (string $name) : void {
+
+        global $wpdb;
+
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name = %s", $name));
+        $this->forget_row_cache($name);
+
+    }
+
+    protected function forget_row_cache (string $name) : void {
 
         wp_cache_delete($name, 'options');
 
@@ -1142,10 +1247,12 @@ abstract class Iterator extends Singleton {
 
     //
 
+    // A cancelled background run on a non-cron iterator leaves no loop firing every minute; a $cron iterator keeps its schedule.
     public function stop_cron () {
 
         $lock = $this->read_lock();
         if ($lock && $lock['run_by'] === 'cron') $this->release_lock();
+        if (!$this->cron_condition()) wp_unschedule_hook($this->get_loop_action());
 
         return true;
 

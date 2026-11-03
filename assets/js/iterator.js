@@ -27,6 +27,7 @@
             this.els.retry = document.querySelector(".iterator button[data-task='retry']");
             this.els.dismiss = document.querySelector(".iterator button[data-task='dismiss']");
             this.els.once = document.querySelector(".iterator button[data-task='once']");
+            this.els.background = document.querySelector(".iterator button[data-task='background']");
             this.els.options = document.querySelector(".iterator .run-options");
             this.els.batch_size = document.querySelector(".iterator .run-options [data-param='batch_size']");
             this.els.dry_run = document.querySelector(".iterator .run-options [data-param='dry_run']");
@@ -60,6 +61,7 @@
             if (this.els.retry) this.els.retry.addEventListener('click', this.maybe_retry.bind(this));
             if (this.els.dismiss) this.els.dismiss.addEventListener('click', this.maybe_dismiss.bind(this));
             if (this.els.once) this.els.once.addEventListener('click', this.start.bind(this, true));
+            if (this.els.background) this.els.background.addEventListener('click', this.background.bind(this));
 
         },
 
@@ -249,6 +251,15 @@
                 this.stop();
 
             }
+
+        },
+
+        // Hands the run to the cron loop; the page then reads the cron state from the server, so it reloads.
+        background: function () {
+
+            this.els.status.textContent = 'Handing over';
+            this.batch_log(`Handing the run to the background loop.`);
+            this.request('background', function () { window.location.reload(); });
 
         },
 

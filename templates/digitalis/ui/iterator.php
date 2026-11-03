@@ -11,6 +11,7 @@
     <div class='iterator-panel controls'>
         <button type='button' class='button button-primary' data-task='start'>Start</button>
         <button type='button' class='button' data-task='once'>Run one batch</button>
+        <button type='button' class='button' data-task='background'>Run in background</button>
         <button type='button' class='button' data-task='stop'>Stop</button>
         <button type='button' class='button' data-task='reset'>Reset</button>
         <fieldset class='run-options'<?= $cron ? ' disabled' : '' ?>>

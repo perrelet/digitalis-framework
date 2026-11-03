@@ -837,6 +837,7 @@ abstract class Iterator extends Singleton
 | `$cron_time` | `string` | `'00:00:00'` | `H:i:s` in `$timezone`: the first start |
 | `$cron_schedule` | `string` | `'daily'` | Schedule of the start event |
 | `$cron_loop_schedule` | `string` | `'every_minute'` | Schedule of the tick event while a cron run is going |
+| `$cron_budget` | `int` | `20` | Seconds of batches one loop fire does |
 | `$lock_window` | `?int` | `null` | Seconds the run lock outlives its last tick; `null` derives it (`get_lock_window()`) |
 | `$labels` | `array` | `['single' => 'item', 'plural' => 'items']` | Both keys |
 | `$ui_options` | `array` | `[]` | Passed to `Iterator_UI` |
@@ -870,8 +871,10 @@ The run:
 | `reset_progress()` | `public reset_progress(): array` | The cron start: restores the keys `get_default_store()` declares and drops the total; every other key survives |
 | `get_store()`, `update_store()` | `public get_store(): array` | The option; `update_store()` writes the index and merges this request's log lines |
 | `skip_item()`, `skip_items()` | `public skip_item(mixed $item = null): void` | Ids the loop skips |
+| `background()` | `public background(): array` | Run in background: the lock as `cron`, the loop scheduled, the run continued from its index (`refused` under a live lock or on a complete run) |
+| `cron_loop()` | `public cron_loop(): void` | One fire: batches for `$cron_budget` seconds under the cron lock, held off by a live `iterator_{$key} fire` row; a non-cron iterator unschedules its loop when the run ends |
 | `stop()` | `public stop(): array` | The chain's end: releases the lock when this request's token holds it (`released`) |
-| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | A cron run: the lock held as `cron` and not stale; `stop_cron()` releases it |
+| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | A cron run: the lock held as `cron` and not stale; `stop_cron()` releases it and unschedules a non-cron iterator's loop |
 | `take_lock()`, `release_lock()` | `public take_lock(string $run_by): string\|false` | The run lock (`iterator_{$key} lock`, its own row): `ui` or `cron`; the token, or `false` under a live lock. A stale lock is taken over |
 | `get_lock()`, `holds_lock()`, `check_lock()` | `public get_lock(): ?array` | `run_by`, `taken_at`, `seen_at` and `stale` for the page (never the token); whether this request holds the lock; whether it may write (holds it, or nobody does) |
 | `get_lock_window()`, `is_lock_stale()`, `lock_refusal()` | `public get_lock_window(): int` | `$lock_window`, else `max(LOCK_STALE, max_execution_time + 30)`, or `LOCK_STALE_UNLIMITED` when the limit is 0; the 409 body `{status, run_by, message}` |
