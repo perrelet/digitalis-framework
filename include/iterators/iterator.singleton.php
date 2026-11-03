@@ -36,6 +36,9 @@ abstract class Iterator extends Singleton {
     protected $cron_run_action  = false;
     protected $cron_loop_action = false;
 
+    // The run lock outlives its last tick by this many seconds; null derives the window from max_execution_time (get_lock_window()).
+    protected $lock_window = null;
+
     protected $ui_options = [];
 
     protected $labels = [
@@ -45,6 +48,9 @@ abstract class Iterator extends Singleton {
 
     const LOG_TAIL       = 200;
     const MAX_BATCH_SIZE = 1000;
+
+    const LOCK_STALE           = 120; // the least a lock outlives its last tick; a batch runs under max_execution_time, so that plus 30 when larger
+    const LOCK_STALE_UNLIMITED = 600; // the window when max_execution_time is 0 (a system cron running php wp-cron.php has no limit)
 
     // What a log line may carry: a consumer colours a span, nothing scripts. The prefix is built after the filter.
     const LOG_TAGS = [
@@ -74,6 +80,7 @@ abstract class Iterator extends Singleton {
 
     protected $items = [];
     protected $retrying = false;
+    protected $token = null; // this request's lock token: taken here, adopted by the cron loop, or sent with an iterate request
     protected $store;
     protected $index;
     protected $item_id;
@@ -211,14 +218,22 @@ abstract class Iterator extends Singleton {
         if (!current_user_can($this->capability))                          wp_send_json_error('Unauthorized Access.', 401);
         if (!isset($_REQUEST['task']))                                     wp_send_json_error('Task parameter is required.', 422);
 
+        $this->token = is_string($_REQUEST['token'] ?? null) ? sanitize_key($_REQUEST['token']) : null;
+
+        // A run opens by taking the lock (total, retry) and the token comes back; every iterate carries it, and a mismatch is 409.
         switch ($_REQUEST['task']) {
 
             case "total":
-                wp_send_json($this->get_total_items_wrap());
+                if (($token = $this->take_lock('ui')) === false) wp_send_json($this->lock_refusal(), 409);
+                wp_send_json(['total' => $this->get_total_items_wrap(), 'token' => $token]);
 
             case "iterate":
+                if (!$this->holds_lock()) wp_send_json($this->lock_refusal(), 409);
                 $this->read_request($_REQUEST);
                 wp_send_json($this->iterate());
+
+            case "stop":
+                wp_send_json($this->stop());
 
             case "reset":
                 wp_send_json($this->reset());
@@ -227,8 +242,10 @@ abstract class Iterator extends Singleton {
                 wp_send_json($this->stop_cron());
             case "retry":
                 if (!$this->supports_retry()) wp_send_json_error('This iterator cannot serve items by id.', 422);
-                wp_send_json($this->retry());
+                if (($token = $this->take_lock('ui')) === false) wp_send_json($this->lock_refusal(), 409);
+                wp_send_json(['token' => $token] + $this->retry());
             case "dismiss":
+                if (!$this->check_lock()) wp_send_json($this->lock_refusal(), 409);
                 wp_send_json($this->dismiss());
 
             default:
@@ -238,20 +255,33 @@ abstract class Iterator extends Singleton {
 
     }
 
+    // The lock is taken before the reset: a reset under a live UI run would be written back over by its next tick.
     public function cron_start () {
 
-        $this->set_doing_cron(true);
+        if ($this->take_lock('cron') === false) {
+
+            $message = 'Cron start refused: ' . $this->lock_refusal()['message'];
+            $this->mark("--- {$message} ---");
+            error_log('Lattice: ' . static::class . ": {$message}");
+
+            return;
+
+        }
+
         $this->reset_progress();
         $this->iterate();
-    
+
     }
 
+    // The loop adopts the cron run's token, stale or not: a fire that died leaves its lock behind and the next fire continues the run.
     public function cron_loop () {
-    
-        if (!$this->is_doing_cron()) return;
 
+        $lock = $this->read_lock();
+        if (!$lock || $lock['run_by'] !== 'cron') return;
+
+        $this->token = $lock['run'];
         $this->iterate();
-    
+
     }
 
     //
@@ -267,6 +297,10 @@ abstract class Iterator extends Singleton {
         $tick = microtime(true);
 
         $this->warm_up();
+
+        // A live lock that is not this request's refuses the tick; none at all runs it bare (a direct call). A held lock is touched here
+        // as well as at the write, so a long batch is seen as alive while it runs.
+        if (!$this->check_lock(true)) return $return_store ? $this->store : $this->lock_refusal() + ['refused' => true];
 
         // A retry tick serves the queued ids and leaves the index, the status and the run's own tests alone.
         $this->retrying = is_array($this->store['retry'] ?? null) && $this->store['retry'];
@@ -359,7 +393,7 @@ abstract class Iterator extends Singleton {
 
             $this->store['finished_at'] = time();
             $this->on_complete();
-            $this->set_doing_cron(false);
+            if ($this->holds_lock()) $this->release_lock();
 
         } elseif ($halt) {
 
@@ -368,7 +402,7 @@ abstract class Iterator extends Singleton {
             $this->store['finished_at'] = time();
 
             $this->error("Halted: {$failed}.", true);
-            $this->set_doing_cron(false);
+            if ($this->holds_lock()) $this->release_lock();
 
         } elseif (!$this->items) {
 
@@ -816,11 +850,25 @@ abstract class Iterator extends Singleton {
         $this->store['log']    = array_slice(array_merge($this->store['log'], $this->log), -static::LOG_TAIL);
         $this->store['errors'] = array_slice(array_merge($this->store['errors'], $this->errors), -static::LOG_TAIL);
 
+        // The write race closes here: a request that lost the lock while in flight discards its snapshot. Its lines still go to the
+        // file, since the items' side effects happened; a takeover reprocesses the batch from the winner's index.
+        if (!$this->check_lock(true)) {
+
+            $this->error($this->lock_refusal()['message'] . ' This batch is not recorded.', true);
+            $this->mark('--- discarded: lock lost ---');
+            $this->flush_buffer();
+
+            return false;
+
+        }
+
         $this->flush_buffer();
 
         $this->pre_update_store($this->store);
 
         update_option($this->get_option_key(), $this->store, false);
+
+        return true;
 
     }
 
@@ -875,16 +923,176 @@ abstract class Iterator extends Singleton {
     
     }
 
+    // One truth: a cron run is the lock held as cron and not stale.
     public function is_doing_cron () {
-    
-        return (bool) get_option($this->get_option_key('cron'), false);
-    
+
+        $lock = $this->read_lock();
+
+        return $lock !== null && $lock['run_by'] === 'cron' && !$this->is_lock_stale($lock);
+
     }
 
+    // Deprecated: the lock is the flag. True takes it as cron (refused under a live run), false releases it.
     public function set_doing_cron ($state) {
-    
-        update_option($this->get_option_key('cron'), (bool) $state, false);
-    
+
+        if ($state) $this->take_lock('cron'); else $this->release_lock();
+
+    }
+
+    //
+
+    // The run lock is its own option row, iterator_{key} lock: {run, run_by, taken_at, seen_at}. It is taken with INSERT IGNORE and
+    // the affected rows (add_option() decides "exists" from the cache, so two readers of "absent" would both succeed), read and
+    // deleted by direct queries (the options and notoptions caches would answer this request's earlier copy), and taken over only
+    // when stale, by compare-and-swap against the row just read, so two takers of one stale lock cannot both win.
+    public function take_lock (string $run_by, bool $retry = true) {
+
+        global $wpdb;
+
+        $token = bin2hex(random_bytes(8));
+        $now   = time();
+        $lock  = ['run' => $token, 'run_by' => $run_by, 'taken_at' => $now, 'seen_at' => $now];
+
+        $rows = $wpdb->query($wpdb->prepare("INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')", $this->get_lock_name(), serialize($lock)));
+        $this->forget_lock_cache();
+
+        if ($rows === 1) return $this->token = $token;
+
+        $held = $this->read_lock();
+
+        if (!$held) return $retry ? $this->take_lock($run_by, false) : false; // released between the insert and the read
+        if (!$this->is_lock_stale($held) || !$this->write_lock($lock, $held)) return false;
+
+        $this->mark("--- took over a stale {$held['run_by']} lock, last seen " . ($now - $held['seen_at']) . "s ago ---");
+
+        return $this->token = $token;
+
+    }
+
+    public function release_lock () : void {
+
+        global $wpdb;
+
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name = %s", $this->get_lock_name()));
+        $this->forget_lock_cache();
+
+    }
+
+    public function read_lock () : ?array {
+
+        global $wpdb;
+
+        $raw  = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s LIMIT 1", $this->get_lock_name()));
+        $lock = is_string($raw) ? maybe_unserialize($raw) : null;
+
+        if (!is_array($lock) || !is_string($lock['run'] ?? null) || !is_string($lock['run_by'] ?? null)) return null;
+
+        $lock['taken_at'] = (int) ($lock['taken_at'] ?? 0);
+        $lock['seen_at']  = (int) ($lock['seen_at'] ?? 0);
+
+        return $lock;
+
+    }
+
+    // A compare-and-swap: the row is rewritten only while it still reads as $expected; zero affected rows is a refusal.
+    protected function write_lock (array $lock, array $expected) : bool {
+
+        global $wpdb;
+
+        $rows = $wpdb->query($wpdb->prepare("UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", serialize($lock), $this->get_lock_name(), serialize($expected)));
+        $this->forget_lock_cache();
+
+        return $rows === 1;
+
+    }
+
+    // Whether this request may drive the run: it holds the lock, or nobody does (a stale lock is nobody's). A held lock is touched on request.
+    public function check_lock (bool $touch = false) : bool {
+
+        $lock = $this->read_lock();
+
+        if (!$lock) return true;
+
+        if ($this->token !== null && $lock['run'] === $this->token) {
+
+            if ($touch) $this->write_lock(array_replace($lock, ['seen_at' => time()]), $lock);
+
+            return true;
+
+        }
+
+        return $this->is_lock_stale($lock);
+
+    }
+
+    public function holds_lock () : bool {
+
+        $lock = $this->read_lock();
+
+        return $this->token !== null && $lock !== null && $lock['run'] === $this->token;
+
+    }
+
+    // The page's read: who holds the run and whether the lock is stale, never the token.
+    public function get_lock () : ?array {
+
+        if (!$lock = $this->read_lock()) return null;
+
+        return ['run_by' => $lock['run_by'], 'taken_at' => $lock['taken_at'], 'seen_at' => $lock['seen_at'], 'stale' => $this->is_lock_stale($lock)];
+
+    }
+
+    public function is_lock_stale (array $lock) : bool {
+
+        return time() - (int) ($lock['seen_at'] ?? 0) > $this->get_lock_window();
+
+    }
+
+    // The window must outlast a batch, or a live batch is taken over mid-flight.
+    public function get_lock_window () : int {
+
+        if (is_int($this->lock_window) && $this->lock_window > 0) return $this->lock_window;
+
+        $limit = (int) ini_get('max_execution_time');
+
+        return $limit > 0 ? max(static::LOCK_STALE, $limit + 30) : static::LOCK_STALE_UNLIMITED;
+
+    }
+
+    public function lock_refusal () : array {
+
+        $lock   = $this->get_lock();
+        $run_by = ($lock && !$lock['stale']) ? $lock['run_by'] : null;
+
+        return [
+            'status'  => $this->get_status(),
+            'run_by'  => $run_by,
+            'message' => $run_by ? "A run is in progress ({$run_by}); Stop it first, or wait." : 'No run is in progress; press Start.',
+        ];
+
+    }
+
+    public function get_lock_name () : string {
+
+        return $this->get_option_key('lock');
+
+    }
+
+    protected function forget_lock_cache () : void {
+
+        $name = $this->get_lock_name();
+
+        wp_cache_delete($name, 'options');
+
+        $notoptions = wp_cache_get('notoptions', 'options');
+
+        if (is_array($notoptions) && isset($notoptions[$name])) {
+
+            unset($notoptions[$name]);
+            wp_cache_set('notoptions', $notoptions, 'options');
+
+        }
+
     }
 
     public function get_timezone () {
@@ -936,13 +1144,27 @@ abstract class Iterator extends Singleton {
 
     public function stop_cron () {
 
-        $this->set_doing_cron(false);
+        $lock = $this->read_lock();
+        if ($lock && $lock['run_by'] === 'cron') $this->release_lock();
 
         return true;
 
     }
 
+    // The chain's end, after the stopped batch has landed: the server knows the run stopped and the page says so. Only the
+    // driver's token releases; a page without one changes nothing here.
+    public function stop () {
+
+        $released = $this->holds_lock();
+        if ($released) $this->release_lock();
+
+        return ['status' => $this->get_status(), 'released' => $released];
+
+    }
+
     public function reset () {
+
+        $this->release_lock();
 
         $this->store = $this->get_default_store();
         $this->index = 0;

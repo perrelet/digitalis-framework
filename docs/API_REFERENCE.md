@@ -837,6 +837,7 @@ abstract class Iterator extends Singleton
 | `$cron_time` | `string` | `'00:00:00'` | `H:i:s` in `$timezone`: the first start |
 | `$cron_schedule` | `string` | `'daily'` | Schedule of the start event |
 | `$cron_loop_schedule` | `string` | `'every_minute'` | Schedule of the tick event while a cron run is going |
+| `$lock_window` | `?int` | `null` | Seconds the run lock outlives its last tick; `null` derives it (`get_lock_window()`) |
 | `$labels` | `array` | `['single' => 'item', 'plural' => 'items']` | Both keys |
 | `$ui_options` | `array` | `[]` | Passed to `Iterator_UI` |
 | `$default_store` | `array` | the per-run keys | See the store keys below |
@@ -869,7 +870,11 @@ The run:
 | `reset_progress()` | `public reset_progress(): array` | The cron start: restores the keys `get_default_store()` declares and drops the total; every other key survives |
 | `get_store()`, `update_store()` | `public get_store(): array` | The option; `update_store()` writes the index and merges this request's log lines |
 | `skip_item()`, `skip_items()` | `public skip_item(mixed $item = null): void` | Ids the loop skips |
-| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | The cron flag (`iterator_{$key} cron`) |
+| `stop()` | `public stop(): array` | The chain's end: releases the lock when this request's token holds it (`released`) |
+| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | A cron run: the lock held as `cron` and not stale; `stop_cron()` releases it |
+| `take_lock()`, `release_lock()` | `public take_lock(string $run_by): string\|false` | The run lock (`iterator_{$key} lock`, its own row): `ui` or `cron`; the token, or `false` under a live lock. A stale lock is taken over |
+| `get_lock()`, `holds_lock()`, `check_lock()` | `public get_lock(): ?array` | `run_by`, `taken_at`, `seen_at` and `stale` for the page (never the token); whether this request holds the lock; whether it may write (holds it, or nobody does) |
+| `get_lock_window()`, `is_lock_stale()`, `lock_refusal()` | `public get_lock_window(): int` | `$lock_window`, else `max(LOCK_STALE, max_execution_time + 30)`, or `LOCK_STALE_UNLIMITED` when the limit is 0; the 409 body `{status, run_by, message}` |
 
 Store keys: `index`, the id arrays `processed`, `skip` and `failed`, `log`, `errors`, `status` and `stalled` are per run (`$default_store`); `total` is absent until computed and `null` when unknown.
 

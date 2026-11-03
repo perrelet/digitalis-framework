@@ -1147,7 +1147,7 @@ class Nightly_Sync extends Post_Iterator {
 }
 ```
 
-> **Non-obvious:** the loop runs on `every_minute`, which the framework registers itself when a cron iterator is constructed (a site's own 60-second schedule under that name is kept). A `$cron_time` that is not `H:i:s`, or a schedule no `cron_schedules` filter registers, schedules nothing: under strict a violation at construction, in production one log line. `Strict::audit()` reads the declarations: `$labels` needs string `single` and `plural`, `$cron_time` must be `H:i:s`.
+> **Non-obvious:** the loop runs on `every_minute`, which the framework registers itself when a cron iterator is constructed (a site's own 60-second schedule under that name is kept). A `$cron_time` that is not `H:i:s`, or a schedule no `cron_schedules` filter registers, schedules nothing: under strict a violation at construction, in production one log line. `Strict::audit()` reads the declarations: `$labels` needs string `single` and `plural`, `$cron_time` must be `H:i:s`. One driver at a time: the page's Start and the cron start take the run lock (`iterator_{$key} lock`), the other is refused until it is released or stale (`$lock_window`, default `max(120, max_execution_time + 30)` seconds); a lock must outlast a batch.
 
 ---
 

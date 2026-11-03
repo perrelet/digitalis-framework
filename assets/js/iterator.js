@@ -12,6 +12,7 @@
             stop: false,
         },
         retrying: false,
+        token: null,
 
         init: function (params) {
 
@@ -71,21 +72,37 @@
 
         },
 
+        // A stale chain's next iterate is refused by the server, so the stop flag is cleared here rather than left for it.
         start: function (once) {
 
             this.flags.once = once === true;
+            this.flags.stop = false;
             this.last_time = new Date().getTime();
             this.els.status.textContent = 'Starting';
             this.batch_log(`Starting batch at index ${this.params.index}.`);
             this.request('total', this.start_total.bind(this));
             this.set_running(true);
-            this.els.iterator.classList.remove('err', 'is-paused', 'is-halted', 'is-stalled', 'is-complete');
+            this.els.iterator.classList.remove('err', 'is-stopped', 'is-halted', 'is-stalled', 'is-complete');
 
         },
 
-        start_total: function (total) {
+        // The total answer opens the run: the token drives every iterate until the chain ends.
+        start_total: function (response) {
 
-            if (this.set_total(total)) this.request('iterate', this.iterate.bind(this));
+            this.token = response.token;
+
+            if (this.set_total(response.total)) this.request('iterate', this.iterate.bind(this)); else this.release();
+
+        },
+
+        // A chain that ends with the run stopped hands the lock back, after the last response has landed: the server then knows the
+        // run stopped, a reload says so, and the next Start is not refused. A finished or halted run was released by the server.
+        release: function () {
+
+            if (!this.token) return;
+
+            this.request('stop', function () {});
+            this.token = null;
 
         },
 
@@ -167,6 +184,7 @@
                 this.els.iterator.classList.add('is-complete');
                 this.set_running(false);
                 this.flags.stop = false; // a Stop that landed during this batch has nothing left to stop
+                this.token = null;
 
             } else if (response.status == 'halted') {
 
@@ -176,6 +194,7 @@
                 this.els.iterator.classList.add('err', 'is-halted');
                 this.set_running(false);
                 this.flags.stop = false;
+                this.token = null;
 
             } else if (response.stalled) {
 
@@ -185,21 +204,25 @@
                 this.els.iterator.classList.add('is-stalled');
                 this.set_running(false);
                 this.flags.stop = false;
+                this.release();
 
             } else if (this.flags.stop) {
 
                 this.els.status.textContent = 'Stopped';
                 this.update_eta(null);
                 this.batch_log(`Batch stopped after ${this.time}ms.`);
+                this.els.iterator.classList.add('is-stopped');
                 this.flags.stop = false;
+                this.release();
 
             } else if (this.flags.once) {
 
-                this.els.status.textContent = 'Paused';
+                this.els.status.textContent = 'Stopped';
                 this.update_eta(null);
                 this.batch_log(`One batch run - press Start to continue.`);
-                this.els.iterator.classList.add('is-paused');
+                this.els.iterator.classList.add('is-stopped');
                 this.set_running(false);
+                this.release();
 
             } else {
 
@@ -271,6 +294,7 @@
 
         retry_start: function (response) {
 
+            this.token = response.token;
             this.render_failed(response.failed);
 
             if (response.retry_remaining) this.request('iterate', this.retry_tick.bind(this)); else this.retry_end(null);
@@ -301,6 +325,7 @@
             this.set_running(false);
             this.els.status.textContent = response && labels[response.status] ? labels[response.status] : 'Retried';
             this.batch_log(`Retry finished after ${this.time}ms.`);
+            this.release();
 
         },
 
@@ -367,6 +392,7 @@
         reset: function () {
 
             this.stop();
+            this.token = null; // the server releases the lock with the record
             this.els.status.textContent = 'Resetting';
             this.batch_log(`Resetting batch process...`);
             this.request('reset', this.reset_complete.bind(this));
@@ -383,7 +409,7 @@
             this.apply_total(null);
             this.update_progress(response.index);
 
-            this.els.iterator.classList.remove('err', 'is-paused', 'is-halted', 'is-stalled', 'is-complete');
+            this.els.iterator.classList.remove('err', 'is-stopped', 'is-halted', 'is-stalled', 'is-complete');
 
             this.els.status.textContent = 'Reset';
             this.els.time.textContent = '00:00:00';
@@ -424,6 +450,11 @@
                             this.error(`AJAX Error: ${http.status} - ${http.responseText}`, true, true);
                             return;
 
+                        case 409:
+
+                            this.refused(JSON.parse(http.responseText));
+                            return;
+
                         default:
 
                             this.error(`AJAX Error: ${http.status} - ${http.responseText}`, true, true);
@@ -436,6 +467,8 @@
             }.bind(this);
 
             let url = `${this.params.ajax_url}?action=iterator_${this.params.key}&task=${task}&nonce=${this.params.nonce}`;
+
+            if (this.token) url += `&token=${encodeURIComponent(this.token)}`;
 
             if (task == 'iterate') {
 
@@ -546,6 +579,18 @@
 
         },
 
+        // The server refused this chain: another driver holds the run, or none does. The chain ends with the message; no halt, no stop flag.
+        refused: function (response) {
+
+            this.token = null;
+            this.retrying = false;
+            this.flags.stop = false;
+            this.set_running(false);
+            this.els.status.textContent = response.run_by ? 'Locked' : 'Stopped';
+            this.error(response.message, false, true);
+
+        },
+
         error: function (error, halt = false, text = false) {
 
             if (halt) {
@@ -554,6 +599,7 @@
                 this.flags.stop = false;
                 this.retrying = false;
                 this.els.iterator.classList.add('err');
+                this.release();
 
             }
 

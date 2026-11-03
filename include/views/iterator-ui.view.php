@@ -28,7 +28,9 @@ class Iterator_UI extends View {
 
         $iterator = $p['iterator'];
         $store    = $iterator->get_store();
-        $cron     = $iterator->is_doing_cron();
+        $lock     = $iterator->get_lock();
+        $running  = (bool) $lock && !$lock['stale']; // a live driver, this page's or not; a stale lock is nobody's
+        $cron     = $running && $lock['run_by'] === 'cron';
         $status   = $iterator->get_status();
         $stalled  = (bool) ($store['stalled'] ?? false);
         $total    = $iterator->has_total() ? $iterator->get_total() : $iterator->refresh_total(); // computed once per run, not once per render
@@ -37,15 +39,16 @@ class Iterator_UI extends View {
         $eta      = ($cron && $status === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
         $log      = $iterator->get_log();
 
-        $labels = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Paused'];
-        $states = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-paused']];
+        $labels = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Stopped'];
+        $states = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-stopped']];
 
-        // The cron flag outranks the record (a UI run the Stop button interrupted stays running in the store); a stall outranks the flag.
+        // A live lock outranks the record (a running record with no driver is a stopped run); a stall outranks the lock.
         $classes = ['digitalis-iterator', 'iterator', 'iterator-' . $iterator->get_key()];
 
-        if ($cron)           $classes = array_merge($classes, ['doing_cron', 'running']);
+        if ($cron)           $classes[] = 'doing_cron';
+        if ($running)        $classes[] = 'running';
         if ($stalled)        $classes[] = 'is-stalled';
-        elseif (!$cron)      $classes = array_merge($classes, $states[$status] ?? []);
+        elseif (!$running)   $classes = array_merge($classes, $states[$status] ?? []);
         if (is_null($total)) $classes[] = 'is-indeterminate';
 
         $p['total']   = $total;
@@ -54,7 +57,7 @@ class Iterator_UI extends View {
         $p['cron']    = $cron;
         $p['failed']  = $iterator->get_failed_items(); // built once: it resolves an edit link per item
         $p['classes'] = implode(' ', $classes);
-        $p['label']   = $stalled ? 'Stalled' : ($cron ? 'Running' : ($labels[$status] ?? 'Ready'));
+        $p['label']   = $stalled ? 'Stalled' : ($running ? 'Running' : ($labels[$status] ?? 'Ready'));
         $p['time']    = $cron ? 'Cron task' . ($started ? ' · started ' . $iterator->format_time($started) : '') : sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
         $p['eta']     = is_null($eta) ? '' : 'about ' . static::about($eta) . ' left';
         $p['log_url'] = ($p['log_url'] && $log && is_file($log->get_path())) ? $p['log_url'] : ''; // the full log, when there is one to link
