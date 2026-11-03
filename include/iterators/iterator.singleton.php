@@ -381,7 +381,7 @@ abstract class Iterator extends Singleton {
 
         if ($this->retrying) {
 
-            $ids = array_splice($this->store['retry'], 0, $this->batch_size);
+            $ids = array_splice($this->store['retry'], 0, (int) $this->batch_size);
             $this->items = $this->get_items_by_id($ids) ?? [];
 
         } else {
@@ -587,7 +587,7 @@ abstract class Iterator extends Singleton {
         $failed = is_array($failed) ? array_values($failed) : [];
         $items  = [];
 
-        foreach (array_slice($failed, 0, static::FAILED_LIST) as $id) $items[] = ['id' => $id, 'url' => $this->get_item_url($id)];
+        foreach (array_slice($failed, 0, (int) static::FAILED_LIST) as $id) $items[] = ['id' => $id, 'url' => $this->get_item_url($id)];
 
         return ['count' => count($failed), 'items' => $items];
 
@@ -753,7 +753,7 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function get_elapsed () {
+    public function get_elapsed () : float {
 
         $elapsed = $this->get_store()['elapsed'] ?? 0;
 
@@ -761,7 +761,7 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function get_started_at () {
+    public function get_started_at () : ?int {
 
         $at = $this->get_store()['started_at'] ?? null;
 
@@ -769,7 +769,7 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function get_updated_at () {
+    public function get_updated_at () : ?int {
 
         $at = $this->get_store()['updated_at'] ?? null;
 
@@ -777,7 +777,7 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function get_finished_at () {
+    public function get_finished_at () : ?int {
 
         $at = $this->get_store()['finished_at'] ?? null;
 
@@ -788,7 +788,7 @@ abstract class Iterator extends Singleton {
     // Seconds remaining at the run's pace: server time per item, or for a cron run, whose pace is the scheduler's gap between
     // ticks rather than the work inside them, the wall time from the start to the last tick (the record, not the clock, so the
     // page reads the same figure until the next tick). Null until a batch has run against a known total.
-    public function get_eta ($wall = false) {
+    public function get_eta ($wall = false) : ?int {
 
         $total = $this->get_total();
         $index = $this->get_index();
@@ -873,7 +873,7 @@ abstract class Iterator extends Singleton {
 
     }
 
-    public function get_option_key ($suffix = false) {
+    public function get_option_key ($suffix = false) : string {
 
         $key = "iterator_" . $this->key;
         if ($suffix) $key .= ' ' . $suffix;
@@ -921,8 +921,8 @@ abstract class Iterator extends Singleton {
         $this->get_store();
 
         $this->store['index']  = $this->index;
-        $this->store['log']    = array_slice(array_merge($this->store['log'], $this->log), -static::LOG_TAIL);
-        $this->store['errors'] = array_slice(array_merge($this->store['errors'], $this->errors), -static::LOG_TAIL);
+        $this->store['log']    = array_slice(array_merge($this->store['log'], $this->log), -(int) static::LOG_TAIL);
+        $this->store['errors'] = array_slice(array_merge($this->store['errors'], $this->errors), -(int) static::LOG_TAIL);
 
         // The write race closes here: a request that lost the lock while in flight discards its snapshot. Its lines still go to the
         // file, since the items' side effects happened; a takeover reprocesses the batch from the winner's index.
@@ -1114,7 +1114,7 @@ abstract class Iterator extends Singleton {
 
         $limit = (int) ini_get('max_execution_time');
 
-        return $limit > 0 ? max(static::LOCK_STALE, $limit + 30) : static::LOCK_STALE_UNLIMITED;
+        return $limit > 0 ? max((int) static::LOCK_STALE, $limit + 30) : (int) static::LOCK_STALE_UNLIMITED;
 
     }
 
@@ -1321,7 +1321,7 @@ abstract class Iterator extends Singleton {
 
         } else {
 
-            $line .= ucfirst($this->labels['single']) . ' #' . esc_html((string) $this->item_id) . ': ' . $msg;
+            $line .= ucfirst((string) $this->labels['single']) . ' #' . esc_html((string) $this->item_id) . ': ' . $msg;
 
         }
 

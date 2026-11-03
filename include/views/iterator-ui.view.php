@@ -60,7 +60,7 @@ class Iterator_UI extends View {
         $p['label']   = $stalled ? 'Stalled' : ($running ? 'Running' : ($labels[$status] ?? 'Ready'));
         $p['time']    = $cron ? 'Cron task' . ($started ? ' · started ' . $iterator->format_time($started) : '') : sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
         $p['eta']     = is_null($eta) ? '' : 'about ' . static::about($eta) . ' left';
-        $p['log_url'] = ($p['log_url'] && $log && is_file($log->get_path())) ? $p['log_url'] : ''; // the full log, when there is one to link
+        $p['log_url'] = ($p['log_url'] && $log && is_file((string) $log->get_path())) ? $p['log_url'] : ''; // the full log, when there is one to link
 
     }
 
