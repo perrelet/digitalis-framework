@@ -317,8 +317,9 @@ abstract class Iterator extends Singleton {
 
         if (!$this->take_fire()) return;
 
-        $this->token = $lock['run'];
-        $until       = microtime(true) + $this->cron_budget;
+        $this->token       = $lock['run'];
+        $this->lock_window = (int) ($lock['window'] ?? $this->get_lock_window()); // adopted with the token, so the mid-batch touch keeps the taker's window
+        $until             = microtime(true) + $this->cron_budget;
 
         try {
 
@@ -507,7 +508,7 @@ abstract class Iterator extends Singleton {
 
         $this->update_store();
 
-        if (in_array($this->store['status'], ['complete', 'halted'], true) && $this->holds_lock()) $this->release_lock(); // after the write that records the end
+        if (!$this->retrying && in_array($this->store['status'], ['complete', 'halted'], true) && $this->holds_lock()) $this->release_lock(); // after the write that records the end; a retry chain ends through stop
 
         if ($return_store) {
 
@@ -1039,7 +1040,7 @@ abstract class Iterator extends Singleton {
 
         $token = bin2hex(random_bytes(8));
         $now   = time();
-        $lock  = ['run' => $token, 'run_by' => $run_by, 'taken_at' => $now, 'seen_at' => $now];
+        $lock  = ['run' => $token, 'run_by' => $run_by, 'taken_at' => $now, 'seen_at' => $now, 'window' => $this->get_lock_window()];
 
         if ($this->row_insert($this->get_lock_name(), $lock)) return $this->token = $token;
 
@@ -1113,7 +1114,7 @@ abstract class Iterator extends Singleton {
 
     public function is_lock_stale (array $lock) : bool {
 
-        return time() - (int) ($lock['seen_at'] ?? 0) > $this->get_lock_window();
+        return time() - (int) ($lock['seen_at'] ?? 0) > (int) ($lock['window'] ?? $this->get_lock_window()); // the taker's window: a CLI fire and an FPM page would not agree
 
     }
 

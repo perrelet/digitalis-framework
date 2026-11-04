@@ -402,8 +402,7 @@
 
         reset: function () {
 
-            this.stop();
-            this.token = null; // the server releases the lock with the record
+            this.stop(); // the token goes with the request: the server releases the lock with the record, and refuses without it
             this.els.status.textContent = 'Resetting';
             this.batch_log(`Resetting batch process...`);
             this.request('reset', this.reset_complete.bind(this));
@@ -422,6 +421,7 @@
 
             this.els.iterator.classList.remove('err', 'is-stopped', 'is-halted', 'is-stalled', 'is-complete');
 
+            this.token = null;
             this.els.status.textContent = 'Reset';
             this.els.time.textContent = '00:00:00';
             this.update_counts({ processed: 0, skipped: 0, failed: 0 });
