@@ -112,17 +112,23 @@ class Query_Profile extends Factory {
 
         }
 
-        if ($this->post_status) {
-
-            $post_status = (array) $wp_query->get('post_status');
-            if ($post_status && !array_intersect($post_status, $this->post_status)) return false;
-
-        }
+        if (!$this->matches_post_status($wp_query)) return false;
 
         if (!$this->matches_set($this->get_role($wp_query),    $this->role))    return false;
         if (!$this->matches_set($this->get_context($wp_query), $this->context)) return false;
 
         return true;
+
+    }
+
+    protected function matches_post_status ($wp_query) {
+
+        if (!$this->post_status)                                                return true;
+        if (!$post_status = array_filter((array) $wp_query->get('post_status'))) return true;
+
+        if (in_array('any', $post_status, true)) $post_status = array_merge($post_status, get_post_stati(['exclude_from_search' => false]));
+
+        return (bool) array_intersect($post_status, $this->post_status);
 
     }
 
