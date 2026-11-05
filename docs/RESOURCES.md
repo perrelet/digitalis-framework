@@ -186,11 +186,12 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 |-----|---------|
 | `capability` | Needed beyond updating the record |
 | `when` | `fn ($model)` answering why it cannot run now, or `''` |
-| `input` | `name => 'string' \| 'email' \| 'int'` |
+| `input` | `name => 'string' \| 'email' \| 'int'`, required; `'?string'` is optional. The CLI takes each as `--<name>` |
 | `sets` | Fields the unsaved copy gets, so the dry run shows the action's effect |
 | `confirm` | Requires the dry run's fingerprint |
 | `changes_record` | `false` for one that makes a new record (`copy`) and needs no version |
 | `undo` | The action that reverses it |
+| `writes_through` | The action writes through this service, which checks, previews, claims and journals that write. `act_{name}($model, $input, $via)` gets the whole input (`why`, `confirm`, `dry_run` included) after the record's and the action's refusals, the declared input and the why, and answers that write's result, a `WP_Error` keeping its data. It handles its own dry run and needs no version of its own, and answers an array or a `WP_Error`. It declares no `undo`: the journal row is the inner write's |
 
 `act_{name}()` returns the model, a new record, or a `WP_Error`. An error that changed nothing keeps its own code.
 
@@ -285,6 +286,10 @@ Another feature has its say over single records:
 - `lattice.resources.refuse` (`$reason, $resource, $model, $operation`): a non-empty reason refuses that record as `locked`. `$operation` is `read`, `update` or an action's name.
 - `lattice.resources.query` (`$args, $resource`): the list's query, to leave records out.
 - `lattice.resources.journal` (`$journal, $resource, $model`): `false` keeps a record's changes out of the journal.
+- `lattice.resources.forbidden` (`$data, $resource, $model, $operation`): adds to the `data` of the `forbidden` refusal of a write to a known record, so a refusal can say what the account could do instead.
+- `lattice.resources.describe` (`$description, $resource`): adds to the guide's description of a resource.
+
+A record's actions read as unusable where `lattice.resources.allow` refuses them. `Resources::check_update($name, $id, $values)` says what would stop an update, for an account that may read the record, without its right to make it: `problems`, `locked` (field and reason) and `needs` (the capability the record's lock asks), with neither a diff nor consequences. It predicts as that account, so it can differ for a reviewer where a resource shows fields per account. An empty answer means nothing stands in the way.
 
 ---
 

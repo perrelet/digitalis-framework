@@ -484,6 +484,8 @@ Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are
 | `lattice.resources.refuse` | Filter | `$reason`, `$resource`, `$model`, `$operation` | A non-empty reason refuses one record as `locked` |
 | `lattice.resources.query` | Filter | `$args`, `$resource` | A resource list's query, to leave records out |
 | `lattice.resources.journal` | Filter | `$journal`, `$resource`, `$model` | `false` keeps a record's changes out of the journal |
+| `lattice.resources.forbidden` | Filter | `$data`, `$resource`, `$model`, `$operation` | Add to a `forbidden` refusal's data on a write to a known record |
+| `lattice.resources.describe` | Filter | `$description`, `$resource` | Add to the guide's description of a resource |
 | `lattice.resources.present` | Filter | `$lines`, `$resource`, `$before`, `$after`, `$model` | Add to a change presented for people |
 | `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
 

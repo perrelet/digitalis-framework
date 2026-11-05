@@ -83,7 +83,7 @@ class Resources extends Service {
 
     protected function describe_resource (Model_Resource $resource) : array {
 
-        return [
+        return apply_filters('lattice.resources.describe', [
             'name'      => $resource->get_name(),
             'label'     => $resource->get_label(),
             'post_type' => $resource->get_post_type() ?: null,
@@ -96,7 +96,7 @@ class Resources extends Service {
                 'undo'           => $action['undo'] ?? null,
             ], fn ($value) => !in_array($value, ['', [], null, false], true)), $resource->get_actions()),
             'views'     => array_keys($resource->get_views()),
-        ];
+        ], $resource);
 
     }
 
@@ -159,7 +159,7 @@ class Resources extends Service {
 
         $actions = [];
 
-        foreach ($resource->get_actions() as $name => $action) $actions[$name] = $this->refuse_action($resource, $model, $action);
+        foreach ($resource->get_actions() as $name => $action) $actions[$name] = $this->may($resource, $name, $model) ? $this->refuse_action($resource, $model, $action) : 'This account may not do that.';
 
         return $this->summarise($resource, $model) + [
             'fields'  => $resource->read($model),
@@ -235,18 +235,20 @@ class Resources extends Service {
 
         if (!($definition = $resource->get_actions()[$action] ?? null) || !method_exists($resource, "act_{$action}")) return $this->error('not_found', "No action {$action}.", 404);
 
+        $through        = !empty($definition['writes_through']);
         $changes_record = $definition['changes_record'] ?? true;
 
-        if ($refusal = $changes_record ? $this->refuse_update($resource, $model) : $this->refuse_read($resource, $model)) return $refusal;
+        if ($refusal = ($changes_record || $through) ? $this->refuse_update($resource, $model, $action) : $this->refuse_read($resource, $model)) return $refusal;
+
+        if (!$this->may($resource, $action, $model)) return $this->forbidden($action);
 
         if ($refusal = $this->refuse_record($resource, $model, $action)) return $refusal;
 
         if (isset($definition['capability']) && !current_user_can($definition['capability'])) return $this->forbidden($definition['capability']);
-        if (!$this->may($resource, $action, $model))                                            return $this->forbidden($action);
 
         if ($reason = $this->refuse_action($resource, $model, $definition)) return $this->error('locked', $reason, 409, ['reason' => $reason]);
 
-        if ($changes_record && ($refusal = $this->check_version($model, $input))) return $refusal;
+        if ($changes_record && !$through && ($refusal = $this->check_version($model, $input))) return $refusal;
 
         $values   = array_intersect_key($input, (array) ($definition['input'] ?? []));
         $problems = $this->check_action_input((array) ($definition['input'] ?? []), $values);
@@ -256,6 +258,8 @@ class Resources extends Service {
         array_push($problems, ...$this->check_why($input, $via));
 
         if ($problems) return $this->invalid($problems);
+
+        if ($through) return $this->act_through($resource, $model, $action, $input, $via);
 
         $sets   = (array) ($definition['sets'] ?? []);
         $change = $this->build($resource, $action, $model, $resource->get_unsaved_copy($model, $sets), $sets, $values, $input, $via);
@@ -329,6 +333,23 @@ class Resources extends Service {
 
     }
 
+    // The write it makes through this service checks, previews, claims and journals: the action only answers that write's result.
+    protected function act_through (Model_Resource $resource, $model, string $action, array $input, string $via) : array|WP_Error {
+
+        try {
+
+            $result = $resource->{"act_{$action}"}($model, $input, $via);
+
+            return (is_array($result) || is_wp_error($result)) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500);
+
+        } catch (\Throwable $e) {
+
+            return $this->error('not_saved', 'It was not done: ' . $e->getMessage() . ' Read it again before the next change.', 500);
+
+        }
+
+    }
+
     public function undo (int $row_id, array $input, string $via) : array|WP_Error {
 
         if (!$row = Journal::inst()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
@@ -373,6 +394,29 @@ class Resources extends Service {
         if ($inverse = $resource->get_actions()[$row['action']]['undo'] ?? null) return $this->act($resource->get_name(), $model->get_id(), $inverse, ['version' => $model->get_version()] + array_intersect_key($input, array_flip([...static::CONTROL, ...array_keys((array) ($resource->get_actions()[$inverse]['input'] ?? []))])), $via, $row_id);
 
         return $this->error('locked', 'Nothing reverses this.', 409, ['reason' => 'Nothing reverses this.']);
+
+    }
+
+    // What would stop this update, as an account that may read the record, without its right to make it: what an author reads before a reviewer approves. Writes nothing and answers no diff.
+    public function check_update (string $name, $id, array $values) : array|WP_Error {
+
+        [$resource, $model] = $this->find($name, $id);
+
+        if ($resource instanceof WP_Error) return $resource;
+
+        if (!$this->may($resource, 'read', $model)) return $this->forbidden($resource->get_capability('read', $model));
+
+        [$values, $problems] = $this->take_values($resource, $values, $model);
+
+        array_push($problems, ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
+
+        $lock = $resource->get_lock($model);
+
+        return array_filter([
+            'problems' => $problems,
+            'locked'   => $this->get_locked($resource, $model, $values),
+            'needs'    => ($lock && !current_user_can($lock)) ? $lock : null,
+        ]);
 
     }
 
@@ -539,11 +583,13 @@ class Resources extends Service {
 
     }
 
-    protected function refuse_update (Model_Resource $resource, $model) : ?WP_Error {
+    protected function refuse_update (Model_Resource $resource, $model, string $operation = 'update') : ?WP_Error {
 
-        if (!$this->may($resource, 'update', $model)) return $this->forbidden($resource->get_capability('update', $model));
+        $data = fn (string $needs) => (array) apply_filters('lattice.resources.forbidden', ['needs' => $needs], $resource, $model, $operation);
 
-        if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.');
+        if (!$this->may($resource, 'update', $model)) return $this->forbidden($needs = $resource->get_capability('update', $model), data: $data($needs));
+
+        if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.', $data($lock));
 
         return $this->refuse_record($resource, $model, 'update');
 
@@ -558,11 +604,17 @@ class Resources extends Service {
 
     }
 
-    protected function refuse_locked (Model_Resource $resource, $model, array $values) : ?WP_Error {
+    protected function get_locked (Model_Resource $resource, $model, array $values) : array {
 
         $nested = array_map(fn () => 'it holds a flexible field the layer cannot yet write without losing its rows.', array_filter($resource->get_fields_for($model, $values), fn ($field) => $field->holds_flexible()));
 
-        if (!$locked = array_intersect_key(($model ? $resource->get_locked_fields($model) : []) + $nested, $values)) return null;
+        return array_intersect_key(($model ? $resource->get_locked_fields($model) : []) + $nested, $values);
+
+    }
+
+    protected function refuse_locked (Model_Resource $resource, $model, array $values) : ?WP_Error {
+
+        if (!$locked = $this->get_locked($resource, $model, $values)) return null;
 
         $reason = implode(' ', array_map(fn ($name, $why) => "{$name}: {$why}", array_keys($locked), $locked));
 
@@ -681,9 +733,11 @@ class Resources extends Service {
 
         foreach ($types as $name => $type) {
 
-            $value = $values[$name] ?? null;
+            $value    = $values[$name] ?? null;
+            $optional = str_starts_with($type, '?');
+            $type     = ltrim($type, '?');
 
-            if (in_array($value, [null, ''], true)) $problems[] = "{$name} is required.";
+            if (in_array($value, [null, ''], true)) { if (!$optional) $problems[] = "{$name} is required."; }
             elseif ($type === 'email' && !is_email((string) $value)) $problems[] = "{$name} is an email address.";
             elseif ($type === 'int' && !is_numeric($value))          $problems[] = "{$name} is a number.";
             elseif ($type === 'string' && !is_string($value))        $problems[] = "{$name} is text.";
@@ -708,9 +762,9 @@ class Resources extends Service {
 
     }
 
-    protected function forbidden (string $needs, string $message = 'This account may not do that.') : WP_Error {
+    protected function forbidden (string $needs, string $message = 'This account may not do that.', array $data = []) : WP_Error {
 
-        return $this->error('forbidden', $message, 403, ['needs' => $needs]);
+        return $this->error('forbidden', $message, 403, ['needs' => $needs] + $data);
 
     }
 
