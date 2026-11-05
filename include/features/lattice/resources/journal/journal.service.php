@@ -8,6 +8,8 @@ class Journal extends Service {
 
     const PER_PAGE = 50;
 
+    const MARKS = ['set_key', 'set_step', 'proposer_id'];
+
     protected function get_table () : string {
 
         global $wpdb;
@@ -33,7 +35,7 @@ class Journal extends Service {
             'version_before' => (int) ($row['version_before'] ?? 0),
             'version_after'  => (int) ($row['version_after'] ?? 0),
             'undoes'         => $row['undoes'] ?? null,
-        ]);
+        ] + (Journal_Schema::is_current() ? array_intersect_key($row, array_flip(static::MARKS)) : []));
 
         return (int) $wpdb->insert_id;
 
@@ -75,6 +77,15 @@ class Journal extends Service {
 
         }
 
+        foreach (['set' => 'set_key', 'proposer' => 'proposer_id'] as $filter => $column) if (isset($args[$filter])) {
+
+            if (!Journal_Schema::is_current() || ((int) $args[$filter] < 1)) return [];
+
+            $where[] = "{$column} = %d";
+            $vars[]  = (int) $args[$filter];
+
+        }
+
         if (!empty($args['resources'])) $where[] = 'resource IN (' . implode(', ', array_map(fn ($name) => $wpdb->prepare('%s', $name), (array) $args['resources'])) . ')';
 
         if (!empty($args['since'])) {
@@ -106,7 +117,8 @@ class Journal extends Service {
 
         foreach (['id', 'user_id', 'version_before', 'version_after'] as $column) $row[$column] = (int) $row[$column];
 
-        $row['undoes'] = is_null($row['undoes']) ? null : (int) $row['undoes'];
+        foreach (['undoes', ...static::MARKS] as $column) $row[$column] = is_null($row[$column] ?? null) ? null : (int) $row[$column];
+
         $row['before'] = is_null($row['before']) ? null : json_decode($row['before'], true);
         $row['after']  = is_null($row['after']) ? null : json_decode($row['after'], true);
 

@@ -235,7 +235,7 @@ wp-admin's classic editor and options pages carry the version in a hidden field 
 
 ## The Journal and Undo
 
-`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`).
+`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`). A row may also name a change set: `set_key`, `set_step` and `proposer_id`, which `journal()`, its route (`?set=`, `?proposer=`), the CLI and the Changes screen filter by.
 
 A restored revision is one row, `restore`. WordPress saves the post's columns, then its `wp_restore_post_revision` listeners bring the fields back (its own, ACF's, a site's); the feature journals the save as it would any, then completes that row at priority 100, once the fields are in (`Journal::amend()`, used only for a row written earlier in the same request). Rows are otherwise never changed.
 

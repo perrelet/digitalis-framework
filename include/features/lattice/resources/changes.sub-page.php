@@ -18,7 +18,7 @@ class Changes_Page extends Admin_Sub_Page {
 
     public function callback () {
 
-        $filters = array_filter(['resource' => sanitize_key($_GET['resource'] ?? ''), 'record_id' => sanitize_text_field(wp_unslash($_GET['record'] ?? ''))]);
+        $filters = array_filter(['resource' => sanitize_key($_GET['resource'] ?? ''), 'record_id' => sanitize_text_field(wp_unslash($_GET['record'] ?? '')), 'set' => (int) ($_GET['set'] ?? 0), 'proposer' => (int) ($_GET['proposer'] ?? 0)]);
         $paged   = max(1, (int) ($_GET['paged'] ?? 1));
         $rows    = Journal::inst()->query($filters + ['page' => $paged]);
 
@@ -38,6 +38,18 @@ class Changes_Page extends Admin_Sub_Page {
 
     }
 
+    protected function render_set (array $row) : string {
+
+        if (!$row['set_key']) return '';
+
+        $set      = '<a href="' . esc_url(add_query_arg('set', $row['set_key'], $this->get_url())) . '">set #' . (int) $row['set_key'] . '</a>';
+        $step     = is_null($row['set_step']) ? '' : ', step ' . (int) $row['set_step'];
+        $proposer = ($row['proposer_id'] && ($user = get_userdata($row['proposer_id']))) ? ', proposed by <a href="' . esc_url(add_query_arg('proposer', $row['proposer_id'], $this->get_url())) . '">' . esc_html($user->display_name) . '</a>' : '';
+
+        return "<br>{$set}{$step}{$proposer}";
+
+    }
+
     protected function render_row (array $row) : void {
 
         $user     = get_userdata($row['user_id']);
@@ -53,7 +65,7 @@ class Changes_Page extends Admin_Sub_Page {
         echo '<td>' . esc_html($user ? $user->display_name : '—') . '</td>';
         echo '<td>' . esc_html($row['via']) . '</td>';
         echo '<td>' . esc_html($resource?->get_label() ?? $row['resource']) . ' ' . $record . ' (' . $history . ')</td>';
-        echo '<td>' . esc_html($row['action'] . ($row['undoes'] ? " of #{$row['undoes']}" : '')) . '</td>';
+        echo '<td>' . esc_html($row['action'] . ($row['undoes'] ? " of #{$row['undoes']}" : '')) . $this->render_set($row) . '</td>';
         echo '<td>' . esc_html($row['why']) . '</td>';
         echo '<td>' . implode('<br>', $changes) . '</td>';
         echo '</tr>';
@@ -62,7 +74,7 @@ class Changes_Page extends Admin_Sub_Page {
 
     protected function render_paging (array $filters, int $paged, bool $more) : void {
 
-        $link = fn ($page, $label) => '<a class="button" href="' . esc_url(add_query_arg($filters + ['paged' => $page], $this->get_url())) . '">' . $label . '</a>';
+        $link = fn ($page, $label) => '<a class="button" href="' . esc_url(add_query_arg(array_filter(['record' => $filters['record_id'] ?? null]) + array_diff_key($filters, ['record_id' => 0]) + ['paged' => $page], $this->get_url())) . '">' . $label . '</a>';
 
         echo '<p>' . ($paged > 1 ? $link($paged - 1, 'Newer') . ' ' : '') . ($more ? $link($paged + 1, 'Older') : '') . '</p>';
 

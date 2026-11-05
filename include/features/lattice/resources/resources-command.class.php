@@ -14,7 +14,7 @@ class Resources_Command {
         $command = new static;
 
         WP_CLI::add_command('lattice guide', [$command, 'guide'], ['shortdesc' => 'The resources this account can reach, their fields and actions.']);
-        WP_CLI::add_command('lattice journal', [$command, 'journal'], ['shortdesc' => 'Changes, newest first.', 'synopsis' => '[--resource=<resource>] [--id=<id>] [--since=<row>] [--page=<page>]']);
+        WP_CLI::add_command('lattice journal', [$command, 'journal'], ['shortdesc' => 'Changes, newest first.', 'synopsis' => '[--resource=<resource>] [--id=<id>] [--set=<set>] [--proposer=<user>] [--since=<row>] [--page=<page>]']);
         WP_CLI::add_command('lattice undo', [$command, 'undo'], ['shortdesc' => 'Reverse a journal row.', 'synopsis' => '<row> ' . static::CONTROL]);
 
         foreach (Resources::inst()->get_resources() as $name => $resource) WP_CLI::add_command("lattice {$name}", fn ($args, $assoc) => $command->run($name, $args, $assoc), [
@@ -35,6 +35,8 @@ class Resources_Command {
         $this->answer(Resources::inst()->journal([
             'resource'  => (string) ($assoc['resource'] ?? ''),
             'record_id' => (string) ($assoc['id'] ?? ''),
+            'set'       => $assoc['set'] ?? null,
+            'proposer'  => $assoc['proposer'] ?? null,
             'since'     => (int) ($assoc['since'] ?? 0),
             'page'      => (int) ($assoc['page'] ?? 1),
         ]));
