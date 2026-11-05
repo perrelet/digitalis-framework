@@ -16,6 +16,7 @@ Custom database tables, schema versioning, and migrations under the `Digitalis\D
 - [Running Migrations](#running-migrations)
   - [Table_Registry](#table_registry)
   - [Migration_Runner](#migration_runner)
+- [Features](#features)
 - [App Integration](#app-integration)
 - [Logging](#logging)
   - [Option_Migration_Logger](#option_migration_logger)
@@ -270,6 +271,12 @@ $runner->migrate_module(My_Plugin_Schema::class);
 **`uninstall_module(string $schema_class, bool $drop_tables = false, bool $clear_logger = false)`**
 
 Clears the installed version option. Optionally drops all tables and clears the logger.
+
+---
+
+## Features
+
+A feature that keeps tables of its own calls `My_Schema::ensure()` in its `run()`, since `App::ensure_schema()` is its site's: `ensure()` runs the migrations, and a failure is logged and waits ten minutes (`const BACKOFF`) rather than failing every request. `My_Schema::is_current()` says whether they have run, for code that must not touch a table before then. Guard each table, column and index in a migration: `get_tables()`'s classes describe the current shape, so a new site's first migration may already have made what a later one adds.
 
 ---
 

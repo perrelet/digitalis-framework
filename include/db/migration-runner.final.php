@@ -225,6 +225,8 @@ final class Migration_Runner {
 
     private function set_installed_version (string $module_slug, int $version) : void {
 
+        wp_cache_delete('alloptions', 'options');
+
         update_option($this->get_option_key($module_slug), (int) $version, true);
 
     }
