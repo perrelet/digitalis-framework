@@ -65,7 +65,7 @@ trait Has_Proposals {
 
     public function set_proposal_note (string $note) : void {
 
-        $this->update_meta(Proposal::META['NOTE'], $note);
+        $this->update_meta(Proposal::META['NOTE'], wp_slash($note));
 
     }
 

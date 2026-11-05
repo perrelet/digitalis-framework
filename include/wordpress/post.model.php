@@ -384,7 +384,7 @@ class Post extends WP_Model {
         if (is_wp_error($result)) return $result;
 
         // meta_input holds one value per key.
-        foreach ($multiple as $key => $values) foreach ($values as $value) $duplicate->add_meta($key, $value);
+        foreach ($multiple as $key => $values) foreach ($values as $value) $duplicate->add_meta($key, wp_slash($value));
 
         return $duplicate;
 

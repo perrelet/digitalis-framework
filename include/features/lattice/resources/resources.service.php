@@ -413,7 +413,7 @@ class Resources extends Service {
             $fields = $resource->get_fields_for($model, $values);
 
             // By key: finding a field by name asks the saved record's groups, which a term in this write may change.
-            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, $fields[$name]->to_raw($value));
+            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, wp_slash($fields[$name]->to_raw($value)));
 
             $resource->stage_model_values($model, $values);
 
