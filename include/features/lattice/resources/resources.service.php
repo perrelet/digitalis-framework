@@ -175,7 +175,7 @@ class Resources extends Service {
         if (!$resource = $this->get_resource($name)) return $this->error('not_found', "No resource {$name}.", 404);
         if (!$this->may($resource, 'create'))         return $this->forbidden($resource->get_capability('create'));
 
-        [$values, $problems] = $this->take_values($resource, $input, null);
+        [$values, $problems, $removed] = $this->take_values($resource, $input, null);
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'));
 
@@ -185,7 +185,7 @@ class Resources extends Service {
         if ($refusal = $this->refuse_publish($resource, null, $values)) return $refusal;
 
         $model    = $resource->make_model($values);
-        $change   = $this->build($resource, 'create', null, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via);
+        $change   = $this->build($resource, 'create', null, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via, $removed);
 
         if (!empty($input['dry_run'])) return $change->describe();
 
@@ -205,7 +205,7 @@ class Resources extends Service {
 
         unset($this->writing['new']);
 
-        return is_wp_error($result) ? $result : ['created' => true] + $result;
+        return is_wp_error($result) ? $result : ['created' => true] + $result + array_filter(['removed' => $removed]);
 
     }
 
@@ -217,13 +217,13 @@ class Resources extends Service {
         if ($refusal = $this->refuse_update($resource, $model))  return $refusal;
         if ($refusal = $this->check_version($model, $input))     return $refusal;
 
-        [$values, $problems] = $this->take_values($resource, $input, $model);
+        [$values, $problems, $removed] = $this->take_values($resource, $input, $model);
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
 
         if ($problems) return $this->invalid($problems);
 
-        return $this->write_values($resource, $model, $values, $input, $via, 'update', (int) $input['version'], null);
+        return $this->write_values($resource, $model, $values, $input, $via, 'update', (int) $input['version'], null, $removed);
 
     }
 
@@ -358,11 +358,13 @@ class Resources extends Service {
 
             $fields = $resource->get_fields_for($model, $values);
 
+            [$values, $removed] = $this->filter_values($values, $fields, $resource->read($model, false));
+
             foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($fields[$name], $values + $current)) array_push($problems, ...$fields[$name]->check($value, $name, null, true));
 
             if ($problems) return $this->invalid($problems);
 
-            return $this->write_values($resource, $model, $values, ['version' => $model->get_version()] + $input, $via, 'undo', $model->get_version(), $row_id);
+            return $this->write_values($resource, $model, $values, ['version' => $model->get_version()] + $input, $via, 'undo', $model->get_version(), $row_id, $removed);
 
         }
 
@@ -376,14 +378,16 @@ class Resources extends Service {
 
     // The steps of a write
 
-    protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes) : array|WP_Error {
+    protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes, array $removed = []) : array|WP_Error {
 
         if ($refusal = $this->refuse_locked($resource, $model, $values)) return $refusal;
 
-        $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via);
+        $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via, $removed);
+
+        if (!$change->changes && $removed) return $this->error('locked', 'Filtering for this account removes the whole change: ' . implode(', ', array_keys($removed)) . '.', 409, ['reason' => 'Nothing is left to write.', 'removed' => $removed]);
 
         if (!empty($input['dry_run'])) return $change->describe();
-        if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false];
+        if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false] + array_filter(['removed' => $removed]);
 
         if ($refusal = $this->refuse_publish($resource, $model, $values)) return $refusal;
 
@@ -391,7 +395,9 @@ class Resources extends Service {
 
         if (!$model->claim_version($seen)) return $this->stale($model);
 
-        return $this->commit($resource, $model, $values, $change->why, $via, $operation, $seen, $undoes, true);
+        $result = $this->commit($resource, $model, $values, $change->why, $via, $operation, $seen, $undoes, true);
+
+        return is_wp_error($result) ? $result : $result + array_filter(['removed' => $removed]);
 
     }
 
@@ -467,7 +473,7 @@ class Resources extends Service {
 
     }
 
-    protected function build (Model_Resource $resource, string $operation, ?object $before, object $after, array $values, array $action_input, array $input, string $via) : Resource_Change {
+    protected function build (Model_Resource $resource, string $operation, ?object $before, object $after, array $values, array $action_input, array $input, string $via, array $removed = []) : Resource_Change {
 
         $change = new Resource_Change($resource, $operation, $before, $after, $values, $action_input, trim((string) ($input['why'] ?? '')), $via);
 
@@ -476,6 +482,7 @@ class Resources extends Service {
         $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before, $values)));
         $change->consequences = $resource->get_consequences($change);
         $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $change->consequences]));
+        $change->removed      = $removed;
 
         return $change;
 
@@ -612,6 +619,8 @@ class Resources extends Service {
 
         foreach (array_intersect_key($values, $shown) as $name => $value) $values[$name] = $shown[$name]->unmask($value, $current[$name] ?? null);
 
+        [$values, $removed] = $this->filter_values($values, $shown, $current);
+
         foreach (array_intersect_key($values, $shown) as $name => $value) {
 
             $field = $shown[$name];
@@ -622,7 +631,26 @@ class Resources extends Service {
 
         }
 
-        return [array_intersect_key($values, $shown), $problems];
+        return [array_intersect_key($values, $shown), $problems, $removed];
+
+    }
+
+    // ACF's values as the acting account, before anything checks or previews them; a value sent back as the record holds it keeps its markup. Columns are WordPress's to filter.
+    protected function filter_values (array $values, array $fields, array $current) : array {
+
+        $removed = [];
+
+        foreach (array_intersect_key($values, $fields) as $name => $sent) {
+
+            if (($fields[$name]->source !== 'acf') || acf_allow_unfiltered_html()) continue;
+
+            $values[$name] = Markup::keep_value($fields[$name]->filter($sent), $sent, [$current[$name] ?? null]);
+
+            if ($lost = Markup::subtract(Markup::count($sent), Markup::count($values[$name]))) $removed[$name] = $lost;
+
+        }
+
+        return [$values, $removed];
 
     }
 

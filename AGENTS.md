@@ -125,6 +125,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 |-------|---------|---------|
 | `Utility` | — | Abstract pure-static base; cannot be instantiated or cloned |
 | `List_Utility` | `Utility` | Static key→label list with null option; `$list`, `$null_option`, `$null_key`, `get_primary_keys()` |
+| `Markup` | `Utility` | What kses does to markup, on unslashed values of any shape: `keep_value()` (a value sent back as stored keeps its markup), `count()`, `subtract()` |
 
 ### Views & Rendering
 

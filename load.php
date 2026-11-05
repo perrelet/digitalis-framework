@@ -10,6 +10,7 @@ define('DIGITALIS_FRAMEWORK_URI',       plugin_dir_url(__FILE__));
 require DIGITALIS_FRAMEWORK_PATH . 'include/utils/utility.abstract.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/utils/call.utility.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/utils/list-utility.utility.php';
+require DIGITALIS_FRAMEWORK_PATH . 'include/utils/markup.utility.php';
 
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/autoloader.trait.php';
 require DIGITALIS_FRAMEWORK_PATH . 'include/traits/auto-instantiate.trait.php';

@@ -301,7 +301,7 @@ class Proposal {
 
         $at_risk = [];
 
-        foreach (static::read_filtered($resource, $original) as $name => $value) if (($markup = static::count_markup($value)) && ($lost = static::subtract_markup($markup, static::count_markup(static::filter($name, $value))))) $at_risk[$name] = $lost;
+        foreach (static::read_filtered($resource, $original) as $name => $value) if (($markup = Markup::count($value)) && ($lost = Markup::subtract($markup, Markup::count(static::filter($name, $value))))) $at_risk[$name] = $lost;
 
         return $at_risk;
 
@@ -325,7 +325,7 @@ class Proposal {
         $draft   = static::read_filtered($resource, $this->draft);
         $removed = [];
 
-        foreach ($live as $name => $value) if (($markup = static::count_markup($value)) && ($lost = static::subtract_markup($markup, static::count_markup($draft[$name] ?? null)))) $removed[$name] = $lost;
+        foreach ($live as $name => $value) if (($markup = Markup::count($value)) && ($lost = Markup::subtract($markup, Markup::count($draft[$name] ?? null)))) $removed[$name] = $lost;
 
         return $this->removed[$key] = $removed;
 
@@ -382,77 +382,6 @@ class Proposal {
         if (isset(static::FILTERED[$name])) return wp_kses((string) $value, static::FILTERED[$name][1]);
 
         return map_deep($value, fn ($each) => is_string($each) ? wp_kses_post($each) : $each);
-
-    }
-
-    // Block attributes' strings too.
-    protected static function count_markup ($value) : array {
-
-        $counts = [];
-
-        $scan = function (string $html) use (&$counts) {
-
-            $tags = new \WP_HTML_Tag_Processor($html);
-
-            while ($tags->next_tag()) {
-
-                $tag = strtolower($tags->get_tag());
-
-                $counts[$tag] = ($counts[$tag] ?? 0) + 1;
-
-                foreach ((array) $tags->get_attribute_names_with_prefix('') as $attribute) $counts["{$attribute} on {$tag}"] = ($counts["{$attribute} on {$tag}"] ?? 0) + 1;
-
-            }
-
-        };
-
-        $walk = function (array $blocks) use (&$walk, $scan) {
-
-            foreach ($blocks as $block) {
-
-                array_walk_recursive($block['attrs'], function ($value) use ($scan) { if (is_string($value) && str_contains($value, '<')) $scan($value); });
-
-                $walk($block['innerBlocks']);
-
-            }
-
-        };
-
-        $values = (array) $value;
-
-        array_walk_recursive($values, function ($html) use ($scan, $walk) {
-
-            if (!is_string($html) || !str_contains($html, '<')) return;
-
-            $scan($html);
-
-            if (has_blocks($html)) $walk(parse_blocks($html));
-
-        });
-
-        return $counts;
-
-    }
-
-    // An element that goes takes its attributes with it.
-    protected static function subtract_markup (array $before, array $after) : array {
-
-        $lost = [];
-
-        foreach ($before as $markup => $count) if (($left = $count - ($after[$markup] ?? 0)) > 0) $lost[$markup] = $left;
-
-        foreach ($lost as $markup => $count) {
-
-            if (!str_contains($markup, ' on ')) continue;
-
-            $left = $count - ($lost[substr($markup, strrpos($markup, ' on ') + 4)] ?? 0);
-
-            if ($left > 0) $lost[$markup] = $left;
-            else unset($lost[$markup]);
-
-        }
-
-        return $lost;
 
     }
 

@@ -137,6 +137,7 @@ public function get_model_fields () : array {
 
 A model field's setter must only stage: a dry run calls it on the unsaved copy.
 
+- **Markup.** ACF values a caller sends, by create, update or undo, are stored as wp-admin would store them for the acting account: an account without `unfiltered_html` has every string filtered with `wp_kses_post()` before the checks and the dry run, so what is checked and previewed is what is stored. An exact declared choice and a secret that cannot carry markup (text, textarea, email, password, a reference) are left alone. A value sent back as the record holds it keeps its markup, row by row, a row matching any stored row. A dry run and an answer list what filtering took away under `removed` (`field => [markup => count]`), outside the fingerprint; re-encoding such as `&` to `&amp;` is not listed, and shows in the values, so code that reads a plain-text field decodes it. Writes outside the layer are unchanged.
 - **Content** is saved as the acting account, so WordPress filters its markup (kses) exactly as wp-admin would for that account.
 - **Terms** are `taxonomy => term ids`; a taxonomy left out keeps its terms. A write that changes a term may write the fields of the groups that term brings in.
 
@@ -297,5 +298,7 @@ Another feature has its say over single records:
 - Only the classic editor and options pages refuse a stale save. The block editor, Quick Edit and Bulk Edit raise the version, so the layer refuses whatever read before them, but are not themselves refused.
 - An option page's dry run cannot see code that reads its options through the global `get_field($name, 'option')`.
 - Consequences are written by each resource: a resource that puts a secret's value in one leaks it there.
+- A dry run shows the post's columns as sent: WordPress filters them at save, trimming the title, converting entities and applying kses as the acting account, and predicting that save is not safe.
+- An account without `unfiltered_html` undoing a row, or a reviewer without it approving a trusted account's new embed in an ACF field, removes what it cannot keep; the dry run shows it.
 - Content is filtered as the acting account. For an account without `unfiltered_html`, WordPress's kses turns `&` into `&amp;` inside ACF block data, as it does in wp-admin: an approval by such an account carries that into the live content. WordPress also re-serialises block attributes (`\"` to `\u0022`), so compare content with what WordPress stored, not the string sent.
 - Long text is presented shortened; an edit beyond what is shown reads "Changed". `lattice.resources.present` (`$lines, $resource, $before, $after, $model`) lets another feature add to a presented change, a preview link say.

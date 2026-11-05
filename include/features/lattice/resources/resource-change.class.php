@@ -7,6 +7,7 @@ final class Resource_Change {
     public array  $changes      = [];
     public array  $consequences = [];
     public string $fingerprint  = '';
+    public array  $removed      = [];
 
     public function __construct (
         public readonly Model_Resource $resource,
@@ -38,7 +39,7 @@ final class Resource_Change {
             'changes'      => $this->changes,
             'consequences' => $this->consequences,
             'fingerprint'  => $this->fingerprint,
-        ];
+        ] + array_filter(['removed' => $this->removed]);
 
     }
 

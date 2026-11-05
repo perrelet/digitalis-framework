@@ -36,23 +36,7 @@ class Stored_Markup extends Feature {
 
         $this->kept[$post_id] = true;
 
-        foreach ($_POST['acf'] as $key => $filtered) if (isset($_REQUEST['acf'][$key]) && ($field = acf_get_field($key))) $_POST['acf'][$key] = $this->keep_value($filtered, $_REQUEST['acf'][$key], [acf_get_value($post_id, $field)]);
-
-    }
-
-    // $stored holds what a value may match. A row may match any stored row, so moved and deleted rows still match.
-    protected function keep_value ($filtered, $sent, array $stored) {
-
-        if (is_string($filtered)) return (($filtered !== $sent) && is_string($sent) && in_array(wp_unslash($sent), array_filter($stored, 'is_string'), true)) ? $sent : $filtered;
-
-        if (!is_array($filtered) || !is_array($sent)) return $filtered;
-
-        $rows   = array_merge(...array_values(array_filter($stored, fn ($each) => is_array($each) && array_is_list($each))));
-        $fields = array_filter($stored, fn ($each) => is_array($each) && !array_is_list($each));
-
-        foreach ($filtered as $key => $value) $filtered[$key] = $this->keep_value($value, $sent[$key] ?? null, [...$rows, ...array_column($fields, $key)]);
-
-        return $filtered;
+        foreach ($_POST['acf'] as $key => $filtered) if (isset($_REQUEST['acf'][$key]) && ($field = acf_get_field($key))) $_POST['acf'][$key] = wp_slash(Markup::keep_value(wp_unslash($filtered), wp_unslash($_REQUEST['acf'][$key]), [acf_get_value($post_id, $field)]));
 
     }
 

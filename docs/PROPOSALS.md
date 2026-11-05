@@ -151,6 +151,6 @@ What kses only re-encodes (`&` to `&amp;` inside block data, block attributes re
 
 ## Limits
 
-- Approving writes content as the reviewer, so a reviewer without `unfiltered_html` has it filtered again. Content already filtered when its author saved it is unchanged by this. Content from an author with `unfiltered_html`, approved by a reviewer without it, loses what the reviewer can't keep, and the dry run does not show it.
+- Approving writes as the reviewer, so a reviewer without `unfiltered_html` has values filtered again. Values already filtered when their author saved them are unchanged by this. A trusted author's new markup, approved by a reviewer without it, loses what the reviewer can't keep: for ACF values the review's dry run lists it under `removed`; for the post's columns the dry run does not show it.
 - Proposals are made in wp-admin only. A write through the API cannot yet be held as a proposal.
 - Long text is presented shortened; the review box links a preview of the draft when its content changed.

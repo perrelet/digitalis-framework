@@ -21,6 +21,8 @@ final class Resource_Field {
 
     const ROW_FLAGS = ['disabled' => 'acf_fc_layout_disabled', 'label' => 'acf_fc_layout_custom_label'];
 
+    const PLAIN_SECRETS = ['text', 'textarea', 'email', 'password', ...self::REFERENCES];
+
     const INTERNAL = ['ID', 'prefix', '_name', '_valid', '_prepare', 'parent', 'parent_layout', 'menu_order', 'wrapper', 'class', 'id', 'value', 'sub_fields', 'layouts', 'get', 'set', 'validate'];
 
     public readonly string $name;
@@ -290,6 +292,29 @@ final class Resource_Field {
         foreach (array_intersect_key($row, $fields) as $name => $one) $row[$name] = $map($fields[$name], $one, $name);
 
         return $row;
+
+    }
+
+    // Markup
+
+    // As wp-admin would store it, through wp_kses_post(), which leaves numbers, dates and ids as they are. An exact choice keeps its & for the check that follows.
+    public function filter ($value) {
+
+        if ($this->is_secret() && in_array($this->type, static::PLAIN_SECRETS, true)) return $value;
+
+        if (is_string($value)) return (in_array($this->type, static::CHOICE_TYPES, true) && array_key_exists($value, $this->get_choices())) ? $value : wp_kses_post($value);
+
+        if (!is_array($value)) return $value;
+
+        if (!$this->is_group() && !$this->is_rows() && !$this->is_flexible()) return array_map([$this, 'filter'], $value);
+
+        return $this->map_rows($value, function (array $fields, array $row) {
+
+            if (is_string($row['label'] ?? null) && $this->is_flexible()) $row['label'] = wp_kses_post($row['label']);
+
+            return static::map_row($fields, $row, fn ($field, $one) => $field->filter($one));
+
+        });
 
     }
 
