@@ -273,7 +273,7 @@ A guard that refuses (`pre_trash_post` or `pre_untrash_post` answering `false`, 
 | `POST {resource}/{id}/{action}` | `wp lattice <resource> <action> <id>` | `act()` |
 | `GET {resource}/{id}/{view}` | `wp lattice <resource> view <id> <view>` | `view()` |
 
-`version`, `why`, `dry_run` and `confirm` travel with the values (CLI: `--version`, `--why`, `--dry-run`, `--confirm`, values in `--input=<file|->`). The CLI needs `--user`. `guide`, `journal`, `undo` and `dev` are not resource names.
+`version`, `why`, `dry_run` and `confirm` travel with the values (CLI: `--version`, `--why`, `--dry-run`, `--confirm`, values in `--input=<file|->`). The CLI needs `--user`. `guide`, `journal`, `undo`, `dev` and `jobs` are not resource names.
 
 ---
 

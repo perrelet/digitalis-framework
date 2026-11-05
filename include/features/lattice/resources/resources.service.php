@@ -9,7 +9,7 @@ class Resources extends Service {
     const CONTROL  = ['version', 'why', 'dry_run', 'confirm'];
     const VIAS     = ['rest', 'cli', 'admin', 'other'];
     const PER_PAGE = 50;
-    const RESERVED = ['guide', 'journal', 'undo', 'dev'];
+    const RESERVED = ['guide', 'journal', 'undo', 'dev', 'jobs'];
     const TRASH_META = ['_wp_trash_meta_status', '_wp_trash_meta_time'];
     const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
 
