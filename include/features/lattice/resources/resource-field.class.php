@@ -257,9 +257,15 @@ final class Resource_Field {
 
     // Secrets
 
+    public static function is_mask ($value) : bool {
+
+        return is_string($value) && preg_match('/^\[set [0-9a-f]{8}\]$/', $value);
+
+    }
+
     public function mask ($value) {
 
-        if ($this->is_secret()) return in_array($value, [null, '', []], true) ? '' : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']';
+        if ($this->is_secret()) return in_array($value, [null, '', []], true) ? '' : (static::is_mask($value) ? $value : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']');
 
         return $this->map_rows($value, fn (array $fields, array $row) => static::map_row($fields, $row, fn ($field, $one) => $field->mask($one)));
 
@@ -313,6 +319,25 @@ final class Resource_Field {
             if (is_string($row['label'] ?? null) && $this->is_flexible()) $row['label'] = wp_kses_post($row['label']);
 
             return static::map_row($fields, $row, fn ($field, $one) => $field->filter($one));
+
+        });
+
+    }
+
+    // For measuring against what was sent: a write leaves out what it does not name in terms and groups, and read() leaves out a row's empty flags.
+    public function comparable ($value, $sent = null) {
+
+        if (!is_array($value)) return $value;
+
+        if (($this->type === 'terms' || $this->is_group()) && is_array($sent)) $value = array_intersect_key($value, $sent);
+
+        if ($this->type === 'terms') return array_map(function ($ids) { $ids = array_map('intval', (array) $ids); sort($ids); return $ids; }, $value);
+
+        return $this->map_rows($value, function (array $fields, array $row) {
+
+            if ($this->is_flexible()) $row = array_filter($row, fn ($flag, $name) => !in_array($name, ['disabled', 'label'], true) || !empty($flag), ARRAY_FILTER_USE_BOTH);
+
+            return static::map_row($fields, $row, fn ($field, $one) => $field->comparable($one));
 
         });
 

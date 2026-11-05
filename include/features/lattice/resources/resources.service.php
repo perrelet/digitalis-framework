@@ -76,7 +76,7 @@ class Resources extends Service {
 
         return [
             'framework' => DIGITALIS_FRAMEWORK_VERSION,
-            'features'  => ['dry_run', 'journal', 'undo', 'trash'],
+            'features'  => ['dry_run', 'journal', 'undo', 'trash', 'expected'],
             'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may($resource, 'list')))),
         ];
 
@@ -217,13 +217,33 @@ class Resources extends Service {
         if ($resource instanceof WP_Error)                       return $resource;
         if ($refusal = $this->refuse_update($resource, $model))  return $refusal;
         if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
-        if ($refusal = $this->check_version($model, $input))     return $refusal;
+
+        $expected = $input['expected'] ?? null;
+
+        unset($input['expected']);
+
+        if ((is_null($expected) || isset($input['version'])) && ($refusal = $this->check_version($model, $input))) return $refusal;
+
+        // Before any value is read: a rival write landing after this makes the claim fail.
+        $seen = (int) ($input['version'] ?? $model->get_version());
+
+        if (!is_null($expected)) {
+
+            if (method_exists($model, 'reload')) $model->reload();
+
+            $resource->forget_values($model);
+
+        }
 
         [$values, $problems, $removed] = $this->take_values($resource, $input, $model);
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
 
+        if (!is_null($expected)) array_push($problems, ...$this->check_expected($expected, $input));
+
         if ($problems) return $this->invalid($problems);
+
+        if (!is_null($expected)) return $this->write_expected($resource, $model, $values, $expected, $input, $via, $removed, $seen);
 
         return $this->write_values($resource, $model, $values, $input, $via, 'update', (int) $input['version'], null, $removed);
 
@@ -566,6 +586,38 @@ class Resources extends Service {
 
     // The steps of a write
 
+    // Each field is measured from where its caller started, so a change elsewhere stops nothing: applied while the record still holds the start, skipped where it already holds the proposal, a conflict otherwise.
+    protected function write_expected (Model_Resource $resource, $model, array $values, array $expected, array $input, string $via, array $removed, int $seen) : array|WP_Error {
+
+        $live   = $resource->read($model, false);
+        $shown  = $resource->read($model);
+        $fields = $resource->get_fields_for($model, $values);
+
+        $applied = $skipped = $conflicts = [];
+
+        foreach ($values as $name => $proposed) {
+
+            $field = $fields[$name];
+            $same  = fn ($one, $other) => !$this->diff(['value' => $field->comparable($one, $proposed)], ['value' => $field->comparable($other, $proposed)]);
+            $start = $field->mask($expected[$name] ?? null);
+
+            // WordPress changes a column at save, so only the same text says it is already there.
+            $there = (($field->source === 'model') && is_string($proposed) && is_string($live[$name] ?? null)) ? ($live[$name] === $proposed) : $same($live[$name] ?? null, $proposed);
+
+            if ($there)                                 $skipped[]      = $name;
+            elseif ($same($shown[$name] ?? null, $start)) $applied[$name] = $proposed;
+            else                                        $conflicts[]    = ['field' => $name, 'start' => $start, 'live' => $shown[$name] ?? null, 'proposed' => $field->mask($proposed)];
+
+        }
+
+        if ($conflicts) return $this->stale($model, 'Someone changed what this changes: read it again and start from there.', ['conflicts' => $conflicts]);
+
+        $result = $this->write_values($resource, $model, $applied, $input, $via, 'update', $seen, null, $removed);
+
+        return is_wp_error($result) ? $result : $result + ['applied' => array_keys($applied), 'skipped' => $skipped];
+
+    }
+
     protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes, array $removed = []) : array|WP_Error {
 
         if ($refusal = $this->refuse_locked($resource, $model, $values)) return $refusal;
@@ -865,6 +917,16 @@ class Resources extends Service {
         }
 
         return [$values, $removed];
+
+    }
+
+    protected function check_expected ($expected, array $input) : array {
+
+        if (!is_array($expected)) return ['expected is an object of each field sent and the value it started from.'];
+
+        $sent = array_diff_key($input, array_flip(static::CONTROL));
+
+        return (array_diff_key($sent, $expected) || array_diff_key($expected, $sent)) ? ['expected names every field sent and no other.'] : [];
 
     }
 

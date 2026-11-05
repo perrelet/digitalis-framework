@@ -162,6 +162,8 @@ An update runs in this order:
 4. The version is claimed; `before_write()`; ACF fields, then model fields and `save()`; `after_write()`; the version is finished.
 5. One journal row.
 
+An update may carry `expected`, each field it sends and the value the caller started from, instead of `version`. Each field is then measured from its own start: applied while the record holds it, skipped where the record already holds what is proposed, and a conflict otherwise, so a change to another field stops nothing. A conflict refuses the whole update as `stale`, with `data.conflicts` (`field`, `start`, `live`, `proposed`, secrets masked). The answer lists `applied` and `skipped`; with nothing applied it is `changed: false`. A secret's start is compared masked, so what a read gave can be sent back. A post column counts as there only on the same text, so a change WordPress filtered at save reads as a conflict. A `version` sent as well is checked too. Terms and groups are measured on what the update names, since a write leaves the rest alone.
+
 The service writes ACF fields directly, so `acf/save_post` does not fire: `after_write()` runs what the model's `acf/save_post` handlers would. A write that changes nothing answers `changed: false` and raises nothing.
 
 ---
@@ -284,7 +286,7 @@ A guard that refuses (`pre_trash_post` or `pre_untrash_post` answering `false`, 
 | `invalid` | 400 | `data.problems`; nothing changed |
 | `forbidden` | 403 | `data.needs` names the capability |
 | `not_found` | 404 | No such resource, record, action, view or row |
-| `stale` | 409 | `data.version` is now; or a `confirm` no longer matches |
+| `stale` | 409 | `data.version` is now; or a `confirm` no longer matches; or `data.conflicts` says which expected values no longer hold |
 | `locked` | 409 | `data.reason`; locked fields in `data.fields` |
 | `not_saved` | 500 | Part was written: read it again |
 
