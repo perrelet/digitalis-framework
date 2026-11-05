@@ -10,6 +10,7 @@ class Resources extends Service {
     const VIAS     = ['rest', 'cli', 'admin', 'other'];
     const PER_PAGE = 50;
     const RESERVED = ['guide', 'journal', 'undo', 'dev'];
+    const TRASH_META = ['_wp_trash_meta_status', '_wp_trash_meta_time'];
     const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
 
     protected array $resources = [];
@@ -75,7 +76,7 @@ class Resources extends Service {
 
         return [
             'framework' => DIGITALIS_FRAMEWORK_VERSION,
-            'features'  => ['dry_run', 'journal', 'undo'],
+            'features'  => ['dry_run', 'journal', 'undo', 'trash'],
             'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may($resource, 'list')))),
         ];
 
@@ -215,6 +216,7 @@ class Resources extends Service {
 
         if ($resource instanceof WP_Error)                       return $resource;
         if ($refusal = $this->refuse_update($resource, $model))  return $refusal;
+        if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
         if ($refusal = $this->check_version($model, $input))     return $refusal;
 
         [$values, $problems, $removed] = $this->take_values($resource, $input, $model);
@@ -233,7 +235,7 @@ class Resources extends Service {
 
         if ($resource instanceof WP_Error) return $resource;
 
-        if (!($definition = $resource->get_actions()[$action] ?? null) || !method_exists($resource, "act_{$action}")) return $this->error('not_found', "No action {$action}.", 404);
+        if (in_array($action, ['trash', 'untrash'], true) || !($definition = $resource->get_actions()[$action] ?? null) || !method_exists($resource, "act_{$action}")) return $this->error('not_found', "No action {$action}.", 404);
 
         $through        = !empty($definition['writes_through']);
         $changes_record = $definition['changes_record'] ?? true;
@@ -243,6 +245,8 @@ class Resources extends Service {
         if (!$this->may($resource, $action, $model)) return $this->forbidden($action);
 
         if ($refusal = $this->refuse_record($resource, $model, $action)) return $refusal;
+
+        if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
 
         if (isset($definition['capability']) && !current_user_can($definition['capability'])) return $this->forbidden($definition['capability']);
 
@@ -333,6 +337,124 @@ class Resources extends Service {
 
     }
 
+    public function trash (string $name, $id, array $input, string $via, ?int $undoes = null) : array|WP_Error {
+
+        return $this->move_to($name, $id, 'trash', $input, $via, $undoes);
+
+    }
+
+    public function untrash (string $name, $id, array $input, string $via, ?int $undoes = null) : array|WP_Error {
+
+        return $this->move_to($name, $id, 'untrash', $input, $via, $undoes);
+
+    }
+
+    protected function move_to (string $name, $id, string $operation, array $input, string $via, ?int $undoes) : array|WP_Error {
+
+        [$resource, $model] = $this->find($name, $id);
+
+        if ($resource instanceof WP_Error) return $resource;
+
+        if (!$resource->get_post_type()) return $this->refuse_state("A {$resource->get_label()} has no Trash.");
+
+        if ($refusal = $this->refuse_update($resource, $model, $operation, $operation)) return $refusal;
+
+        $trashing = $operation === 'trash';
+        $post_id  = $model->get_id();
+        $trashed  = $this->is_trashed($resource, $model);
+
+        if ($trashing && $trashed)        return $this->refuse_state('It is already in the Trash.');
+        if (!$trashing && !$trashed)      return $this->refuse_state('It is not in the Trash.');
+        if ($trashing && !EMPTY_TRASH_DAYS) return $this->refuse_state('This site deletes for good instead of trashing, which nothing could undo.');
+
+        $target = $trashing ? 'trash' : ((string) get_post_meta($post_id, static::TRASH_META[0], true) ?: 'draft');
+
+        if (!$trashing && in_array($target, ['publish', 'future', 'private'], true) && !$this->may($resource, 'publish', $model)) return $this->forbidden($resource->get_capability('publish'), "It was {$target}, and this account may not publish.");
+
+        if ($refusal = $this->check_version($model, $input)) return $refusal;
+
+        if ($problems = $this->check_why($input, $via)) return $this->invalid($problems);
+
+        $sets   = ['status' => $target];
+        $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $sets), $sets, [], $input, $via);
+
+        if (!empty($input['dry_run'])) return $change->describe();
+
+        if (!empty($resource->get_proposable()[$operation]['confirm']) && empty($input['confirm'])) return $this->invalid(['Send the fingerprint of its dry run as confirm.']);
+
+        if (!empty($input['confirm']) && !hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
+
+        $seen = (int) $input['version'];
+
+        if (!$model->claim_version($seen)) return $this->stale($model);
+
+        $this->writing[(string) $post_id] = true;
+
+        $resource->forget_values($model);
+
+        $before = $resource->read($model);
+        $meta   = array_map(fn ($key) => get_post_meta($post_id, $key, true), array_combine(static::TRASH_META, static::TRASH_META));
+        $keep   = fn ($new_status, $id) => ((int) $id === (int) $post_id) ? $target : $new_status;
+
+        if (!$trashing) add_filter('wp_untrash_post_status', $keep, PHP_INT_MAX, 2);
+
+        try {
+
+            $trashing ? wp_trash_post($post_id) : wp_untrash_post($post_id);
+            $error = null;
+
+        } catch (\Throwable $e) {
+
+            $error = $e->getMessage();
+
+        }
+
+        if (!$trashing) remove_filter('wp_untrash_post_status', $keep, PHP_INT_MAX);
+
+        clean_post_cache($post_id);
+
+        $status = get_post_status($post_id);
+        $landed = $trashing ? ($status === 'trash') : ($status !== 'trash');
+
+        // A site's wp_insert_post_data may have kept the status, after WordPress changed the trash meta.
+        if (!$landed) foreach ($meta as $key => $value) $trashing ? delete_post_meta($post_id, $key) : (($value !== '') && update_post_meta($post_id, $key, $value));
+
+        $model->finish_version();
+
+        if (!$landed && !$error) $model->restore_version($seen);
+
+        $model->reload();
+        $resource->forget_values($model);
+
+        if (!$landed) {
+
+            unset($this->writing[(string) $post_id]);
+
+            return $error ? $this->error('not_saved', "It was not done: {$error} Read it again before the next change.", 500) : $this->refuse_state('A guard refused it: it stays as it was.');
+
+        }
+
+        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::inst()->write([
+            'via'            => $via,
+            'resource'       => $resource->get_name(),
+            'record_id'      => $post_id,
+            'action'         => $operation,
+            'why'            => $change->why,
+            'before'         => $before,
+            'after'          => $resource->read($model),
+            'version_before' => $seen,
+            'version_after'  => $model->get_version(),
+            'undoes'         => $undoes,
+        ]);
+
+        unset($this->writing[(string) $post_id]);
+
+        if ($error) return $this->error('not_saved', "Part was written: {$error} Read it again before the next change.", 500);
+
+        return $this->describe_record($resource, $model) + ['changed' => true] + $this->report_journal($journaled);
+
+    }
+
     // The write it makes through this service checks, previews, claims and journals: the action only answers that write's result.
     protected function act_through (Model_Resource $resource, $model, string $action, array $input, string $via) : array|WP_Error {
 
@@ -360,6 +482,28 @@ class Resources extends Service {
         if ($refusal = $this->refuse_read($resource, $model)) return $refusal;
 
         $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id])]);
+
+        $inverse = ['version' => $model->get_version()] + array_intersect_key($input, array_flip(static::CONTROL));
+        $trashed = $this->is_trashed($resource, $model);
+        $to_bin  = in_array($row['action'], ['update', 'undo'], true) && (($row['after']['status'] ?? '') === 'trash') && (($row['before']['status'] ?? '') !== 'trash');
+
+        if ($row['action'] === 'trash' || $to_bin) {
+
+            if (!$trashed || (!$to_bin && $model->get_version() !== $row['version_after'])) return $moved('It');
+
+            return $this->untrash($row['resource'], $row['record_id'], $inverse, $via, $row_id);
+
+        }
+
+        if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
+
+        if (in_array($row['action'], ['untrash', 'create'], true)) {
+
+            if ($model->get_version() !== $row['version_after']) return $moved('It');
+
+            return $this->trash($row['resource'], $row['record_id'], $inverse, $via, $row_id);
+
+        }
 
         // Any save raises the version, so an update row compares the fields it restores.
         if (in_array($row['action'], ['update', 'undo', 'restore'], true) && is_array($row['before'])) {
@@ -577,21 +721,39 @@ class Resources extends Service {
 
         if (!get_current_user_id()) return false;
 
-        if (in_array($operation, ['list', 'read', 'create', 'update', 'publish'], true) && !$resource->can($operation, $model)) return false;
+        if (in_array($operation, ['list', 'read', 'create', 'update', 'publish', 'trash', 'untrash'], true) && !$resource->can($operation, $model)) return false;
 
         return (bool) apply_filters('lattice.resources.allow', true, wp_get_current_user(), $resource->get_name(), $operation);
 
     }
 
-    protected function refuse_update (Model_Resource $resource, $model, string $operation = 'update') : ?WP_Error {
+    protected function refuse_update (Model_Resource $resource, $model, string $operation = 'update', string $right = 'update') : ?WP_Error {
 
         $data = fn (string $needs) => (array) apply_filters('lattice.resources.forbidden', ['needs' => $needs], $resource, $model, $operation);
 
-        if (!$this->may($resource, 'update', $model)) return $this->forbidden($needs = $resource->get_capability('update', $model), data: $data($needs));
+        if (!$this->may($resource, $right, $model)) return $this->forbidden($needs = $resource->get_capability($right, $model), data: $data($needs));
 
         if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.', $data($lock));
 
-        return $this->refuse_record($resource, $model, 'update');
+        return $this->refuse_record($resource, $model, $right);
+
+    }
+
+    protected function is_trashed (Model_Resource $resource, $model) : bool {
+
+        return $resource->get_post_type() && ($resource->get_status($model) === 'trash');
+
+    }
+
+    protected function refuse_trashed (Model_Resource $resource, $model) : ?WP_Error {
+
+        return $this->is_trashed($resource, $model) ? $this->refuse_state('It is in the Trash: take it out first.') : null;
+
+    }
+
+    protected function refuse_state (string $reason) : WP_Error {
+
+        return $this->error('locked', $reason, 409, ['reason' => $reason]);
 
     }
 

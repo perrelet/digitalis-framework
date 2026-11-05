@@ -18,7 +18,7 @@ class Resources_Command {
         WP_CLI::add_command('lattice undo', [$command, 'undo'], ['shortdesc' => 'Reverse a journal row.', 'synopsis' => '<row> ' . static::CONTROL]);
 
         foreach (Resources::inst()->get_resources() as $name => $resource) WP_CLI::add_command("lattice {$name}", fn ($args, $assoc) => $command->run($name, $args, $assoc), [
-            'shortdesc' => "list, get, create, update, view or an action on {$resource->get_label()}.",
+            'shortdesc' => "list, get, create, update, trash, untrash, view or an action on {$resource->get_label()}.",
             'synopsis'  => '<operation> [<id>] [<view>] [--status=<status>] [--search=<search>] [--page=<page>] ' . static::CONTROL . ' [--<field>=<value>]',
         ]);
 
@@ -58,13 +58,15 @@ class Resources_Command {
         // The synopsis takes any flag for an action's input, so WP-CLI no longer stops a mistyped one: a write must not go ahead without its --dry-run.
         $extra = array_diff_key($assoc, array_flip(['input', 'version', 'why', 'confirm', 'dry-run', 'status', 'search', 'page']));
 
-        if ($extra && in_array($operation, ['list', 'get', 'create', 'update', 'view'], true)) WP_CLI::error('Unknown: --' . implode(', --', array_keys($extra)));
+        if ($extra && in_array($operation, ['list', 'get', 'create', 'update', 'trash', 'untrash', 'view'], true)) WP_CLI::error('Unknown: --' . implode(', --', array_keys($extra)));
 
         $this->answer(match ($operation) {
             'list'   => $api->list($name, $assoc),
             'get'    => $api->get($name, $id),
             'create' => $api->create_record($name, $this->get_input($assoc), 'cli'),
             'update' => $api->update($name, $id, $this->get_input($assoc), 'cli'),
+            'trash'   => $api->trash($name, $id, $this->get_input($assoc), 'cli'),
+            'untrash' => $api->untrash($name, $id, $this->get_input($assoc), 'cli'),
             'view'   => $api->view($name, $id, (string) ($args[2] ?? '')),
             default  => $api->act($name, $id, $operation, $this->get_input($assoc) + $extra, 'cli'),
         });

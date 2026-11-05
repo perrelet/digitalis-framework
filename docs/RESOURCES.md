@@ -15,6 +15,7 @@ Read and change models through one layer, the way wp-admin does: REST (`lattice/
 - [Option Pages](#option-pages)
 - [The Version](#the-version)
 - [The Journal and Undo](#the-journal-and-undo)
+- [Trash](#trash)
 - [Transports](#transports)
 - [Refusals](#refusals)
 - [Policy](#policy)
@@ -240,7 +241,17 @@ Undo is a write of its own:
 
 - an update or restore row writes back the fields it changed, while each still holds that row's after (any save raises the version, so fields are compared, not versions);
 - an action row runs its `undo` action, while the record is at that row's version;
-- create, an action without `undo`, and secrets are refused.
+- a `trash` row untrashes and an `untrash` row trashes, and an older update row that moved a record to the Trash untrashes it;
+- a create row trashes what it created, while the record is at that row's version;
+- an action without `undo`, a `deleted` row and secrets are refused.
+
+---
+
+## Trash
+
+Trashing and untrashing are writes like any other: `delete_post` on the record and its lock, a version, a why, a dry run whose diff is the status change, so a resource's consequences can say what it does, and a journal row. A trashed record takes no update, action or undo but its untrash, and an untrash returns it to the status it had, needing the right to publish where that is published, scheduled or private. wp-admin's untrash keeps WordPress's draft. A resource asks a `confirm` of either through `const PROPOSABLE = ['trash' => ['confirm' => true]]`, on every call and on undo's inverses.
+
+A guard that refuses (`pre_trash_post` or `pre_untrash_post` answering `false`, or a site's `wp_insert_post_data` keeping the status) answers `locked`, the record and its trash meta as they were. A guard must not call `wp_die()` while `Resources::is_writing()` holds. Both are refused while `EMPTY_TRASH_DAYS` is 0, and by a resource with no post type. `trash` and `untrash` are names no resource may give an action. wp-admin's trashes of a resource's records journal as `trash` and `untrash`, and a record deleted for good leaves a `deleted` row, which nothing undoes.
 
 ---
 
@@ -255,6 +266,8 @@ Undo is a write of its own:
 | `POST {resource}` | `wp lattice <resource> create` | `create_record()` |
 | `GET {resource}/{id}` | `wp lattice <resource> get <id>` | `get()` |
 | `PATCH {resource}/{id}` | `wp lattice <resource> update <id>` | `update()` |
+| `DELETE {resource}/{id}` | `wp lattice <resource> trash <id>` | `trash()` |
+| `POST {resource}/{id}/untrash` | `wp lattice <resource> untrash <id>` | `untrash()` |
 | `POST {resource}/{id}/{action}` | `wp lattice <resource> <action> <id>` | `act()` |
 | `GET {resource}/{id}/{view}` | `wp lattice <resource> view <id> <view>` | `view()` |
 

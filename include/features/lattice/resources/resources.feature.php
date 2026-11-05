@@ -36,6 +36,7 @@ class Lattice_Resources extends Feature {
             'save_post'                                       => 'raise_version',
             'pre_post_update'                                 => 'take_before',
             'wp_after_insert_post'                            => ['settle_save', 100],
+            'before_delete_post'                              => 'note_deletion',
             'wp_restore_post_revision'                        => ['settle_restore', 100],
             'post_submitbox_misc_actions'                     => 'print_version',
             'admin_action_editpost'                           => 'claim_from_editor',
@@ -226,7 +227,7 @@ class Lattice_Resources extends Feature {
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $post_id,
-            'action'         => $created ? 'create' : 'update',
+            'action'         => $created ? 'create' : (($before['status'] !== 'trash' && $wp_post->post_status === 'trash') ? 'trash' : (($before['status'] === 'trash' && $wp_post->post_status !== 'trash') ? 'untrash' : 'update')),
             'before'         => $created ? null : $before['values'],
             'after'          => $after,
             'version_before' => $created ? 0 : $before['version'],
@@ -234,6 +235,29 @@ class Lattice_Resources extends Feature {
         ]);
 
         if (!$created) $this->last_save['row'] = $row;
+
+    }
+
+    public function note_deletion ($post_id) {
+
+        [$resource, $model] = $this->find($post_id);
+
+        if (!$model || (get_post_status($post_id) === 'auto-draft') || !Resources::inst()->is_journaled($resource, $model)) return;
+
+        $resource->forget_values($model);
+
+        // WordPress's purge deletes a list in one loop: one unreadable record must not stop it.
+        try { $before = $resource->read($model); } catch (\Throwable $e) { $before = null; }
+
+        Journal::inst()->write([
+            'via'            => is_admin() ? 'admin' : 'other',
+            'resource'       => $resource->get_name(),
+            'record_id'      => $post_id,
+            'action'         => 'deleted',
+            'before'         => $before,
+            'version_before' => $model->get_version(),
+            'version_after'  => $model->get_version(),
+        ]);
 
     }
 

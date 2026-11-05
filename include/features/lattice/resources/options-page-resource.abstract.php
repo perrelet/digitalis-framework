@@ -14,6 +14,12 @@ abstract class Options_Page_Resource extends Model_Resource {
 
     }
 
+    public function get_proposable () : array {
+
+        return static::PROPOSABLE;
+
+    }
+
     public function get_page_slug () : string {
 
         return static::$page;

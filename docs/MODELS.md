@@ -1052,6 +1052,7 @@ A count in meta that every change raises, so a write based on a stale read can b
 | `is_claimed()` | `bool` | Whether this request has claimed the record and not yet finished |
 | `finish_version()` | `void` | Raises once more after a claimed write, so anyone who read mid-write is stale too |
 | `raise_version()` | `void` | One raise outside a write; does nothing while the record is mid-write |
+| `restore_version($seen)` | `void` | Gives back a finished claim whose write a guard refused outright, if nothing else moved it |
 
 Versions start at 1, since `update_meta()` ignores a previous value of `0`. With the `lattice/resources` feature loaded, copies made by `duplicate()` start their own version.
 

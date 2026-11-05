@@ -45,6 +45,15 @@ trait Has_Version {
 
     }
 
+    // A claimed write that a guard refused outright: nothing changed, so a later undo must still find the version it knows.
+    public function restore_version (int $seen) : void {
+
+        if ($this->get_version() !== $seen + 2) return;
+
+        $seen ? $this->update_meta(static::get_version_key(), $seen, $seen + 2) : $this->delete_meta(static::get_version_key());
+
+    }
+
     public function raise_version () : void {
 
         if (!$this->is_claimed()) $this->step_version($this->get_version());
