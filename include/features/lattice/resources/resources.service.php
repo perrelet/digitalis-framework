@@ -996,7 +996,7 @@ class Resources extends Service {
     }
 
     // The set's own business: what its resource takes.
-    protected function refuse_step (array $step) : string {
+    public function refuse_step (array $step) : string {
 
         if (!$resource = $this->get_resource($step['resource'])) return "No resource {$step['resource']}.";
 
