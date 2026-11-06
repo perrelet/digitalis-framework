@@ -11,6 +11,8 @@ class Resources extends Service {
     const PER_PAGE = 50;
     const RESERVED = ['guide', 'journal', 'undo', 'dev', 'jobs'];
     const TRASH_META = ['_wp_trash_meta_status', '_wp_trash_meta_time'];
+    // A post column and the kses context its own save filters it with.
+    const COLUMNS  = ['title' => 'title_save_pre', 'content' => 'post', 'excerpt' => 'post'];
     const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
 
     protected array $resources = [];
@@ -365,7 +367,7 @@ class Resources extends Service {
             'version_before' => $made ? 0 : $version_before,
             'version_after'  => ($made ?? $model)->get_version(),
             'undoes'         => $undoes,
-        ]);
+        ] + $this->get_marks($resource, $made ?? $model));
 
         unset($this->writing[$this->writing_key($resource, $model)]);
 
@@ -602,10 +604,69 @@ class Resources extends Service {
 
     }
 
+    // Values held for a later write, as the current account would send them now: filtered, checked, written nowhere. A held column is filtered here too, since the save that stores it runs as whoever applies it. No id for a record not yet made. A mask is refused: it stands for what a record holds, and answering that would hand a secret to whoever only read its mask.
+    public function hold_values (string $name, $id, array $values) : array|WP_Error {
+
+        if (!$resource = $this->get_resource($name)) return $this->error('not_found', "No resource {$name}.", 404);
+
+        $model = null;
+
+        if (is_null($id)) {
+
+            if (!$this->may($resource, 'hold')) return $this->forbidden('hold');
+
+        } else {
+
+            if (!is_scalar($id)) return $this->error('not_found', "No {$resource->get_label()} with that id.", 404);
+
+            [$resource, $model] = $this->find($name, $id);
+
+            if ($resource instanceof WP_Error) return $resource;
+            if ($refusal = $this->refuse_read($resource, $model)) return $refusal;
+
+        }
+
+        [$values, $problems, $removed] = $this->take_values($resource, $values, $model, false);
+        [$values, $lost]               = $this->filter_columns($resource, $values, $model);
+
+        foreach ($values as $field => $value) {
+
+            $leaves = [$value];
+
+            array_walk_recursive($leaves, function ($leaf) use (&$problems, $field) { if (Resource_Field::is_mask($leaf)) $problems[] = "{$field} holds a mask: send the value it stands for."; });
+
+        }
+
+        return ['values' => $values, 'removed' => $removed + $lost, 'problems' => $problems];
+
+    }
+
+    // How each field compares, for an account that may only read the record: what a write would refuse is the write's to say. Without the right to write, a field holding a secret is withheld, so reading it never tests a guess at one.
+    public function compare_expected (string $name, $id, array $values, $expected) : array|WP_Error {
+
+        [$resource, $model] = $this->find($name, $id);
+
+        if ($resource instanceof WP_Error)                    return $resource;
+        if ($refusal = $this->refuse_read($resource, $model)) return $refusal;
+        if ($problems = $this->check_expected($expected, $values)) return $this->invalid($problems);
+
+        if (method_exists($model, 'reload')) $model->reload();
+
+        $resource->forget_values($model);
+
+        $values   = array_diff_key($values, array_flip(static::CONTROL));
+        $withheld = $this->may($resource, 'update', $model) ? [] : array_filter($resource->get_fields_for($model, $values), fn ($field, $field_name) => isset($values[$field_name]) && $field->holds_secret(), ARRAY_FILTER_USE_BOTH);
+
+        [$applied, $skipped, $conflicts] = $this->compare_fields($resource, $model, array_diff_key($values, $withheld), $expected);
+
+        return ['applied' => array_keys($applied), 'skipped' => $skipped, 'conflicts' => $conflicts, 'withheld' => array_keys($withheld)];
+
+    }
+
     // The steps of a write
 
     // Each field is measured from where its caller started, so a change elsewhere stops nothing: applied while the record still holds the start, skipped where it already holds the proposal, a conflict otherwise.
-    protected function write_expected (Model_Resource $resource, $model, array $values, array $expected, array $input, string $via, array $removed, int $seen) : array|WP_Error {
+    protected function compare_fields (Model_Resource $resource, $model, array $values, array $expected) : array {
 
         $live   = $resource->read($model, false);
         $shown  = $resource->read($model);
@@ -615,7 +676,14 @@ class Resources extends Service {
 
         foreach ($values as $name => $proposed) {
 
-            $field = $fields[$name];
+            if (!$field = $fields[$name] ?? null) {
+
+                $conflicts[] = ['field' => $name, 'not_shown' => true, 'start' => Resource_Field::mask_value($expected[$name] ?? null), 'live' => null, 'proposed' => Resource_Field::mask_value($proposed)];
+
+                continue;
+
+            }
+
             $same  = fn ($one, $other) => !$this->diff(['value' => $field->comparable($one, $proposed)], ['value' => $field->comparable($other, $proposed)]);
             $start = $field->mask($expected[$name] ?? null);
 
@@ -627,6 +695,14 @@ class Resources extends Service {
             else                                        $conflicts[]    = ['field' => $name, 'start' => $start, 'live' => $shown[$name] ?? null, 'proposed' => $field->mask($proposed)];
 
         }
+
+        return [$applied, $skipped, $conflicts];
+
+    }
+
+    protected function write_expected (Model_Resource $resource, $model, array $values, array $expected, array $input, string $via, array $removed, int $seen) : array|WP_Error {
+
+        [$applied, $skipped, $conflicts] = $this->compare_fields($resource, $model, $values, $expected);
 
         if ($conflicts) return $this->stale($model, 'Someone changed what this changes: read it again and start from there.', ['conflicts' => $conflicts]);
 
@@ -705,13 +781,30 @@ class Resources extends Service {
             'version_before' => $seen,
             'version_after'  => $model->get_version(),
             'undoes'         => $undoes,
-        ]);
+        ] + $this->get_marks($resource, $model));
 
         unset($this->writing[$this->writing_key($resource, $model)]);
 
         if ($error) return $this->error('not_saved', 'Part was written: ' . $error->getMessage() . ' Read it again before the next change.', 500);
 
         return $this->describe_record($resource, $model) + ['changed' => true] + $this->report_journal($journaled);
+
+    }
+
+    // The write has landed by now: a row without its marks is better than none.
+    protected function get_marks (Model_Resource $resource, $model) : array {
+
+        try {
+
+            return $resource->journal_marks($model);
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice resources: a row lost its marks: ' . $e->getMessage());
+
+            return [];
+
+        }
 
     }
 
@@ -890,7 +983,7 @@ class Resources extends Service {
 
     }
 
-    protected function take_values (Model_Resource $resource, array $input, $model) : array {
+    protected function take_values (Model_Resource $resource, array $input, $model, bool $unmask = true) : array {
 
         $values   = array_diff_key($input, array_flip(static::CONTROL));
         $problems = [];
@@ -901,7 +994,7 @@ class Resources extends Service {
         if ($unknown = array_diff(array_keys($values), array_keys($known))) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
         if ($hidden = array_diff(array_keys(array_intersect_key($values, $known)), array_keys($shown))) $problems[] = 'Not shown for this record (see applies_when): ' . implode(', ', $hidden) . '.';
 
-        foreach (array_intersect_key($values, $shown) as $name => $value) $values[$name] = $shown[$name]->unmask($value, $current[$name] ?? null);
+        if ($unmask) foreach (array_intersect_key($values, $shown) as $name => $value) $values[$name] = $shown[$name]->unmask($value, $current[$name] ?? null);
 
         [$values, $removed] = $this->filter_values($values, $shown, $current);
 
@@ -929,6 +1022,28 @@ class Resources extends Service {
             if (($fields[$name]->source !== 'acf') || acf_allow_unfiltered_html()) continue;
 
             $values[$name] = Markup::keep_value($fields[$name]->filter($sent), $sent, [$current[$name] ?? null]);
+
+            if ($lost = Markup::subtract(Markup::count($sent), Markup::count($values[$name]))) $removed[$name] = $lost;
+
+        }
+
+        return [$values, $removed];
+
+    }
+
+    // Only what the column's own save runs for an account without unfiltered_html, and none of the rest of its chain: the save still runs that, once, when the value is written.
+    protected function filter_columns (Model_Resource $resource, array $values, $model) : array {
+
+        if (!$resource->get_post_type() || current_user_can('unfiltered_html')) return [$values, []];
+
+        $current = $model ? $resource->read($model, false) : [];
+        $removed = [];
+
+        foreach (array_intersect_key($values, static::COLUMNS) as $name => $sent) {
+
+            if (!is_string($sent) || ($resource->get_field($name)?->source !== 'model')) continue;
+
+            $values[$name] = Markup::keep_value(wp_kses($sent, static::COLUMNS[$name]), $sent, [$current[$name] ?? null]);
 
             if ($lost = Markup::subtract(Markup::count($sent), Markup::count($values[$name]))) $removed[$name] = $lost;
 

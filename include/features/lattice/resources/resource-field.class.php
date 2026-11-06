@@ -95,6 +95,16 @@ final class Resource_Field {
 
     }
 
+    public function holds_secret () : bool {
+
+        if ($this->is_secret()) return true;
+
+        foreach ([$this->sub_fields, ...array_values($this->layouts)] as $fields) foreach ($fields as $field) if ($field->holds_secret()) return true;
+
+        return false;
+
+    }
+
     public function is_multiple () : bool {
 
         return in_array($this->type, static::MULTIPLE, true) || !empty($this->acf['multiple']);
@@ -263,9 +273,15 @@ final class Resource_Field {
 
     }
 
+    public static function mask_value ($value) {
+
+        return in_array($value, [null, '', []], true) ? '' : (static::is_mask($value) ? $value : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']');
+
+    }
+
     public function mask ($value) {
 
-        if ($this->is_secret()) return in_array($value, [null, '', []], true) ? '' : (static::is_mask($value) ? $value : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']');
+        if ($this->is_secret()) return static::mask_value($value);
 
         return $this->map_rows($value, fn (array $fields, array $row) => static::map_row($fields, $row, fn ($field, $one) => $field->mask($one)));
 

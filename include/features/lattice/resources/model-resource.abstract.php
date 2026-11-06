@@ -244,6 +244,24 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Values held for later, whoever reads them: a resource that hides a secret from an account must not let it through raw.
+    public function mask_held (array $values) : array {
+
+        $fields = $this->get_fields();
+
+        foreach ($values as $name => $value) {
+
+            $field = $fields[$name] ?? null;
+
+            // Rows are masked leaf by leaf, which only reaches what is shaped like rows.
+            $values[$name] = (!$field || in_array($name, static::SECRET, true) || ($field->holds_secret() && !is_array($value))) ? Resource_Field::mask_value($value) : $field->mask($value);
+
+        }
+
+        return $values;
+
+    }
+
     public function to_raw (array $values, ?array $fields = null) : array {
 
         $fields ??= $this->get_fields();
@@ -454,5 +472,12 @@ abstract class Model_Resource extends Singleton {
 
     // Run what the model's acf/save_post handlers would.
     public function after_write ($model, mixed $before, string $why) : void {}
+
+    // What this resource's own rows carry beyond the journal's columns: the journal's marks.
+    public function journal_marks ($model) : array {
+
+        return [];
+
+    }
 
 }
