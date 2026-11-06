@@ -32,6 +32,7 @@ class Job extends Model {
     protected static int   $depth   = 0;
     protected static array $ended   = [];
 
+    protected int     $blog     = 0;
     protected array   $row      = [];
     protected ?string $token    = null;
     protected bool    $stepping = false;
@@ -79,12 +80,35 @@ class Job extends Model {
 
         if (!is_int($id) || ($id < 1)) return false;
 
-        $type = self::$types[$id] ??= static::read_type($id);
+        $type = self::$types[get_current_blog_id()][$id] ??= static::read_type($id);
 
         if (!$type)         return false;
         if (static::$type)  return $type === static::$type;
 
         return static::class === self::class;
+
+    }
+
+    public function __construct ($data = null) {
+
+        $this->blog = get_current_blog_id();
+
+        parent::__construct($data);
+
+    }
+
+    // Ids are per site, and the model cache is not.
+    public static function get_instance ($data = null, $auto_resolve = null) {
+
+        if (is_null($data) && self::$current) return self::$current;
+
+        $job = parent::get_instance($data, $auto_resolve);
+
+        if (!$job || ($job->blog === get_current_blog_id())) return $job;
+
+        unset(self::$instances[get_class($job)][$job->id]);
+
+        return parent::get_instance($data, $auto_resolve);
 
     }
 
@@ -215,6 +239,8 @@ class Job extends Model {
         if (strlen(static::$type) > 64)        throw new LogicException(static::class . ' declares a $type over 64 characters.');
         if (!$row = static::prepare_row($args, $at, $key, $expires)) return null;
 
+        if (!Jobs_Schema::is_current()) return null;
+
         if (self::$current?->stepping) {
 
             $job = new static(['unsaved' => true]);
@@ -225,7 +251,6 @@ class Job extends Model {
 
         }
 
-        if (!Jobs_Schema::is_current())  return null;
         if (!$id = static::write_row($row)) return null;
 
         if ($now) Jobs_Worker::inst()->run_after_response($id);
@@ -250,6 +275,7 @@ class Job extends Model {
         if ($expires_time && ($expires_time <= ($at_time ?: time()))) return null;
 
         return [
+            'blog'       => get_current_blog_id(),
             'args'       => $json,
             'key'        => $key,
             'at'         => $at_time,
@@ -591,6 +617,7 @@ class Job extends Model {
         global $wpdb;
 
         $failure = null;
+        $depth   = count($GLOBALS['_wp_switched_stack'] ?? []);
 
         $this->has_next = false;
         $this->outcome  = [];
@@ -613,6 +640,8 @@ class Job extends Model {
             $this->stepping = false;
 
         }
+
+        while (count($GLOBALS['_wp_switched_stack'] ?? []) > $depth) restore_current_blog();
 
         $wpdb->query('ROLLBACK');
 
@@ -729,7 +758,19 @@ class Job extends Model {
 
     protected function write_held () : bool {
 
-        foreach ($this->held as [$class, $row]) if (!$class::write_row($row)) return false;
+        foreach ($this->held as [$class, $row]) {
+
+            $elsewhere = $row['blog'] !== get_current_blog_id();
+
+            if ($elsewhere) switch_to_blog($row['blog']);
+
+            $written = $class::write_row($row);
+
+            if ($elsewhere) restore_current_blog();
+
+            if (!$written) return false;
+
+        }
 
         return true;
 
@@ -777,6 +818,8 @@ class Job extends Model {
         if (!$this->stepping) return;
 
         $this->stepping = false;
+
+        if ($this->blog !== get_current_blog_id()) switch_to_blog($this->blog);
 
         $wpdb->query('ROLLBACK');
 
@@ -1060,7 +1103,8 @@ class Job extends Model {
 
     protected function assert_saved () : void {
 
-        if ($this->is_new) throw new LogicException('This job is held by its step and has no row yet.');
+        if ($this->is_new)                            throw new LogicException('This job is held by its step and has no row yet.');
+        if ($this->blog !== get_current_blog_id())    throw new LogicException('This job belongs to another site.');
 
     }
 

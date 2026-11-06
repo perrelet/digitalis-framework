@@ -260,5 +260,5 @@ One option holds why the worker is paused, and since when: `copied`, `by a perso
 - **An FPM reload kills a step mid-run,** with `process_control_timeout` at its default. The lease recovers it, up to `$lease` later.
 - **A cursor that cycles** cannot be detected, and is bounded only by its latest time. `next()` to the same cursor is caught.
 - **A `catch (\Throwable)` around `snooze()` or `cancel()`** cannot lose the outcome, but the code after it runs until `handle()` returns.
-- **A job that switches blogs** does so at its own risk: the model cache ignores the blog id. On multisite, each subsite has its own table, tick and pause, and needs its own traffic or `--url`.
+- **Multisite:** each site has its own table, tick and pause, and needs its own traffic or `--url`. Ids are per site, so a job object used from another site throws. A job that switches sites is brought home after its step, and a dispatch goes to the site it was called on. Replication is untested.
 - **Not included, and additive later:** a `parent` column for a fan-out that counts its children's failures, priorities, named queues, concurrency caps, job results and a call renewing the lease within a long step.
