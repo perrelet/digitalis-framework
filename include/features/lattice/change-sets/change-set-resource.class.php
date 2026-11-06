@@ -14,6 +14,8 @@ class Change_Set_Resource extends Model_Resource {
     const OPS       = ['create', 'update', 'act', 'trash', 'untrash'];
     const MAX_STEPS = 1000;
 
+    protected array $announcing = [];
+
     public function get_post_type () : string {
 
         return '';
@@ -208,7 +210,7 @@ class Change_Set_Resource extends Model_Resource {
 
         $lines = [];
 
-        foreach (['purpose' => 'Purpose', 'state' => 'State', 'reason' => 'Reason'] as $name => $label) if (($before[$name] ?? null) !== ($after[$name] ?? null)) $lines[] = ['field' => $name, 'label' => $label, 'before' => (string) ($before[$name] ?? ''), 'after' => (string) ($after[$name] ?? '')];
+        foreach (['purpose' => 'Purpose', 'state' => 'State', 'reason' => 'Reason', 'note' => 'Note', 'submitted_at' => 'Submitted'] as $name => $label) if (($before[$name] ?? null) !== ($after[$name] ?? null)) $lines[] = ['field' => $name, 'label' => $label, 'before' => (string) ($before[$name] ?? ''), 'after' => (string) ($after[$name] ?? '')];
 
         if (($before['steps'] ?? []) !== ($after['steps'] ?? [])) $lines[] = ['field' => 'steps', 'label' => 'Steps', 'before' => count((array) ($before['steps'] ?? [])) . ' steps', 'after' => count((array) ($after['steps'] ?? [])) . ' steps'];
 
@@ -491,7 +493,11 @@ class Change_Set_Resource extends Model_Resource {
 
         $this->settle_walk($set, $result);
 
-        return $result + $this->finish_action($set, $action, $why, $before, $version, $via) + ['state' => $set->reload()->get_state()];
+        $answer = $result + $this->finish_action($set, $action, $why, $before, $version, $via) + ['state' => $set->reload()->get_state()];
+
+        if ($answer['version'] !== $version) $this->announce_walk($set, $result);
+
+        return $answer;
 
     }
 
@@ -534,25 +540,31 @@ class Change_Set_Resource extends Model_Resource {
             default         => $set->move_to($applied ? Change_Set::APPLIED_IN_PART : Change_Set::DRAFT, $reason),
         };
 
-        $state = $set->reload()->get_state();
+    }
 
-        // Looking again is the author's own business on a set never offered: CX1's table.
+    // Looking again is the author's own business on a set never offered: CX1's table.
+    protected function announce_walk ($set, array $result) : void {
+
+        $state = $set->get_state();
+
         if (($state === Change_Set::AWAITING_REVIEW) || (($state === Change_Set::APPLIED_IN_PART) && in_array($result['outcome'], ['refused', 'failed'], true))) $this->announce($state, $set);
 
     }
 
-    // A listener's fault is no fault of the walk, which has landed.
-    protected function announce (string $state, $set) : void {
+    // Heard once its row is written and its lock released, so a listener can read one and take the other.
+    protected function announce (string $hook, ...$args) : void {
 
-        try {
+        $this->announcing[] = [$hook, $args];
 
-            do_action("lattice.change_set.{$state}", $set);
+    }
 
-        } catch (\Throwable $e) {
+    protected function fire_announced () : void {
 
-            error_log("Change sets: a listener on {$state} threw: " . $e->getMessage());
+        $announcing = $this->announcing;
 
-        }
+        $this->announcing = [];
+
+        foreach ($announcing as [$hook, $args]) do_action("lattice.change_set.{$hook}", ...$args);
 
     }
 
@@ -826,6 +838,8 @@ class Change_Set_Resource extends Model_Resource {
     public function after_operation ($model, string $operation) : void {
 
         $model->release_lock();
+
+        $this->fire_announced();
 
     }
 

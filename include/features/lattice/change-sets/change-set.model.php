@@ -208,15 +208,35 @@ class Change_Set extends Model implements Step_List {
     }
 
     // Moves the state, unless a delete has marked it broken, which cannot wait for the lock and only withdrawing closes. A closed set never moves, since a delete or a lost walk may arrive after it closed. Back to draft is taken back from review too.
-    public function move_to (string $state, ?string $reason = null) : bool {
+    public function move_to (string $state, ?string $reason = null, array $with = []) : bool {
 
         global $wpdb;
 
-        $done = $wpdb->query($wpdb->prepare('UPDATE ' . static::table() . ' SET state = %s, reason = ' . (is_null($reason) ? 'NULL' : '%s') . ', updated_at = UTC_TIMESTAMP()' . (($state === static::DRAFT) ? ', submitted_at = NULL' : '') . ' WHERE set_id = %d' . " AND state NOT IN ('" . implode("', '", in_array($state, [static::BROKEN, static::WITHDRAWN], true) ? static::CLOSED : [...static::CLOSED, static::BROKEN]) . "')", ...[$state, ...(is_null($reason) ? [] : [static::fit_text($reason)]), $this->get_id()]));
+        $columns = ['state' => $state, 'reason' => is_null($reason) ? null : static::fit_text($reason)] + $with + (($state === static::DRAFT) ? ['submitted_at' => null] : []);
+        $values  = array_filter($columns, fn ($value) => !is_null($value));
+        $writes  = array_map(fn ($column, $value) => $column . (is_null($value) ? ' = NULL' : ' = %s'), array_keys($columns), $columns);
+        $stopped = in_array($state, [static::BROKEN, static::WITHDRAWN], true) ? static::CLOSED : [...static::CLOSED, static::BROKEN];
+
+        $done = $wpdb->query($wpdb->prepare('UPDATE ' . static::table() . ' SET ' . implode(', ', $writes) . ", updated_at = UTC_TIMESTAMP() WHERE set_id = %d AND state NOT IN ('" . implode("', '", $stopped) . "')", ...[...array_values($values), $this->get_id()]));
 
         $this->reload();
 
         return $done !== false;
+
+    }
+
+    // move_to() answers true when broken or closed stops it, and these two must know.
+    public function submit () : bool {
+
+        return $this->move_to(static::SUBMITTED, null, ['submitted_at' => gmdate('Y-m-d H:i:s'), 'note' => null]) && ($this->get_state() === static::SUBMITTED);
+
+    }
+
+    public function send_back (?string $note) : bool {
+
+        $state = $this->has_applied_step() ? static::APPLIED_IN_PART : static::DRAFT;
+
+        return $this->move_to($state, null, ['submitted_at' => null, 'note' => (($note ?? '') === '') ? null : static::fit_text($note)]) && ($this->get_state() === $state);
 
     }
 
