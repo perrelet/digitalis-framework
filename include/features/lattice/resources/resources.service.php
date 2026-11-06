@@ -296,7 +296,7 @@ class Resources extends Service {
 
         if ($problems) return $this->invalid($problems);
 
-        if ($through) return $this->act_through($resource, $model, $action, $input, $via);
+        if ($through) return $this->operate($resource, $model, $action, $input, fn () => $this->act_through($resource, $model, $action, $input, $via));
 
         $sets   = (array) ($definition['sets'] ?? []);
         $change = $this->build($resource, $action, $model, $resource->get_unsaved_copy($model, $sets), $sets, $values, $input, $via);
@@ -309,6 +309,12 @@ class Resources extends Service {
             if (!hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
         }
+
+        return $this->operate($resource, $model, $action, $input, fn () => $this->run_action($resource, $model, $action, $values, $input, $via, $undoes, $changes_record, $change));
+
+    }
+
+    protected function run_action (Model_Resource $resource, $model, string $action, array $values, array $input, string $via, ?int $undoes, bool $changes_record, Resource_Change $change) : array|WP_Error {
 
         if ($changes_record && !$model->claim_version((int) $input['version'])) return $this->stale($model);
 
@@ -424,7 +430,15 @@ class Resources extends Service {
 
         if (!empty($input['confirm']) && !hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
-        $seen = (int) $input['version'];
+        return $this->operate($resource, $model, $operation, $input, fn () => $this->run_move($resource, $model, $operation, $target, $input, $via, $undoes, $change));
+
+    }
+
+    protected function run_move (Model_Resource $resource, $model, string $operation, string $target, array $input, string $via, ?int $undoes, Resource_Change $change) : array|WP_Error {
+
+        $trashing = $operation === 'trash';
+        $post_id  = $model->get_id();
+        $seen     = (int) $input['version'];
 
         if (!$model->claim_version($seen)) return $this->stale($model);
 
@@ -492,6 +506,61 @@ class Resources extends Service {
         if ($error) return $this->error('not_saved', "Part was written: {$error} Read it again before the next change.", 500);
 
         return $this->describe_record($resource, $model) + ['changed' => true] + $this->report_journal($journaled);
+
+    }
+
+    // A resource's say over a write that will happen. A dry run asks nothing: an action writing through the service tests dry_run the same way, or it writes unasked.
+    protected function operate (Model_Resource $resource, $model, string $operation, array $input, callable $write) : array|WP_Error {
+
+        if (!empty($input['dry_run'])) return $write();
+
+        try {
+
+            $refusal = $resource->before_operation($model, $operation);
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice resources: before_operation threw: ' . $e->getMessage());
+
+            return $this->error('not_saved', 'It could not begin, and nothing was written.', 500);
+
+        }
+
+        if ($refusal) {
+
+            $code = isset(static::STATUSES[$refusal->get_error_code()]) ? $refusal->get_error_code() : 'locked';
+
+            return $this->error($code, $refusal->get_error_message(), static::STATUSES[$code], $this->get_error_data($refusal));
+
+        }
+
+        try {
+
+            return $write();
+
+        } catch (\Throwable $e) {
+
+            // What a write leaves when it throws outside its own try: nothing else in this request would clear it.
+            unset($this->writing[$this->writing_key($resource, $model)]);
+
+            $model->finish_version();
+
+            throw $e;
+
+        } finally {
+
+            // The write has landed by now, and its answer stands.
+            try {
+
+                $resource->after_operation($model, $operation);
+
+            } catch (\Throwable $e) {
+
+                error_log('Lattice resources: after_operation threw: ' . $e->getMessage());
+
+            }
+
+        }
 
     }
 
@@ -727,11 +796,15 @@ class Resources extends Service {
 
         if (!empty($input['confirm']) && !hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
-        if (!$model->claim_version($seen)) return $this->stale($model);
+        return $this->operate($resource, $model, $operation, $input, function () use ($resource, $model, $values, $change, $via, $operation, $seen, $undoes, $removed) {
 
-        $result = $this->commit($resource, $model, $values, $change->why, $via, $operation, $seen, $undoes, true);
+            if (!$model->claim_version($seen)) return $this->stale($model);
 
-        return is_wp_error($result) ? $result : $result + array_filter(['removed' => $removed]);
+            $result = $this->commit($resource, $model, $values, $change->why, $via, $operation, $seen, $undoes, true);
+
+            return is_wp_error($result) ? $result : $result + array_filter(['removed' => $removed]);
+
+        });
 
     }
 

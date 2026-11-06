@@ -473,6 +473,15 @@ abstract class Model_Resource extends Singleton {
     // Run what the model's acf/save_post handlers would.
     public function after_write ($model, mixed $before, string $why) : void {}
 
+    // Before a write that will happen, after its refusals: a WP_Error refuses it. Each pairs with after_operation() only when this answered null.
+    public function before_operation ($model, string $operation) : ?\WP_Error {
+
+        return null;
+
+    }
+
+    public function after_operation ($model, string $operation) : void {}
+
     // What this resource's own rows carry beyond the journal's columns: the journal's marks.
     public function journal_marks ($model) : array {
 
