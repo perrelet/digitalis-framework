@@ -167,6 +167,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `API_Only_Application_Passwords` | `Feature` | An application password authenticates the API's own requests and never a sign-in form: `wp_signon()` inside a REST request (a plugin's login form, say) treats it as a wrong password. A wrong one that REST refuses is reported to WP Fail2Ban Redux where that plugin runs. `load_feature('wp/api-only-application-passwords')` | no |
 | `Lattice_Resources` | `Feature` | Models through REST (`lattice/v1`) and `wp lattice`: dry runs, a version, a journal with undo, actions shared with wp-admin. Subclass `Model_Resource` per model (or `Options_Page_Resource` per options page); load with `load_feature('lattice/resources')` before `parent::load()`. See [RESOURCES.md](./docs/RESOURCES.md) | no |
 | `Lattice_Jobs` | `Feature` | Durable background work: a class per kind, a row per piece. `handle()` is one step, `next($cursor)` another; returning commits it. Subclass `Job` in `*.job.php`; load with `load_feature('lattice/jobs')` before `parent::load()`. Runs on WordPress cron alone. See [JOBS.md](./docs/JOBS.md) | no |
+| `Lattice_Change_Sets` | `Feature` | A held list of the layer's calls, applied by its author: several records and types, conflicts per field, a walk that stops and goes on, undo. Load with `load_feature('lattice/change-sets')`. See [CHANGE_SETS.md](./docs/CHANGE_SETS.md) | no |
 | `Proposals` | `Feature` | Changes to published records held for review: a draft copy, a review screen, approval through `Resources::update()`. Every moderated type is a resource whose model uses `Has_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `wp/stored-markup`; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
@@ -623,6 +624,7 @@ Examples:
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
 | Durable background work: jobs, steps, retries, keys | [docs/JOBS.md](./docs/JOBS.md) |
 | Models through REST and WP-CLI: resources, dry runs, the journal | [docs/RESOURCES.md](./docs/RESOURCES.md) |
+| A held list of the layer's calls: change sets | [docs/CHANGE_SETS.md](./docs/CHANGE_SETS.md) |
 | Changes held for review: proposals | [docs/PROPOSALS.md](./docs/PROPOSALS.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |

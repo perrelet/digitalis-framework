@@ -441,6 +441,23 @@ class Change_Set extends Model implements Step_List {
 
     }
 
+    public static function delete_closed_before (string $before) : int {
+
+        global $wpdb;
+
+        $closed = "'" . implode("', '", static::CLOSED) . "'";
+
+        // A set outlives its rows: the journal's own prune may have failed, or an undo come since.
+        $ids = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT set_id FROM ' . static::table() . " AS sets WHERE state IN ({$closed}) AND updated_at < %s AND NOT EXISTS (SELECT 1 FROM " . Journal_Table::get_name($wpdb) . ' AS rows_of WHERE rows_of.set_key = sets.set_id)', $before)));
+
+        if (!$ids) return 0;
+
+        $list = implode(', ', $ids);
+
+        return static::transaction(fn () => ($wpdb->query('DELETE FROM ' . static::steps_table() . " WHERE set_id IN ({$list})") !== false) && ($wpdb->query('DELETE FROM ' . static::table() . " WHERE set_id IN ({$list})") !== false)) ? count($ids) : 0;
+
+    }
+
     // The lock
 
     protected function get_lock_name () : string {

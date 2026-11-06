@@ -617,6 +617,36 @@ class Change_Set_Resource extends Model_Resource {
 
     }
 
+    // The cron's own: it has no account for the layer to ask, and writes its row itself. Under the lock it looks again, since a dead walk's state only settles there.
+    public function withdraw_idle ($set, string $before, string $why) : void {
+
+        if ($set->is_held_here() || !$set->take_lock()) return;
+
+        try {
+
+            $this->settle($set);
+
+            $set->reload();
+
+            if (!in_array($set->get_state(), [Change_Set::DRAFT, Change_Set::BROKEN], true) || $this->refuse_unsettled($set) || ($set->get_updated_at() >= $before)) return;
+
+            $was     = $this->read($set);
+            $version = $set->get_version();
+
+            if (!$this->close($set, Change_Set::WITHDRAWN)) throw new \RuntimeException('It could not be closed.');
+
+            $set->raise_version();
+
+            $this->write_row($set, 'withdraw_set', $why, $was, $version, 'cron');
+
+        } finally {
+
+            $set->release_lock();
+
+        }
+
+    }
+
     protected function refuse_settling ($set) : string {
 
         return $this->refuse_unsettled($set) ? '' : 'No step is waiting to be settled.';

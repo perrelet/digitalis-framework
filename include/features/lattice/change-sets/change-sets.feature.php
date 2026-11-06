@@ -21,13 +21,25 @@ class Lattice_Change_Sets extends Feature {
         // Here and not above: a feature's file is included before its requirements load, and these extend theirs.
         require_once __DIR__ . '/change-set.model.php';
         require_once __DIR__ . '/change-set-resource.class.php';
+        require_once __DIR__ . '/change-sets-cleanup.cron-scheduler.php';
 
         Change_Set_Resource::get_instance();
+        Change_Sets_Cleanup::get_instance();
 
         $this->add_hooks([
             'before_delete_post'            => 'mark_broken',
             'lattice.resources.journal_set' => 'answer_journal_read',
+            Lattice_Resources::PRUNE        => ['prune_sets', 20],
         ]);
+
+    }
+
+    // After the journal's own, so a set never outlives none of its rows. Every action raises updated_at, so its rows are older still.
+    public function prune_sets () {
+
+        $days = (int) apply_filters('lattice.journal.keep_days', Journal::KEEP_DAYS) + 1;
+
+        Change_Set::delete_closed_before(gmdate('Y-m-d H:i:s', time() - ($days * DAY_IN_SECONDS)));
 
     }
 
