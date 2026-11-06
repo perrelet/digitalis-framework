@@ -189,8 +189,10 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 |-----|---------|
 | `capability` | Needed beyond updating the record |
 | `when` | `fn ($model)` answering why it cannot run now, or `''` |
-| `input` | `name => 'string' \| 'email' \| 'int'`, required; `'?string'` is optional. The CLI takes each as `--<name>` |
+| `input` | `name => 'string' \| 'email' \| 'int' \| 'json'`, required; `'?string'` is optional. `json` is an array or a JSON string holding one, and the action gets the array. The CLI takes each as `--<name>` |
+| `validate` | `fn ($model, array $input) : array` answering problems, after the input's types and before the dry run and the claim, so a dry run says the same and a refused call moves nothing. Problems answer `invalid` with `data.problems`. A client chooses the input's shape: a rule that throws refuses as `invalid` and is logged |
 | `sets` | Fields the unsaved copy gets, so the dry run shows the action's effect |
+| `act_{name}()` | Answers the record, a new record or a `WP_Error`. A `WP_Error` means nothing was done, so its data (when an array) goes to the caller and the version goes back; for work done and then failed, throw, which keeps the version moved |
 | `confirm` | Requires the dry run's fingerprint |
 | `changes_record` | `false` for one that makes a new record (`copy`) and needs no version |
 | `undo` | The action that reverses it |

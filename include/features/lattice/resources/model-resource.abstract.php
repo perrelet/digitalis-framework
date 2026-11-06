@@ -425,7 +425,7 @@ abstract class Model_Resource extends Singleton {
 
     // Actions, views and consequences
 
-    // name => ['label', 'capability', 'when' => fn ($model) => reason or '', 'input' => [name => type], 'sets' => [field => value], 'confirm', 'changes_record', 'undo'].
+    // name => ['label', 'capability', 'when' => fn ($model) => reason or '', 'input' => [name => type], 'validate' => fn ($model, array $input) => problems, 'sets' => [field => value], 'confirm', 'changes_record', 'undo'].
     public function get_actions () : array {
 
         return [];

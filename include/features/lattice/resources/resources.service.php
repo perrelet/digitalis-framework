@@ -281,12 +281,16 @@ class Resources extends Service {
 
         if ($changes_record && !$through && ($refusal = $this->check_version($model, $input))) return $refusal;
 
-        $values   = array_intersect_key($input, (array) ($definition['input'] ?? []));
-        $problems = $this->check_action_input((array) ($definition['input'] ?? []), $values);
+        $types    = (array) ($definition['input'] ?? []);
+        $input    = $this->decode_action_input($types, $input);
+        $values   = array_intersect_key($input, $types);
+        $problems = $this->check_action_input($types, $values);
 
-        if ($unknown = array_diff(array_keys($input), [...static::CONTROL, ...array_keys((array) ($definition['input'] ?? []))])) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
+        if ($unknown = array_diff(array_keys($input), [...static::CONTROL, ...array_keys($types)])) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
 
         array_push($problems, ...$this->check_why($input, $via));
+
+        if (!$problems && isset($definition['validate'])) array_push($problems, ...$this->check_action_rule($definition['validate'], $model, $values));
 
         if ($problems) return $this->invalid($problems);
 
@@ -320,10 +324,14 @@ class Resources extends Service {
         } catch (\Throwable $e) {
 
             $result = new WP_Error('not_saved', $e->getMessage());
+            $threw  = true;
 
         }
 
         if ($changes_record) $model->finish_version();
+
+        // Its status may have moved behind the model's back, and the read below decides whether anything changed.
+        if (is_wp_error($result) && method_exists($model, 'reload')) $model->reload();
 
         $resource->forget_values($model);
 
@@ -337,9 +345,12 @@ class Resources extends Service {
 
             unset($this->writing[$this->writing_key($resource, $model)]);
 
+            // The action refused and nothing changed, so a later undo must still find the version it knows. What threw may have done work a read does not show.
+            if ($changes_record && empty($threw)) $model->restore_version((int) $input['version']);
+
             $code = isset(static::STATUSES[$result->get_error_code()]) ? $result->get_error_code() : 'not_saved';
 
-            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500);
+            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500, $this->get_error_data($result));
 
         }
 
@@ -358,7 +369,7 @@ class Resources extends Service {
 
         unset($this->writing[$this->writing_key($resource, $model)]);
 
-        if (is_wp_error($result)) return $this->error('not_saved', 'It was not done: ' . $result->get_error_message() . ' Read it again before the next change.', 500);
+        if (is_wp_error($result)) return $this->error('not_saved', 'It was not done: ' . $result->get_error_message() . ' Read it again before the next change.', 500, $this->get_error_data($result));
 
         return ($made ? ['created' => true] : []) + $this->describe_record($resource, $made ?? $model) + ['changed' => true] + $this->report_journal($journaled);
 
@@ -958,6 +969,44 @@ class Resources extends Service {
 
     }
 
+    // A JSON string becomes what it holds; what holds no array stays as sent, for the check to answer.
+    protected function decode_action_input (array $types, array $input) : array {
+
+        foreach ($types as $name => $type) {
+
+            if ((ltrim($type, '?') !== 'json') || !is_string($input[$name] ?? null)) continue;
+
+            if ($input[$name] === '') { unset($input[$name]); continue; }
+
+            $decoded = json_decode($input[$name], true);
+
+            if (is_array($decoded)) $input[$name] = $decoded;
+
+        }
+
+        return $input;
+
+    }
+
+    // A client chooses this input's shape, so a rule that cannot read it refuses instead of ending the request.
+    protected function check_action_rule (callable $rule, $model, array $values) : array {
+
+        try {
+
+            $problems = $rule($model, $values);
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice resources: an action\'s validate threw: ' . $e->getMessage());
+
+            return ['It could not be checked as sent.'];
+
+        }
+
+        return is_array($problems) ? array_values($problems) : ($problems ? ['It was refused as sent.'] : []);
+
+    }
+
     protected function check_action_input (array $types, array $values) : array {
 
         $problems = [];
@@ -972,6 +1021,7 @@ class Resources extends Service {
             elseif ($type === 'email' && !is_email((string) $value)) $problems[] = "{$name} is an email address.";
             elseif ($type === 'int' && !is_numeric($value))          $problems[] = "{$name} is a number.";
             elseif ($type === 'string' && !is_string($value))        $problems[] = "{$name} is text.";
+            elseif ($type === 'json' && !is_array($value))           $problems[] = "{$name} is an array, or a JSON string holding one.";
 
         }
 
@@ -984,6 +1034,15 @@ class Resources extends Service {
     protected function error (string $code, string $message, int $status, array $data = []) : WP_Error {
 
         return new WP_Error($code, $message, ['status' => $status] + $data);
+
+    }
+
+    protected function get_error_data (WP_Error $error) : array {
+
+        // WordPress's own errors carry the database's text here, as a string.
+        $data = $error->get_error_data();
+
+        return is_array($data) ? array_diff_key($data, ['status' => 0]) : [];
 
     }
 
