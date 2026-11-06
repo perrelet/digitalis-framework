@@ -22,6 +22,8 @@ class Journal extends Service {
 
         global $wpdb;
 
+        if (!array_key_exists('set_key', $row)) $row += Resources::inst()->get_held_marks();
+
         $wpdb->insert($this->get_table(), [
             'at'             => gmdate('Y-m-d H:i:s'),
             'user_id'        => get_current_user_id(),
@@ -36,6 +38,8 @@ class Journal extends Service {
             'version_after'  => (int) ($row['version_after'] ?? 0),
             'undoes'         => $row['undoes'] ?? null,
         ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) : []));
+
+        Resources::inst()->note_row((int) $wpdb->insert_id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
 
         return (int) $wpdb->insert_id;
 
@@ -100,6 +104,40 @@ class Journal extends Service {
         $sql      = "SELECT * FROM {$this->get_table()} WHERE " . implode(' AND ', $where) . " ORDER BY id DESC LIMIT {$per_page} OFFSET {$offset}";
 
         return array_map([$this, 'decode'], (array) $wpdb->get_results($vars ? $wpdb->prepare($sql, ...$vars) : $sql, ARRAY_A));
+
+    }
+
+    // Every row of a set, oldest first: a page holds too few for a walk, and a walk's own rows would shift the pages.
+    public function rows_for_set (int $key) : array {
+
+        global $wpdb;
+
+        if (!Journal_Schema::is_current()) return [];
+
+        return array_map([$this, 'decode'], (array) $wpdb->get_results($wpdb->prepare("SELECT * FROM {$this->get_table()} WHERE set_key = %d ORDER BY id ASC", $key), ARRAY_A));
+
+    }
+
+    // Whether a row of a step was undone, from wherever: someone undoing one by hand writes no mark of the set. A query that fails answers yes, since what depends on this stops.
+    public function has_undone_rows (int $key) : bool {
+
+        global $wpdb;
+
+        $table = $this->get_table();
+        $found = $wpdb->get_var($wpdb->prepare("SELECT 1 FROM {$table} AS undoing JOIN {$table} AS row_undone ON undoing.undoes = row_undone.id WHERE row_undone.set_key = %d AND row_undone.set_step IS NOT NULL AND row_undone.undoes IS NULL LIMIT 1", $key));
+
+        return !is_null($found) || ($wpdb->last_error !== '');
+
+    }
+
+    // The rows undoing these, the undo's own walk.
+    public function undoing (array $ids) : array {
+
+        global $wpdb;
+
+        if (!$ids = array_values(array_filter(array_map('intval', $ids)))) return [];
+
+        return array_map([$this, 'decode'], (array) $wpdb->get_results("SELECT * FROM {$this->get_table()} WHERE undoes IN (" . implode(', ', $ids) . ') ORDER BY id ASC', ARRAY_A));
 
     }
 

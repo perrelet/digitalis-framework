@@ -19,6 +19,7 @@ class Resources extends Service {
 
     protected array $resources = [];
     protected array $writing   = [];
+    protected ?array $walk     = null;
 
     public function register (Model_Resource $resource) : void {
 
@@ -207,7 +208,7 @@ class Resources extends Service {
 
         try {
 
-            $model = $resource->insert_model($model);
+            $model = $resource->insert_model($model, $this->take_create_meta());
 
             if (is_wp_error($model)) return $this->error('not_saved', 'It could not be created: ' . $model->get_error_message(), 500);
 
@@ -524,6 +525,389 @@ class Resources extends Service {
 
     }
 
+    // Applying a set
+
+    // Each step as the current account would meet it now, nothing written.
+    public function preview_set (Step_List $set) : array {
+
+        $steps = $set->get_steps();
+        $plan  = $this->plan_steps($steps);
+        $seen  = [];
+
+        foreach ($steps as $position => $step) {
+
+            $refused = $plan[$position]['done'] ? '' : $this->refuse_step($step);
+            $look    = ($plan[$position]['done'] || $refused) ? ['result' => $refused ? $this->refuse_state($refused) : null, 'version' => null] : $this->look_at_step($step, $this->get_step_why($set, $position));
+            $res     = $look['result'];
+
+            $seen[$position] = array_filter([
+                'op'          => $step['op'],
+                'resource'    => $step['resource'],
+                'id'          => $step['id'] ?? null,
+                'action'      => $step['action'] ?? null,
+                'marker'      => $step['marker'] ?? '',
+                'done'        => $plan[$position]['done'],
+                'reached'     => $plan[$position]['reached'],
+                'flags'       => $this->get_step_flags($step),
+                'step_hash'   => $this->get_step_hash($step),
+                'version'     => $look['version'],
+                'fingerprint' => is_array($res) ? ($res['fingerprint'] ?? null) : null,
+                'preview'     => is_array($res) ? $res : null,
+                'refusal'     => is_wp_error($res) ? ['code' => $res->get_error_code(), 'message' => $res->get_error_message(), 'data' => $res->get_error_data()] : null,
+            ], fn ($value) => !is_null($value));
+
+        }
+
+        return $seen;
+
+    }
+
+    // Walks what is not yet done, each step through this service as the current account, stopping at the first that fails or no longer matches what was seen. $seen, by position: fingerprint, version, step_hash.
+    public function apply_set (Step_List $set, array $seen, string $via) : array|WP_Error {
+
+        if (!Journal_Schema::is_current()) return $this->refuse_state('The journal is not up to date, so its rows would lose their marks.');
+        if ($this->walk)                   return $this->refuse_state('Another set is being walked in this request.');
+        if (Journal::inst()->has_undone_rows($set->get_key())) return $this->refuse_state('Part of it has been undone, so what it says is no longer live: withdraw it.');
+
+        $steps   = $set->get_steps();
+        $seen    = array_map(fn ($each) => is_array($each) ? $each : null, $seen);
+        $results = [];
+        $answer  = function (string $outcome, string $reason = '', array $more = []) use ($set, &$results) { return ['outcome' => $outcome, 'reason' => $reason, 'markers' => array_map(fn ($step) => $step['marker'] ?? '', $set->get_steps()), 'results' => $results] + $more; };
+
+        foreach ($steps as $position => $step) if (in_array($step['marker'] ?? '', ['started', 'unknown'], true)) return $answer('unknown', "A person settles step {$position} first.");
+
+        $plan    = $this->plan_steps($steps);
+        $refused = '';
+        $look    = '';
+        $wait    = [];
+
+        foreach ($steps as $position => $step) {
+
+            if ($plan[$position]['done']) continue;
+
+            if ($reason = $this->refuse_step($step)) { $refused = $refused ?: "Step {$position}: {$reason}"; continue; }
+
+            $current = $this->look_at_step($step, $this->get_step_why($set, $position));
+            $result  = $current['result'];
+
+            if ($plan[$position]['reached']) {
+
+                if (is_wp_error($result) && in_array($result->get_error_code(), ['forbidden', 'not_found'], true)) $refused = $refused ?: "Step {$position}: {$result->get_error_message()}";
+
+                continue;
+
+            }
+
+            if (is_wp_error($result)) {
+
+                if ($result->get_error_code() === 'stale') { $look = $look ?: "Step {$position}: {$result->get_error_message()}"; continue; }
+
+                if (($result->get_error_code() === 'locked') && array_filter(array_slice($plan, 0, array_search($position, array_keys($plan), true), true), fn ($each) => !$each['done'])) $wait[] = $position;
+
+                $refused = $refused ?: "Step {$position}: {$result->get_error_message()}";
+
+                continue;
+
+            }
+
+            if (!$this->matches_seen($step, $current, $seen[$position] ?? null)) $look = $look ?: "Step {$position} has changed since it was seen.";
+
+        }
+
+        if ($refused) return $answer('refused', $refused, $wait ? ['wait' => $wait] : []);
+        if ($look)    return $answer('awaiting_look', $look);
+
+        $this->walk = ['key' => $set->get_key(), 'step' => null, 'proposer' => $set->get_proposer_id(), 'rows' => [], 'create' => false];
+
+        register_shutdown_function(function () use ($set) { if ((($this->walk['key'] ?? null) === $set->get_key()) && $set->holds_lock()) $this->settle_started($set); });
+
+        try {
+
+            foreach ($steps as $position => $step) {
+
+                if ($plan[$position]['done']) continue;
+
+                if ($stop = $this->walk_step($set, $position, $step, $plan[$position]['reached'], $seen[$position] ?? null, $via, $results)) return $answer($stop[0], $stop[1]);
+
+            }
+
+        } finally {
+
+            $this->walk = null;
+
+        }
+
+        return $answer('applied');
+
+    }
+
+    // A step left started, by a request that died: a create landed whole if its record has its key and its unmarked row. Nothing else can say.
+    public function settle_started (Step_List $set) : void {
+
+        foreach ($set->get_steps() as $position => $step) {
+
+            if (($step['marker'] ?? '') !== 'started') continue;
+
+            $resource = ($step['op'] === 'create') ? $this->get_resource($step['resource']) : null;
+            $record   = $resource?->find_by_set_key(static::get_set_key($set->get_key(), $position));
+            $row      = null;
+
+            if ($record) foreach (Journal::inst()->rows_for_set($set->get_key()) as $each) if (($each['action'] === 'create') && ($each['set_step'] === $position) && ((string) $each['record_id'] === (string) $record->get_id()) && empty($each['after']['_partial'])) $row = $each;
+
+            $row ? $set->mark($position, 'applied', ['journal_id' => $row['id'], 'record_id' => $record->get_id()]) : $set->mark($position, 'unknown', $record ? ['record_id' => $record->get_id()] : []);
+
+        }
+
+    }
+
+    // What a create step's record carries, so a request that died can find it.
+    public static function get_set_key (int $key, int $position) : string {
+
+        return "{$key}:{$position}";
+
+    }
+
+    // For Journal::write(): a row of this walk's step names it.
+    public function get_held_marks () : array {
+
+        return $this->walk ? ['set_key' => $this->walk['key'], 'set_step' => $this->walk['step'], 'proposer_id' => $this->walk['proposer']] : [];
+
+    }
+
+    public function note_row (int $id, string $action, string $resource, string $record_id) : void {
+
+        if ($this->walk && $id) $this->walk['rows'][] = ['id' => $id, 'action' => $action, 'resource' => $resource, 'record_id' => $record_id];
+
+    }
+
+    protected function take_create_meta () : array {
+
+        if (!($this->walk['create'] ?? false)) return [];
+
+        $this->walk['create'] = false;
+
+        return [static::SET_KEY => static::get_set_key($this->walk['key'], $this->walk['step'])];
+
+    }
+
+    // The walk is in order and stops at such a step, so waiting for all before it says all that waiting for one would.
+    protected function plan_steps (array $steps) : array {
+
+        $plan    = [];
+        $writes  = [];
+        $waiting = false;
+
+        foreach ($steps as $position => $step) {
+
+            $done = in_array($step['marker'] ?? '', ['applied', 'skipped'], true);
+            $key  = isset($step['id']) ? $step['resource'] . ':' . (is_numeric($step['id']) ? (int) $step['id'] : $step['id']) : null;
+
+            $plan[$position] = ['done' => $done, 'reached' => !$done && (($key && isset($writes[$key])) || (!empty($step['wait']) && $waiting))];
+
+            if ($done) continue;
+
+            $waiting = true;
+
+            if ($key && $this->step_writes($step)) $writes[$key] = true;
+
+        }
+
+        return $plan;
+
+    }
+
+    protected function step_writes (array $step) : bool {
+
+        if ($step['op'] !== 'act') return true;
+
+        return $this->get_resource($step['resource'])?->get_actions()[$step['action'] ?? '']['changes_record'] ?? true;
+
+    }
+
+    // The set's own business: what its resource takes.
+    protected function refuse_step (array $step) : string {
+
+        if (!$resource = $this->get_resource($step['resource'])) return "No resource {$step['resource']}.";
+
+        // A call's control keys are the walk's: held in a step, one could turn a preview into a write.
+        if ($held = array_intersect_key((array) ($step['values'] ?? []) + (array) ($step['input'] ?? []), array_flip([...static::CONTROL, 'expected']))) return 'A step cannot hold ' . implode(', ', array_keys($held)) . '.';
+
+        $proposable = $resource->get_proposable();
+
+        if ($step['op'] !== 'act') return isset($proposable[$step['op']]) ? '' : "{$resource->get_label()} does not take {$step['op']} in a set.";
+
+        $action = (string) ($step['action'] ?? '');
+
+        if (in_array($action, ['create', 'update', 'trash', 'untrash'], true) || !isset($proposable[$action], $resource->get_actions()[$action])) return "{$resource->get_label()} does not take {$action} in a set.";
+
+        return empty($resource->get_actions()[$action]['writes_through']) ? '' : "{$action} writes through the service, so it cannot be a step.";
+
+    }
+
+    protected function get_step_hash (array $step) : string {
+
+        return wp_hash((string) wp_json_encode([$step['op'], $step['resource'], isset($step['id']) ? (string) $step['id'] : null, $step['action'] ?? null, $step['input'] ?? [], $step['values'] ?? [], $step['expected'] ?? null, !empty($step['wait'])]));
+
+    }
+
+    protected function get_step_why (Step_List $set, int $position) : string {
+
+        return $set->get_why() . " (set {$set->get_key()}, step {$position})";
+
+    }
+
+    // What a reviewer should know beforehand. Undoing's own dry run says exactly what it can do.
+    protected function get_step_flags (array $step) : array {
+
+        $resource = $this->get_resource($step['resource']);
+        $action   = ($step['op'] === 'act') ? ($resource?->get_actions()[$step['action'] ?? ''] ?? []) : [];
+        $fields   = (array) ($step['values'] ?? []);
+        $secrets  = ($resource && $fields && ($step['op'] === 'update')) ? array_filter(array_keys($fields), fn ($name) => in_array($name, $resource::SECRET, true) || $resource->get_field($name)?->is_secret()) : [];
+        $no_undo  = (($step['op'] === 'act') && empty($action['undo'])) || (($step['op'] === 'create') && $resource && !$resource->get_post_type()) || ($secrets && (count($secrets) === count($fields)));
+
+        return array_values(array_filter([
+            in_array($step['op'], ['trash', 'untrash', 'act'], true) ? $step['op'] : null,
+            ($resource && !$resource->get_post_type()) ? 'no_post_type' : null,
+            $no_undo ? 'cannot_be_undone' : null,
+            !empty($step['wait']) ? 'wait' : null,
+        ]));
+
+    }
+
+    // At the record's current version, so a refusal here is about the step, and comparing with what was seen is apart from it.
+    protected function look_at_step (array $step, string $why) : array {
+
+        try {
+
+            if ($step['op'] === 'create') return ['result' => $this->call_step($step, ['dry_run' => true, 'why' => $why], 'other'), 'version' => null];
+
+            // A record deleted by another request is still in this one's cache.
+            if ($this->get_resource($step['resource'])?->get_post_type() && is_numeric($step['id'] ?? null)) clean_post_cache((int) $step['id']);
+
+            [$resource, $model] = $this->find($step['resource'], $step['id'] ?? 0);
+
+            if ($resource instanceof WP_Error) return ['result' => $resource, 'version' => null];
+
+            $resource->refresh($model);
+
+            $version = $model->get_version();
+
+            return ['result' => $this->call_step($step, ['dry_run' => true, 'version' => $version, 'why' => $why], 'other'), 'version' => $version];
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice resources: looking at a step threw: ' . $e->getMessage());
+
+            // A look writes nothing, so this says nothing about what was written.
+            return ['result' => $this->error('locked', 'It could not be read as held.', 409, ['reason' => 'It could not be read as held.']), 'version' => null];
+
+        }
+
+    }
+
+    protected function call_step (array $step, array $control, string $via) : array|WP_Error {
+
+        // The walk's control keys win, whatever a step holds: refuse_step() says so to whoever holds one.
+        $own    = array_flip([...static::CONTROL, 'expected']);
+        $values = array_diff_key((array) ($step['values'] ?? []), $own);
+        $input  = array_diff_key((array) ($step['input'] ?? []), $own);
+
+        return match ($step['op']) {
+            'create'  => $this->create_record($step['resource'], $values + $control, $via),
+            'update'  => $this->update($step['resource'], $step['id'], $values + (isset($step['expected']) ? ['expected' => $step['expected']] : []) + $control, $via),
+            'act'     => $this->act($step['resource'], $step['id'], (string) ($step['action'] ?? ''), $input + $control, $via),
+            'trash'   => $this->trash($step['resource'], $step['id'], $control, $via),
+            'untrash' => $this->untrash($step['resource'], $step['id'], $control, $via),
+            default   => $this->invalid(["No operation {$step['op']}."]),
+        };
+
+    }
+
+    protected function matches_seen (array $step, array $current, ?array $seen) : bool {
+
+        if (!$seen || !is_string($seen['step_hash'] ?? null) || !is_string($seen['fingerprint'] ?? null) || !isset($current['result']['fingerprint'])) return false;
+
+        if (!hash_equals($seen['step_hash'], $this->get_step_hash($step)) || !hash_equals($seen['fingerprint'], (string) $current['result']['fingerprint'])) return false;
+
+        return is_null($current['version']) || (is_numeric($seen['version'] ?? null) && ((int) $seen['version'] === $current['version']));
+
+    }
+
+    // What stops the walk, as [outcome, reason], or null to go on.
+    protected function walk_step (Step_List $set, int $position, array $step, bool $reached, ?array $seen, string $via, array &$results) : ?array {
+
+        $stop = fn (string $marker, string $outcome, string $reason, array $detail = []) => $set->mark($position, $marker, $detail) ? [$outcome, $reason] : ['unknown', "Step {$position}'s marker could not be written: {$reason}"];
+
+        if (!$set->holds_lock()) return ['unknown', 'The lock was lost.'];
+
+        if ($reached) return $stop('stopped', 'awaiting_look', "Step {$position} is previewed once the steps before it are applied: look again.");
+
+        $this->walk['step'] = $position;
+
+        $current = $this->look_at_step($step, $this->get_step_why($set, $position));
+        $result  = $current['result'];
+
+        if (is_wp_error($result)) return ($result->get_error_code() === 'stale') ? $stop('stopped', 'awaiting_look', "Step {$position}: {$result->get_error_message()}") : $stop('failed', 'failed', "Step {$position}: {$result->get_error_message()}", ['error' => $result->get_error_message()]);
+
+        if (!$this->matches_seen($step, $current, $seen)) return $stop('stopped', 'awaiting_look', "Step {$position} has changed since it was seen.");
+
+        if (!$set->mark($position, 'started')) return ['unknown', "Step {$position}'s marker could not be written."];
+
+        $this->walk['rows']   = [];
+        $this->walk['create'] = $step['op'] === 'create';
+
+        try {
+
+            $result = $this->call_step($step, array_filter(['version' => $current['version'], 'confirm' => $seen['fingerprint'], 'why' => $this->get_step_why($set, $position)], fn ($value) => !is_null($value)), $via);
+
+        } catch (\Throwable $e) {
+
+            $result = new WP_Error('not_saved', $e->getMessage(), ['partial' => true]);
+
+        } finally {
+
+            $this->walk['create'] = false;
+
+        }
+
+        // Another request may have settled this step by now.
+        if (!$set->holds_lock()) return ['unknown', 'The lock was lost during that step.'];
+
+        if (is_wp_error($result)) {
+
+            $data    = (array) $result->get_error_data();
+            $message = "Step {$position}: {$result->get_error_message()}";
+
+            if (!empty($data['partial']))               return $stop('unknown', 'unknown', $message, array_filter(['error' => $result->get_error_message(), 'record_id' => $data['id'] ?? null, 'journal_id' => $this->find_walk_row($step)]));
+            if ($result->get_error_code() === 'stale')  return $stop('stopped', 'awaiting_look', $message);
+
+            return $stop('failed', 'failed', $message, ['error' => $result->get_error_message()]);
+
+        }
+
+        $results[$position] = $result;
+
+        if (array_key_exists('changed', $result) && !$result['changed']) return $set->mark($position, 'skipped') ? null : ['unknown', "Step {$position}'s marker could not be written."];
+
+        $detail = array_filter(['journal_id' => $this->find_walk_row($step), 'record_id' => ($step['op'] === 'create') ? ($result['id'] ?? null) : null]);
+
+        if (($result['journaled'] ?? true) === false) return $stop('applied', 'failed', "Step {$position} was applied, and its row could not be written.", $detail);
+
+        return $set->mark($position, 'applied', $detail) ? null : ['unknown', "Step {$position}'s marker could not be written."];
+
+    }
+
+    // A listener's own write through the service carries the step too: the step's row is the last one for its operation.
+    protected function find_walk_row (array $step) : ?int {
+
+        $action = ($step['op'] === 'act') ? ($step['action'] ?? '') : $step['op'];
+
+        foreach (array_reverse($this->walk['rows'] ?? []) as $row) if (($row['action'] === $action) && ($row['resource'] === $step['resource']) && (!isset($step['id']) || ($row['record_id'] === (string) $step['id']))) return $row['id'];
+
+        return null;
+
+    }
+
     // A resource's say over a write that will happen. A dry run asks nothing: an action writing through the service tests dry_run the same way, or it writes unasked.
     protected function operate (Model_Resource $resource, $model, string $operation, array $input, callable $write) : array|WP_Error {
 
@@ -806,10 +1190,11 @@ class Resources extends Service {
 
         if (!$change->changes && $removed) return $this->error('locked', 'Filtering for this account removes the whole change: ' . implode(', ', array_keys($removed)) . '.', 409, ['reason' => 'Nothing is left to write.', 'removed' => $removed]);
 
+        // Before the dry run, as a create and a trash have it: a preview that passes must not then refuse.
+        if ($refusal = $this->refuse_publish($resource, $model, $values)) return $refusal;
+
         if (!empty($input['dry_run'])) return $change->describe();
         if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false] + array_filter(['removed' => $removed]);
-
-        if ($refusal = $this->refuse_publish($resource, $model, $values)) return $refusal;
 
         if ($this->misses_confirm($change, $input)) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 

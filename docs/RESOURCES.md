@@ -170,6 +170,10 @@ The service writes ACF fields directly, so `acf/save_post` does not fire: `after
 
 ---
 
+## Applying a list of calls
+
+`Resources::apply_set(Step_List $list, array $seen, string $via)` replays a held list of this service's calls, each as the current account, with its own checks, preview, `confirm`, version and row. The caller implements `Step_List` and holds its lock; `lattice/change-sets` is the one that does. `preview_set($list)` is the dry run: per step its preview or refusal, flags, fingerprint, version and step hash, the steps that can only be previewed once earlier ones land marked `reached`. `$seen` carries those, by position. Before anything is written, a moved version, a changed fingerprint or step hash or a conflict answers `awaiting_look` and any other refusal answers `refused`; while walking, the walk stops at the first step that no longer matches. It answers `outcome` (`applied`, `awaiting_look`, `refused`, `failed`, `unknown`), `reason`, `markers`, `results` by position and, for a `locked` step that could wait, `wait`; and a `WP_Error` (`locked`) for what is not the list's fault. A step cannot hold a call's control keys. A list's rows being undone stops it for good: `Journal::has_undone_rows($key)` says so. A step of unknown outcome is never run again by itself. Every row written meanwhile names the list and step.
+
 ## Actions, Views and Consequences
 
 ```php
