@@ -63,10 +63,17 @@ class Resources extends Service {
 
     }
 
-    // The save hooks stand aside while this holds; no id means any record.
+    // The save hooks stand aside while this holds: an id is a post's, and no id means any record.
     public function is_writing ($id = null) : bool {
 
         return is_null($id) ? (bool) $this->writing : isset($this->writing[(string) $id]);
+
+    }
+
+    // A record with no post type shares no post's hooks, though it may share its number.
+    protected function writing_key (Model_Resource $resource, $model) : string {
+
+        return $resource->get_post_type() ? (string) $model->get_id() : "{$resource->get_name()}:{$model->get_id()}";
 
     }
 
@@ -299,7 +306,7 @@ class Resources extends Service {
 
         if ($changes_record && !$model->claim_version((int) $input['version'])) return $this->stale($model);
 
-        $this->writing[(string) $model->get_id()] = true;
+        $this->writing[$this->writing_key($resource, $model)] = true;
 
         $resource->forget_values($model);
 
@@ -328,7 +335,7 @@ class Resources extends Service {
 
         if (is_wp_error($result) && !$made && ($after === $before)) {
 
-            unset($this->writing[(string) $model->get_id()]);
+            unset($this->writing[$this->writing_key($resource, $model)]);
 
             $code = isset(static::STATUSES[$result->get_error_code()]) ? $result->get_error_code() : 'not_saved';
 
@@ -349,7 +356,7 @@ class Resources extends Service {
             'undoes'         => $undoes,
         ]);
 
-        unset($this->writing[(string) $model->get_id()]);
+        unset($this->writing[$this->writing_key($resource, $model)]);
 
         if (is_wp_error($result)) return $this->error('not_saved', 'It was not done: ' . $result->get_error_message() . ' Read it again before the next change.', 500);
 
@@ -645,7 +652,7 @@ class Resources extends Service {
 
         if (!$claimed && !$model->claim_version($seen)) return $this->stale($model);
 
-        $this->writing[(string) $model->get_id()] = true;
+        $this->writing[$this->writing_key($resource, $model)] = true;
 
         $resource->forget_values($model);
 
@@ -689,7 +696,7 @@ class Resources extends Service {
             'undoes'         => $undoes,
         ]);
 
-        unset($this->writing[(string) $model->get_id()]);
+        unset($this->writing[$this->writing_key($resource, $model)]);
 
         if ($error) return $this->error('not_saved', 'Part was written: ' . $error->getMessage() . ' Read it again before the next change.', 500);
 

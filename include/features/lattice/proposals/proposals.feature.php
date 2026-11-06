@@ -196,9 +196,9 @@ class Proposals extends Feature {
 
     public function refuse_drafts ($reason, $resource, $model) {
 
-        if ($reason || !Proposal::find_model($model->get_id())?->is_proposal()) return $reason;
+        if ($reason || !($draft = $this->find_draft($resource, $model))) return $reason;
 
-        $original_id = $model->get_proposed_for_id();
+        $original_id = $draft->get_proposed_for_id();
 
         return "This is a proposed change to #{$original_id}. It changes only in wp-admin, and reaches #{$original_id} when a reviewer approves it.";
 
@@ -206,7 +206,18 @@ class Proposals extends Feature {
 
     public function journal_drafts ($journal, $resource, $model) {
 
-        return $journal && !Proposal::find_model($model->get_id())?->is_proposal();
+        return $journal && !$this->find_draft($resource, $model);
+
+    }
+
+    // A record is its resource and its id: another resource's record may share a draft's number.
+    protected function find_draft ($resource, $model) : ?Post {
+
+        if (!in_array($resource->get_post_type(), $this->get_post_types(), true)) return null;
+
+        $found = Proposal::find_model($model->get_id());
+
+        return $found?->is_proposal() ? $found : null;
 
     }
 
