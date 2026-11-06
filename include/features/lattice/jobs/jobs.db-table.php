@@ -25,6 +25,7 @@ class Jobs_Table extends Table {
             new Column('expires_at',  'DATETIME', nullable: true),
             new Column('created_at',  'DATETIME'),
             new Column('ended_at',    'DATETIME', nullable: true),
+            new Column('parked_at',   'DATETIME', nullable: true),
             new Column('attempts',    'INT(11)', default: 0),
             new Column('position',    'LONGTEXT', nullable: true),
             new Column('done',        'BIGINT(20) UNSIGNED', default: 0),

@@ -33,7 +33,7 @@ class Lattice_Jobs extends Feature {
         // Hand-required, so the autoloader never calls it.
         Job_End::static_init();
 
-        if ((Jobs_Worker::inst()->get_pause()['why'] ?? '') !== Jobs_Worker::UNINSTALLED) Jobs_Schema::ensure();
+        if (!Jobs_Schema::is_current() && ((Jobs_Worker::inst()->get_pause()['why'] ?? '') !== Jobs_Worker::UNINSTALLED)) Jobs_Schema::ensure();
 
         Jobs_Tick::get_instance();
 

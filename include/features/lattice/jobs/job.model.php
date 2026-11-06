@@ -117,12 +117,6 @@ class Job extends Model {
 
     }
 
-    public function is_stepping () : bool {
-
-        return $this->stepping;
-
-    }
-
     public function next ($cursor, int $done = 1) : void {
 
         $this->assert_stepping('next');
@@ -296,11 +290,11 @@ class Job extends Model {
 
                 if ($open['leased']) return null;
 
-                $job = new static((int) $open['id']);
+                static::settle_row($open);
 
-                $job->row = $open;
+            } elseif ($open && !$open['leased'] && ($open['attempts'] >= static::get_tries())) {
 
-                $job->settle();
+                static::settle_row($open);
 
             }
 
@@ -329,6 +323,16 @@ class Job extends Model {
         }
 
         return null;
+
+    }
+
+    protected static function settle_row (array $row) : void {
+
+        $job = new static((int) $row['id']);
+
+        $job->row = $row;
+
+        $job->settle();
 
     }
 
@@ -485,7 +489,7 @@ class Job extends Model {
         if ($latest && ($latest <= time()))                                       return false;
         if (is_null($expires) && !is_null($this->row['expires_at']) && $this->row['past']) return false;
 
-        $sets = 'state = %s, run_after = UTC_TIMESTAMP(), attempts = 0, open = 1, ended_at = NULL, again = 0, cancel_why = NULL, error = NULL';
+        $sets = 'state = %s, run_after = UTC_TIMESTAMP(), attempts = 0, open = 1, ended_at = NULL, cancel_why = NULL, error = NULL';
 
         if ($latest)            $sets .= $wpdb->prepare(', expires_at = %s', gmdate('Y-m-d H:i:s', $latest));
         if ($expires === false) $sets .= ', expires_at = NULL';
@@ -515,7 +519,7 @@ class Job extends Model {
         $held  = is_null($this->row['lease_token']) ? 'lease_token IS NULL' : $wpdb->prepare('lease_token = %s', $this->row['lease_token']);
 
         $rows = $wpdb->query($wpdb->prepare(
-            'UPDATE ' . static::table() . " SET lease_token = %s, lease_until = DATE_ADD(UTC_TIMESTAMP(), INTERVAL %d SECOND), attempts = attempts + 1 WHERE id = %d AND state = %s {$due}AND cancel_why IS NULL AND (expires_at IS NULL OR expires_at >= UTC_TIMESTAMP()) AND attempts = %d AND {$held} AND " . static::FREE,
+            'UPDATE ' . static::table() . " SET lease_token = %s, lease_until = DATE_ADD(UTC_TIMESTAMP(), INTERVAL %d SECOND), attempts = attempts + 1, parked_at = NULL WHERE id = %d AND state = %s {$due}AND cancel_why IS NULL AND (expires_at IS NULL OR expires_at >= UTC_TIMESTAMP()) AND attempts = %d AND {$held} AND " . static::FREE,
             $token, static::get_lease(), $this->id, static::PENDING, (int) $this->row['attempts']
         ));
 
@@ -702,7 +706,7 @@ class Job extends Model {
 
                 return $rows ? $this->write_held() : $rows;
 
-            }, 1);
+            });
 
         }
 
@@ -766,7 +770,25 @@ class Job extends Model {
 
     }
 
-    public function failed_attempt (string $error) : void {
+    public function abandon_step () : void {
+
+        global $wpdb;
+
+        if (!$this->stepping) return;
+
+        $this->stepping = false;
+
+        $wpdb->query('ROLLBACK');
+
+        $last = error_get_last();
+
+        $this->failed_attempt(($last && in_array($last['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) ? $last['message'] : 'Exited without returning.');
+
+        self::$current = null;
+
+    }
+
+    protected function failed_attempt (string $error) : void {
 
         if (!$this->refresh()) return;
 

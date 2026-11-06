@@ -22,7 +22,8 @@ class Jobs_Worker extends Service {
     public static function get_budget () : float {
 
         $limit  = (int) ini_get('max_execution_time');
-        $budget = $limit ? min(static::BUDGET, $limit * 0.75) : static::BUDGET;
+        $spent  = microtime(true) - (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
+        $budget = $limit ? min(static::BUDGET, max(0, ($limit * 0.75) - $spent)) : static::BUDGET;
 
         return (float) apply_filters('lattice.jobs.budget', $budget);
 
@@ -108,7 +109,7 @@ class Jobs_Worker extends Service {
             Job::CANCELLED, 'Discarded on resuming.', Job::PENDING, $pause['at']
         ));
 
-        delete_option(static::PAUSE);
+        update_option(static::PAUSE, '', true);
         update_option(static::SITE, $this->get_site_hash(), true);
 
         return $discarded;
@@ -147,6 +148,7 @@ class Jobs_Worker extends Service {
         if (!$stored) {
 
             update_option(static::SITE, $this->get_site_hash(), true);
+            add_option(static::PAUSE, '', '', true);
             return;
 
         }
@@ -170,9 +172,20 @@ class Jobs_Worker extends Service {
         $this->begin($budget);
         $this->park_unknown();
 
+        $refused = null;
+
         while ($this->may_start() && ($id = $this->choose())) {
 
-            if (!($job = Job::get_instance($id)) || !$job->take()) continue;
+            if (!($job = Job::get_instance($id)) || !$job->take()) {
+
+                if ($id === $refused) return;
+
+                $refused = $id;
+                continue;
+
+            }
+
+            $refused = null;
 
             $this->run_job($job);
             $this->forget();
@@ -297,19 +310,7 @@ class Jobs_Worker extends Service {
 
         $this->guarded = true;
 
-        register_shutdown_function(function () {
-
-            global $wpdb;
-
-            if (!($job = Job::get_current()) || !$job->is_stepping()) return;
-
-            $wpdb->query('ROLLBACK');
-
-            $last = error_get_last();
-
-            $job->failed_attempt(($last && in_array($last['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) ? $last['message'] : 'Exited without returning.');
-
-        });
+        add_action('shutdown', fn () => Job::get_current()?->abandon_step(), PHP_INT_MIN);
 
     }
 
@@ -326,16 +327,16 @@ class Jobs_Worker extends Service {
 
         $table = Jobs_Table::get_name($wpdb);
         $in    = implode(', ', array_fill(0, count($types), '%s'));
-        $where = "state = %s AND run_after <= UTC_TIMESTAMP() AND " . Job::FREE . " AND type NOT IN ({$in})";
+        $where = 'state = %s AND run_after <= UTC_TIMESTAMP() AND ' . Job::FREE . " AND type NOT IN ({$in})";
 
         $found = $wpdb->query($wpdb->prepare(
-            "UPDATE {$table} SET state = IF(cancel_why IS NULL, %s, %s), error = IF(cancel_why IS NULL, %s, error), ended_at = UTC_TIMESTAMP(), open = NULL, lease_token = NULL, lease_until = NULL WHERE {$where} AND created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)",
+            "UPDATE {$table} SET state = IF(cancel_why IS NULL, %s, %s), error = IF(cancel_why IS NULL, %s, error), ended_at = UTC_TIMESTAMP(), open = NULL, lease_token = NULL, lease_until = NULL WHERE {$where} AND parked_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)",
             Job::FAILED, Job::CANCELLED, 'Its class has gone.', Job::PENDING, ...$types
         ));
 
         if ($found) Jobs_Log::inst()->log("{$found} jobs of an unknown type ended.");
 
-        $wpdb->query($wpdb->prepare("UPDATE {$table} SET run_after = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 DAY) WHERE {$where}", Job::PENDING, ...$types));
+        $wpdb->query($wpdb->prepare("UPDATE {$table} SET run_after = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 HOUR), parked_at = IFNULL(parked_at, UTC_TIMESTAMP()) WHERE {$where}", Job::PENDING, ...$types));
 
     }
 

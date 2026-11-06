@@ -110,14 +110,14 @@ A step can hold a batch, which costs fewer statements but repeats more and stops
 | `dispatch($args, at, key, expires, now)` | Makes the row. See [Dispatching](#dispatching) |
 | `find($key)` | The open job of this class with that key, or null |
 | `reschedule($at, $expires = null)` | Moves a pending job and clears any dead lease. A past `$at` means due now. Keeps the latest time unless given a new one, `false` meaning never; refused if `$at` falls past it. False only for a live lease, an ended job or that latest time |
-| `retry($expires = null)` | Moves a `failed` job back to pending, its cursor kept. Refuses any other state, a row whose class has gone, a key since reopened, or a latest time passed with no later `$expires` |
+| `retry($expires = null)` | Moves a `failed` job back to pending, its cursor kept. A dispatch that arrived during the run still restarts it when it next finishes. Refuses any other state, a row whose class has gone, a key since reopened, or a latest time passed with no later `$expires` |
 | `run_one()` | One whole run now, from PHP or `--id`, waiving "due". Restores the current user. It issues a `ROLLBACK`, so do not call it inside a transaction of your own. This is how a job is tested |
 | `get_state()`, `is_running()`, `get_progress()`, `get_args()`, `get_error()` | Reading, always from the row. `get_progress()` answers `done` and `total`, with `total` null if never set. `get_error()` answers the last failure or the reason for a cancel |
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `$type` | Required | The row's type, up to 64 characters. Explicit, so renaming a class orphans nothing |
-| `$tries` | 5 | Claims without a committed step before failing. A committed step earns a fresh set |
+| `$tries` | 5 | Claims without a committed step before failing. A committed step earns a fresh set, so `$tries = 1` does not mean never retried |
 | `$backoff` | 1, 5, 15, 60 minutes | The delays, the last repeating |
 | `$lease` | 5 minutes, floor one minute | A step must fit it, or two workers can overlap |
 | `$expires_in` | 30 days, null for never | How long after its due time a job stops being worth doing |
@@ -144,7 +144,7 @@ A step can hold a batch, which costs fewer statements but repeats more and stops
 - **Outside `handle()`** it writes the row and returns the job, or null on failure. A deadlock is retried.
 - **Inside a transaction of your own,** a plain insert joins it. Anything that needs its own transaction commits yours, as `START TRANSACTION` does: ending an about-to-end row, or a `cancel()` writing a follow-up.
 - **Inside `handle()` it is held:** written in one transaction with its step, after the step's update, and dropped by a throw or snooze. It returns an unsaved job, with no id until written. So a chain or fan-out cannot repeat a hand-off.
-- **`key`** means one open job per key per type, enforced by the database. Dispatching a key already open returns that job and keeps its arguments and due time, since the same key means the same work. If it has a lease or a saved cursor, the dispatch also makes it run again from the start when it finishes, so a change made during a run is not missed. If the open row is about to end, because it carries a cancel or is past its latest time, then unleased it is ended and a new job opened, and leased the dispatch returns null. A key says nothing about jobs already ended: for "once a day", put the date in the key.
+- **`key`** means one open job per key per type, enforced by the database. Dispatching a key already open returns that job and keeps its arguments and due time, since the same key means the same work. If it has a lease or a saved cursor, the dispatch also makes it run again from the start when it finishes, so a change made during a run is not missed. If the open row is about to end, because it carries a cancel, is past its latest time or, unleased, is out of tries, then unleased it is ended and a new job opened, and leased the dispatch returns null. A key says nothing about jobs already ended: for "once a day", put the date in the key.
 - **A job's own key** needs no rule of its own. In a finishing step the row has just closed, so a new job opens, which is how a job moves itself past its latest time; it ends as `done`, and any `on_end` runs. In a step that calls `next()`, it sets `again` like any other.
 - **`now: true`** runs the job on `shutdown` after `fastcgi_finish_request()` or `litespeed_finish_request()`. It applies only to a job due now, unleased and on a site not paused. Anything else, a host with neither function or WP-CLI waits for the next tick. The row comes first, so a death loses nothing.
 
@@ -191,9 +191,9 @@ Times are `DATETIME` in UTC, compared with the database's `UTC_TIMESTAMP()`, so 
 
 **One scan decides everything.** Due, pending rows of known types with no live lease, ordered by `run_after` then `id`, are ended (carrying a cancel, past their latest time, or at `$tries`) or claimed by compare-and-set. Round-robin comes from one rule: a job stopped by the budget has its `run_after` set to now, so it goes behind what is already due. There is no priority.
 
-**Unknown types** are moved on by a day each time the worker starts, so they never sit at the head of the scan, and end 7 days after they were created.
+**Unknown types** are moved on by an hour each time the worker starts, so they never sit at the head of the scan, and end 7 days after they were first parked. A job claimed again forgets its parking.
 
-**The budget** is about 45 seconds or three quarters of `max_execution_time`, whichever is lower, with `lattice.jobs.budget` for hosts that hide a wall-clock limit. No new job starts past half of it. Near a memory limit (80%) the worker stops before the next step.
+**The budget** is about 45 seconds or what remains of three quarters of `max_execution_time` in the request, whichever is lower, with `lattice.jobs.budget` for hosts that hide a wall-clock limit. No new job starts past half of it. Near a memory limit (80%) the worker stops before the next step.
 
 **Each run** starts with no current user: the framework impersonates nobody. Between jobs the worker forgets model instances and flushes the runtime cache, though a class's own statics survive.
 
