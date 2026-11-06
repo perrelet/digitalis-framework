@@ -538,6 +538,9 @@ abstract class Iterator extends Singleton {
         $this->store['updated_at'] = time();
         $this->store['elapsed']    = round($this->get_elapsed() + (microtime(true) - $tick), 3);
 
+        // A retry tick on a finished run is its last batch: the record ends when it last moved, not at the first completion.
+        if ($this->retrying && in_array($this->store['status'], ['complete', 'halted'], true)) $this->store['finished_at'] = time();
+
         $this->update_store();
 
         if (!$this->retrying && in_array($this->store['status'], ['complete', 'halted'], true) && $this->holds_lock()) $this->release_lock(); // after the write that records the end; a retry chain ends through stop

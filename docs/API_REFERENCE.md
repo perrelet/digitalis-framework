@@ -886,7 +886,7 @@ The run:
 | `skip_item()`, `skip_items()` | `public skip_item(mixed $item = null): void` | Ids the loop skips |
 | `get_counts()` | `public get_counts(): array` | `processed`, `skipped` and `failed`, counted from the id arrays |
 | `get_elapsed()` | `public get_elapsed(): float` | Seconds of server time the run has spent in batches (`elapsed`) |
-| `get_started_at()`, `get_updated_at()`, `get_finished_at()` | `public get_started_at(): ?int` | The record's timestamps; `null` for a run that predates them |
+| `get_started_at()`, `get_updated_at()`, `get_finished_at()` | `public get_started_at(): ?int` | The record's timestamps; `null` for a run that predates them; a retry tick on a complete or halted run moves `finished_at` to its own time |
 | `get_eta()` | `public get_eta(bool $wall = false): ?int` | Seconds remaining at the run's pace: server time per item, or with `$wall` (a cron run) the wall time from the start, or from the last Run in background (`handed_at`, over the items since `handed_index`), to the last tick; `null` until a batch has run against a known total |
 | `format_time()` | `public format_time(int $timestamp, string $format = 'H:i'): string` | The timestamp in `$timezone` |
 | `get_failed_items()` | `public get_failed_items(): array` | `count` and `items` (`id`, `url` from `get_item_url()`) for the first `FAILED_LIST` failed ids |
