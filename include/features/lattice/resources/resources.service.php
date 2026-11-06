@@ -11,6 +11,8 @@ class Resources extends Service {
     const PER_PAGE = 50;
     const RESERVED = ['guide', 'journal', 'undo', 'dev', 'jobs'];
     const TRASH_META = ['_wp_trash_meta_status', '_wp_trash_meta_time'];
+    const SET_KEY  = '_lattice_set_key';
+    const WHY_BYTES = 65535;
     // A post column and the kses context its own save filters it with.
     const COLUMNS  = ['title' => 'title_save_pre', 'content' => 'post', 'excerpt' => 'post'];
     const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
@@ -199,23 +201,35 @@ class Resources extends Service {
 
         if (!empty($input['dry_run'])) return $change->describe();
 
+        if ($this->misses_confirm($change, $input)) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
+
         $this->writing['new'] = true;
 
-        $model = $resource->insert_model($model);
+        try {
 
-        if (is_wp_error($model)) {
+            $model = $resource->insert_model($model);
+
+            if (is_wp_error($model)) return $this->error('not_saved', 'It could not be created: ' . $model->get_error_message(), 500);
+
+            $result = $this->commit($resource, $model, $values, $change->why, $via, 'create', $model->get_version(), null);
+
+        } catch (\Throwable $e) {
+
+            // A listener may throw after the row exists, so running it again could make a second.
+            $result = new WP_Error('not_saved', $e->getMessage());
+
+        } finally {
 
             unset($this->writing['new']);
 
-            return $this->error('not_saved', 'It could not be created: ' . $model->get_error_message(), 500);
+            if (!is_wp_error($model) && $model->get_id()) unset($this->writing[$this->writing_key($resource, $model)]);
 
         }
 
-        $result = $this->commit($resource, $model, $values, $change->why, $via, 'create', $model->get_version(), null);
+        // The record exists by now, whatever went wrong after: running it again would make a second.
+        if (is_wp_error($result)) return $this->error('not_saved', 'Part was written: ' . $result->get_error_message() . ' Read it again before the next change.', 500, array_filter(['partial' => true, 'id' => $model->get_id()]));
 
-        unset($this->writing['new']);
-
-        return is_wp_error($result) ? $result : ['created' => true] + $result + array_filter(['removed' => $removed]);
+        return ['created' => true] + $result + array_filter(['removed' => $removed]);
 
     }
 
@@ -305,10 +319,11 @@ class Resources extends Service {
 
         if (!empty($definition['confirm'])) {
 
-            if (empty($input['confirm']))                                  return $this->invalid(['Send the fingerprint of its dry run as confirm.']);
-            if (!hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
+            if (empty($input['confirm'])) return $this->invalid(['Send the fingerprint of its dry run as confirm.']);
 
         }
+
+        if ($this->misses_confirm($change, $input)) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
         return $this->operate($resource, $model, $action, $input, fn () => $this->run_action($resource, $model, $action, $values, $input, $via, $undoes, $changes_record, $change));
 
@@ -358,7 +373,7 @@ class Resources extends Service {
 
             $code = isset(static::STATUSES[$result->get_error_code()]) ? $result->get_error_code() : 'not_saved';
 
-            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500, $this->get_error_data($result));
+            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500, $this->get_error_data($result) + (empty($threw) ? [] : ['partial' => true]));
 
         }
 
@@ -377,7 +392,7 @@ class Resources extends Service {
 
         unset($this->writing[$this->writing_key($resource, $model)]);
 
-        if (is_wp_error($result)) return $this->error('not_saved', 'It was not done: ' . $result->get_error_message() . ' Read it again before the next change.', 500, $this->get_error_data($result));
+        if (is_wp_error($result)) return $this->error('not_saved', 'Part was done: ' . $result->get_error_message() . ' Read it again before the next change.', 500, ['partial' => true] + $this->get_error_data($result));
 
         return ($made ? ['created' => true] : []) + $this->describe_record($resource, $made ?? $model) + ['changed' => true] + $this->report_journal($journaled);
 
@@ -428,7 +443,7 @@ class Resources extends Service {
 
         if (!empty($resource->get_proposable()[$operation]['confirm']) && empty($input['confirm'])) return $this->invalid(['Send the fingerprint of its dry run as confirm.']);
 
-        if (!empty($input['confirm']) && !hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
+        if ($this->misses_confirm($change, $input)) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
         return $this->operate($resource, $model, $operation, $input, fn () => $this->run_move($resource, $model, $operation, $target, $input, $via, $undoes, $change));
 
@@ -484,7 +499,7 @@ class Resources extends Service {
 
             unset($this->writing[(string) $post_id]);
 
-            return $error ? $this->error('not_saved', "It was not done: {$error} Read it again before the next change.", 500) : $this->refuse_state('A guard refused it: it stays as it was.');
+            return $error ? $this->error('not_saved', "It was not done: {$error} Read it again before the next change.", 500, ['partial' => true]) : $this->refuse_state('A guard refused it: it stays as it was.');
 
         }
 
@@ -503,7 +518,7 @@ class Resources extends Service {
 
         unset($this->writing[(string) $post_id]);
 
-        if ($error) return $this->error('not_saved', "Part was written: {$error} Read it again before the next change.", 500);
+        if ($error) return $this->error('not_saved', "Part was written: {$error} Read it again before the next change.", 500, ['partial' => true]);
 
         return $this->describe_record($resource, $model) + ['changed' => true] + $this->report_journal($journaled);
 
@@ -571,11 +586,11 @@ class Resources extends Service {
 
             $result = $resource->{"act_{$action}"}($model, $input, $via);
 
-            return (is_array($result) || is_wp_error($result)) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500);
+            return (is_array($result) || is_wp_error($result)) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500, ['partial' => true]);
 
         } catch (\Throwable $e) {
 
-            return $this->error('not_saved', 'It was not done: ' . $e->getMessage() . ' Read it again before the next change.', 500);
+            return $this->error('not_saved', 'It may be partly done: ' . $e->getMessage() . ' Read it again before the next change.', 500, ['partial' => true]);
 
         }
 
@@ -589,6 +604,8 @@ class Resources extends Service {
 
         if ($resource instanceof WP_Error)          return $resource;
         if ($refusal = $this->refuse_read($resource, $model)) return $refusal;
+
+        if (!$this->may($resource, 'undo', $model)) return $this->forbidden('undo');
 
         $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id])]);
 
@@ -794,7 +811,7 @@ class Resources extends Service {
 
         if ($refusal = $this->refuse_publish($resource, $model, $values)) return $refusal;
 
-        if (!empty($input['confirm']) && !hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
+        if ($this->misses_confirm($change, $input)) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
         return $this->operate($resource, $model, $operation, $input, function () use ($resource, $model, $values, $change, $via, $operation, $seen, $undoes, $removed) {
 
@@ -850,7 +867,8 @@ class Resources extends Service {
             'action'         => $operation,
             'why'            => $why,
             'before'         => $before,
-            'after'          => $resource->read($model),
+            // A failed write's row says so: a create's row settles its step only when it landed whole.
+            'after'          => ($error ? ['_partial' => true] : []) + $resource->read($model),
             'version_before' => $seen,
             'version_after'  => $model->get_version(),
             'undoes'         => $undoes,
@@ -858,7 +876,7 @@ class Resources extends Service {
 
         unset($this->writing[$this->writing_key($resource, $model)]);
 
-        if ($error) return $this->error('not_saved', 'Part was written: ' . $error->getMessage() . ' Read it again before the next change.', 500);
+        if ($error) return $this->error('not_saved', 'Part was written: ' . $error->getMessage() . ' Read it again before the next change.', 500, ['partial' => true]);
 
         return $this->describe_record($resource, $model) + ['changed' => true] + $this->report_journal($journaled);
 
@@ -905,10 +923,17 @@ class Resources extends Service {
 
         $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before, $values)));
         $change->consequences = $resource->get_consequences($change);
-        $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $change->consequences]));
+        $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $this->drop_volatile($change->consequences)]));
         $change->removed      = $removed;
 
         return $change;
+
+    }
+
+    // A consequence's own top-level keys it names as changing by themselves: shown, but a busy record must not stop whoever looked.
+    protected function drop_volatile (array $consequences) : array {
+
+        return array_map(fn ($item) => (is_array($item) && !empty($item['volatile'])) ? array_diff_key($item, array_flip([...(array) $item['volatile'], 'volatile'])) : $item, $consequences);
 
     }
 
@@ -1050,9 +1075,30 @@ class Resources extends Service {
 
     }
 
+    // Sent and no longer what it would do. A confirm is a fingerprint, so anything else sent as one fails to match it.
+    protected function misses_confirm (Resource_Change $change, array $input) : bool {
+
+        $confirm = $input['confirm'] ?? null;
+
+        if (in_array($confirm, [null, '', false], true)) return false;
+
+        return !is_string($confirm) || !hash_equals($change->fingerprint, $confirm);
+
+    }
+
+    // wpdb drops a row it would have to change, silently and after the write: a why that would be is refused first.
     protected function check_why (array $input, string $via) : array {
 
-        return (empty($input['dry_run']) && in_array($via, ['rest', 'cli'], true) && trim((string) ($input['why'] ?? '')) === '') ? ['Say why: every change through the API carries a why.'] : [];
+        $why = $input['why'] ?? '';
+
+        if (!is_string($why) && !is_numeric($why)) return ['A why is text.'];
+
+        $why = (string) $why;
+
+        if (strlen($why) > static::WHY_BYTES)        return ['A why is at most ' . static::WHY_BYTES . ' bytes.'];
+        if (wp_check_invalid_utf8($why) !== $why)    return ['A why is valid text.'];
+
+        return (empty($input['dry_run']) && in_array($via, ['rest', 'cli'], true) && trim($why) === '') ? ['Say why: every change through the API carries a why.'] : [];
 
     }
 

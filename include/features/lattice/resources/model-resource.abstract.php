@@ -345,6 +345,30 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // The record a set's create step made. Directly, since post_status 'any' leaves out the Trash and exclude_from_search statuses.
+    public function find_by_set_key (string $key) : ?object {
+
+        global $wpdb;
+
+        if (!$this->get_post_type()) return null;
+
+        foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s", Resources::SET_KEY, $key)) as $id) if ($model = $this->find((int) $id)) return $model;
+
+        return null;
+
+    }
+
+    // What another request may have written since this one last looked.
+    public function refresh ($model) : void {
+
+        if ($this->get_post_type()) clean_post_cache($model->get_id());
+
+        if (method_exists($model, 'reload')) $model->reload();
+
+        $this->forget_values($model);
+
+    }
+
     // status, search, page, per_page
     public function query (array $args) : array {
 
@@ -368,9 +392,10 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    public function insert_model ($model) : object {
+    // $meta goes in with the insert, so its save_post listeners already find it.
+    public function insert_model ($model, array $meta = []) : object {
 
-        $saved = $model->save(['post_author' => get_current_user_id()]);
+        $saved = $model->save(['post_author' => get_current_user_id()] + ($meta ? ['meta_input' => $meta] : []));
 
         return is_wp_error($saved) ? $saved : (static::$model_class)::get_instance($model->get_id());
 

@@ -202,7 +202,7 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 
 `act_{name}()` returns the model, a new record, or a `WP_Error`. An error that changed nothing keeps its own code.
 
-Views (`get_views()`) are named reads: `'prices' => fn ($offer) => …`. Consequences (`get_consequences(Resource_Change $change)`) compare `$change->before` (the saved record, null on create) with `$change->after` (the unsaved copy) and answer `[['kind', 'label', 'items']]`.
+Views (`get_views()`) are named reads: `'prices' => fn ($offer) => …`. A consequence may name its own top-level keys in `volatile` (`['kind' => 'due', 'label' => '…', 'count' => 12, 'volatile' => ['count']]`): shown, and left out of the fingerprint, so a count or a time changing by itself does not stop whoever looked. Consequences (`get_consequences(Resource_Change $change)`) compare `$change->before` (the saved record, null on create) with `$change->after` (the unsaved copy) and answer `[['kind', 'label', 'items']]`.
 
 ### Presenting a change
 
@@ -292,7 +292,7 @@ A guard that refuses (`pre_trash_post` or `pre_untrash_post` answering `false`, 
 | `not_found` | 404 | No such resource, record, action, view or row |
 | `stale` | 409 | `data.version` is now; or a `confirm` no longer matches; or `data.conflicts` says which expected values no longer hold |
 | `locked` | 409 | `data.reason`; locked fields in `data.fields` |
-| `not_saved` | 500 | Part was written: read it again |
+| `not_saved` | 500 | It was not written. With `data.partial`, part was, or may have been: read it again, and do not simply run it again. A create names what it made in `data.id` where it knows, and its row carries `_partial` in `after` |
 
 ---
 

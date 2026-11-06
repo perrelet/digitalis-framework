@@ -174,7 +174,7 @@ class Lattice_Resources extends Feature {
 
     public function exclude_version ($keys, $post) {
 
-        return method_exists($post, 'get_version_key') ? [...$keys, $post::get_version_key()] : $keys;
+        return method_exists($post, 'get_version_key') ? [...$keys, $post::get_version_key(), Resources::SET_KEY] : $keys;
 
     }
 
