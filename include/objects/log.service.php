@@ -15,6 +15,12 @@ class Log extends Service {
     protected $date_format = null;
     protected $export_vars = false;
 
+    public static function create ($data = []) {
+
+        return parent::create(is_string($data) ? ['file' => $data] : $data);
+
+    }
+
     public function __invoke ($msg) {
 
         return $this->log($msg);
