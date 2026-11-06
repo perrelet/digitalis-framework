@@ -236,7 +236,7 @@ class Change_Set extends Model implements Step_List {
 
         $state = $this->has_applied_step() ? static::APPLIED_IN_PART : static::DRAFT;
 
-        return $this->move_to($state, null, ['submitted_at' => null, 'note' => (($note ?? '') === '') ? null : static::fit_text($note)]) && ($this->get_state() === $state);
+        return $this->move_to($state, null, ['submitted_at' => null, 'note' => static::fit_text((string) $note)]) && ($this->get_state() === $state);
 
     }
 

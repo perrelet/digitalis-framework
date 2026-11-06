@@ -490,6 +490,9 @@ Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are
 | `lattice.resources.journal_set` | Filter | `$named`, `$set_id` | The records whose rows a read by `set` shows whatever the reader may list, as `resource:id` |
 | `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
 | `lattice.change_set.cleanup_days` | Filter | `$days` | How long a draft or `broken` set may sit idle before it is withdrawn (90) |
+| `lattice.change_set.submitted` | Action | `$set` | A set was offered for review (Proposals) |
+| `lattice.change_set.rejected` | Action | `$set` | A set was handed back; `get_note()` is the note (Proposals) |
+| `lattice.change_set.approved` | Action | `$set`, `$result` | Approving landed every step and closed the set (Proposals) |
 | `lattice.change_set.awaiting_review` | Action | `$set` | A walk of a submitted set stopped for a fresh look |
 | `lattice.change_set.applied_in_part` | Action | `$set` | A walk stopped with a step applied |
 | `lattice.change_set.broken` | Action | `$set` | A record the set names was deleted |

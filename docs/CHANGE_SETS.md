@@ -42,7 +42,7 @@ An update's `expected` holds the value each field started from, read from the li
 | `failed` | `draft` | `applied_in_part` |
 | `unknown` | `unknown` | `unknown` |
 
-Each with the reason in `reason`. Nothing overwrites `broken`, which a delete of a record it names writes without waiting for the lock. Going back to `draft` clears `submitted_at`.
+Each with the reason in `reason`. Nothing overwrites `broken`, which a delete of a record it names writes without waiting for the lock. Going back to `draft` clears `submitted_at`, and so does a reviewer's rejection in any state.
 
 **One request at a time.** Every write to a set takes `GET_LOCK` without waiting, so a second answers `locked`; a dry run takes none. Under the lock it settles what a dead request left, then reads state and markers again and refuses on what it finds, since its own refusals ran unlocked and a walk that died raised no version.
 
@@ -60,9 +60,9 @@ Each day the feature withdraws `draft` and `broken` sets idle past `lattice.chan
 
 ## Extending
 
-Proposals registers its own resource under the name `change_set`, extending `Change_Set_Resource`, and the feature's hooks ask for whichever is registered. `walk_set($set, $seen, $why, $via, $action)` is the walk with its outcome applied to the set, for an action that writes through the service, under the lock.
+Proposals registers its own resource under the name `change_set`, extending `Change_Set_Resource`, and the feature's hooks ask for whichever is registered; see [Sets](./PROPOSALS.md#sets). `walk_set($set, $seen, $why, $via, $action)` is the walk with its outcome applied to the set, for an action that writes through the service, under the lock.
 
-**Hooks:** `lattice.change_set.awaiting_review`, `applied_in_part` and `broken` fire with the set. See [HOOKS.md](./HOOKS.md).
+**Hooks:** `lattice.change_set.awaiting_review`, `applied_in_part` and `broken` fire with the set. The first two fire once the set's row is written and its lock released, so a listener can read one and act on the set, and only when the walk changed something. `broken` fires where it happens, since a delete holds no lock. See [HOOKS.md](./HOOKS.md).
 
 **Limits:**
 - A closed set's masks depend on who closed it: an account who cannot see a field masks it whole, plain cells included. No secret stays raw.

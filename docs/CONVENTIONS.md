@@ -114,7 +114,7 @@ A library feature that needs another lists it by path. `load_feature()` loads ea
 ```php
 class Proposals extends Feature {
 
-    protected static $requires = ['lattice/resources', 'wp/stored-markup'];
+    protected static $requires = ['lattice/resources', 'lattice/change-sets'];
 
     public static function instance_condition ($data = []) {
 

@@ -29,6 +29,12 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
     }
 
+    public function get_edit_url ($set) : string {
+
+        return add_query_arg('set', $set->get_id(), Proposal::get_queue_url());
+
+    }
+
     public function get_views () : array {
 
         return ['review' => 'review_set'];
@@ -68,6 +74,9 @@ class Proposal_Set_Resource extends Change_Set_Resource {
             'purpose'      => $set->get_purpose(),
             'author_id'    => $set->get_author_id(),
             'submitted_at' => $set->get_submitted_at(),
+            'undone'       => Journal::inst()->has_undone_rows($set->get_key()),
+            'unsettled'    => (bool) $this->refuse_unsettled($set),
+            'closed'       => $set->is_closed(),
             'note'         => $set->get_note(),
             'reason'       => $set->get_reason(),
             'steps'        => $steps,
@@ -128,6 +137,45 @@ class Proposal_Set_Resource extends Change_Set_Resource {
             return $conflict + (((Resource_Field::is_mask($start) && is_array($live)) || (is_array($start) && Resource_Field::is_mask($live))) ? ['masking' => true] : []);
 
         }, $conflicts);
+
+    }
+
+    public function query_queue () : array {
+
+        global $wpdb;
+
+        $mine = $wpdb->prepare('author_id = %d', get_current_user_id());
+        $ids  = $wpdb->get_col('SELECT set_id FROM ' . Change_Set::table() . ' WHERE ' . $this->open_where(current_user_can('approve_proposals') ? "(submitted_at IS NOT NULL OR {$mine})" : $mine) . ' ORDER BY updated_at DESC, set_id DESC');
+
+        return Change_Set::get_instances(array_map('intval', (array) $ids));
+
+    }
+
+    public function count_awaiting () : int {
+
+        return $this->count_open('submitted_at IS NOT NULL');
+
+    }
+
+    public function count_sent_back_for (int $author_id) : int {
+
+        global $wpdb;
+
+        return $this->count_open($wpdb->prepare('author_id = %d AND note IS NOT NULL AND submitted_at IS NULL', $author_id));
+
+    }
+
+    protected function count_open (string $where) : int {
+
+        global $wpdb;
+
+        return (int) $wpdb->get_var('SELECT COUNT(*) FROM ' . Change_Set::table() . ' WHERE ' . $this->open_where($where));
+
+    }
+
+    protected function open_where (string $where) : string {
+
+        return "state NOT IN ('" . implode("', '", Change_Set::CLOSED) . "') AND {$where}";
 
     }
 

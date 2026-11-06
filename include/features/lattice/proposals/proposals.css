@@ -31,5 +31,11 @@
 
 .lattice-proposal-pill { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 11px; font-weight: 600; }
 .lattice-proposal-pill.is-awaiting { color: #dba617; background: #fff8e5; }
-.lattice-proposal-pill.is-sent-back, .lattice-proposal-pill.is-stale { color: #b32d2e; background: #fcf0f1; }
-.lattice-proposal-pill.is-writing { color: #50575e; background: #f0f0f1; }
+.lattice-proposal-pill.is-sent-back, .lattice-proposal-pill.is-stale, .lattice-proposal-pill.is-attention { color: #b32d2e; background: #fcf0f1; }
+.lattice-proposal-pill.is-writing, .lattice-proposal-pill.is-in-part { color: #50575e; background: #f0f0f1; }
+
+.lattice-set-steps { margin-top: 6px; }
+.lattice-set-steps th:first-child { width: 22%; }
+.lattice-set-steps pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.lattice-set-flag { display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 3px; font-size: 11px; background: #f0f0f1; }
+.lattice-set-record { margin-top: 18px; }

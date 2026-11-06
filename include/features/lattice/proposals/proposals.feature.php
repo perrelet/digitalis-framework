@@ -10,6 +10,7 @@ require_once __DIR__ . '/views/proposal-notice.view.php';
 require_once __DIR__ . '/views/proposal-status.view.php';
 require_once __DIR__ . '/views/proposal-review.view.php';
 require_once __DIR__ . '/views/proposals-queue.view.php';
+require_once __DIR__ . '/views/proposal-set-review.view.php';
 require_once __DIR__ . '/proposals-admin.feature.php';
 require_once __DIR__ . '/proposals.posts-table.php';
 require_once __DIR__ . '/proposal-review.meta-box.php';
