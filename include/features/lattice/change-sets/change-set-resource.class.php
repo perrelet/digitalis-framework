@@ -14,7 +14,6 @@ class Change_Set_Resource extends Model_Resource {
     const OPS       = ['create', 'update', 'act', 'trash', 'untrash'];
     const MAX_STEPS = 1000;
 
-
     public function get_post_type () : string {
 
         return '';
@@ -229,11 +228,18 @@ class Change_Set_Resource extends Model_Resource {
 
         return [
             'set_steps'    => ['label' => 'Change its steps', 'input' => ['steps' => 'json'], 'when' => fn ($set) => $this->refuse_holding($set), 'validate' => fn ($set, array $input) => $this->prepare_steps($set, $input['steps'])['problems']],
+            'apply_set'    => ['label' => 'Apply it', 'writes_through' => true, 'input' => ['seen' => '?json'], 'when' => fn ($set) => $this->refuse_applying($set)],
+            'undo_set'     => ['label' => 'Undo what it applied', 'writes_through' => true, 'input' => ['seen' => '?json']],
+            'withdraw_set' => ['label' => 'Withdraw it', 'when' => fn ($set) => $this->refuse_withdrawing($set)],
+            'settle_step'  => ['label' => 'Settle a step', 'input' => ['position' => 'int', 'outcome' => 'string'], 'when' => fn ($set) => $this->refuse_settling($set), 'validate' => fn ($set, array $input) => $this->check_settling($set, $input)],
+            'rebase_set'   => ['label' => 'Start from what is live', 'when' => fn ($set) => $this->refuse_rebasing($set)],
         ];
 
     }
 
     public function get_consequences (Resource_Change $change) : array {
+
+        if ($change->operation === 'rebase_set') return $this->prepare_rebase($change->before)['moved'];
 
         if ($change->operation !== 'set_steps') return [];
 
@@ -442,6 +448,312 @@ class Change_Set_Resource extends Model_Resource {
         $definition = $target->get_field($field);
 
         return $definition ? $definition->unmask($sent, $raw) : $sent;
+
+    }
+
+    // Applying
+
+    protected function refuse_applying ($set) : string {
+
+        if ($set->get_author_id() !== get_current_user_id()) return 'Only its author applies a set of their own.';
+        if ($set->get_submitted_at())                        return 'It is with a reviewer.';
+        if ($set->is_closed())                               return 'It is closed.';
+        if ($set->get_state() === Change_Set::BROKEN)        return 'A record it names has been deleted: withdraw it.';
+
+        return '';
+
+    }
+
+    public function act_apply_set ($set, array $input, string $via) {
+
+        if (trim($set->get_purpose()) === '') return $this->invalid(['Say what it is for before applying it.']);
+        if (!$set->get_steps())               return $this->invalid(['It holds no steps.']);
+
+        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::inst()->preview_set($set)];
+
+        return $this->walk_set($set, $input['seen'] ?? null, (string) ($input['why'] ?? ''), $via, 'apply_set');
+
+    }
+
+    // What seen must hold, whoever is walking it: $seen['version'] was the set's as they looked, $seen['steps'] each step's.
+    public function walk_set ($set, $seen, string $why, string $via, string $action) {
+
+        if ($refusal = $this->check_seen($set, $seen, 'steps')) return $refusal;
+
+        $before  = $this->read($set);
+        $version = $set->get_version();
+        $result  = Resources::inst()->apply_set($set, $seen['steps'], $via);
+
+        if (is_wp_error($result)) return $result;
+
+        // Another request may hold it now, and the state is theirs to write.
+        if (!$set->holds_lock()) return $result + ['state' => $set->reload()->get_state(), 'version' => $set->get_version()];
+
+        $this->settle_walk($set, $result);
+
+        return $result + $this->finish_action($set, $action, $why, $before, $version, $via) + ['state' => $set->reload()->get_state()];
+
+    }
+
+    // A through action raises the version and writes the row the layer writes for the others, when it did anything.
+    protected function finish_action ($set, string $action, string $why, array $before, int $version, string $via) : array {
+
+        if ($this->read($set->reload()) === $before) return ['version' => $set->get_version()];
+
+        $set->raise_version();
+
+        $row = $this->write_row($set, $action, $why, $before, $version, $via);
+
+        return ['version' => $set->get_version()] + ($row ? [] : ['journaled' => false]);
+
+    }
+
+    protected function check_seen ($set, $seen, string $list) : ?WP_Error {
+
+        if (!is_array($seen) || !is_numeric($seen['version'] ?? null) || !is_array($seen[$list] ?? null)) return $this->invalid(["Send seen as its dry run answered it: the set's version and its {$list}."]);
+
+        if (!$set->holds_lock()) return $this->refuse('The lock was lost.');
+
+        if ((int) $seen['version'] !== $set->get_version()) return new WP_Error('stale', 'It changed since you looked: run its dry run again.', ['status' => 409, 'version' => $set->get_version()]);
+
+        return null;
+
+    }
+
+    // What a walk's outcome does to the set: CX1's table.
+    protected function settle_walk ($set, array $result) : void {
+
+        $applied   = $set->has_applied_step();
+        $submitted = (bool) $set->get_submitted_at();
+        $reason    = (string) ($result['reason'] ?? '');
+
+        match ($result['outcome']) {
+            'applied'       => $this->close($set, Change_Set::APPLIED) || error_log("Change sets: set {$set->get_id()} applied, and could not be closed."),
+            'unknown'       => $set->move_to(Change_Set::UNKNOWN, $reason),
+            'awaiting_look' => $set->move_to($submitted ? Change_Set::AWAITING_REVIEW : ($applied ? Change_Set::APPLIED_IN_PART : Change_Set::DRAFT), $reason),
+            default         => $set->move_to($applied ? Change_Set::APPLIED_IN_PART : Change_Set::DRAFT, $reason),
+        };
+
+        $state = $set->reload()->get_state();
+
+        // Looking again is the author's own business on a set never offered: CX1's table.
+        if (($state === Change_Set::AWAITING_REVIEW) || (($state === Change_Set::APPLIED_IN_PART) && in_array($result['outcome'], ['refused', 'failed'], true))) $this->announce($state, $set);
+
+    }
+
+    // A listener's fault is no fault of the walk, which has landed.
+    protected function announce (string $state, $set) : void {
+
+        try {
+
+            do_action("lattice.change_set.{$state}", $set);
+
+        } catch (\Throwable $e) {
+
+            error_log("Change sets: a listener on {$state} threw: " . $e->getMessage());
+
+        }
+
+    }
+
+    // A closed set keeps no secret it no longer needs (D44), and one that stayed broken has not closed. As mask_held() answers whoever closes it (D57).
+    public function close ($set, string $state) : bool {
+
+        $steps = array_map(function ($step) {
+
+            $step['values'] = $this->mask_step($step, $step['values']);
+
+            if (!is_null($step['expected'])) $step['expected'] = $this->mask_step($step, $step['expected']);
+
+            return $step;
+
+        }, $set->get_steps());
+
+        // Together, or a set could close holding what it no longer needs, with nothing to come back for it.
+        return Change_Set::transaction(fn () => $set->move_to($state) && (($set->get_state() !== $state) || $set->replace_steps(array_values($steps))));
+
+    }
+
+    public function act_undo_set ($set, array $input, string $via) {
+
+        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'rows' => Resources::inst()->preview_undo($set)];
+
+        $seen = $input['seen'] ?? null;
+
+        if ($refusal = $this->check_seen($set, $seen, 'rows')) return $refusal;
+
+        $before  = $this->read($set);
+        $version = $set->get_version();
+        $result  = Resources::inst()->undo_set($set, $seen['rows'], $via);
+
+        if (is_wp_error($result)) return $result;
+
+        if (!$set->holds_lock() || !$result['undone']) return $result + ['version' => $set->get_version()];
+
+        // Its state and steps are as they were, so what it did is only in its result.
+        $set->raise_version();
+
+        $row = $this->write_row($set, 'undo_set', (string) ($input['why'] ?? ''), $before, $version, $via);
+
+        return $result + ['version' => $set->get_version()] + ($row ? [] : ['journaled' => false]);
+
+    }
+
+    protected function refuse_unsettled ($set) : string {
+
+        return array_intersect(['started', 'unknown'], array_column($set->get_steps(), 'marker')) ? 'A step may or may not have landed: settle it first.' : '';
+
+    }
+
+    protected function refuse_withdrawing ($set) : string {
+
+        return $set->is_closed() ? 'It is closed.' : $this->refuse_unsettled($set);
+
+    }
+
+    public function act_withdraw_set ($set, array $input, $change) {
+
+        return $this->close($set, Change_Set::WITHDRAWN) ? $set : new WP_Error('not_saved', 'It could not be closed, and nothing was changed.');
+
+    }
+
+    protected function refuse_settling ($set) : string {
+
+        return $this->refuse_unsettled($set) ? '' : 'No step is waiting to be settled.';
+
+    }
+
+    protected function check_settling ($set, array $input) : array {
+
+        $problems = in_array($input['outcome'], ['applied', 'not_applied'], true) ? [] : ['outcome is applied or not_applied.'];
+
+        return isset($set->get_steps()[(int) $input['position']]) ? $problems : [...$problems, 'It holds no such step.'];
+
+    }
+
+    public function act_settle_step ($set, array $input, $change) {
+
+        $position = (int) $input['position'];
+        $step     = $set->get_steps()[$position];
+
+        if ($step['marker'] !== 'unknown') return $this->refuse('That step is not waiting to be settled.');
+
+        global $wpdb;
+
+        $target = Resources::inst()->get_resource($step['resource']);
+        $record = null;
+
+        if ($step['op'] === 'create') {
+
+            $record = $target?->find_by_set_key(Resources::get_set_key($set->get_key(), $position));
+
+            // A read that failed says nothing about whether a record exists, and being wrong makes a second.
+            if ($wpdb->last_error !== '') return new WP_Error('not_saved', 'Its record could not be looked for, and nothing was changed.');
+
+            $record ??= is_null($step['id']) ? null : $target?->find($step['id']);
+
+        }
+
+        $applied = $input['outcome'] === 'applied';
+
+        if ($applied && ($step['op'] === 'create') && !$record) return $this->refuse('No record carries its key, so it did not land.');
+
+        if (!$applied && $record && ($target->get_status($record) !== 'trash')) return $this->refuse('Its record exists, so applying again would make a second: trash it first.');
+
+        $action = ($step['op'] === 'act') ? $step['action'] : $step['op'];
+        $rows   = $applied ? array_filter(Journal::inst()->rows_for_set($set->get_key()), fn ($row) => ($row['set_step'] === $position) && is_null($row['undoes']) && ($row['action'] === $action) && (is_null($step['id']) || ($row['record_id'] === (string) $step['id']))) : [];
+        $detail = $applied ? array_filter(['journal_id' => $rows ? end($rows)['id'] : null, 'record_id' => $record?->get_id()]) : (($step['op'] === 'create') ? ['record_id' => null] : []);
+
+        $settled = Change_Set::transaction(function () use ($set, $position, $applied, $detail) {
+
+            if (!$set->mark($position, $applied ? 'applied' : '', $detail)) return false;
+
+            return in_array('unknown', array_column($set->get_steps(), 'marker'), true) || $set->move_to($set->has_applied_step() ? Change_Set::APPLIED_IN_PART : Change_Set::DRAFT);
+
+        });
+
+        if (!$settled) return new WP_Error('not_saved', 'It could not be settled, and nothing was changed.');
+
+        // So it cannot settle a later attempt.
+        if (!$applied && $record && $target->get_post_type()) delete_post_meta($record->get_id(), Resources::SET_KEY);
+
+        return $set;
+
+    }
+
+    // Rebasing
+
+    protected function refuse_rebasing ($set) : string {
+
+        if ($set->get_author_id() !== get_current_user_id()) return 'Only its author rebases it.';
+
+        if (!in_array($set->get_state(), [Change_Set::DRAFT, Change_Set::AWAITING_REVIEW, Change_Set::APPLIED_IN_PART], true)) return 'It cannot be rebased in this state.';
+
+        return $this->refuse_unsettled($set);
+
+    }
+
+    // Each step not yet applied takes what is live as the start of a field that conflicts, and holds its values again as its author, since a value kept only because the record once held it is filtered if the record no longer does.
+    protected function prepare_rebase ($set) : array {
+
+        $steps = $set->get_steps();
+        $moved = [];
+        $left  = [];
+
+        foreach ($steps as $position => $step) {
+
+            if (in_array($step['marker'], ['applied', 'skipped'], true) || ($step['op'] !== 'update') || is_null($step['expected'])) continue;
+
+            $target   = Resources::inst()->get_resource($step['resource']);
+            $model    = $target?->find($step['id']);
+            $compared = Resources::inst()->compare_expected($step['resource'], $step['id'], $step['values'], $step['expected']);
+
+            if (is_wp_error($compared)) { $left[] = "Step {$position}: {$compared->get_error_message()}"; continue; }
+
+            // A field this account is not shown stays as it is, which does not stop the ones beside it.
+            $held = Resources::inst()->hold_values($step['resource'], $step['id'], array_intersect_key($step['values'], $target->get_fields_for($model, $step['values'])));
+
+            if (is_wp_error($held)) { $left[] = "Step {$position}: {$held->get_error_message()}"; continue; }
+
+            if ($held['problems']) { $left[] = "Step {$position}: " . implode(' ', $held['problems']); continue; }
+
+            $held['values'] = array_replace($step['values'], $held['values']);
+
+            foreach ($compared['withheld'] as $field) $left[] = "Step {$position}: {$field} is withheld from this account.";
+
+            $expected = $step['expected'];
+
+            foreach ($compared['conflicts'] as $conflict) {
+
+                if (!empty($conflict['not_shown'])) { $left[] = "Step {$position}: {$conflict['field']} is not shown to this account."; continue; }
+
+                $expected[$conflict['field']] = $this->mask_step($step, [$conflict['field'] => $conflict['live']])[$conflict['field']];
+
+                $moved[] = ['step' => $position, 'field' => $conflict['field'], 'start' => $expected[$conflict['field']]];
+
+            }
+
+            $removed = array_intersect_key($held['removed'] + $step['removed'], $held['values']);
+            $changed = wp_json_encode([$expected, $held['values']]) !== wp_json_encode([$step['expected'], $step['values']]);
+
+            $steps[$position] = ['expected' => $expected, 'values' => $held['values'], 'removed' => $removed] + ($changed ? ['marker' => '', 'marked_at' => null, 'journal_id' => null, 'error' => null] : []) + $step;
+
+        }
+
+        return ['steps' => $steps, 'moved' => $moved, 'left' => $left];
+
+    }
+
+    public function act_rebase_set ($set, array $input, $change) {
+
+        $rebase = $this->prepare_rebase($set);
+
+        $state = array_filter($rebase['steps'], fn ($step) => $step['marker'] === 'applied') ? Change_Set::APPLIED_IN_PART : Change_Set::DRAFT;
+
+        // Together, or a reviewer could still be offered what its author has rebased.
+        if (!Change_Set::transaction(fn () => $set->replace_steps(array_values($rebase['steps'])) && $set->move_to($state, implode(' ', $rebase['left']) ?: null))) return new WP_Error('not_saved', 'The steps could not be stored, and nothing was changed.');
+
+        return $set;
 
     }
 
