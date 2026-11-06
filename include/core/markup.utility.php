@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // What kses does to markup, on unslashed values of any shape: a form's field keys or the layer's names.

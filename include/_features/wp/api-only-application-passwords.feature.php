@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // wp_signon() fires wp_authenticate; the API's own Basic authentication never does.

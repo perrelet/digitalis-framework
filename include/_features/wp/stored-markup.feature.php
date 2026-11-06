@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // kses filters new input; a value sent back exactly as stored isn't.

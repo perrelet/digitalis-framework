@@ -9,7 +9,7 @@ Let an account that may not change a published record propose a change to it. A 
 A proposal is a draft copy of a published record, linked to it by meta. Its author edits the draft in wp-admin and submits it ("Submit for Review"). A reviewer sees what it changes against the live record, then approves it or sends it back with a note. Approving is `Resources::update()` on the live record, so it gets the resources layer's checks, its journal row and its undo.
 
 ```
-include/features/lattice/proposals/
+include/_features/lattice/proposals/
 ├── proposals.feature.php                Proposals: options, guards, the resources policy hooks
 ├── has-proposals.trait.php              Has_Proposals: the proposal meta, on every moderated model
 ├── proposal.class.php                   Proposal: one draft; finding, changes, markup, review, approve, reject

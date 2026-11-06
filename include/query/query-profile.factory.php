@@ -125,7 +125,7 @@ class Query_Profile extends Factory {
 
     }
 
-    protected function matches_post_status ($wp_query) {
+    protected function matches_post_status (WP_Query $wp_query) {
 
         if (!$this->post_status)                                                return true;
         if (!$post_status = array_filter((array) $wp_query->get('post_status'))) return true;

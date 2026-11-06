@@ -1,3 +1,4 @@
+<?php declare(strict_types=1); ?>
 <h1 class="wp-heading-inline">Proposed Changes</h1>
 <hr class="wp-header-end">
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Jobs_Tick extends Cron_Scheduler {

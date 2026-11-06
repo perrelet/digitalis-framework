@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Proposals_Admin extends Feature {
@@ -168,7 +170,7 @@ class Proposals_Admin extends Feature {
 
     }
 
-    protected function redirect (string $url, string $notice = '') : never {
+    protected function redirect (string $url, string $notice = '') /* : never */ {
 
         wp_safe_redirect($notice ? add_query_arg(static::NOTICE, $notice, $url) : $url);
         exit;

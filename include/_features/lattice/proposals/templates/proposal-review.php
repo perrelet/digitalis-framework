@@ -1,3 +1,4 @@
+<?php declare(strict_types=1); ?>
 <p class="lattice-proposal-muted"><?php if ($author): ?>Proposed by <strong><?= esc_html($author) ?></strong><?php else: ?>Proposed change<?php endif; ?><?= $created ? ' · ' . esc_html($created) : '' ?></p>
 
 <?php if (!$original): ?>

@@ -198,7 +198,7 @@ abstract class App extends Factory {
 
     }
 
-    protected function refuse_feature (string $message) : null {
+    protected function refuse_feature (string $message) /* : null */ {
 
         _doing_it_wrong(static::class . '::load_feature', esc_html($message), '');
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 require_once __DIR__ . '/job-signal.class.php';
