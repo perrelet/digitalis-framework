@@ -31,7 +31,7 @@ abstract class Posts_Table extends Screen_Table {
 
         parent::run();
 
-        add_action("manage_{$this->post_type}_posts_custom_column", [$this, 'post_column'], $this->priority, 2);
+        foreach ((array) $this->post_type as $post_type) add_action("manage_{$post_type}_posts_custom_column", [$this, 'post_column'], $this->priority, 2);
 
         add_action('restrict_manage_posts', [$this, 'render_filters_wrap']);
         add_action('pre_get_posts',         [$this, 'admin_controller']);
@@ -81,6 +81,12 @@ abstract class Posts_Table extends Screen_Table {
 
     }
 
+    public function disable_months_dropdown ($disable, $post_type) {
+
+        return in_array($post_type, (array) $this->post_type, true) ? true : $disable;
+
+    }
+
     public function render_filters_wrap () {
     
         if (!$this->is_admin_archive()) return;
@@ -120,7 +126,7 @@ abstract class Posts_Table extends Screen_Table {
 
     protected function is_main_admin_query ($query) {
 
-        return ($this->is_admin_archive() && $query->is_main_query() && isset($query->query_vars['post_type']) && ($query->query_vars['post_type'] == $this->post_type));
+        return ($this->is_admin_archive() && $query->is_main_query() && isset($query->query_vars['post_type']) && in_array($query->query_vars['post_type'], (array) $this->post_type, true));
 
     }
 
@@ -128,7 +134,7 @@ abstract class Posts_Table extends Screen_Table {
 
         global $pagenow, $post_type;
 
-        return (is_admin() && ($post_type == $this->post_type) && ($pagenow == 'edit.php'));
+        return (is_admin() && in_array($post_type, (array) $this->post_type, true) && ($pagenow == 'edit.php'));
 
     }
 

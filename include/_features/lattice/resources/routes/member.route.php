@@ -13,6 +13,8 @@ class Resources_Member_Route extends Resource_Route {
 
     public function callback (WP_REST_Request $request) {
 
+        if (($request->get_method() === 'POST') && ($request['name'] === 'untrash')) return Resources::inst()->untrash($request['resource'], $request['id'], $this->get_input($request), 'rest');
+
         return ($request->get_method() === 'POST')
             ? Resources::inst()->act($request['resource'], $request['id'], $request['name'], $this->get_input($request), 'rest')
             : Resources::inst()->view($request['resource'], $request['id'], $request['name']);

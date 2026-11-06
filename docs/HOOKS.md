@@ -499,6 +499,30 @@ add_filter('digitalis_woocommerce_account_page_icon', function($icon, $slug, $pa
 }, 10, 3);
 ```
 
+### Lattice Hooks
+
+Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are used exactly as written.
+
+| Hook | Type | Arguments | Use |
+|------|------|-----------|-----|
+| `lattice.feature.paths` | Filter | `$paths` | Base paths `App::load_feature()` searches, in order |
+| `lattice.view.editors` | Filter | `$editors`, `$class` | Editors a view is published to |
+| `lattice.view.controls` | Filter | `$controls`, `$class` | A view's controls inside an editor |
+| `lattice.post.duplicate.exclude_meta` | Filter | `$keys`, `$post` | Meta keys kept off every copy `Post::duplicate()` makes |
+| `lattice.relationship.partner_updated` | Action | `$type`, `$id`, `$key`, `$relationship` | After `ACF\Bidirectional_Relationship` writes a partner's meta, which is not a save |
+| `lattice.keywords.collected` | Filter | `$keywords`, `$model` | Keywords before `Has_Keywords` writes them |
+| `lattice.keywords.updated` | Action | `$model`, `$keywords` | After the keywords are written |
+| `lattice.resources.allow` | Filter | `$allowed`, `$user`, `$resource`, `$operation` | Refuse an operation on a resource; it can never grant one |
+| `lattice.resources.refuse` | Filter | `$reason`, `$resource`, `$model`, `$operation` | A non-empty reason refuses one record as `locked` |
+| `lattice.resources.query` | Filter | `$args`, `$resource` | A resource list's query, to leave records out |
+| `lattice.resources.journal` | Filter | `$journal`, `$resource`, `$model` | `false` keeps a record's changes out of the journal |
+| `lattice.resources.forbidden` | Filter | `$data`, `$resource`, `$model`, `$operation` | Add to a `forbidden` refusal's data on a write to a known record |
+| `lattice.resources.describe` | Filter | `$description`, `$resource` | Add to the guide's description of a resource |
+| `lattice.resources.present` | Filter | `$lines`, `$resource`, `$before`, `$after`, `$model` | Add to a change presented for people |
+| `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
+
+The resources hooks are described in [RESOURCES.md](./RESOURCES.md#policy).
+
 ### Legacy names
 
 Before 1.0.0 these fired as `Digitalis/Post_Type/{Class}/Args` and the like. `Hook::filter()` still runs each legacy name through `apply_filters_deprecated()` before the live one, so a callback on the old name keeps working and logs a deprecation; hooks naming a framework class also answer to the pre-rename `Digitalis\` namespace (`Digitalis/Class/Digitalis/User` for `lattice.class.lattice.user`), and the post type hooks answer to both spellings they had (`Digitalis/Post_Type/My_Plugin\Project/Args` and `Digitalis/Post_Type/My_Plugin/Project/Args`). The legacy name is rebuilt from the live one (`/` between the parts, each `_` word capitalised), so a class whose name had capitals beyond the first letter of a word (`SOMM\Dancer` forwards as `Digitalis/Class/Somm/Dancer`) is not forwarded. Move callbacks to the dotted names.
@@ -762,6 +786,7 @@ class ACF_Customizations extends Feature {
 | `lattice.keywords.updated` | Action | After `Has_Keywords` writes the excerpt (`$model, $keywords`) |
 | `lattice.relationship.partner_updated` | Action | After `Bidirectional_Relationship` writes a partner's field (`$type, $id, $key, $relationship`); `Excerpt_Keywords` rebuilds the partner's keywords on it |
 | `digitalis_woocommerce_account_page_icon` | Filter | Account page icons (`$icon, $slug, $page`) |
+| `lattice.resources.*`, `lattice.journal.keep_days` | Filter | The resources layer's policy hooks: see [Lattice Hooks](#lattice-hooks) and [RESOURCES.md](./RESOURCES.md#policy) |
 
 ### Naming Convention
 

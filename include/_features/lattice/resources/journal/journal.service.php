@@ -10,6 +10,8 @@ class Journal extends Service {
 
     const PER_PAGE = 50;
 
+    const MARKS = ['set_key', 'set_step', 'proposer_id'];
+
     protected function get_table () : string {
 
         global $wpdb;
@@ -35,9 +37,20 @@ class Journal extends Service {
             'version_before' => (int) ($row['version_before'] ?? 0),
             'version_after'  => (int) ($row['version_after'] ?? 0),
             'undoes'         => $row['undoes'] ?? null,
-        ]);
+        ] + (Journal_Schema::is_current() ? array_intersect_key($row, array_flip(static::MARKS)) : []));
 
         return (int) $wpdb->insert_id;
+
+    }
+
+    // Only for a row written earlier in this request.
+    public function amend (int $id, array $changes) : bool {
+
+        global $wpdb;
+
+        foreach (array_intersect_key($changes, ['before' => 0, 'after' => 0]) as $column => $value) $changes[$column] = is_null($value) ? null : wp_json_encode($value);
+
+        return (bool) $wpdb->update($this->get_table(), $changes, ['id' => $id]);
 
     }
 
@@ -63,6 +76,15 @@ class Journal extends Service {
 
             $where[] = "{$column} = %s";
             $vars[]  = (string) $args[$column];
+
+        }
+
+        foreach (['set' => 'set_key', 'proposer' => 'proposer_id'] as $filter => $column) if (isset($args[$filter])) {
+
+            if (!Journal_Schema::is_current() || ((int) $args[$filter] < 1)) return [];
+
+            $where[] = "{$column} = %d";
+            $vars[]  = (int) $args[$filter];
 
         }
 
@@ -97,7 +119,8 @@ class Journal extends Service {
 
         foreach (['id', 'user_id', 'version_before', 'version_after'] as $column) $row[$column] = (int) $row[$column];
 
-        $row['undoes'] = is_null($row['undoes']) ? null : (int) $row['undoes'];
+        foreach (['undoes', ...static::MARKS] as $column) $row[$column] = is_null($row[$column] ?? null) ? null : (int) $row[$column];
+
         $row['before'] = is_null($row['before']) ? null : json_decode((string) $row['before'], true);
         $row['after']  = is_null($row['after']) ? null : json_decode((string) $row['after'], true);
 

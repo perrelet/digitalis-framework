@@ -28,6 +28,12 @@ class Options_Page_Record extends Options_Page {
 
     }
 
+    public function delete_meta ($key, $value = '') {
+
+        return delete_option($this->get_option_name($key));
+
+    }
+
     // update_option has no compare-and-swap.
     public function update_meta ($key, $value, $prev = null) {
 

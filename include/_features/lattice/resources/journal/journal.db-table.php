@@ -30,6 +30,9 @@ class Journal_Table extends Table {
             new Column('version_before', 'INT(10) UNSIGNED'),
             new Column('version_after',  'INT(10) UNSIGNED'),
             new Column('undoes',         'BIGINT(20) UNSIGNED', nullable: true),
+            new Column('set_key',        'BIGINT(20) UNSIGNED', nullable: true),
+            new Column('set_step',       'SMALLINT(5) UNSIGNED', nullable: true),
+            new Column('proposer_id',    'BIGINT(20) UNSIGNED', nullable: true),
         ];
 
     }
@@ -40,6 +43,8 @@ class Journal_Table extends Table {
             Index::primary(['id']),
             Index::index('record', ['resource', 'record_id', 'id']),
             Index::index('at', ['at']),
+            Index::index('set_row', ['set_key', 'id']),
+            Index::index('proposer_row', ['proposer_id', 'id']),
         ];
 
     }

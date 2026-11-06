@@ -132,6 +132,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Utility` | — | Abstract pure-static base; cannot be instantiated or cloned |
 | `List_Utility` | `Utility` | Static key→label list with null option; `$list`, `$null_option`, `$null_key`, `get_primary_keys()` |
 | `Plugins` | `Utility` | Which plugins WordPress is loading on this request, once per request; `is_active()` takes a basename or a directory |
+| `Markup` | `Utility` | What kses does to markup, on unslashed values of any shape: `keep_value()` (a value sent back as stored keeps its markup), `count()`, `subtract()` |
 
 ### Views & Rendering
 
@@ -165,11 +166,15 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `Feature` | `Factory` | Hook registrar via `get_hooks()`; a callback WordPress could not call is a strict violation at registration (HOOKS.md) | yes |
+| `Feature` | `Factory` | Hook registrar via `get_hooks()`. `$requires` lists library features `load_feature()` loads first; `instance_condition()` gates the rest (see [CONVENTIONS](./docs/CONVENTIONS.md)) | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin; `$plugin` is a plugin basename or its directory (`Plugins::is_active()`); anything but a string is a strict violation | yes |
-| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order`. Fires `lattice.relationship.partner_updated` (`$type`, `$id`, `$key`, `$relationship`) after each partner write; `Excerpt_Keywords` listens to rebuild the partner's keywords, since the write is not a save. `Bidirectional_Relationship::suppress()` / `restore()` pause every sync (they nest), e.g. while saving a working copy | yes |
+| `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order`. Fires `lattice.relationship.partner_updated` (`$type`, `$id`, `$key`, `$relationship`) after each partner write; `Excerpt_Keywords` listens to rebuild the partner's keywords, since the write is not a save. `lattice.relationship.sync` (`$sync`, `$type`, `$id`, `$relationship`) refuses one record's sync, as proposals does for its drafts; `Bidirectional_Relationship::suppress()` / `restore()` pause every sync (they nest) | yes |
+| `Stored_Markup` | `Feature` | A post column or ACF value a save sends back exactly as stored keeps its markup, so an account without `unfiltered_html` doesn't strip a trusted account's markup from what it left alone. ACF's raw values come from `$_REQUEST['acf']`. `load_feature('wp/stored-markup')` | no |
+| `API_Only_Application_Passwords` | `Feature` | An application password authenticates the API's own requests and never a sign-in form: `wp_signon()` inside a REST request (a plugin's login form, say) treats it as a wrong password. A wrong one that REST refuses is reported to WP Fail2Ban Redux where that plugin runs. `load_feature('wp/api-only-application-passwords')` | no |
 | `Lattice_Resources` | `Feature` | Models through REST (`lattice/v1`) and `wp lattice`: dry runs, a version, a journal with undo, actions shared with wp-admin. Subclass `Model_Resource` per model (or `Options_Page_Resource` per options page); load with `load_feature('lattice/resources')` before `parent::load()`. See [RESOURCES.md](./docs/RESOURCES.md) | no |
+| `Lattice_Jobs` | `Feature` | Durable background work: a class per kind, a row per piece. `handle()` is one step, `next($cursor)` another; returning commits it. Subclass `Job` in `*.job.php`; load with `load_feature('lattice/jobs')` before `parent::load()`. Runs on WordPress cron alone. See [JOBS.md](./docs/JOBS.md) | no |
+| `Proposals` | `Feature` | Changes to published records held for review: a draft copy, a review screen, approval through `Resources::update()`. Every moderated type is a resource whose model uses `Has_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `wp/stored-markup`; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
 ### REST, Blocks & Shortcodes
@@ -246,6 +251,7 @@ The run record (status, total, stalled), the stall rule and `$halt_on_fail` are 
 | `shortcode` | `Lattice\Shortcode` |
 | `layout` | `Lattice\Layout` |
 | `page-view` | `Lattice\Page_View` |
+| `job` | `Lattice\Job` |
 | `iterator` | `Lattice\Iterator` |
 | `post-iterator` | `Lattice\Post_Iterator` |
 | `user-iterator` | `Lattice\User_Iterator` |
@@ -629,7 +635,9 @@ Examples:
 | Dependency injection internals | [docs/DEPENDENCY_INJECTION.md](./docs/DEPENDENCY_INJECTION.md) |
 | Copy-paste patterns | [docs/CHEATSHEET.md](./docs/CHEATSHEET.md) |
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
+| Durable background work: jobs, steps, retries, keys | [docs/JOBS.md](./docs/JOBS.md) |
 | Models through REST and WP-CLI: resources, dry runs, the journal | [docs/RESOURCES.md](./docs/RESOURCES.md) |
+| Changes held for review: proposals | [docs/PROPOSALS.md](./docs/PROPOSALS.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |
 | Moving a consumer onto a new framework version, the first strict boot | [docs/UPGRADING.md](./docs/UPGRADING.md) |

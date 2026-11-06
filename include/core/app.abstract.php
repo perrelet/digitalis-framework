@@ -165,7 +165,48 @@ abstract class App extends Factory {
 
     //
 
-    public function load_feature (string $file, mixed $options = []) {
+    protected array $loading_features = [];
+    protected array $loaded_features  = [];
+
+    // Requirements load first, with their defaults.
+    public function load_feature (string $file, mixed $options = null) {
+
+        return $this->load_feature_as($file, $options, false);
+
+    }
+
+    protected function load_feature_as (string $file, mixed $options, bool $required) {
+
+        if (!$feature = $this->find_feature($file))         return $this->refuse_feature("No feature {$file}.");
+        if (isset($this->loading_features[$feature]))       return $this->refuse_feature("{$feature} requires itself through {$file}.");
+        if (!$feature::instance_condition($options ?? []))  return $this->refuse_feature("{$feature} did not load: its instance_condition() refused.");
+
+        if (!is_null($options) && (($this->loaded_features[$feature] ?? '') === 'requirement')) $this->refuse_feature("{$feature} already loaded as a requirement, so its options were ignored: load it before what requires it.");
+
+        $this->loading_features[$feature] = true;
+
+        $missing = is_subclass_of($feature, Feature::class) ? array_filter($feature::get_requirements(), fn ($each) => !$this->load_feature_as($each, null, true)) : [];
+
+        unset($this->loading_features[$feature]);
+
+        if ($missing)                          return $this->refuse_feature("{$feature} needs " . implode(', ', $missing) . ', which did not load.');
+        if (!$feature::get_instance($options)) return $this->refuse_feature("{$feature} did not load.");
+
+        $this->loaded_features[$feature] ??= $required ? 'requirement' : 'site';
+
+        return $feature;
+
+    }
+
+    protected function refuse_feature (string $message) : null {
+
+        _doing_it_wrong(static::class . '::load_feature', esc_html($message), '');
+
+        return null;
+
+    }
+
+    protected function find_feature (string $file) : ?string {
 
         $paths = apply_filters('lattice.feature.paths', [LATTICE_LIBRARY_PATH]);
         $file  = ltrim($file, '/');
@@ -189,12 +230,11 @@ abstract class App extends Factory {
             if (!is_file($path)) continue;
 
             $feature = $this->load_class($path, false);
-            if ($feature && class_exists($feature)) {
-                $feature::get_instance($options);
-                return $feature;
-            }
+            if ($feature && class_exists($feature)) return $feature;
 
         }
+
+        return null;
 
     }
 

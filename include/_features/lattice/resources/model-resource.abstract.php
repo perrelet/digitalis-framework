@@ -14,6 +14,9 @@ abstract class Model_Resource extends Singleton {
 
     const SECRET = [];
 
+    // Beyond updates and creates, what may be proposed on it: 'trash', 'untrash' and action names, each with 'confirm' where a call must carry its dry run's fingerprint.
+    const PROPOSABLE = [];
+
     // Of get_post_fields(): title, status, content, excerpt, featured_image, terms.
     const POST_FIELDS = ['title', 'status'];
 
@@ -222,7 +225,7 @@ abstract class Model_Resource extends Singleton {
             $value  = match ($field->source) {
                 'model'  => ($getter instanceof \Closure) ? $getter($model) : $model->$getter(),
                 'reader' => $readers[$name]($model),
-                default  => $field->from_raw($model->get_field($name, false)),
+                default  => $field->from_raw(($field->is_flexible() && !$model->has_unsaved_value($name)) ? $field->read_rows($model->get_acf_id()) : $model->get_field($name, false)),
             };
 
             $values[$name] = $mask ? $field->mask($value) : $value;
@@ -385,6 +388,12 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    public function get_proposable () : array {
+
+        return ['update' => [], 'create' => []] + static::PROPOSABLE;
+
+    }
+
     // An extra capability updating needs in the record's current state.
     public function get_lock ($model) : ?string {
 
@@ -400,6 +409,7 @@ abstract class Model_Resource extends Singleton {
         return (string) match (true) {
             $model && ($operation === 'read')   => 'read_post',
             $model && ($operation === 'update') => 'edit_post',
+            $model && in_array($operation, ['trash', 'untrash'], true) => 'delete_post',
             $operation === 'create'             => $caps?->create_posts ?? 'edit_posts',
             $operation === 'publish'            => $caps?->publish_posts ?? 'publish_posts',
             default                             => $caps?->edit_posts ?? 'edit_posts',
@@ -409,7 +419,7 @@ abstract class Model_Resource extends Singleton {
 
     public function can (string $operation, $model = null) : bool {
 
-        $meta = $model && in_array($operation, ['read', 'update'], true);
+        $meta = $model && in_array($operation, ['read', 'update', 'trash', 'untrash'], true);
 
         return current_user_can($this->get_capability($operation, $model), ...($meta ? [$model->get_id()] : []));
 
@@ -417,7 +427,7 @@ abstract class Model_Resource extends Singleton {
 
     // Actions, views and consequences
 
-    // name => ['label', 'capability', 'when' => fn ($model) => reason or '', 'input' => [name => type], 'sets' => [field => value], 'confirm', 'changes_record', 'undo'].
+    // name => ['label', 'capability', 'when' => fn ($model) => reason or '', 'input' => [name => type], 'validate' => fn ($model, array $input) => problems, 'sets' => [field => value], 'confirm', 'changes_record', 'undo'].
     public function get_actions () : array {
 
         return [];

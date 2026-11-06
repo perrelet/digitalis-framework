@@ -19,6 +19,7 @@ Quick reference for model classes and their available methods.
 - [Shared Methods](#shared-methods)
 - [Custom Fields](#custom-fields)
 - [Meta Data](#meta-data)
+- [Versions and Unsaved Copies](#versions-and-unsaved-copies)
 - [Extending Models](#extending-models)
 
 ---
@@ -387,6 +388,7 @@ $copy = $product->duplicate([], ['_my_plugin_pointer']);          // keep a key 
 Three properties are load-bearing:
 
 - **Meta is copied raw.** No ACF write happens, so nothing downstream of one fires — notably a `Bidirectional_Relationship` sync, which would otherwise wire the original's partners to the copy. A copy holds the original's relationship values one-way until its first real save.
+- **The copy is whole when its hooks run.** Meta goes in through `meta_input`, so `save_post` already sees it; terms go in through `tax_input`, so `wp_after_insert_post` sees them. A key with several values is added after the save, since `meta_input` holds one value per key.
 - **The slug is never copied.** A copy must not contend for the original's URL; WP assigns a fresh unique slug from the title.
 - **Placement columns are not copied.** `post_parent`, `menu_order` and friends stay out because whether a copy belongs in the same structural position depends on why it's being made. Pass them through `$overrides` when it matters.
 
@@ -1029,6 +1031,51 @@ $post->update_metas([
 // Delete
 $post->delete_meta('_custom_key');
 ```
+
+---
+
+## Versions and Unsaved Copies
+
+Two core traits a model needs to become a resource ([RESOURCES.md](./RESOURCES.md)); either is useful alone.
+
+```php
+class Offer extends \Digitalis\Post {
+
+    use \Digitalis\Has_Version, \Digitalis\Has_Unsaved_Copies;
+
+    public function forget_derived () : void { $this->flush(); }
+
+}
+```
+
+### Has_Version
+
+A count in meta that every change raises, so a write based on a stale read can be refused.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_version_key()` | `string` | Static; the meta key, `_lattice_version` unless overridden to keep an existing one |
+| `get_version()` | `int` | The count; `0` before the first raise |
+| `claim_version($seen)` | `bool` | Raises the count only if it is still `$seen` (compare-and-set), and marks the record mid-write |
+| `is_claimed()` | `bool` | Whether this request has claimed the record and not yet finished |
+| `finish_version()` | `void` | Raises once more after a claimed write, so anyone who read mid-write is stale too |
+| `raise_version()` | `void` | One raise outside a write; does nothing while the record is mid-write |
+| `restore_version($seen)` | `void` | Gives back a finished claim whose write a guard refused outright, if nothing else moved it |
+
+Versions start at 1, since `update_meta()` ignores a previous value of `0`. With the `lattice/resources` feature loaded, copies made by `duplicate()` start their own version.
+
+### Has_Unsaved_Copies
+
+A clone that answers `get_field()` from values not yet written, so code can see what a change would do before it is made.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_unsaved_copy($values)` | `static` | A clone answering `get_field()` from `$values` (raw ACF values by field name), formatted as ACF would |
+| `is_unsaved_copy()` | `bool` | Whether this instance is such a clone |
+| `has_unsaved_value($selector)` | `bool` | Whether the copy holds a value for that field |
+| `forget_derived()` | `void` | Override to clear whatever the model remembers from its fields; a copy calls it when made |
+
+Only `$this->get_field()` sees the unsaved values. A global `get_field()`, `get_post_meta()` or the same record fetched again by id reads what is saved.
 
 ---
 

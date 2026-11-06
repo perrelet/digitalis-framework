@@ -9,13 +9,15 @@ use WP_REST_Request;
 class Resources_Record_Route extends Resource_Route {
 
     protected $route      = self::RESOURCE . '/(?P<id>[\w-]+)';
-    protected $definition = ['methods' => ['GET', 'PATCH']];
+    protected $definition = ['methods' => ['GET', 'PATCH', 'DELETE']];
 
     public function callback (WP_REST_Request $request) {
 
-        return ($request->get_method() === 'PATCH')
-            ? Resources::inst()->update($request['resource'], $request['id'], $this->get_input($request), 'rest')
-            : Resources::inst()->get($request['resource'], $request['id']);
+        return match ($request->get_method()) {
+            'PATCH'  => Resources::inst()->update($request['resource'], $request['id'], $this->get_input($request), 'rest'),
+            'DELETE' => Resources::inst()->trash($request['resource'], $request['id'], $this->get_input($request), 'rest'),
+            default  => Resources::inst()->get($request['resource'], $request['id']),
+        };
 
     }
 

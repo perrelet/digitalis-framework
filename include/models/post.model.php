@@ -338,54 +338,59 @@ class Post extends WP_Model {
 
     }
 
+    // The copy's meta and terms go in with it, so its own save hooks see a whole record.
     public function duplicate (array $overrides = [], string|array $exclude_meta = []) {
 
-        $wp_post = $this->get_wp_post();
-
-        kses_remove_filters(); // Preserve block delimiters for users without unfiltered_html.
-
-        try {
-
-            $duplicate = static::create(wp_parse_args($overrides, [
-                'post_type'    => $wp_post->post_type,
-                'post_status'  => 'draft',
-                'post_title'   => $wp_post->post_title,
-                'post_content' => $wp_post->post_content,
-                'post_excerpt' => $wp_post->post_excerpt,
-                'post_author'  => $wp_post->post_author,
-            ]));
-
-            $result = $duplicate->save();
-
-        } finally {
-
-            kses_init_filters();
-
-        }
-
-        if (is_wp_error($result)) return $result;
+        $wp_post  = $this->get_wp_post();
+        $filtered = (bool) has_filter('content_save_pre', 'wp_filter_post_kses');
 
         $excluded = array_merge(
-            ['_edit_lock', '_edit_last', '_wp_old_slug'],
+            ['_edit_lock', '_edit_last', '_wp_old_slug', '_wp_old_date'],
             (array) $exclude_meta,
             (array) apply_filters('lattice.post.duplicate.exclude_meta', [], $this)
         );
 
-        foreach (get_post_meta($this->get_id()) as $key => $values) {
-
-            if (in_array($key, $excluded, true)) continue;
-
-            foreach ($values as $value) $duplicate->add_meta($key, maybe_unserialize($value));
-
-        }
+        $meta     = array_map(fn ($values) => array_map('maybe_unserialize', $values), array_diff_key(get_post_meta($this->get_id()), array_flip($excluded)));
+        $multiple = array_filter($meta, fn ($values) => count($values) > 1);
+        $terms    = [];
 
         foreach (get_object_taxonomies($wp_post->post_type) as $taxonomy) {
 
             $term_ids = wp_get_object_terms($this->get_id(), $taxonomy, ['fields' => 'ids']);
 
-            if (!is_wp_error($term_ids) && $term_ids) wp_set_object_terms($duplicate->get_id(), $term_ids, $taxonomy);
+            if (!is_wp_error($term_ids) && $term_ids) $terms[$taxonomy] = $term_ids;
 
         }
+
+        $post_array = wp_parse_args($overrides, [
+            'post_type'    => $wp_post->post_type,
+            'post_status'  => 'draft',
+            'post_title'   => $wp_post->post_title,
+            'post_content' => $wp_post->post_content,
+            'post_excerpt' => $wp_post->post_excerpt,
+            'post_author'  => $wp_post->post_author,
+        ]);
+
+        $post_array['meta_input'] = (array) ($overrides['meta_input'] ?? []) + array_map(fn ($values) => $values[0], array_diff_key($meta, $multiple));
+        $post_array['tax_input']  = (array) ($overrides['tax_input'] ?? []) + $terms;
+
+        kses_remove_filters(); // Preserve block delimiters for users without unfiltered_html.
+
+        try {
+
+            $duplicate = static::create($post_array);
+            $result    = $duplicate->save();
+
+        } finally {
+
+            if ($filtered) kses_init_filters();
+
+        }
+
+        if (is_wp_error($result)) return $result;
+
+        // meta_input holds one value per key.
+        foreach ($multiple as $key => $values) foreach ($values as $value) $duplicate->add_meta($key, wp_slash($value));
 
         return $duplicate;
 

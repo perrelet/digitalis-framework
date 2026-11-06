@@ -113,6 +113,18 @@ $qv->merge(['post_status' => 'draft']); // Result: ['publish', 'draft']
 $qv->overwrite(['post_status' => 'draft']); // Result: 'draft'
 ```
 
+### `'post_status' => 'any'` skips `exclude_from_search` statuses
+
+WP drops them from `any` unless they are also listed. `Post_Iterator` defaults to `any`. `post_type` has the same gap and no fix: WP only honours `any` there as a plain string.
+
+```php
+// ❌ Silently misses pending_review posts
+$query = new WP_Query(['post_type' => 'org', 'post_status' => 'any']);
+
+// ✅
+$query = new WP_Query(['post_type' => 'org', 'post_status' => ['any', 'pending_review']]);
+```
+
 ### Paths from `find_*_path()` are invalidated by structural changes
 
 ```php

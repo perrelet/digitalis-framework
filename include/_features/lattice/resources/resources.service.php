@@ -11,7 +11,8 @@ class Resources extends Service {
     const CONTROL  = ['version', 'why', 'dry_run', 'confirm'];
     const VIAS     = ['rest', 'cli', 'admin', 'other'];
     const PER_PAGE = 50;
-    const RESERVED = ['guide', 'journal', 'undo', 'dev'];
+    const RESERVED = ['guide', 'journal', 'undo', 'dev', 'jobs'];
+    const TRASH_META = ['_wp_trash_meta_status', '_wp_trash_meta_time'];
     const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
 
     protected array $resources = [];
@@ -64,10 +65,17 @@ class Resources extends Service {
 
     }
 
-    // The save hooks stand aside while this holds; no id means any record.
+    // The save hooks stand aside while this holds: an id is a post's, and no id means any record.
     public function is_writing ($id = null) : bool {
 
         return is_null($id) ? (bool) $this->writing : isset($this->writing[(string) $id]);
+
+    }
+
+    // A record with no post type shares no post's hooks, though it may share its number.
+    protected function writing_key (Model_Resource $resource, $model) : string {
+
+        return $resource->get_post_type() ? (string) $model->get_id() : "{$resource->get_name()}:{$model->get_id()}";
 
     }
 
@@ -77,7 +85,7 @@ class Resources extends Service {
 
         return [
             'framework' => LATTICE_VERSION,
-            'features'  => ['dry_run', 'journal', 'undo'],
+            'features'  => ['dry_run', 'journal', 'undo', 'trash', 'expected'],
             'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may($resource, 'list')))),
         ];
 
@@ -85,7 +93,7 @@ class Resources extends Service {
 
     protected function describe_resource (Model_Resource $resource) : array {
 
-        return [
+        return apply_filters('lattice.resources.describe', [
             'name'      => $resource->get_name(),
             'label'     => $resource->get_label(),
             'post_type' => $resource->get_post_type() ?: null,
@@ -98,7 +106,7 @@ class Resources extends Service {
                 'undo'           => $action['undo'] ?? null,
             ], fn ($value) => !in_array($value, ['', [], null, false], true)), $resource->get_actions()),
             'views'     => array_keys($resource->get_views()),
-        ];
+        ], $resource);
 
     }
 
@@ -161,7 +169,7 @@ class Resources extends Service {
 
         $actions = [];
 
-        foreach ($resource->get_actions() as $name => $action) $actions[$name] = $this->refuse_action($resource, $model, $action);
+        foreach ($resource->get_actions() as $name => $action) $actions[$name] = $this->may($resource, $name, $model) ? $this->refuse_action($resource, $model, $action) : 'This account may not do that.';
 
         return $this->summarise($resource, $model) + [
             'fields'  => $resource->read($model),
@@ -177,16 +185,17 @@ class Resources extends Service {
         if (!$resource = $this->get_resource($name)) return $this->error('not_found', "No resource {$name}.", 404);
         if (!$this->may($resource, 'create'))         return $this->forbidden($resource->get_capability('create'));
 
-        [$values, $problems] = $this->take_values($resource, $input, null);
+        [$values, $problems, $removed] = $this->take_values($resource, $input, null);
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'));
 
         if ($problems) return $this->invalid($problems);
 
+        if ($refusal = $this->refuse_locked($resource, null, $values)) return $refusal;
         if ($refusal = $this->refuse_publish($resource, null, $values)) return $refusal;
 
         $model    = $resource->make_model($values);
-        $change   = $this->build($resource, 'create', null, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via);
+        $change   = $this->build($resource, 'create', null, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via, $removed);
 
         if (!empty($input['dry_run'])) return $change->describe();
 
@@ -206,7 +215,7 @@ class Resources extends Service {
 
         unset($this->writing['new']);
 
-        return is_wp_error($result) ? $result : ['created' => true] + $result;
+        return is_wp_error($result) ? $result : ['created' => true] + $result + array_filter(['removed' => $removed]);
 
     }
 
@@ -216,15 +225,36 @@ class Resources extends Service {
 
         if ($resource instanceof WP_Error)                       return $resource;
         if ($refusal = $this->refuse_update($resource, $model))  return $refusal;
-        if ($refusal = $this->check_version($model, $input))     return $refusal;
+        if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
 
-        [$values, $problems] = $this->take_values($resource, $input, $model);
+        $expected = $input['expected'] ?? null;
+
+        unset($input['expected']);
+
+        if ((is_null($expected) || isset($input['version'])) && ($refusal = $this->check_version($model, $input))) return $refusal;
+
+        // Before any value is read: a rival write landing after this makes the claim fail.
+        $seen = (int) ($input['version'] ?? $model->get_version());
+
+        if (!is_null($expected)) {
+
+            if (method_exists($model, 'reload')) $model->reload();
+
+            $resource->forget_values($model);
+
+        }
+
+        [$values, $problems, $removed] = $this->take_values($resource, $input, $model);
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
 
+        if (!is_null($expected)) array_push($problems, ...$this->check_expected($expected, $input));
+
         if ($problems) return $this->invalid($problems);
 
-        return $this->write_values($resource, $model, $values, $input, $via, 'update', (int) $input['version'], null);
+        if (!is_null($expected)) return $this->write_expected($resource, $model, $values, $expected, $input, $via, $removed, $seen);
+
+        return $this->write_values($resource, $model, $values, $input, $via, 'update', (int) $input['version'], null, $removed);
 
     }
 
@@ -234,29 +264,39 @@ class Resources extends Service {
 
         if ($resource instanceof WP_Error) return $resource;
 
-        if (!($definition = $resource->get_actions()[$action] ?? null) || !method_exists($resource, "act_{$action}")) return $this->error('not_found', "No action {$action}.", 404);
+        if (in_array($action, ['trash', 'untrash'], true) || !($definition = $resource->get_actions()[$action] ?? null) || !method_exists($resource, "act_{$action}")) return $this->error('not_found', "No action {$action}.", 404);
 
+        $through        = !empty($definition['writes_through']);
         $changes_record = $definition['changes_record'] ?? true;
 
-        if ($refusal = $changes_record ? $this->refuse_update($resource, $model) : $this->refuse_read($resource, $model)) return $refusal;
+        if ($refusal = ($changes_record || $through) ? $this->refuse_update($resource, $model, $action) : $this->refuse_read($resource, $model)) return $refusal;
+
+        if (!$this->may($resource, $action, $model)) return $this->forbidden($action);
 
         if ($refusal = $this->refuse_record($resource, $model, $action)) return $refusal;
 
+        if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
+
         if (isset($definition['capability']) && !current_user_can($definition['capability'])) return $this->forbidden($definition['capability']);
-        if (!$this->may($resource, $action, $model))                                            return $this->forbidden($action);
 
         if ($reason = $this->refuse_action($resource, $model, $definition)) return $this->error('locked', $reason, 409, ['reason' => $reason]);
 
-        if ($changes_record && ($refusal = $this->check_version($model, $input))) return $refusal;
+        if ($changes_record && !$through && ($refusal = $this->check_version($model, $input))) return $refusal;
 
-        $values   = array_intersect_key($input, (array) ($definition['input'] ?? []));
-        $problems = $this->check_action_input((array) ($definition['input'] ?? []), $values);
+        $types    = (array) ($definition['input'] ?? []);
+        $input    = $this->decode_action_input($types, $input);
+        $values   = array_intersect_key($input, $types);
+        $problems = $this->check_action_input($types, $values);
 
-        if ($unknown = array_diff(array_keys($input), [...static::CONTROL, ...array_keys((array) ($definition['input'] ?? []))])) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
+        if ($unknown = array_diff(array_keys($input), [...static::CONTROL, ...array_keys($types)])) $problems[] = 'Unknown: ' . implode(', ', $unknown) . '.';
 
         array_push($problems, ...$this->check_why($input, $via));
 
+        if (!$problems && isset($definition['validate'])) array_push($problems, ...$this->check_action_rule($definition['validate'], $model, $values));
+
         if ($problems) return $this->invalid($problems);
+
+        if ($through) return $this->act_through($resource, $model, $action, $input, $via);
 
         $sets   = (array) ($definition['sets'] ?? []);
         $change = $this->build($resource, $action, $model, $resource->get_unsaved_copy($model, $sets), $sets, $values, $input, $via);
@@ -272,7 +312,7 @@ class Resources extends Service {
 
         if ($changes_record && !$model->claim_version((int) $input['version'])) return $this->stale($model);
 
-        $this->writing[(string) $model->get_id()] = true;
+        $this->writing[$this->writing_key($resource, $model)] = true;
 
         $resource->forget_values($model);
 
@@ -286,10 +326,14 @@ class Resources extends Service {
         } catch (\Throwable $e) {
 
             $result = new WP_Error('not_saved', $e->getMessage());
+            $threw  = true;
 
         }
 
         if ($changes_record) $model->finish_version();
+
+        // Its status may have moved behind the model's back, and the read below decides whether anything changed.
+        if (is_wp_error($result) && method_exists($model, 'reload')) $model->reload();
 
         $resource->forget_values($model);
 
@@ -301,11 +345,14 @@ class Resources extends Service {
 
         if (is_wp_error($result) && !$made && ($after === $before)) {
 
-            unset($this->writing[(string) $model->get_id()]);
+            unset($this->writing[$this->writing_key($resource, $model)]);
+
+            // The action refused and nothing changed, so a later undo must still find the version it knows. What threw may have done work a read does not show.
+            if ($changes_record && empty($threw)) $model->restore_version((int) $input['version']);
 
             $code = isset(static::STATUSES[$result->get_error_code()]) ? (string) $result->get_error_code() : 'not_saved';
 
-            return $this->error($code, $result->get_error_message(), (int) (static::STATUSES[$code] ?? 500));
+            return $this->error($code, $result->get_error_message(), (int) (static::STATUSES[$code] ?? 500), $this->get_error_data($result));
 
         }
 
@@ -322,11 +369,146 @@ class Resources extends Service {
             'undoes'         => $undoes,
         ]);
 
-        unset($this->writing[(string) $model->get_id()]);
+        unset($this->writing[$this->writing_key($resource, $model)]);
 
-        if (is_wp_error($result)) return $this->error('not_saved', 'It was not done: ' . $result->get_error_message() . ' Read it again before the next change.', 500);
+        if (is_wp_error($result)) return $this->error('not_saved', 'It was not done: ' . $result->get_error_message() . ' Read it again before the next change.', 500, $this->get_error_data($result));
 
         return ($made ? ['created' => true] : []) + $this->describe_record($resource, $made ?? $model) + ['changed' => true] + $this->report_journal($journaled);
+
+    }
+
+    public function trash (string $name, $id, array $input, string $via, ?int $undoes = null) : array|WP_Error {
+
+        return $this->move_to($name, $id, 'trash', $input, $via, $undoes);
+
+    }
+
+    public function untrash (string $name, $id, array $input, string $via, ?int $undoes = null) : array|WP_Error {
+
+        return $this->move_to($name, $id, 'untrash', $input, $via, $undoes);
+
+    }
+
+    protected function move_to (string $name, $id, string $operation, array $input, string $via, ?int $undoes) : array|WP_Error {
+
+        [$resource, $model] = $this->find($name, $id);
+
+        if ($resource instanceof WP_Error) return $resource;
+
+        if (!$resource->get_post_type()) return $this->refuse_state("A {$resource->get_label()} has no Trash.");
+
+        if ($refusal = $this->refuse_update($resource, $model, $operation, $operation)) return $refusal;
+
+        $trashing = $operation === 'trash';
+        $post_id  = $model->get_id();
+        $trashed  = $this->is_trashed($resource, $model);
+
+        if ($trashing && $trashed)        return $this->refuse_state('It is already in the Trash.');
+        if (!$trashing && !$trashed)      return $this->refuse_state('It is not in the Trash.');
+        if ($trashing && !EMPTY_TRASH_DAYS) return $this->refuse_state('This site deletes for good instead of trashing, which nothing could undo.');
+
+        $target = $trashing ? 'trash' : ((string) get_post_meta($post_id, static::TRASH_META[0], true) ?: 'draft');
+
+        if (!$trashing && in_array($target, ['publish', 'future', 'private'], true) && !$this->may($resource, 'publish', $model)) return $this->forbidden($resource->get_capability('publish'), "It was {$target}, and this account may not publish.");
+
+        if ($refusal = $this->check_version($model, $input)) return $refusal;
+
+        if ($problems = $this->check_why($input, $via)) return $this->invalid($problems);
+
+        $sets   = ['status' => $target];
+        $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $sets), $sets, [], $input, $via);
+
+        if (!empty($input['dry_run'])) return $change->describe();
+
+        if (!empty($resource->get_proposable()[$operation]['confirm']) && empty($input['confirm'])) return $this->invalid(['Send the fingerprint of its dry run as confirm.']);
+
+        if (!empty($input['confirm']) && !hash_equals($change->fingerprint, (string) $input['confirm'])) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
+
+        $seen = (int) $input['version'];
+
+        if (!$model->claim_version($seen)) return $this->stale($model);
+
+        $this->writing[(string) $post_id] = true;
+
+        $resource->forget_values($model);
+
+        $before = $resource->read($model);
+        $meta   = array_map(fn ($key) => get_post_meta($post_id, $key, true), array_combine(static::TRASH_META, static::TRASH_META));
+        $keep   = fn ($new_status, $id) => ((int) $id === (int) $post_id) ? $target : $new_status;
+
+        if (!$trashing) add_filter('wp_untrash_post_status', $keep, PHP_INT_MAX, 2);
+
+        try {
+
+            $trashing ? wp_trash_post($post_id) : wp_untrash_post($post_id);
+            $error = null;
+
+        } catch (\Throwable $e) {
+
+            $error = $e->getMessage();
+
+        }
+
+        if (!$trashing) remove_filter('wp_untrash_post_status', $keep, PHP_INT_MAX);
+
+        clean_post_cache($post_id);
+
+        $status = get_post_status($post_id);
+        $landed = $trashing ? ($status === 'trash') : ($status !== 'trash');
+
+        // A site's wp_insert_post_data may have kept the status, after WordPress changed the trash meta.
+        if (!$landed) foreach ($meta as $key => $value) $trashing ? delete_post_meta($post_id, $key) : (($value !== '') && update_post_meta($post_id, $key, $value));
+
+        $model->finish_version();
+
+        if (!$landed && !$error) $model->restore_version($seen);
+
+        $model->reload();
+        $resource->forget_values($model);
+
+        if (!$landed) {
+
+            unset($this->writing[(string) $post_id]);
+
+            return $error ? $this->error('not_saved', "It was not done: {$error} Read it again before the next change.", 500) : $this->refuse_state('A guard refused it: it stays as it was.');
+
+        }
+
+        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::inst()->write([
+            'via'            => $via,
+            'resource'       => $resource->get_name(),
+            'record_id'      => $post_id,
+            'action'         => $operation,
+            'why'            => $change->why,
+            'before'         => $before,
+            'after'          => $resource->read($model),
+            'version_before' => $seen,
+            'version_after'  => $model->get_version(),
+            'undoes'         => $undoes,
+        ]);
+
+        unset($this->writing[(string) $post_id]);
+
+        if ($error) return $this->error('not_saved', "Part was written: {$error} Read it again before the next change.", 500);
+
+        return $this->describe_record($resource, $model) + ['changed' => true] + $this->report_journal($journaled);
+
+    }
+
+    // The write it makes through this service checks, previews, claims and journals: the action only answers that write's result.
+    protected function act_through (Model_Resource $resource, $model, string $action, array $input, string $via) : array|WP_Error {
+
+        try {
+
+            $result = $resource->{"act_{$action}"}($model, $input, $via);
+
+            return (is_array($result) || is_wp_error($result)) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500);
+
+        } catch (\Throwable $e) {
+
+            return $this->error('not_saved', 'It was not done: ' . $e->getMessage() . ' Read it again before the next change.', 500);
+
+        }
 
     }
 
@@ -341,8 +523,30 @@ class Resources extends Service {
 
         $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id])]);
 
+        $inverse = ['version' => $model->get_version()] + array_intersect_key($input, array_flip(static::CONTROL));
+        $trashed = $this->is_trashed($resource, $model);
+        $to_bin  = in_array($row['action'], ['update', 'undo'], true) && (($row['after']['status'] ?? '') === 'trash') && (($row['before']['status'] ?? '') !== 'trash');
+
+        if ($row['action'] === 'trash' || $to_bin) {
+
+            if (!$trashed || (!$to_bin && $model->get_version() !== $row['version_after'])) return $moved('It');
+
+            return $this->untrash($row['resource'], $row['record_id'], $inverse, $via, $row_id);
+
+        }
+
+        if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
+
+        if (in_array($row['action'], ['untrash', 'create'], true)) {
+
+            if ($model->get_version() !== $row['version_after']) return $moved('It');
+
+            return $this->trash($row['resource'], $row['record_id'], $inverse, $via, $row_id);
+
+        }
+
         // Any save raises the version, so an update row compares the fields it restores.
-        if (in_array($row['action'], ['update', 'undo'], true) && is_array($row['before'])) {
+        if (in_array($row['action'], ['update', 'undo', 'restore'], true) && is_array($row['before'])) {
 
             if ($refusal = $this->refuse_update($resource, $model)) return $refusal;
 
@@ -359,11 +563,13 @@ class Resources extends Service {
 
             $fields = $resource->get_fields_for($model, $values);
 
+            [$values, $removed] = $this->filter_values($values, $fields, $resource->read($model, false));
+
             foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($fields[$name], $values + $current)) array_push($problems, ...$fields[$name]->check($value, $name, null, true));
 
             if ($problems) return $this->invalid($problems);
 
-            return $this->write_values($resource, $model, $values, ['version' => $model->get_version()] + $input, $via, 'undo', $model->get_version(), $row_id);
+            return $this->write_values($resource, $model, $values, ['version' => $model->get_version()] + $input, $via, 'undo', $model->get_version(), $row_id, $removed);
 
         }
 
@@ -375,16 +581,73 @@ class Resources extends Service {
 
     }
 
+    // What would stop this update, as an account that may read the record, without its right to make it: what an author reads before a reviewer approves. Writes nothing and answers no diff.
+    public function check_update (string $name, $id, array $values) : array|WP_Error {
+
+        [$resource, $model] = $this->find($name, $id);
+
+        if ($resource instanceof WP_Error) return $resource;
+
+        if (!$this->may($resource, 'read', $model)) return $this->forbidden($resource->get_capability('read', $model));
+
+        [$values, $problems] = $this->take_values($resource, $values, $model);
+
+        array_push($problems, ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
+
+        $lock = $resource->get_lock($model);
+
+        return array_filter([
+            'problems' => $problems,
+            'locked'   => $this->get_locked($resource, $model, $values),
+            'needs'    => ($lock && !current_user_can($lock)) ? $lock : null,
+        ]);
+
+    }
+
     // The steps of a write
 
-    protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes) : array|WP_Error {
+    // Each field is measured from where its caller started, so a change elsewhere stops nothing: applied while the record still holds the start, skipped where it already holds the proposal, a conflict otherwise.
+    protected function write_expected (Model_Resource $resource, $model, array $values, array $expected, array $input, string $via, array $removed, int $seen) : array|WP_Error {
+
+        $live   = $resource->read($model, false);
+        $shown  = $resource->read($model);
+        $fields = $resource->get_fields_for($model, $values);
+
+        $applied = $skipped = $conflicts = [];
+
+        foreach ($values as $name => $proposed) {
+
+            $field = $fields[$name];
+            $same  = fn ($one, $other) => !$this->diff(['value' => $field->comparable($one, $proposed)], ['value' => $field->comparable($other, $proposed)]);
+            $start = $field->mask($expected[$name] ?? null);
+
+            // WordPress changes a column at save, so only the same text says it is already there.
+            $there = (($field->source === 'model') && is_string($proposed) && is_string($live[$name] ?? null)) ? ($live[$name] === $proposed) : $same($live[$name] ?? null, $proposed);
+
+            if ($there)                                 $skipped[]      = $name;
+            elseif ($same($shown[$name] ?? null, $start)) $applied[$name] = $proposed;
+            else                                        $conflicts[]    = ['field' => $name, 'start' => $start, 'live' => $shown[$name] ?? null, 'proposed' => $field->mask($proposed)];
+
+        }
+
+        if ($conflicts) return $this->stale($model, 'Someone changed what this changes: read it again and start from there.', ['conflicts' => $conflicts]);
+
+        $result = $this->write_values($resource, $model, $applied, $input, $via, 'update', $seen, null, $removed);
+
+        return is_wp_error($result) ? $result : $result + ['applied' => array_keys($applied), 'skipped' => $skipped];
+
+    }
+
+    protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes, array $removed = []) : array|WP_Error {
 
         if ($refusal = $this->refuse_locked($resource, $model, $values)) return $refusal;
 
-        $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via);
+        $change = $this->build($resource, $operation, $model, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via, $removed);
+
+        if (!$change->changes && $removed) return $this->error('locked', 'Filtering for this account removes the whole change: ' . implode(', ', array_keys($removed)) . '.', 409, ['reason' => 'Nothing is left to write.', 'removed' => $removed]);
 
         if (!empty($input['dry_run'])) return $change->describe();
-        if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false];
+        if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false] + array_filter(['removed' => $removed]);
 
         if ($refusal = $this->refuse_publish($resource, $model, $values)) return $refusal;
 
@@ -392,7 +655,9 @@ class Resources extends Service {
 
         if (!$model->claim_version($seen)) return $this->stale($model);
 
-        return $this->commit($resource, $model, $values, $change->why, $via, $operation, $seen, $undoes, true);
+        $result = $this->commit($resource, $model, $values, $change->why, $via, $operation, $seen, $undoes, true);
+
+        return is_wp_error($result) ? $result : $result + array_filter(['removed' => $removed]);
 
     }
 
@@ -400,7 +665,7 @@ class Resources extends Service {
 
         if (!$claimed && !$model->claim_version($seen)) return $this->stale($model);
 
-        $this->writing[(string) $model->get_id()] = true;
+        $this->writing[$this->writing_key($resource, $model)] = true;
 
         $resource->forget_values($model);
 
@@ -414,7 +679,7 @@ class Resources extends Service {
             $fields = $resource->get_fields_for($model, $values);
 
             // By key: finding a field by name asks the saved record's groups, which a term in this write may change.
-            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, $value);
+            foreach ($values as $name => $value) if ($fields[$name]->source === 'acf') $model->update_field($fields[$name]->key ?: $name, wp_slash($fields[$name]->to_raw($value)));
 
             $resource->stage_model_values($model, $values);
 
@@ -444,7 +709,7 @@ class Resources extends Service {
             'undoes'         => $undoes,
         ]);
 
-        unset($this->writing[(string) $model->get_id()]);
+        unset($this->writing[$this->writing_key($resource, $model)]);
 
         if ($error) return $this->error('not_saved', 'Part was written: ' . $error->getMessage() . ' Read it again before the next change.', 500);
 
@@ -468,7 +733,7 @@ class Resources extends Service {
 
     }
 
-    protected function build (Model_Resource $resource, string $operation, ?object $before, object $after, array $values, array $action_input, array $input, string $via) : Resource_Change {
+    protected function build (Model_Resource $resource, string $operation, ?object $before, object $after, array $values, array $action_input, array $input, string $via, array $removed = []) : Resource_Change {
 
         $change = new Resource_Change($resource, $operation, $before, $after, $values, $action_input, trim((string) ($input['why'] ?? '')), $via);
 
@@ -477,6 +742,7 @@ class Resources extends Service {
         $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before, $values)));
         $change->consequences = $resource->get_consequences($change);
         $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $change->consequences]));
+        $change->removed      = $removed;
 
         return $change;
 
@@ -527,19 +793,39 @@ class Resources extends Service {
 
         if (!get_current_user_id()) return false;
 
-        if (in_array($operation, ['list', 'read', 'create', 'update', 'publish'], true) && !$resource->can($operation, $model)) return false;
+        if (in_array($operation, ['list', 'read', 'create', 'update', 'publish', 'trash', 'untrash'], true) && !$resource->can($operation, $model)) return false;
 
         return (bool) apply_filters('lattice.resources.allow', true, wp_get_current_user(), $resource->get_name(), $operation);
 
     }
 
-    protected function refuse_update (Model_Resource $resource, $model) : ?WP_Error {
+    protected function refuse_update (Model_Resource $resource, $model, string $operation = 'update', string $right = 'update') : ?WP_Error {
 
-        if (!$this->may($resource, 'update', $model)) return $this->forbidden($resource->get_capability('update', $model));
+        $data = fn (string $needs) => (array) apply_filters('lattice.resources.forbidden', ['needs' => $needs], $resource, $model, $operation);
 
-        if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.');
+        if (!$this->may($resource, $right, $model)) return $this->forbidden($needs = $resource->get_capability($right, $model), data: $data($needs));
 
-        return $this->refuse_record($resource, $model, 'update');
+        if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.', $data($lock));
+
+        return $this->refuse_record($resource, $model, $right);
+
+    }
+
+    protected function is_trashed (Model_Resource $resource, $model) : bool {
+
+        return $resource->get_post_type() && ($resource->get_status($model) === 'trash');
+
+    }
+
+    protected function refuse_trashed (Model_Resource $resource, $model) : ?WP_Error {
+
+        return $this->is_trashed($resource, $model) ? $this->refuse_state('It is in the Trash: take it out first.') : null;
+
+    }
+
+    protected function refuse_state (string $reason) : WP_Error {
+
+        return $this->error('locked', $reason, 409, ['reason' => $reason]);
 
     }
 
@@ -552,9 +838,17 @@ class Resources extends Service {
 
     }
 
+    protected function get_locked (Model_Resource $resource, $model, array $values) : array {
+
+        $nested = array_map(fn () => 'it holds a flexible field the layer cannot yet write without losing its rows.', array_filter($resource->get_fields_for($model, $values), fn ($field) => $field->holds_flexible()));
+
+        return array_intersect_key(($model ? $resource->get_locked_fields($model) : []) + $nested, $values);
+
+    }
+
     protected function refuse_locked (Model_Resource $resource, $model, array $values) : ?WP_Error {
 
-        if (!$locked = array_intersect_key($resource->get_locked_fields($model), $values)) return null;
+        if (!$locked = $this->get_locked($resource, $model, $values)) return null;
 
         $reason = implode(' ', array_map(fn ($name, $why) => "{$name}: {$why}", array_keys($locked), $locked));
 
@@ -611,6 +905,8 @@ class Resources extends Service {
 
         foreach (array_intersect_key($values, $shown) as $name => $value) $values[$name] = $shown[$name]->unmask($value, $current[$name] ?? null);
 
+        [$values, $removed] = $this->filter_values($values, $shown, $current);
+
         foreach (array_intersect_key($values, $shown) as $name => $value) {
 
             $field = $shown[$name];
@@ -621,7 +917,36 @@ class Resources extends Service {
 
         }
 
-        return [array_intersect_key($values, $shown), $problems];
+        return [array_intersect_key($values, $shown), $problems, $removed];
+
+    }
+
+    // ACF's values as the acting account, before anything checks or previews them; a value sent back as the record holds it keeps its markup. Columns are WordPress's to filter.
+    protected function filter_values (array $values, array $fields, array $current) : array {
+
+        $removed = [];
+
+        foreach (array_intersect_key($values, $fields) as $name => $sent) {
+
+            if (($fields[$name]->source !== 'acf') || acf_allow_unfiltered_html()) continue;
+
+            $values[$name] = Markup::keep_value($fields[$name]->filter($sent), $sent, [$current[$name] ?? null]);
+
+            if ($lost = Markup::subtract(Markup::count($sent), Markup::count($values[$name]))) $removed[$name] = $lost;
+
+        }
+
+        return [$values, $removed];
+
+    }
+
+    protected function check_expected ($expected, array $input) : array {
+
+        if (!is_array($expected)) return ['expected is an object of each field sent and the value it started from.'];
+
+        $sent = array_diff_key($input, array_flip(static::CONTROL));
+
+        return (array_diff_key($sent, $expected) || array_diff_key($expected, $sent)) ? ['expected names every field sent and no other.'] : [];
 
     }
 
@@ -646,18 +971,59 @@ class Resources extends Service {
 
     }
 
+    // A JSON string becomes what it holds; what holds no array stays as sent, for the check to answer.
+    protected function decode_action_input (array $types, array $input) : array {
+
+        foreach ($types as $name => $type) {
+
+            if ((ltrim($type, '?') !== 'json') || !is_string($input[$name] ?? null)) continue;
+
+            if ($input[$name] === '') { unset($input[$name]); continue; }
+
+            $decoded = json_decode($input[$name], true);
+
+            if (is_array($decoded)) $input[$name] = $decoded;
+
+        }
+
+        return $input;
+
+    }
+
+    // A client chooses this input's shape, so a rule that cannot read it refuses instead of ending the request.
+    protected function check_action_rule (callable $rule, $model, array $values) : array {
+
+        try {
+
+            $problems = $rule($model, $values);
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice resources: an action\'s validate threw: ' . $e->getMessage());
+
+            return ['It could not be checked as sent.'];
+
+        }
+
+        return is_array($problems) ? array_values($problems) : ($problems ? ['It was refused as sent.'] : []);
+
+    }
+
     protected function check_action_input (array $types, array $values) : array {
 
         $problems = [];
 
         foreach ($types as $name => $type) {
 
-            $value = $values[$name] ?? null;
+            $value    = $values[$name] ?? null;
+            $optional = str_starts_with($type, '?');
+            $type     = ltrim($type, '?');
 
-            if (in_array($value, [null, ''], true)) $problems[] = "{$name} is required.";
+            if (in_array($value, [null, ''], true)) { if (!$optional) $problems[] = "{$name} is required."; }
             elseif ($type === 'email' && !is_email((string) $value)) $problems[] = "{$name} is an email address.";
             elseif ($type === 'int' && !is_numeric($value))          $problems[] = "{$name} is a number.";
             elseif ($type === 'string' && !is_string($value))        $problems[] = "{$name} is text.";
+            elseif ($type === 'json' && !is_array($value))           $problems[] = "{$name} is an array, or a JSON string holding one.";
 
         }
 
@@ -673,15 +1039,24 @@ class Resources extends Service {
 
     }
 
+    protected function get_error_data (WP_Error $error) : array {
+
+        // WordPress's own errors carry the database's text here, as a string.
+        $data = $error->get_error_data();
+
+        return is_array($data) ? array_diff_key($data, ['status' => 0]) : [];
+
+    }
+
     protected function invalid (array $problems) : WP_Error {
 
         return $this->error('invalid', 'Nothing was changed: ' . implode(' ', $problems), 400, ['problems' => array_values($problems)]);
 
     }
 
-    protected function forbidden (string $needs, string $message = 'This account may not do that.') : WP_Error {
+    protected function forbidden (string $needs, string $message = 'This account may not do that.', array $data = []) : WP_Error {
 
-        return $this->error('forbidden', $message, 403, ['needs' => $needs]);
+        return $this->error('forbidden', $message, 403, ['needs' => $needs] + $data);
 
     }
 

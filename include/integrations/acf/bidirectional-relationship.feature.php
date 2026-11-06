@@ -75,6 +75,14 @@ abstract class Bidirectional_Relationship extends \Lattice\Feature {
 
     }
 
+    protected function allows_sync ($values, $updated_selector, $field) : bool {
+
+        $self_type = $this->get_type_for($field['name'], false);
+
+        return !self::$suppressed && apply_filters('lattice.relationship.sync', true, $self_type->get_type(), $self_type->id_from_selector($updated_selector), $this) && $this->sync_condition($values, $updated_selector, $field);
+
+    }
+
     public function validate ($valid, $values, $field, $input_name) {
 
         if (($_REQUEST['action'] ?? false) != 'acf/validate_save_post') return $valid;
@@ -93,7 +101,7 @@ abstract class Bidirectional_Relationship extends \Lattice\Feature {
         if (!$updated_selector = $this->get_request_selector())         return true;
         if (!$self_type->matches($updated_selector))                    return true;
         if (!$self_type->passes_filter($updated_selector))              return true;
-        if (!$this->sync_condition($values, $updated_selector, $field)) return true;
+        if (!$this->allows_sync($values, $updated_selector, $field))    return true;
 
         $updated_id = $self_type->id_from_selector($updated_selector);
 
@@ -120,8 +128,6 @@ abstract class Bidirectional_Relationship extends \Lattice\Feature {
 
     public function sync ($values, $updated_selector, $field) {
 
-        if (self::$suppressed) return $values;
-
         $field_name     = $field['name'];
         $sync_field_key = ($field_name == $this->key_1) ? $this->key_2 : $this->key_1;
         $self_type      = $this->get_type_for($field_name, false);
@@ -129,9 +135,9 @@ abstract class Bidirectional_Relationship extends \Lattice\Feature {
         $sync_field     = acf_get_field($sync_field_key);
         $updated_id     = $self_type->id_from_selector($updated_selector);
 
-        if (!$this->sync_condition($values, $updated_selector, $field)) return $values;
         if (!$self_type->matches($updated_selector))                    return $values;
         if (!$self_type->passes_filter($updated_selector))              return $values;
+        if (!$this->allows_sync($values, $updated_selector, $field))    return $values;
         if (!$this->check_global_flag('updating'))                      return $values;
 
         // Unresolved partner field means we're about to write its value blind

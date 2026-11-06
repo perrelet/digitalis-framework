@@ -158,8 +158,8 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
             switch ($key) {
 
                 case 'post_type':
-                case 'post_status':
 
+                    // WP only honours 'any' as the plain string.
                     if (($value == 'any') || ($current == 'any')) {
 
                         $value = 'any';
@@ -167,6 +167,11 @@ class Query_Vars implements \ArrayAccess, \IteratorAggregate, \JsonSerializable,
 
                     }
 
+                    // no break;
+
+                case 'post_status':
+
+                    // WP reads ['any', 'x'] as 'any' plus x.
                     $value   = (array) $value;
                     $current = (array) $current;
 

@@ -106,7 +106,8 @@ $qv->overwrite(['post_status' => 'publish']);
 
 | Key | Behaviour when key already exists |
 |---|---|
-| `post_type`, `post_status` | If either side is `'any'`, result is `'any'`. Otherwise both coerced to arrays and array-unique merged. |
+| `post_type` | If either side is `'any'`, result is `'any'`. Otherwise both coerced to arrays and array-unique merged. |
+| `post_status` | Both coerced to arrays and array-unique merged, including `'any'`. |
 | `meta_query`, `tax_query` | Arrays are unique-merged. |
 | other arrays | `array_values(array_unique(array_merge(...), SORT_REGULAR))` |
 | scalar | incoming value wins |
@@ -285,7 +286,7 @@ Profiles pre-filter by structural properties before `condition()` is called:
 | Property | Behaviour |
 |---|---|
 | `$post_type` | Profile only applies if the query matches one of these post types (via `compare_post_type`). Empty = any. |
-| `$post_status` | Profile only applies if query post_status intersects this list. Empty = any. |
+| `$post_status` | Profile only applies if query post_status intersects this list. `'any'` counts as the statuses it covers. A query with no status always matches. Empty = any. |
 | `$role` | Match against stamp `role` (e.g. `'front_main'`, `'programmatic'`). Empty = any. |
 | `$context` | Match against stamp `context` (e.g. `'front'`, `'admin'`). Empty = any. |
 

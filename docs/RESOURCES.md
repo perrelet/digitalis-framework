@@ -15,6 +15,7 @@ Read and change models through one layer, the way wp-admin does: REST (`lattice/
 - [Option Pages](#option-pages)
 - [The Version](#the-version)
 - [The Journal and Undo](#the-journal-and-undo)
+- [Trash](#trash)
 - [Transports](#transports)
 - [Refusals](#refusals)
 - [Policy](#policy)
@@ -137,11 +138,13 @@ public function get_model_fields () : array {
 
 A model field's setter must only stage: a dry run calls it on the unsaved copy.
 
+- **Markup.** ACF values a caller sends, by create, update or undo, are stored as wp-admin would store them for the acting account: an account without `unfiltered_html` has every string filtered with `wp_kses_post()` before the checks and the dry run, so what is checked and previewed is what is stored. An exact declared choice and a secret that cannot carry markup (text, textarea, email, password, a reference) are left alone. A value sent back as the record holds it keeps its markup, row by row, a row matching any stored row. A dry run and an answer list what filtering took away under `removed` (`field => [markup => count]`), outside the fingerprint; re-encoding such as `&` to `&amp;` is not listed, and shows in the values, so code that reads a plain-text field decodes it. Writes outside the layer are unchanged.
 - **Content** is saved as the acting account, so WordPress filters its markup (kses) exactly as wp-admin would for that account.
 - **Terms** are `taxonomy => term ids`; a taxonomy left out keeps its terms. A write that changes a term may write the fields of the groups that term brings in.
 
 - **Groups.** The guide lists the post type's groups and those that depend on one of its terms, marked `applies_when` with ACF's rules. A record reads and writes the groups its own edit screen shows; a field it does not show is refused.
 - **References.** A post, term, user or file field takes an id; `0` means none.
+- **Flexible rows** are `layout` and the layout's fields by name, plus `disabled: true` and `label` (ACF's renamed row) where set, read in any request. A row sent without them is enabled and unnamed, since rows have no identity to keep a flag by. A layout's own sub-fields named `layout`, `disabled` or `label` are not reachable.
 - **Checks.** ACF validates each value (`acf_validate_value()`: lengths, min and max, rows, a site's filters). The layer adds what ACF does not check on the server: choices, that a referenced post, term, user or file exists, a date's stored format, a repeater's computed row keys. A field its conditions hide is never required.
 - **Action-only** (`ACTION_ONLY`, dotted paths): changed only by an action.
 - **Locked** (`get_locked_fields($model)`, `name => why`): refused in the record's present state; other fields in the same write go through. `get_lock($model)` is the record-wide form: a capability updating needs.
@@ -158,6 +161,8 @@ An update runs in this order:
 3. `confirm`, when sent, must match the fingerprint, so what was reviewed is what is done.
 4. The version is claimed; `before_write()`; ACF fields, then model fields and `save()`; `after_write()`; the version is finished.
 5. One journal row.
+
+An update may carry `expected`, each field it sends and the value the caller started from, instead of `version`. Each field is then measured from its own start: applied while the record holds it, skipped where the record already holds what is proposed, and a conflict otherwise, so a change to another field stops nothing. A conflict refuses the whole update as `stale`, with `data.conflicts` (`field`, `start`, `live`, `proposed`, secrets masked). The answer lists `applied` and `skipped`; with nothing applied it is `changed: false`. A secret's start is compared masked, so what a read gave can be sent back. A post column counts as there only on the same text, so a change WordPress filtered at save reads as a conflict. A `version` sent as well is checked too. Terms and groups are measured on what the update names, since a write leaves the rest alone.
 
 The service writes ACF fields directly, so `acf/save_post` does not fire: `after_write()` runs what the model's `acf/save_post` handlers would. A write that changes nothing answers `changed: false` and raises nothing.
 
@@ -184,11 +189,14 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 |-----|---------|
 | `capability` | Needed beyond updating the record |
 | `when` | `fn ($model)` answering why it cannot run now, or `''` |
-| `input` | `name => 'string' \| 'email' \| 'int'` |
+| `input` | `name => 'string' \| 'email' \| 'int' \| 'json'`, required; `'?string'` is optional. `json` is an array or a JSON string holding one, and the action gets the array. The CLI takes each as `--<name>` |
+| `validate` | `fn ($model, array $input) : array` answering problems, after the input's types and before the dry run and the claim, so a dry run says the same and a refused call moves nothing. Problems answer `invalid` with `data.problems`. A client chooses the input's shape: a rule that throws refuses as `invalid` and is logged |
 | `sets` | Fields the unsaved copy gets, so the dry run shows the action's effect |
+| `act_{name}()` | Answers the record, a new record or a `WP_Error`. A `WP_Error` means nothing was done, so its data (when an array) goes to the caller and the version goes back; for work done and then failed, throw, which keeps the version moved |
 | `confirm` | Requires the dry run's fingerprint |
 | `changes_record` | `false` for one that makes a new record (`copy`) and needs no version |
 | `undo` | The action that reverses it |
+| `writes_through` | The action writes through this service, which checks, previews, claims and journals that write. `act_{name}($model, $input, $via)` gets the whole input (`why`, `confirm`, `dry_run` included) after the record's and the action's refusals, the declared input and the why, and answers that write's result, a `WP_Error` keeping its data. It handles its own dry run and needs no version of its own, and answers an array or a `WP_Error`. It declares no `undo`: the journal row is the inner write's |
 
 `act_{name}()` returns the model, a new record, or a `WP_Error`. An error that changed nothing keeps its own code.
 
@@ -219,23 +227,35 @@ Fields come from the groups on that page; the capability is the page's; create i
 
 ## The Version
 
-`Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. `raise_version()` is a single step for raises outside a save.
+`Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. A restored revision raises it once more, after its fields come back. `raise_version()` is a single step for raises outside a save. The count is only ever compared, never counted.
 
 Relationship sync (`ACF\Bidirectional_Relationship`) writes a partner's meta without saving it, so the feature raises the partner's version itself.
 
-wp-admin's classic editor and options pages carry the version in a hidden field and refuse a save from a page opened before another change, before anything is written. Copies never inherit it (`lattice.post.duplicate.exclude_meta`).
+wp-admin's classic editor and options pages carry the version in a hidden field (`lattice_version`) and claim it, so a save from a page opened before another change is refused before anything is written, naming the change from the journal ("Jamie, through the API, 30 Oct 14:02"). The editor claims at `admin_action_editpost`, after checking the nonce and `edit_post` itself, since WordPress checks them only afterwards; an options page at `acf/save_post` 5. Preview compares the version and never raises it: it saves one's own draft while the form stays open. Autosave neither claims nor raises. Copies never inherit it (`lattice.post.duplicate.exclude_meta`).
 
 ---
 
 ## The Journal and Undo
 
-`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`).
+`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`). A row may also name a change set: `set_key`, `set_step` and `proposer_id`, which `journal()`, its route (`?set=`, `?proposer=`), the CLI and the Changes screen filter by.
+
+A restored revision is one row, `restore`. WordPress saves the post's columns, then its `wp_restore_post_revision` listeners bring the fields back (its own, ACF's, a site's); the feature journals the save as it would any, then completes that row at priority 100, once the fields are in (`Journal::amend()`, used only for a row written earlier in the same request). Rows are otherwise never changed.
 
 Undo is a write of its own:
 
-- an update row writes back the fields it changed, while each still holds that row's after (any save raises the version, so fields are compared, not versions);
+- an update or restore row writes back the fields it changed, while each still holds that row's after (any save raises the version, so fields are compared, not versions);
 - an action row runs its `undo` action, while the record is at that row's version;
-- create, an action without `undo`, and secrets are refused.
+- a `trash` row untrashes and an `untrash` row trashes, and an older update row that moved a record to the Trash untrashes it;
+- a create row trashes what it created, while the record is at that row's version;
+- an action without `undo`, a `deleted` row and secrets are refused.
+
+---
+
+## Trash
+
+Trashing and untrashing are writes like any other: `delete_post` on the record and its lock, a version, a why, a dry run whose diff is the status change, so a resource's consequences can say what it does, and a journal row. A trashed record takes no update, action or undo but its untrash, and an untrash returns it to the status it had, needing the right to publish where that is published, scheduled or private. wp-admin's untrash keeps WordPress's draft. A resource asks a `confirm` of either through `const PROPOSABLE = ['trash' => ['confirm' => true]]`, on every call and on undo's inverses.
+
+A guard that refuses (`pre_trash_post` or `pre_untrash_post` answering `false`, or a site's `wp_insert_post_data` keeping the status) answers `locked`, the record and its trash meta as they were. A guard must not call `wp_die()` while `Resources::is_writing()` holds. Both are refused while `EMPTY_TRASH_DAYS` is 0, and by a resource with no post type. `trash` and `untrash` are names no resource may give an action. wp-admin's trashes of a resource's records journal as `trash` and `untrash`, and a record deleted for good leaves a `deleted` row, which nothing undoes.
 
 ---
 
@@ -250,10 +270,12 @@ Undo is a write of its own:
 | `POST {resource}` | `wp lattice <resource> create` | `create_record()` |
 | `GET {resource}/{id}` | `wp lattice <resource> get <id>` | `get()` |
 | `PATCH {resource}/{id}` | `wp lattice <resource> update <id>` | `update()` |
+| `DELETE {resource}/{id}` | `wp lattice <resource> trash <id>` | `trash()` |
+| `POST {resource}/{id}/untrash` | `wp lattice <resource> untrash <id>` | `untrash()` |
 | `POST {resource}/{id}/{action}` | `wp lattice <resource> <action> <id>` | `act()` |
 | `GET {resource}/{id}/{view}` | `wp lattice <resource> view <id> <view>` | `view()` |
 
-`version`, `why`, `dry_run` and `confirm` travel with the values (CLI: `--version`, `--why`, `--dry-run`, `--confirm`, values in `--input=<file|->`). The CLI needs `--user`. `guide`, `journal`, `undo` and `dev` are not resource names.
+`version`, `why`, `dry_run` and `confirm` travel with the values (CLI: `--version`, `--why`, `--dry-run`, `--confirm`, values in `--input=<file|->`). The CLI needs `--user`. `guide`, `journal`, `undo`, `dev` and `jobs` are not resource names.
 
 ---
 
@@ -266,7 +288,7 @@ Undo is a write of its own:
 | `invalid` | 400 | `data.problems`; nothing changed |
 | `forbidden` | 403 | `data.needs` names the capability |
 | `not_found` | 404 | No such resource, record, action, view or row |
-| `stale` | 409 | `data.version` is now; or a `confirm` no longer matches |
+| `stale` | 409 | `data.version` is now; or a `confirm` no longer matches; or `data.conflicts` says which expected values no longer hold |
 | `locked` | 409 | `data.reason`; locked fields in `data.fields` |
 | `not_saved` | 500 | Part was written: read it again |
 
@@ -281,13 +303,24 @@ Another feature has its say over single records:
 - `lattice.resources.refuse` (`$reason, $resource, $model, $operation`): a non-empty reason refuses that record as `locked`. `$operation` is `read`, `update` or an action's name.
 - `lattice.resources.query` (`$args, $resource`): the list's query, to leave records out.
 - `lattice.resources.journal` (`$journal, $resource, $model`): `false` keeps a record's changes out of the journal.
+- `lattice.resources.forbidden` (`$data, $resource, $model, $operation`): adds to the `data` of the `forbidden` refusal of a write to a known record, so a refusal can say what the account could do instead.
+- `lattice.resources.describe` (`$description, $resource`): adds to the guide's description of a resource.
+
+A record's actions read as unusable where `lattice.resources.allow` refuses them. `Resources::check_update($name, $id, $values)` says what would stop an update, for an account that may read the record, without its right to make it: `problems`, `locked` (field and reason) and `needs` (the capability the record's lock asks), with neither a diff nor consequences. It predicts as that account, so it can differ for a reviewer where a resource shows fields per account. An empty answer means nothing stands in the way.
 
 ---
 
 ## Limits
 
+- A flexible field inside a repeater, group or another flexible field is read through its parent, which drops disabled rows outside wp-admin, so a field holding one is locked to the layer's writes.
+- An editor save claimed and then stopped before WordPress writes (another plugin's `wp_die` on `admin_action_editpost`) leaves the version raised once: that form is refused next time and its page needs reloading.
+- A restore's row is written as `update` and completed as `restore` milliseconds later, in the same request: only a journal read at that moment sees it half done.
+- Undo never touches action-only fields, so undoing a restore leaves anything the restore's listeners switched by action as they left it (an Email it switched off stays off).
+- Preview saves one's own draft without raising the version, so the form stays valid; another editor's form opened before it is not refused. WordPress's post lock keeps two people off one draft.
 - Only the classic editor and options pages refuse a stale save. The block editor, Quick Edit and Bulk Edit raise the version, so the layer refuses whatever read before them, but are not themselves refused.
 - An option page's dry run cannot see code that reads its options through the global `get_field($name, 'option')`.
 - Consequences are written by each resource: a resource that puts a secret's value in one leaks it there.
+- A dry run shows the post's columns as sent: WordPress filters them at save, trimming the title, converting entities and applying kses as the acting account, and predicting that save is not safe.
+- An account without `unfiltered_html` undoing a row, or a reviewer without it approving a trusted account's new embed in an ACF field, removes what it cannot keep; the dry run shows it.
 - Content is filtered as the acting account. For an account without `unfiltered_html`, WordPress's kses turns `&` into `&amp;` inside ACF block data, as it does in wp-admin: an approval by such an account carries that into the live content. WordPress also re-serialises block attributes (`\"` to `\u0022`), so compare content with what WordPress stored, not the string sent.
 - Long text is presented shortened; an edit beyond what is shown reads "Changed". `lattice.resources.present` (`$lines, $resource, $before, $after, $model`) lets another feature add to a presented change, a preview link say.

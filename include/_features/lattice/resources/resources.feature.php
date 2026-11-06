@@ -13,6 +13,7 @@ require_once __DIR__ . '/options-page-resource.abstract.php';
 require_once __DIR__ . '/resources.service.php';
 require_once __DIR__ . '/journal/journal.db-table.php';
 require_once __DIR__ . '/journal/v1-create-journal.migration.php';
+require_once __DIR__ . '/journal/v2-journal-sets.migration.php';
 require_once __DIR__ . '/journal/journal.schema.php';
 require_once __DIR__ . '/journal/journal.service.php';
 require_once __DIR__ . '/resources-command.class.php';
@@ -30,14 +31,18 @@ class Lattice_Resources extends Feature {
 
     protected array $before = [];
 
+    protected ?array $last_save = null;
+
     public function get_hooks () {
 
         return [
             'save_post'                                       => 'raise_version',
             'pre_post_update'                                 => 'take_before',
             'wp_after_insert_post'                            => ['settle_save', 100],
+            'before_delete_post'                              => 'note_deletion',
+            'wp_restore_post_revision'                        => ['settle_restore', 100],
             'post_submitbox_misc_actions'                     => 'print_version',
-            'admin_action_editpost'                           => 'refuse_stale_edit',
+            'admin_action_editpost'                           => 'claim_from_editor',
             'acf/save_post'                                   => ['take_page_before', 5],
             'acf/options_page/submitbox_before_major_actions' => 'print_page_version',
             'acf/options_page/save'                           => 'settle_page_save',
@@ -83,15 +88,22 @@ class Lattice_Resources extends Feature {
 
     }
 
+    // Preview posts the editor's form and may save the draft.
+    protected function is_preview ($post_id) : bool {
+
+        return (($_POST['wp-preview'] ?? '') === 'dopreview') && ((int) ($_POST['post_ID'] ?? 0) === (int) $post_id);
+
+    }
+
     // Version
 
     public function raise_version ($post_id) {
 
-        if ($this->is_autosave() || Resources::inst()->is_writing($post_id)) return;
+        if ($this->is_autosave() || $this->is_preview($post_id) || Resources::inst()->is_writing($post_id)) return;
 
         [, $model] = $this->find($post_id);
 
-        $model?->claim_version($model->get_version());
+        if ($model && !$model->is_claimed()) $model->claim_version($model->get_version());
 
     }
 
@@ -103,13 +115,22 @@ class Lattice_Resources extends Feature {
 
     }
 
-    public function refuse_stale_edit () {
+    // post.php checks the nonce only after this.
+    public function claim_from_editor () {
 
         if (!isset($_POST[static::VERSION_FIELD])) return;
 
-        [$resource, $model] = $this->find((int) ($_POST['post_ID'] ?? 0));
+        $post_id = (int) ($_POST['post_ID'] ?? 0);
 
-        if ($model) $this->refuse_if_stale($resource, $model);
+        [$resource, $model] = $this->find($post_id);
+
+        if (!$model || !wp_verify_nonce((string) ($_POST['_wpnonce'] ?? ''), "update-post_{$post_id}") || !current_user_can('edit_post', $post_id)) return;
+
+        $seen = (int) $_POST[static::VERSION_FIELD];
+
+        if ($this->is_preview($post_id) ? ($seen === $model->get_version()) : $model->claim_version($seen)) return;
+
+        $this->refuse_stale($resource, $post_id, $seen);
 
     }
 
@@ -119,11 +140,23 @@ class Lattice_Resources extends Feature {
 
     }
 
-    protected function refuse_if_stale (Model_Resource $resource, $model) : void {
+    protected function refuse_stale (Model_Resource $resource, $record_id, int $seen) : void {
 
-        if (!isset($_POST[static::VERSION_FIELD]) || ((int) $_POST[static::VERSION_FIELD] === $model->get_version())) return;
+        $by = $this->describe_change($resource, $record_id, $seen);
 
-        wp_die(esc_html("This {$resource->get_label()} changed after you opened it, so your edit was not saved. Open it again to see the change, then make yours."), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
+        wp_die(esc_html("This {$resource->get_label()} changed after you opened it" . ($by ? " ({$by})" : '') . ', so your edit was not saved. Open it again to see the change, then make yours.'), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
+
+    }
+
+    protected function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
+
+        $row = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
+
+        if (!$row || ($row['version_after'] <= $seen)) return '';
+
+        $how = ['rest' => 'through the API', 'cli' => 'through WP-CLI', 'admin' => 'in wp-admin'][$row['via']] ?? '';
+
+        return implode(', ', array_filter([(get_userdata($row['user_id']) ?: null)?->display_name ?: 'someone', $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
 
     }
 
@@ -159,13 +192,16 @@ class Lattice_Resources extends Feature {
 
         $resource->forget_values($model);
 
-        $this->before[$post_id] = ['status' => get_post_status($post_id), 'values' => $resource->read($model), 'version' => $model->get_version()];
+        // The editor's form has claimed the version already.
+        $this->before[$post_id] = ['status' => get_post_status($post_id), 'values' => $resource->read($model), 'version' => $model->get_version() - ($model->is_claimed() ? 1 : 0)];
 
         $resource->forget_values($model);
 
     }
 
     public function settle_save ($post_id, $wp_post, $update) {
+
+        $this->last_save = null;
 
         $before = $this->before[$post_id] ?? null;
 
@@ -184,19 +220,71 @@ class Lattice_Resources extends Feature {
 
         $created = !$update || $before['status'] === 'auto-draft';
         $after   = $resource->read($model);
+        $via     = is_admin() ? 'admin' : 'other';
+
+        $this->last_save = $created ? null : ['post_id' => (int) $post_id, 'values' => $before['values'], 'version' => $before['version'], 'via' => $via, 'row' => 0];
 
         if ((!$created && $after === $before['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
 
-        Journal::inst()->write([
-            'via'            => is_admin() ? 'admin' : 'other',
+        $row = Journal::inst()->write([
+            'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $post_id,
-            'action'         => $created ? 'create' : 'update',
+            'action'         => $created ? 'create' : (($before['status'] !== 'trash' && $wp_post->post_status === 'trash') ? 'trash' : (($before['status'] === 'trash' && $wp_post->post_status !== 'trash') ? 'untrash' : 'update')),
             'before'         => $created ? null : $before['values'],
             'after'          => $after,
             'version_before' => $created ? 0 : $before['version'],
             'version_after'  => $model->get_version(),
         ]);
+
+        if (!$created) $this->last_save['row'] = $row;
+
+    }
+
+    public function note_deletion ($post_id) {
+
+        [$resource, $model] = $this->find($post_id);
+
+        if (!$model || (get_post_status($post_id) === 'auto-draft') || !Resources::inst()->is_journaled($resource, $model)) return;
+
+        $resource->forget_values($model);
+
+        // WordPress's purge deletes a list in one loop: one unreadable record must not stop it.
+        try { $before = $resource->read($model); } catch (\Throwable $e) { $before = null; }
+
+        Journal::inst()->write([
+            'via'            => is_admin() ? 'admin' : 'other',
+            'resource'       => $resource->get_name(),
+            'record_id'      => $post_id,
+            'action'         => 'deleted',
+            'before'         => $before,
+            'version_before' => $model->get_version(),
+            'version_after'  => $model->get_version(),
+        ]);
+
+    }
+
+    // WordPress restores the fields after this post's save.
+    public function settle_restore ($post_id) {
+
+        $save = (($this->last_save['post_id'] ?? 0) === (int) $post_id) ? $this->last_save : null;
+
+        $this->last_save = null;
+
+        [$resource, $model] = $this->find($post_id);
+
+        if (!$save || !$model) return;
+
+        $model->raise_version();
+        $resource->forget_values($model);
+        $model->reload();
+
+        if ((($after = $resource->read($model)) === $save['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
+
+        $row = ['action' => 'restore', 'after' => $after, 'version_after' => $model->get_version()];
+
+        if ($save['row']) Journal::inst()->amend($save['row'], $row);
+        else Journal::inst()->write($row + ['via' => $save['via'], 'resource' => $resource->get_name(), 'record_id' => $post_id, 'before' => $save['values'], 'version_before' => $save['version']]);
 
     }
 
@@ -213,13 +301,14 @@ class Lattice_Resources extends Feature {
 
         if (!$model = $resource?->find($plugin_page)) return;
 
-        $this->refuse_if_stale($resource, $model);
+        // ACF has checked the page's nonce.
+        $seen = isset($_POST[static::VERSION_FIELD]) ? (int) $_POST[static::VERSION_FIELD] : $model->get_version();
+
+        if (!$model->claim_version($seen)) $this->refuse_stale($resource, $plugin_page, $seen);
 
         $resource->forget_values($model);
 
-        $this->before[$plugin_page] = ['values' => $resource->read($model), 'version' => $model->get_version()];
-
-        $model->claim_version($model->get_version());
+        $this->before[$plugin_page] = ['values' => $resource->read($model), 'version' => $seen];
 
     }
 
