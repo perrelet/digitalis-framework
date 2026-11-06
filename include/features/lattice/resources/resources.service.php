@@ -962,7 +962,7 @@ class Resources extends Service {
     }
 
     // The walk is in order and stops at such a step, so waiting for all before it says all that waiting for one would.
-    protected function plan_steps (array $steps) : array {
+    public function plan_steps (array $steps) : array {
 
         $plan    = [];
         $writes  = [];
@@ -1028,7 +1028,7 @@ class Resources extends Service {
     }
 
     // What a reviewer should know beforehand. Undoing's own dry run says exactly what it can do.
-    protected function get_step_flags (array $step) : array {
+    public function get_step_flags (array $step) : array {
 
         $resource = $this->get_resource($step['resource']);
         $action   = ($step['op'] === 'act') ? ($resource?->get_actions()[$step['action'] ?? ''] ?? []) : [];
@@ -1402,7 +1402,7 @@ class Resources extends Service {
         $resource->forget_values($model);
 
         $values   = array_diff_key($values, array_flip(static::CONTROL));
-        $withheld = $this->may($resource, 'update', $model) ? [] : array_filter($resource->get_fields_for($model, $values), fn ($field, $field_name) => isset($values[$field_name]) && $field->holds_secret(), ARRAY_FILTER_USE_BOTH);
+        $withheld = $this->may($resource, 'update', $model) ? [] : array_filter($resource->get_fields_for($model, $values), fn ($field, $field_name) => array_key_exists($field_name, $values) && $field->holds_secret(), ARRAY_FILTER_USE_BOTH);
 
         [$applied, $skipped, $conflicts] = $this->compare_fields($resource, $model, array_diff_key($values, $withheld), $expected);
 
@@ -1425,7 +1425,7 @@ class Resources extends Service {
 
             if (!$field = $fields[$name] ?? null) {
 
-                $conflicts[] = ['field' => $name, 'not_shown' => true, 'start' => Resource_Field::mask_value($expected[$name] ?? null), 'live' => null, 'proposed' => Resource_Field::mask_value($proposed)];
+                $conflicts[] = ['field' => $name, 'not_shown' => true, 'start' => null, 'live' => null, 'proposed' => null];
 
                 continue;
 

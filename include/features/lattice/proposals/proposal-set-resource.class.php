@@ -28,6 +28,108 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
     }
 
+    public function get_views () : array {
+
+        return ['review' => 'review_set'];
+
+    }
+
+    public function review_set ($set) : array {
+
+        // Read before the steps, so a step list that moves meanwhile is stale and not taken as seen.
+        $version  = $set->get_version();
+        $reviewer = current_user_can('approve_proposals');
+        $read     = array_combine(array_keys($set->get_steps()), $this->read_steps($set));
+
+        $steps = match (true) {
+            $set->is_closed() => $read,
+            $reviewer         => $this->preview_steps($set, $read),
+            default           => $this->check_steps($set, $read),
+        };
+
+        $records = [];
+        $waiting = [];
+
+        foreach ($steps as $position => $step) {
+
+            $records[$step['resource'] . ':' . ($step['id'] ?? "new-{$position}")][] = $position;
+
+            if (!empty($step['reached'])) $steps[$position]['after'] = $waiting;
+
+            if (empty($step['done'])) $waiting[] = $position;
+
+        }
+
+        return [
+            'as'           => $reviewer ? 'reviewer' : 'author',
+            'version'      => $version,
+            'state'        => $set->get_state(),
+            'purpose'      => $set->get_purpose(),
+            'author_id'    => $set->get_author_id(),
+            'submitted_at' => $set->get_submitted_at(),
+            'note'         => $set->get_note(),
+            'reason'       => $set->get_reason(),
+            'steps'        => $steps,
+            'records'      => $records,
+        ];
+
+    }
+
+    protected function preview_steps ($set, array $read) : array {
+
+        $steps = [];
+
+        foreach (Resources::inst()->preview_set($set) as $position => $preview) $steps[$position] = array_filter(['conflicts' => $this->label_conflicts($preview['refusal']['data']['conflicts'] ?? [])]) + $preview + $read[$position];
+
+        return $steps;
+
+    }
+
+    protected function check_steps ($set, array $read) : array {
+
+        $stored = $set->get_steps();
+        $plan   = Resources::inst()->plan_steps($stored);
+        $steps  = [];
+
+        foreach ($read as $position => $step) {
+
+            $held = $stored[$position];
+
+            // What it would find depends on the steps before it, not on what is live now.
+            $check = (($held['op'] === 'update') && !$plan[$position]['done'] && !$plan[$position]['reached']) ? $this->check_update_step($held) : ['checked' => false];
+
+            $steps[$position] = $step + ['flags' => Resources::inst()->get_step_flags($held)] + $plan[$position] + $check;
+
+        }
+
+        return $steps;
+
+    }
+
+    protected function check_update_step (array $step) : array {
+
+        $compared = Resources::inst()->compare_expected($step['resource'], $step['id'], $step['values'], $step['expected']);
+        $problems = Resources::inst()->check_update($step['resource'], $step['id'], $step['values']);
+
+        foreach ([$compared, $problems] as $answer) if (is_wp_error($answer)) return ['checked' => false, 'refusal' => $answer->get_error_message()];
+
+        return ['checked' => true, 'conflicts' => $this->label_conflicts($compared['conflicts'])] + array_intersect_key($compared, ['applied' => 0, 'skipped' => 0, 'withheld' => 0]) + $problems;
+
+    }
+
+    // An account shown a repeater as one mask and another shown its cells disagree about a value neither moved (D64).
+    protected function label_conflicts (array $conflicts) : array {
+
+        return array_map(function ($conflict) {
+
+            [$start, $live] = [$conflict['start'] ?? null, $conflict['live'] ?? null];
+
+            return $conflict + (((Resource_Field::is_mask($start) && is_array($live)) || (is_array($start) && Resource_Field::is_mask($live))) ? ['masking' => true] : []);
+
+        }, $conflicts);
+
+    }
+
     // Submitting
 
     protected function refuse_submitting ($set) : string {
