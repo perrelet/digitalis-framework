@@ -22,7 +22,7 @@ class Journal extends Service {
 
         global $wpdb;
 
-        if (!array_key_exists('set_key', $row)) $row += Resources::inst()->get_held_marks();
+        if (!array_key_exists('set_key', $row)) $row += Resources::inst()->get_held_marks($row);
 
         $wpdb->insert($this->get_table(), [
             'at'             => gmdate('Y-m-d H:i:s'),

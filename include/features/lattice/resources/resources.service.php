@@ -365,16 +365,17 @@ class Resources extends Service {
 
         $after = $resource->read($made ?? $model);
 
-        if (is_wp_error($result) && !$made && ($after === $before)) {
+        // What threw may have done work a read does not show, so it keeps its claim and leaves a row saying so.
+        if (is_wp_error($result) && !$made && ($after === $before) && empty($threw)) {
 
             unset($this->writing[$this->writing_key($resource, $model)]);
 
-            // The action refused and nothing changed, so a later undo must still find the version it knows. What threw may have done work a read does not show.
-            if ($changes_record && empty($threw)) $model->restore_version((int) $input['version']);
+            // The action refused and nothing changed, so a later undo must still find the version it knows.
+            if ($changes_record) $model->restore_version((int) $input['version']);
 
             $code = isset(static::STATUSES[$result->get_error_code()]) ? $result->get_error_code() : 'not_saved';
 
-            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500, $this->get_error_data($result) + (empty($threw) ? [] : ['partial' => true]));
+            return $this->error($code, $result->get_error_message(), static::STATUSES[$code] ?? 500, $this->get_error_data($result));
 
         }
 
@@ -385,7 +386,7 @@ class Resources extends Service {
             'action'         => $action,
             'why'            => $change->why,
             'before'         => $made ? null : $before,
-            'after'          => $after,
+            'after'          => (is_wp_error($result) ? ['_partial' => true] : []) + $after,
             'version_before' => $made ? 0 : $version_before,
             'version_after'  => ($made ?? $model)->get_version(),
             'undoes'         => $undoes,
@@ -660,6 +661,253 @@ class Resources extends Service {
 
     }
 
+    // Each row a set's steps wrote and not yet undone, newest first, as the current account would meet its undo now. Nothing written.
+    public function preview_undo (Step_List $set) : array {
+
+        $seen    = [];
+        $blocked = (bool) array_filter($set->get_steps(), fn ($step) => in_array($step['marker'] ?? '', ['started', 'unknown'], true));
+
+        foreach ($this->plan_undo($set) as $row_id => $plan) {
+
+            $row  = $plan['row'];
+            $look = $plan['passed_over'] ? ['result' => null, 'version' => null] : $this->look_at_undo($set, $plan);
+            $res  = $look['result'];
+
+            // Named before anyone starts: a row reached later is still known not to reverse, and nothing goes past one that does not.
+            $can     = $plan['passed_over'] ? null : (!$blocked && $this->row_has_inverse($row) && !(is_wp_error($res) && !$plan['reached']));
+            $behind  = $blocked;
+            $blocked = $blocked || ($can === false);
+
+            $seen[$row_id] = array_filter([
+                'row_id'      => $row_id,
+                'step'        => $row['set_step'],
+                'action'      => $row['action'],
+                'resource'    => $row['resource'],
+                'record_id'   => $row['record_id'],
+                'passed_over' => $plan['passed_over'],
+                'reached'     => $plan['reached'],
+                'can_undo'    => $can,
+                'blocked'     => $behind ?: null,
+                'secrets'     => $plan['secrets'] ?: null,
+                'version'     => $look['version'],
+                'fingerprint' => is_array($res) ? ($res['fingerprint'] ?? null) : null,
+                'preview'     => is_array($res) ? $res : null,
+                'refusal'     => is_wp_error($res) ? ['code' => $res->get_error_code(), 'message' => $res->get_error_message()] : null,
+            ], fn ($value) => !is_null($value));
+
+        }
+
+        return $seen;
+
+    }
+
+    // Newest first, each inverse against what was seen of it. $seen, by row id: fingerprint, version. There is no refusing it whole: it stops at the first that cannot go on, what is undone staying undone, and leaves the set's markers and state as they are.
+    public function undo_set (Step_List $set, array $seen, string $via) : array|WP_Error {
+
+        if (!Journal_Schema::is_current()) return $this->refuse_state('The journal is not up to date, so its rows would lose their marks.');
+        if ($this->walk)                   return $this->refuse_state('Another set is being walked in this request.');
+
+        foreach ($set->get_steps() as $position => $step) if (in_array($step['marker'] ?? '', ['started', 'unknown'], true)) return $this->refuse_state("A person settles step {$position} first.");
+
+        $plans  = $this->plan_undo($set);
+        $seen   = array_map(fn ($each) => is_array($each) ? $each : null, $seen);
+        $undone = [];
+        $live   = $this->get_steps_without_rows($set);
+        $answer = function (string $outcome, string $reason = '', ?int $row_id = null, bool $partial = false) use (&$undone, $live) { return ['outcome' => $outcome, 'reason' => $reason, 'undone' => $undone] + ($row_id ? ['row' => $row_id] : []) + ($partial ? ['partial' => true] : []) + ($live ? ['no_row' => $live] : []); };
+
+        $this->walk = ['key' => $set->get_key(), 'step' => null, 'proposer' => $set->get_proposer_id(), 'rows' => [], 'create' => false, 'undoing' => true];
+
+        try {
+
+            foreach ($plans as $row_id => $plan) {
+
+                if ($plan['passed_over']) continue;
+
+                if (!$set->holds_lock()) return $answer('stopped', 'The lock was lost.', $row_id);
+
+                if ($plan['reached']) return $answer('awaiting_look', "Row {$row_id} is previewed once the rows after it are undone: look again.", $row_id);
+
+                $this->walk['step'] = $plan['row']['set_step'];
+
+                $look = $this->look_at_undo($set, $plan);
+                $was  = $seen[$row_id] ?? null;
+
+                if (is_wp_error($look['result'])) return $answer(($look['result']->get_error_code() === 'stale') ? 'awaiting_look' : 'stopped', "Row {$row_id}: {$look['result']->get_error_message()}", $row_id);
+
+                if (!$was || !is_string($was['fingerprint'] ?? null) || !hash_equals($was['fingerprint'], (string) ($look['result']['fingerprint'] ?? '')) || !is_numeric($was['version'] ?? null) || ((int) $was['version'] !== $look['version'])) return $answer('awaiting_look', "Row {$row_id} has changed since it was seen.", $row_id);
+
+                try {
+
+                    $result = $this->undo($row_id, ['why' => $this->get_step_why($set, $plan['row']['set_step']), 'confirm' => $was['fingerprint']], $via, $plan['accepted']);
+
+                } catch (\Throwable $e) {
+
+                    return $answer('stopped', "Row {$row_id}: {$e->getMessage()}", $row_id, true);
+
+                }
+
+                if (is_wp_error($result)) return $answer(($result->get_error_code() === 'stale') ? 'awaiting_look' : 'stopped', "Row {$row_id}: {$result->get_error_message()}", $row_id, !empty($result->get_error_data()['partial']));
+
+                // No row says it was undone, so claiming so would never converge.
+                if (array_key_exists('changed', $result) && !$result['changed']) return $answer('stopped', "Row {$row_id}: its undo found nothing to write.", $row_id);
+
+                if (($result['journaled'] ?? true) === false) return $answer('stopped', "Row {$row_id} was undone, and its row could not be written.", $row_id, true);
+
+                $undone[] = $row_id;
+
+                if (!$set->holds_lock()) return $answer('stopped', 'The lock was lost during that row.', $row_id);
+
+            }
+
+        } finally {
+
+            $this->walk = null;
+
+        }
+
+        return $answer('undone');
+
+    }
+
+    protected function plan_undo (Step_List $set) : array {
+
+        $journal = Journal::inst();
+        $rows    = $journal->rows_for_set($set->get_key());
+        $own     = array_filter($rows, fn ($row) => !is_null($row['set_step']) && is_null($row['undoes']));
+        $undoing = $journal->undoing(array_column($own, 'id'));
+
+        // A failed undo wrote a row too: unless the values it restores landed, it did not undo what it names, and can be tried again.
+        $by_id   = array_column($own, null, 'id');
+        $done    = array_flip(array_column(array_filter($undoing, fn ($row) => empty($row['after']['_partial']) || $this->undo_landed($by_id[$row['undoes']] ?? [], $row)), 'undoes'));
+        $newest  = [];
+
+        foreach ([...$rows, ...$undoing] as $row) if (!is_null($row['set_step']) || !is_null($row['undoes'])) {
+
+            $key = "{$row['resource']}:{$row['record_id']}";
+
+            if (($newest[$key]['id'] ?? 0) < $row['id']) $newest[$key] = ['id' => $row['id'], 'version' => $row['version_after']];
+
+        }
+
+        $plans = [];
+        $ahead = [];
+        $mixed = [];
+
+        foreach ($own as $row) if (!isset($done[$row['id']]) && !$this->row_passes_over($row) && !in_array($row['action'], ['update', 'undo', 'restore'], true)) $mixed["{$row['resource']}:{$row['record_id']}"] = true;
+
+        foreach (array_reverse($own) as $row) {
+
+            if (isset($done[$row['id']])) continue;
+
+            $key        = "{$row['resource']}:{$row['record_id']}";
+            $resource   = $this->get_resource($row['resource']);
+            $passed     = $this->row_passes_over($row);
+            $fields     = $resource ? $resource->get_fields() : [];
+
+            $plans[$row['id']] = [
+                'row'         => $row,
+                'passed_over' => $passed,
+                'reached'     => !$passed && isset($ahead[$key]),
+                'accepted'    => $newest[$key]['version'] ?? null,
+                'strict'      => !$passed && !isset($ahead[$key]) && isset($mixed[$key]),
+                'secrets'     => array_keys(array_filter((array) $row['before'], fn ($value, $name) => ($value !== ($row['after'][$name] ?? null)) && (in_array($name, $resource ? $resource::SECRET : [], true) || ($fields[$name] ?? null)?->holds_secret()), ARRAY_FILTER_USE_BOTH)),
+            ];
+
+            if (!$passed) $ahead[$key] = true;
+
+        }
+
+        return $plans;
+
+    }
+
+    // Wrote nothing to its record that a read shows: an action declaring so, or an update whose read came back the same.
+    protected function row_passes_over (array $row) : bool {
+
+        if (!is_array($row['before']) || ($row['before'] !== $row['after'])) return false;
+
+        if (in_array($row['action'], ['update', 'undo', 'restore'], true)) return true;
+
+        $definition = $this->get_resource($row['resource'])?->get_actions()[$row['action']] ?? [];
+
+        return $definition && (($definition['changes_record'] ?? true) === false);
+
+    }
+
+    // Whether anything could reverse this row, whatever else has happened since.
+    protected function row_has_inverse (array $row) : bool {
+
+        if (!$resource = $this->get_resource($row['resource'])) return false;
+
+        if (!$resource->find($row['record_id'])) return false;
+
+        if (in_array($row['action'], ['trash', 'untrash', 'create'], true)) return true;
+
+        if (in_array($row['action'], ['update', 'undo', 'restore'], true)) {
+
+            if (!is_array($row['before'])) return false;
+
+            $changed = array_filter($row['before'], fn ($value, $name) => $value !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH);
+
+            return !$changed || (bool) $this->get_writable_values($resource, $resource->find($row['record_id']), $changed);
+
+        }
+
+        return !empty($resource->get_actions()[$row['action']]['undo']);
+
+    }
+
+    // A failed undo whose fields landed before it failed, a listener after the save having thrown.
+    protected function undo_landed (array $row, array $undoing) : bool {
+
+        if (!is_array($row['before'] ?? null)) return false;
+
+        $changed = array_filter($row['before'], fn ($value, $name) => $value !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH);
+
+        return (bool) $changed && (array_intersect_key((array) $undoing['after'], $changed) == $changed);
+
+    }
+
+    // Applied, with nothing to undo it from: the row could not be written, a filter kept it off, or it was pruned.
+    protected function get_steps_without_rows (Step_List $set) : array {
+
+        $rowed = array_flip(array_map('intval', array_column(array_filter(Journal::inst()->rows_for_set($set->get_key()), fn ($row) => !is_null($row['set_step'])), 'set_step')));
+
+        return array_keys(array_filter($set->get_steps(), fn ($step, $position) => (($step['marker'] ?? '') === 'applied') && !isset($rowed[$position]), ARRAY_FILTER_USE_BOTH));
+
+    }
+
+    protected function look_at_undo (Step_List $set, array $plan) : array {
+
+        $row = $plan['row'];
+
+        try {
+
+            if ($this->get_resource($row['resource'])?->get_post_type() && is_numeric($row['record_id'])) clean_post_cache((int) $row['record_id']);
+
+            [$resource, $model] = $this->find($row['resource'], $row['record_id']);
+
+            if ($resource instanceof WP_Error) return ['result' => $resource, 'version' => null];
+
+            $resource->refresh($model);
+
+            $version = $model->get_version();
+
+            // The first inverse on a record with more than updates: anything but the set's own newest row having moved it is an outside write, which the version an inverse accepts must not cover.
+            if ($plan['strict'] && !is_null($plan['accepted']) && ($version !== $plan['accepted'])) return ['result' => $this->stale($model, 'It changed outside the set after its last row: read it again.'), 'version' => $version];
+
+            return ['result' => $this->undo($row['id'], ['dry_run' => true, 'why' => $this->get_step_why($set, (int) $row['set_step'])], 'other', $plan['accepted']), 'version' => $version];
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice resources: looking at an undo threw: ' . $e->getMessage());
+
+            return ['result' => $this->refuse_state('It could not be read as held.'), 'version' => null];
+
+        }
+
+    }
+
     // What a create step's record carries, so a request that died can find it.
     public static function get_set_key (int $key, int $position) : string {
 
@@ -668,9 +916,14 @@ class Resources extends Service {
     }
 
     // For Journal::write(): a row of this walk's step names it.
-    public function get_held_marks () : array {
+    public function get_held_marks (array $row = []) : array {
 
-        return $this->walk ? ['set_key' => $this->walk['key'], 'set_step' => $this->walk['step'], 'proposer_id' => $this->walk['proposer']] : [];
+        if (!$this->walk) return [];
+
+        // A listener's write during an undo names the set, and no step: it is nothing the undo should go on to undo.
+        $step = (!empty($this->walk['undoing']) && empty($row['undoes'])) ? null : $this->walk['step'];
+
+        return ['set_key' => $this->walk['key'], 'set_step' => $step, 'proposer_id' => $this->walk['proposer']];
 
     }
 
@@ -980,7 +1233,8 @@ class Resources extends Service {
 
     }
 
-    public function undo (int $row_id, array $input, string $via) : array|WP_Error {
+    // $accepted: a version an action's or a move's strict check also takes, since a set's own later rows moved it. Only undo_set() passes one: never from input, so no route reaches it.
+    public function undo (int $row_id, array $input, string $via, ?int $accepted = null) : array|WP_Error {
 
         if (!$row = Journal::inst()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
 
@@ -991,6 +1245,8 @@ class Resources extends Service {
 
         if (!$this->may($resource, 'undo', $model)) return $this->forbidden('undo');
 
+        $at_row = fn () => in_array($model->get_version(), [$row['version_after'], $accepted], true);
+
         $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id])]);
 
         $inverse = ['version' => $model->get_version()] + array_intersect_key($input, array_flip(static::CONTROL));
@@ -999,7 +1255,7 @@ class Resources extends Service {
 
         if ($row['action'] === 'trash' || $to_bin) {
 
-            if (!$trashed || (!$to_bin && $model->get_version() !== $row['version_after'])) return $moved('It');
+            if (!$trashed || (!$to_bin && !$at_row())) return $moved('It');
 
             return $this->untrash($row['resource'], $row['record_id'], $inverse, $via, $row_id);
 
@@ -1009,7 +1265,8 @@ class Resources extends Service {
 
         if (in_array($row['action'], ['untrash', 'create'], true)) {
 
-            if ($model->get_version() !== $row['version_after']) return $moved('It');
+            // Nothing else in a set can name a record it created, so a create has no version to accept.
+            if ((($row['action'] === 'create') ? $model->get_version() !== $row['version_after'] : !$at_row())) return $moved('It');
 
             return $this->trash($row['resource'], $row['record_id'], $inverse, $via, $row_id);
 
@@ -1043,7 +1300,7 @@ class Resources extends Service {
 
         }
 
-        if ($model->get_version() !== $row['version_after']) return $moved('It');
+        if (!$at_row()) return $moved('It');
 
         if ($inverse = $resource->get_actions()[$row['action']]['undo'] ?? null) return $this->act($resource->get_name(), $model->get_id(), $inverse, ['version' => $model->get_version()] + array_intersect_key($input, array_flip([...static::CONTROL, ...array_keys((array) ($resource->get_actions()[$inverse]['input'] ?? []))])), $via, $row_id);
 
@@ -1584,7 +1841,7 @@ class Resources extends Service {
 
         $fields = $resource->get_fields_for($model, $values);
 
-        return array_filter($values, fn ($value, $name) => ($field = $fields[$name] ?? null) && !$field->computed && !$field->action_only && !$field->is_secret(), ARRAY_FILTER_USE_BOTH);
+        return array_filter($values, fn ($value, $name) => ($field = $fields[$name] ?? null) && !$field->computed && !$field->action_only && !$field->holds_secret(), ARRAY_FILTER_USE_BOTH);
 
     }
 
