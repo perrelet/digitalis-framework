@@ -152,9 +152,27 @@ class Resources extends Service {
 
         $readable = array_values(array_filter(array_keys($this->resources), fn ($name) => ($resource = $this->get_resource($name)) && $this->may($resource, 'list')));
 
-        if (!$readable) return [];
+        // A feature may answer for the rows of one of its own sets, as "resource:id" for each record they may be on.
+        $named = isset($args['set']) ? array_flip((array) apply_filters('lattice.resources.journal_set', [], (int) $args['set'])) : [];
 
-        return array_values(array_filter(Journal::inst()->query(['resources' => $readable] + $args), fn ($row) => !($model = $this->get_resource($row['resource'])->find($row['record_id'])) || !$this->refuse_read($this->get_resource($row['resource']), $model)));
+        if (!$readable && !$named) return [];
+
+        $rows = Journal::inst()->query(($named ? [] : ['resources' => $readable]) + $args);
+
+        return array_values(array_filter($rows, function ($row) use ($readable, $named) {
+
+            if (isset($named["{$row['resource']}:{$row['record_id']}"])) return true;
+
+            if (!in_array($row['resource'], $readable, true)) return false;
+
+            $resource = $this->get_resource($row['resource']);
+
+            // A post that has gone can still be read about. A record with no post type that does not read may only have failed to.
+            if (!$model = $resource->find($row['record_id'])) return (bool) $resource->get_post_type();
+
+            return !$this->refuse_read($resource, $model);
+
+        }));
 
     }
 
@@ -1223,7 +1241,9 @@ class Resources extends Service {
 
             $result = $resource->{"act_{$action}"}($model, $input, $via);
 
-            return (is_array($result) || is_wp_error($result)) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500, ['partial' => true]);
+            if (is_wp_error($result)) return isset(((array) $result->get_error_data())['status']) ? $result : $this->error($result->get_error_code(), $result->get_error_message(), static::STATUSES[$result->get_error_code()] ?? 500, $this->get_error_data($result));
+
+            return is_array($result) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500, ['partial' => true]);
 
         } catch (\Throwable $e) {
 
@@ -1687,7 +1707,7 @@ class Resources extends Service {
 
     }
 
-    protected function refuse_read (Model_Resource $resource, $model) : ?WP_Error {
+    public function refuse_read (Model_Resource $resource, $model) : ?WP_Error {
 
         return $this->may($resource, 'read', $model) ? $this->refuse_record($resource, $model, 'read') : $this->forbidden($resource->get_capability('read', $model));
 

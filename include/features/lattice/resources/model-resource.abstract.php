@@ -245,9 +245,10 @@ abstract class Model_Resource extends Singleton {
     }
 
     // Values held for later, whoever reads them: a resource that hides a secret from an account must not let it through raw.
-    public function mask_held (array $values) : array {
+    public function mask_held (array $values, $model = null) : array {
 
-        $fields = $this->get_fields();
+        // A field only this record shows is still a field, and masking it whole would make every start a conflict.
+        $fields = $this->get_fields_for($model, $values) + $this->get_fields();
 
         foreach ($values as $name => $value) {
 
