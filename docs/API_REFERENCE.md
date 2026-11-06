@@ -891,7 +891,7 @@ The run:
 | `format_time()` | `public format_time(int $timestamp, string $format = 'H:i'): string` | The timestamp in `$timezone` |
 | `get_failed_items()` | `public get_failed_items(): array` | `count` and `items` (`id`, `url` from `get_item_url()`) for the first `FAILED_LIST` failed ids |
 | `supports_retry()` | `public supports_retry(): bool` | Whether the subclass declares both `get_items_by_id()` and `get_item_id()`; the page shows Retry failed when it does |
-| `retry()`, `dismiss()` | `public retry(): array` | The `retry` task queues the failed ids in `retry` (`retry_remaining`, `failed`, `counts`); `dismiss` empties `failed` and `retry` |
+| `retry()`, `dismiss()` | `public retry(): array` | The `retry` task queues the failed ids in `retry` (`retry_remaining`, `failed`, `counts`); `dismiss` empties `failed` and `retry`. A queued id `get_items_by_id()` does not return (a deleted post, or any id the subclass leaves out) leaves `failed` for `skipped` with a log line |
 | `is_retry()` | `public is_retry(): bool` | Inside a retry tick: the queued ids are served by id, the index and the status stay, a success moves the id from `failed` to `processed` |
 | `get_batch_size()`, `set_batch_size()` | `public get_batch_size(): int` | The batch size: the class value, or the page's for this request |
 | `read_request()` | `public read_request(array $request): void` | The `iterate` task's run options: `batch_size` (1 to `MAX_BATCH_SIZE`, this request only) and `dry_run` (`'1'` or `'0'`, written to the store; absent leaves it alone) |

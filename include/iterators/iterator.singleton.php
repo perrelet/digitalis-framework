@@ -439,6 +439,16 @@ abstract class Iterator extends Singleton {
 
         }
 
+        // A retried id the subclass did not return (a deleted post) would otherwise leave the queue and stay in failed until Dismiss.
+        $unserved = $this->retrying ? array_values(array_diff($ids, $results['processed'], $results['skipped'], $results['failed'])) : [];
+
+        if ($unserved) {
+
+            $results['skipped'] = array_merge($results['skipped'], $unserved);
+            $this->log(count($unserved) . " retried {$this->labels['plural']} not served by get_items_by_id(); skipped: " . implode(', ', array_slice($unserved, 0, 20)) . (count($unserved) > 20 ? ', …' : ''), true);
+
+        }
+
         $count = 0;
         foreach ($results as $result) $count += count($result);
 
