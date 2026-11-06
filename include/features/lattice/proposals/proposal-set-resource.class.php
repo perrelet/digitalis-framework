@@ -12,6 +12,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
         return parent::get_actions() + [
             'submit_proposal'   => ['label' => 'Submit it for review', 'capability' => 'propose_changes', 'when' => fn ($set) => $this->refuse_submitting($set), 'validate' => fn ($set, array $input) => $this->check_ready($set)],
             'rebase_proposal'   => ['label' => 'Start from what is live', 'when' => fn ($set) => $this->refuse_rebasing_proposal($set)],
+            'approve_proposal'  => ['label' => 'Approve and apply it', 'capability' => 'approve_proposals', 'writes_through' => true, 'input' => ['seen' => '?json'], 'when' => fn ($set) => $this->refuse_reviewing($set)],
             'reject_proposal'   => ['label' => 'Send it back', 'capability' => 'approve_proposals', 'input' => ['note' => '?string'], 'when' => fn ($set) => $this->refuse_reviewing($set)],
             'withdraw_proposal' => ['label' => 'Withdraw it', 'when' => fn ($set) => $this->refuse_withdrawing($set)],
         ];
@@ -172,6 +173,19 @@ class Proposal_Set_Resource extends Change_Set_Resource {
         if (!$set->get_submitted_at() || !in_array($set->get_state(), [Change_Set::SUBMITTED, Change_Set::AWAITING_REVIEW, Change_Set::APPLIED_IN_PART], true)) return 'It is not waiting for a review.';
 
         return $this->refuse_unsettled($set);
+
+    }
+
+    public function act_approve_proposal ($set, array $input, string $via) {
+
+        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::inst()->preview_set($set)];
+
+        $result = $this->walk_set($set, $input['seen'] ?? null, (string) ($input['why'] ?? ''), $via, 'approve_proposal');
+
+        // A delete leaves it broken though every step landed.
+        if (!is_wp_error($result) && ($result['outcome'] === 'applied') && ($result['state'] === Change_Set::APPLIED)) $this->announce('approved', $set, $result);
+
+        return $result;
 
     }
 
