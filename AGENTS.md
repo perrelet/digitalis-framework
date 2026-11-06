@@ -595,6 +595,14 @@ type: Short description with backtick `Class::method` references 🎭🎪🎠
 
 **The 3 emojis** are required and must be humorous, playful, and clever — they tell a little visual story about the change, not just decorate it.
 
+**The rebus.** The subject is a noun phrase of three content words (the thing, the action, the outcome), never a clause. The three
+emojis spell those words in order, or compose one picture of the phrase; read them back as the sentence before committing. Extra
+points when an emoji is the OTHER sense of the word: 🎾 a serve, 🪢 skipped, 🐎 pace, 🛬 ETA, 🪳 a tick, 🚚 moves, 🪵 log, 💑 date,
+🪞 reflection, 🕳️ blank, 🫳 get, 🏰 keeps, 🩳 short, 🎓 class, 🐌 nailed. A word keeps its emoji across a batch (🔁 iterator, 🪝 hook,
+📄 file, 🛣️ route) and the moon is not "background": an emoji that merely decorates (🌙 🧹 ✅ 🔧 on their own) is a hole in the rebus.
+Write the matrix (literal and second-sense candidates per word, one pick) before the first commit, not after. Points for
+originality, humour, wit, creativity, rhythm, style and directness; a triple that reads back flat scores none of them.
+
 Examples:
 - `fix: \`Route\` default \`$format = null\` 💾👉⚫`
 - `feat: \`$skip_inject\` View var 🦘💉🖼️`
