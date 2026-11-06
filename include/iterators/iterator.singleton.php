@@ -75,6 +75,8 @@ abstract class Iterator extends Singleton {
         'updated_at'  => null,
         'finished_at' => null,
         'elapsed'     => 0.0,
+        'handed_at'    => null, // the last Run in background: the wall ETA paces from here
+        'handed_index' => null,
     ];
 
     const FAILED_LIST = 50; // ids the page lists; the rest is a count
@@ -289,7 +291,23 @@ abstract class Iterator extends Singleton {
     public function background () {
 
         if ($this->get_status() === 'complete') return ['refused' => true, 'status' => 'complete', 'run_by' => null, 'message' => 'The run is complete; Reset first.'];
-        if ($this->take_lock('cron') === false) return $this->lock_refusal() + ['refused' => true];
+        // The fire row is held from the lock to the stamps: a loop fire already due (a $cron iterator's always is) reads the record
+        // under the row, so it cannot read it between the two and write the stamps away with its first batch.
+        $fire = $this->take_fire();
+
+        try {
+
+            if ($this->take_lock('cron') === false) return $this->lock_refusal() + ['refused' => true];
+
+            $this->store['handed_at']    = time();
+            $this->store['handed_index'] = $this->get_index();
+            update_option($this->get_option_key(), $this->store, false);
+
+        } finally {
+
+            if ($fire) $this->release_fire();
+
+        }
 
         if (!wp_next_scheduled($this->get_loop_action())) $this->schedule_event(time(), $this->cron_loop_schedule, $this->get_loop_action());
 
@@ -317,6 +335,10 @@ abstract class Iterator extends Singleton {
 
         if (!$this->take_fire()) return;
 
+        $this->forget_row_cache($this->get_option_key()); // the head read sits in the options cache: a handover's stamps may have landed since
+        $this->store = null;
+        $this->get_store();
+
         $this->token       = $lock['run'];
         $this->lock_window = (int) ($lock['window'] ?? $this->get_lock_window()); // adopted with the token, so the mid-batch touch keeps the taker's window
         $until             = microtime(true) + $this->cron_budget;
@@ -342,14 +364,14 @@ abstract class Iterator extends Singleton {
     protected function take_fire () : bool {
 
         $name = $this->get_option_key('fire');
-        $fire = ['taken_at' => time()];
+        $fire = ['taken_at' => time(), 'window' => $this->get_lock_window()]; // judged by the taker's window, as the lock row is: a CLI fire outlives a page's
 
         if ($this->row_insert($name, $fire)) return true;
 
         $held = $this->row_read($name);
 
         if (!$held) return $this->row_insert($name, $fire);
-        if (time() - (int) ($held['taken_at'] ?? 0) <= $this->get_lock_window()) return false;
+        if (time() - (int) ($held['taken_at'] ?? 0) <= (int) ($held['window'] ?? $this->get_lock_window())) return false;
 
         return $this->row_swap($name, $fire, $held);
 
@@ -808,15 +830,19 @@ abstract class Iterator extends Singleton {
     // page reads the same figure until the next tick). Null until a batch has run against a known total.
     public function get_eta ($wall = false) : ?int {
 
-        $total = $this->get_total();
-        $index = $this->get_index();
-        $since = $this->get_started_at();
-        $until = $this->get_updated_at();
-        $spent = $wall ? (is_int($since) && is_int($until) ? (float) ($until - $since) : 0.0) : $this->get_elapsed();
+        $total  = $this->get_total();
+        $index  = $this->get_index();
+        $store  = $this->get_store();
+        $handed = is_int($store['handed_at'] ?? null) ? $store['handed_at'] : null;
+        $since  = max($this->get_started_at() ?? 0, $handed ?? 0) ?: null; // a handover on an idle run is followed by started_at at the first tick
+        $base   = is_null($handed) ? 0 : (int) ($store['handed_index'] ?? 0);
+        $until  = $this->get_updated_at();
+        $spent  = $wall ? (is_int($since) && is_int($until) ? (float) ($until - $since) : 0.0) : $this->get_elapsed();
+        $done   = $wall ? $index - $base : $index; // the wall pace is the background loop's own: the items since the handover
 
-        if (is_null($total) || $index <= 0 || $index >= $total || $spent <= 0) return null;
+        if (is_null($total) || $done <= 0 || $index >= $total || $spent <= 0) return null;
 
-        return (int) round(($total - $index) * $spent / $index);
+        return (int) round(($total - $index) * $spent / $done);
 
     }
 
@@ -1218,6 +1244,8 @@ abstract class Iterator extends Singleton {
             wp_cache_set('notoptions', $notoptions, 'options');
 
         }
+
+        if (isset(wp_load_alloptions()[$name])) wp_cache_delete('alloptions', 'options'); // get_option() answers from alloptions first: a record a consumer autoloaded
 
     }
 
