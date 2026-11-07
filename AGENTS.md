@@ -220,6 +220,7 @@ The run record (status, total, stalled), the stall rule and `$halt_on_fail` are 
 | `Singleton` | — | Single-instance service/manager base | yes |
 | `Cron_Scheduler` | `Singleton` | WP cron job management | yes |
 | `Task_Handler` | `Singleton` | One-time background task queue | yes |
+| `Command` | — | A `wp` command: `$name`, a `$subcommands` table or docblocks, `register()` on `cli_init`; `fail()`, `answer()`, `table()` | |
 
 ---
 
@@ -258,6 +259,7 @@ The run record (status, total, stalled), the stall rule and `$halt_on_fail` are 
 | `csv-iterator` | `Lattice\CSV_Iterator` |
 | `order-iterator` | `Lattice\Order_Iterator` |
 | `admin-page` | `Lattice\Admin_Page` |
+| `command` | `Lattice\Command` |
 | `query-profile` | `Lattice\Query_Profile` |
 | `.abstract.php` | Abstract class (no framework parent) |
 | `.trait.php` | Trait |

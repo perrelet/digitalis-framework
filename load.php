@@ -69,7 +69,7 @@ add_filter('sassy-variables', function ($variables) {
 
 if (defined('WP_CLI') && WP_CLI) {
 
-    require LATTICE_PATH . 'include/_cli/classmap-cli.php';
-    WP_CLI::add_command('lattice classmap', new Lattice\Classmap_CLI);
+    require LATTICE_PATH . 'include/_cli/classmap.command.php';
+    Lattice\Classmap_Command::register();
 
 }

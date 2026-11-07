@@ -5,21 +5,24 @@ declare(strict_types=1);
 namespace Lattice;
 
 use WP_CLI;
-use WP_Error;
 
-class Resources_Command {
+class Resources_Command extends Command {
 
     const CONTROL = '[--version=<n>] [--why=<why>] [--input=<file>] [--confirm=<fingerprint>] [--dry-run]';
 
-    public static function register () : void {
+    protected $name        = 'lattice';
+    protected $subcommands = [
+        'guide'   => ['The resources this account can reach, their fields and actions.', ''],
+        'journal' => ['Changes, newest first.', '[--resource=<resource>] [--id=<id>] [--set=<set>] [--proposer=<user>] [--since=<row>] [--page=<page>]'],
+        'undo'    => ['Reverse a journal row.', '<row> ' . self::CONTROL],
+    ];
 
-        $command = new static;
+    // The fixed three, then one command per resource.
+    protected function add () : void {
 
-        WP_CLI::add_command('lattice guide', [$command, 'guide'], ['shortdesc' => 'The resources this account can reach, their fields and actions.']);
-        WP_CLI::add_command('lattice journal', [$command, 'journal'], ['shortdesc' => 'Changes, newest first.', 'synopsis' => '[--resource=<resource>] [--id=<id>] [--set=<set>] [--proposer=<user>] [--since=<row>] [--page=<page>]']);
-        WP_CLI::add_command('lattice undo', [$command, 'undo'], ['shortdesc' => 'Reverse a journal row.', 'synopsis' => '<row> ' . static::CONTROL]);
+        parent::add();
 
-        foreach (Resources::inst()->get_resources() as $name => $resource) WP_CLI::add_command("lattice {$name}", fn ($args, $assoc) => $command->run($name, $args, $assoc), [
+        foreach (Resources::inst()->get_resources() as $name => $resource) WP_CLI::add_command("{$this->name} {$name}", fn ($args, $assoc) => $this->run($name, $args, $assoc), [
             'shortdesc' => "list, get, create, update, trash, untrash, view or an action on {$resource->get_label()}.",
             'synopsis'  => '<operation> [<id>] [<view>] [--status=<status>] [--search=<search>] [--page=<page>] ' . static::CONTROL . ' [--<field>=<value>]',
         ]);
@@ -55,14 +58,14 @@ class Resources_Command {
 
         [$operation, $id] = [$args[0], $args[1] ?? null];
 
-        if (is_null($id) && !in_array($operation, ['list', 'create'], true)) WP_CLI::error("Give the record's id: wp lattice {$name} {$operation} <id>");
+        if (is_null($id) && !in_array($operation, ['list', 'create'], true)) $this->fail("Give the record's id: wp lattice {$name} {$operation} <id>");
 
         $api = Resources::inst();
 
         // The synopsis takes any flag for an action's input, so WP-CLI no longer stops a mistyped one: a write must not go ahead without its --dry-run.
         $extra = array_diff_key($assoc, array_flip(['input', 'version', 'why', 'confirm', 'dry-run', 'status', 'search', 'page']));
 
-        if ($extra && in_array($operation, ['list', 'get', 'create', 'update', 'trash', 'untrash', 'view'], true)) WP_CLI::error('Unknown: --' . implode(', --', array_keys($extra)));
+        if ($extra && in_array($operation, ['list', 'get', 'create', 'update', 'trash', 'untrash', 'view'], true)) $this->fail('Unknown: --' . implode(', --', array_keys($extra)));
 
         $this->answer(match ($operation) {
             'list'   => $api->list($name, $assoc),
@@ -86,7 +89,7 @@ class Resources_Command {
             $json  = file_get_contents($assoc['input'] === '-' ? 'php://stdin' : (string) $assoc['input']);
             $input = json_decode((string) $json, true);
 
-            if (!is_array($input)) WP_CLI::error('--input is not a JSON object.');
+            if (!is_array($input)) $this->fail('--input is not a JSON object.');
 
         }
 
@@ -95,16 +98,6 @@ class Resources_Command {
         if (!empty($assoc['dry-run'])) $input['dry_run'] = true;
 
         return $input;
-
-    }
-
-    protected function answer ($result) : void {
-
-        $error = ($result instanceof WP_Error) ? ['code' => $result->get_error_code(), 'message' => $result->get_error_message(), 'data' => $result->get_error_data()] : null;
-
-        WP_CLI::line(wp_json_encode($error ?? $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
-        if ($error) WP_CLI::halt(1);
 
     }
 

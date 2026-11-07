@@ -6,8 +6,9 @@ namespace Lattice;
 
 use WP_CLI;
 
-class Dev_Role_CLI {
+class Dev_Role_Command extends Command {
 
+    protected $name = 'lattice dev';
     protected $meta_key;
 
     public function __construct (string $meta_key) {
@@ -96,7 +97,7 @@ class Dev_Role_CLI {
         elseif (is_email($arg))  $user = User::get_by_email($arg);
         else                     $user = User::get_by_login($arg);
 
-        if (!$user) WP_CLI::error("User not found: $arg");
+        if (!$user) $this->fail("User not found: $arg");
 
         return $user;
 

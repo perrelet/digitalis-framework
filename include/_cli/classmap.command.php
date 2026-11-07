@@ -6,7 +6,9 @@ namespace Lattice;
 
 use WP_CLI;
 
-class Classmap_CLI {
+class Classmap_Command extends Command {
+
+    protected $name = 'lattice classmap';
 
     // Writes what this boot autoloaded. Run it as the request type you want cached; a CLI run does not see `_admin`, which then tokenizes until you regenerate from admin.
     public function __invoke ($args, $assoc_args) {

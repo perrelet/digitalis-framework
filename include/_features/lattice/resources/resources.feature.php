@@ -16,7 +16,7 @@ require_once __DIR__ . '/journal/v1-create-journal.migration.php';
 require_once __DIR__ . '/journal/v2-journal-sets.migration.php';
 require_once __DIR__ . '/journal/journal.schema.php';
 require_once __DIR__ . '/journal/journal.service.php';
-require_once __DIR__ . '/resources-command.class.php';
+require_once __DIR__ . '/resources.command.php';
 require_once __DIR__ . '/changes.sub-page.php';
 require_once __DIR__ . '/routes/resource.route.php';
 

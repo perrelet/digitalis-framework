@@ -200,6 +200,26 @@ abstract class App extends Factory
 
 ---
 
+### `Lattice\Command`
+
+A `wp` command. The root in `$name`, the leaves in `$subcommands`; with no leaves the object registers whole and WP-CLI reads its docblocks (or `__invoke`). A feature hooks `register()` on `cli_init`; core calls it from load.php's `WP_CLI` guard. Keep helpers protected: WP-CLI reflects every public method of a whole-object command into a subcommand.
+
+```php
+abstract class Command
+```
+
+| Member | Signature | Description |
+|--------|-----------|-------------|
+| `$name` | `protected $name = ''` | The root: `lattice jobs`. |
+| `$subcommands` | `protected $subcommands = []` | `name => [about, synopsis]`, or `[about, synopsis, method]` when the name cannot be the method's (`list`). |
+| `register()` | `public static register(mixed ...$args): void` | Returns outside WP-CLI; else constructs with `$args` and adds. |
+| `add()` | `protected add(): void` | One `add_command()` per row, or the object whole; a dynamic set overrides it and calls the parent. |
+| `fail()` | `protected fail(string $message)` | `WP_CLI::error()`; `@return never` (the analysis runs as PHP 8.0). |
+| `answer()` | `protected answer(mixed $result): void` | JSON, pretty and unescaped; a `WP_Error` as `{code, message, data}` then exit 1. |
+| `table()` | `protected table(array $rows, array $fields, string $format = 'table'): void` | `format_items()`. |
+
+---
+
 ## WordPress Models
 
 ### `Lattice\WP_Model`

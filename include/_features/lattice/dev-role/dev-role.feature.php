@@ -4,23 +4,28 @@ declare(strict_types=1);
 
 namespace Lattice;
 
-use WP_CLI;
-
-require_once __DIR__ . '/dev-role-cli.php';
+require_once __DIR__ . '/dev-role.command.php';
 
 class Dev_Role extends Feature {
 
     protected $cap      = 'dev';
     protected $meta_key = 'is_dev';
-    protected $command  = 'lattice dev';
 
     public function __construct () {
 
         $this->add_filter('user_has_cap', 'grant_cap', 10);
 
-        if (defined('WP_CLI') && WP_CLI) {
-            WP_CLI::add_command($this->command, new Dev_Role_CLI($this->meta_key));
-        }
+    }
+
+    public function get_hooks () {
+
+        return ['cli_init' => 'register_commands'];
+
+    }
+
+    public function register_commands () {
+
+        Dev_Role_Command::register($this->meta_key);
 
     }
 

@@ -15,7 +15,7 @@ require_once __DIR__ . '/iterator.job.php';
 require_once __DIR__ . '/jobs-worker.service.php';
 require_once __DIR__ . '/iterator-runner.class.php';
 require_once __DIR__ . '/jobs-tick.cron-scheduler.php';
-require_once __DIR__ . '/jobs-command.class.php';
+require_once __DIR__ . '/jobs.command.php';
 require_once __DIR__ . '/jobs.sub-page.php';
 
 class Lattice_Jobs extends Feature {
