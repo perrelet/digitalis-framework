@@ -29,7 +29,8 @@ class Iterator_UI extends View {
         $iterator = $p['iterator'];
         $store    = $iterator->get_store();
         $lock     = $iterator->get_lock();
-        $cron     = $iterator->is_doing_cron();                 // a background run is open: a job, not a lock holder
+        $job      = $iterator->open_job();                      // the background run, from the runner: null without a runner or an open run
+        $cron     = (bool) $job;
         $running  = $cron || ((bool) $lock && !$lock['stale']); // a live driver: the job, this page's lock or another tab's; a stale lock is nobody's
         $status   = $iterator->get_status();
         $stalled  = (bool) ($store['stalled'] ?? false);
@@ -57,8 +58,9 @@ class Iterator_UI extends View {
         $p['cron']    = $cron;
         $p['failed']  = $iterator->get_failed_items(); // built once: it resolves an edit link per item
         $p['classes'] = implode(' ', $classes);
-        $p['label']   = $stalled ? 'Stalled' : ($running ? 'Running' : ($labels[$status] ?? 'Ready'));
-        $p['time']    = $cron ? 'Cron task' . ($started ? ' · started ' . $iterator->format_time($started) : '') : sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
+        $p['label']   = $stalled ? 'Stalled' : ($job ? ($job['stopping'] ? 'Stopping' : ($job['running'] ? 'Running' : 'Queued')) : ($running ? 'Running' : ($labels[$status] ?? 'Ready')));
+        $p['time']    = $job ? 'Background' . (is_int($job['since']) ? ' · started ' . $iterator->format_time($job['since']) : '') : sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
+        $p['job']     = $job ? ' · ' . (empty($job['url']) ? "job #{$job['id']}" : "<a href='" . esc_url((string) $job['url']) . "'>job #{$job['id']}</a>") : ''; // the row on Tools -> Jobs, one click away while it is open
         $p['eta']     = is_null($eta) ? '' : 'about ' . static::about($eta) . ' left';
         $p['log_url'] = ($p['log_url'] && $log && is_file((string) $log->get_path())) ? $p['log_url'] : ''; // the full log, when there is one to link
 

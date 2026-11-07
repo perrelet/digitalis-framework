@@ -32,7 +32,7 @@
         </div>
         <div class='status-bar'>
             <div class='percent'><?= is_null($total) ? '' : floor(100 * $iterator->get_progress()) . '%' ?></div>
-            <div class='time'><?= $time ?></div>
+            <div class='time'><?= $time . $job ?></div>
         </div>
         <div class='status-bar'>
             <div class='counts'>

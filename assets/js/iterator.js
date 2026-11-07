@@ -238,10 +238,10 @@
 
             if (this.params.doing_cron) {
 
-                if (confirm("Are you sure you want to cancel the current cron task?")) {
+                if (confirm("Stop the background run?")) {
 
-                    this.els.status.textContent = 'Stopping Cron Task';
-                    this.batch_log(`Stopping cron task.`);
+                    this.els.status.textContent = 'Stopping background run';
+                    this.batch_log(`Stopping the background run.`);
                     this.request('stop_cron', this.stop_cron_complete.bind(this));
 
                 }
@@ -254,19 +254,22 @@
 
         },
 
-        // Hands the run to the cron loop; the page then reads the cron state from the server, so it reloads.
+        // Hands the run to a background job; the page then reads the job from the server, so it reloads.
         background: function () {
 
             this.els.status.textContent = 'Handing over';
-            this.batch_log(`Handing the run to the background loop.`);
+            this.batch_log(`Handing the run to the background.`);
             this.request('background', function () { window.location.reload(); });
 
         },
 
-        stop_cron_complete: function () {
+        // `cancelled`: the job had not started. `requested`: it is mid-batch and ends before its next one; the page reads that on a reload.
+        stop_cron_complete: function (response) {
 
-            this.els.status.textContent = 'Cron Task Stopped';
-            this.batch_log(`Cron task stopped.`);
+            const outcome = response && response.cancelled;
+
+            this.els.status.textContent = outcome === 'requested' ? 'Background run stopping' : (outcome ? 'Background run stopped' : 'No background run');
+            this.batch_log(outcome === 'requested' ? `Background run stopping: it ends before its next batch.` : (outcome ? `Background run stopped.` : `No background run to stop.`));
             this.params.doing_cron = false;
             this.set_running(false);
 
@@ -623,4 +626,4 @@
 
     iterator.init(params);
 
-})(iterator_params);
+})(iterator_params);

@@ -30,7 +30,7 @@ final class Iterator_Job_Runner extends Service implements Iterator_Runner {
         $job     = Iterator_Job::find($iterator->get_option_key());
         $outcome = $job instanceof Job ? $job->cancel(self::STOPPED) : null;
 
-        return is_string($outcome) ? $outcome : null;
+        return in_array($outcome, ['cancelled', 'requested'], true) ? $outcome : null; // a bare state (the run ended under the click, or ten contested tries) is no open run
 
     }
 
