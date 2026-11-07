@@ -79,7 +79,7 @@ final class Classmap {
 
     public function write () : string {
 
-        if (is_null($this->data)) $this->load();
+        if (is_null($this->data)) $this->load(false); // a stale map is what a write replaces: no notice, and no throw under WP_DEBUG
 
         $calls = array_merge($this->data['calls'] ?? [], $this->recorded);
         ksort($calls);
@@ -95,7 +95,7 @@ final class Classmap {
 
     }
 
-    private function load () : void {
+    private function load (bool $notify = true) : void {
 
         $this->data = ['calls' => []];
 
@@ -105,7 +105,7 @@ final class Classmap {
 
         if (!is_array($data) || (($data['version'] ?? null) !== LATTICE_VERSION)) {
 
-            $this->stale('version mismatch');
+            if ($notify) $this->stale('version mismatch');
             return;
 
         }
