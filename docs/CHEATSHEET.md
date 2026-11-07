@@ -1149,6 +1149,20 @@ class Nightly_Sync extends Post_Iterator {
 
 > **Non-obvious:** a `$cron` iterator's start, and Run in background on any iterator, hand the run to a job: load the Jobs feature (`$this->load_feature('lattice/jobs')` in the app's `load()`), or the start logs one line and runs nothing and the button's click is refused with one. A `$cron_time` that is not `H:i:s`, or a schedule no `cron_schedules` filter registers, schedules nothing: under strict a violation at construction, in production one log line. `Strict::audit()` reads the declarations: `$labels` needs string `single` and `plural`, `$cron_time` must be `H:i:s`. One driver at a time: the page's Start takes the run lock (`iterator_{$key} lock`), a second tab is refused until it is released or stale (`$lock_window`, default `max(120, max_execution_time + 30)` seconds; a lock must outlast a batch), and every task refuses while a background run is open.
 
+### From the Shell
+
+```bash
+wp lattice iterator list                              # every loaded iterator: key, class, title, status, progress, the open job
+wp lattice iterator status nightly_sync               # the record, the lock, the job and the last errors, as JSON
+wp lattice iterator start nightly_sync                # hand the run to the background (needs lattice/jobs); --run drives the job now
+wp lattice iterator start nightly_sync --foreground   # drive the run here, under the page's lock: the long-run path without the feature
+wp lattice iterator batch nightly_sync                # one bare batch, the response as a table
+wp lattice iterator stop nightly_sync                 # cancel the background run
+wp lattice iterator reset nightly_sync                # refused while a run is open
+```
+
+> **Non-obvious:** `--foreground` holds the `ui` lock for the whole run, so a page Start meanwhile is refused as another tab's would be, and it resumes a halted run on its first batch. Exit 1 is an unknown key, a refusal or a halt; exit 2 is a stall. Ctrl-C releases the lock when `pcntl` is loaded; without it the page reads Running for the CLI window (`LOCK_STALE_UNLIMITED`, 600 s) until the stale lock is taken over. A key is matched case-exactly against class names, so `nightly_sync` never constructs `Nightly_Sync`: an iterator that opts out of auto-instantiation is reported "declared, not loaded".
+
 ---
 
 ## Hooks

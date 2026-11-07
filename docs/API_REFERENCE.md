@@ -834,7 +834,7 @@ abstract class Meta_Box extends Feature
 
 ### `Lattice\Iterator`
 
-Batch processing base class: an admin page under Tools with Start, Stop and Reset, an AJAX loop and an optional WP-cron loop, the run recorded in one option (`iterator_{$key}`, the store).
+Batch processing base class: an admin page under Tools with Start, Stop and Reset, an AJAX loop and an optional WP-cron loop, the run recorded in one option (`iterator_{$key}`, the store). The shell drives the same engine through `wp lattice iterator` (`Iterator_Command`, `include/_cli/iterator.command.php`): `list`, `status`, `start [--run|--foreground]`, `batch`, `stop`, `reset`.
 
 ```php
 abstract class Iterator extends Singleton
@@ -923,6 +923,8 @@ The run:
 | `take_lock()`, `release_lock()` | `public take_lock(bool $retry = true): string\|false` | The page's run lock (`iterator_{$key} lock`, its own row, `run_by` `ui`): the token, or `false` under a live lock. A stale lock is taken over; a row with any other `run_by` (a 0.6 cron lock) reads as nobody's and is deleted |
 | `get_lock()`, `holds_lock()`, `check_lock()` | `public get_lock(): ?array` | `run_by`, `taken_at`, `seen_at` and `stale` for the page (never the token); whether this request holds the lock; whether it may write (holds it, or nobody does; no row at all is free only for a request that never took one, so a driver whose lock went under it is refused). A held lock is touched at the tick, at the write and between items once half the window has passed. The row carries the taker's `window`, so a CLI fire and an FPM page judge staleness by one figure |
 | `get_lock_window()`, `is_lock_stale()`, `lock_refusal()` | `public get_lock_window(): int` | `$lock_window`, else `max(LOCK_STALE, max_execution_time + 30)`, or `LOCK_STALE_UNLIMITED` when the limit is 0; the 409 body `{status, run_by, message}`; `lock_refusal()` names the open job when no lock is live (`job_refusal()`) |
+| `find()`, `declared()`, `all()` | `public static find(string $key_or_class): ?Iterator` | The shell's lookup: a key through the registry every constructor fills, or a class name matched case-exactly (`nightly_sync` never constructs `Nightly_Sync`), to the singleton, else `null`; `declared()` names the loaded class behind a key no constructor registered (one that opts out of auto-instantiation), `all()` is every constructed iterator by key |
+| `get_key()`, `get_title()`, `get_description()` | `public get_key(): string` | The declared `$key`, `$title` and `$description` |
 
 Store keys: `index`, the id arrays `processed`, `skip`, `skipped`, `failed` and `retry`, `log` and `errors` (the last `LOG_TAIL` lines each), `status`, `stalled`, `started_at`, `updated_at`, `finished_at`, `elapsed` are per run (`$default_store`); `total` is absent until computed and `null` when unknown; `dry_run` is the page's checkbox, written by `read_request()`, and survives a cron reset like any other setting.
 

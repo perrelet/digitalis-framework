@@ -70,6 +70,8 @@ add_filter('sassy-variables', function ($variables) {
 if (defined('WP_CLI') && WP_CLI) {
 
     require LATTICE_PATH . 'include/_cli/classmap.command.php';
+    require LATTICE_PATH . 'include/_cli/iterator.command.php';
     Lattice\Classmap_Command::register();
+    Lattice\Iterator_Command::register();
 
 }

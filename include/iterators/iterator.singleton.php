@@ -42,6 +42,8 @@ abstract class Iterator extends Singleton {
         'plural'    => 'items',
     ];
 
+    protected static $registry = []; // key => class of every constructed iterator: the shell's `find()` by key (Singleton's store is private)
+
     const LOG_TAIL       = 200;
     const MAX_BATCH_SIZE = 1000;
 
@@ -120,6 +122,8 @@ abstract class Iterator extends Singleton {
     //
 
     public function __construct () {
+
+        self::$registry[$this->key] = static::class;
 
         add_action('admin_menu', [$this, 'add_admin_page'], 99);
         add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_assets']);
@@ -1330,7 +1334,52 @@ abstract class Iterator extends Singleton {
     //
 
     public function get_key ()         { return $this->key;         }
+    public function get_title ()       { return $this->title;       }
     public function get_description () { return $this->description; }
+
+    // The shell's lookup: a class name goes to its singleton, a key to the registry the constructors fill. Null is unknown or
+    // not loaded; `declared()` tells the two apart. The class match is case-exact: PHP's is not, and a key is often its class's
+    // name in lower case (`nightly_sync`, `Nightly_Sync`), which must not construct an iterator that opted out.
+    public static function find (string $key_or_class) : ?Iterator {
+
+        $class = (string) (self::$registry[$key_or_class] ?? ltrim($key_or_class, '\\'));
+
+        if (!class_exists($class) || !is_subclass_of($class, self::class) || (new \ReflectionClass($class))->getName() !== $class) return null;
+
+        $instance = $class::get_instance();
+
+        return $instance instanceof Iterator ? $instance : null;
+
+    }
+
+    // The declared class behind a key that no constructor registered (one that opts out of auto-instantiation), read from the
+    // declared default without constructing it; null when no loaded class declares the key.
+    public static function declared (string $key) : ?string {
+
+        foreach (get_declared_classes() as $class) {
+
+            if (!is_subclass_of($class, self::class) || in_array($class, self::$registry, true)) continue;
+
+            $reflection = new \ReflectionClass($class);
+
+            if (!$reflection->isAbstract() && ($reflection->getDefaultProperties()['key'] ?? null) === $key) return $class; // the abstract bases all carry the default key
+
+        }
+
+        return null;
+
+    }
+
+    // Every constructed iterator, keyed.
+    public static function all () : array {
+
+        $all = [];
+
+        foreach (self::$registry as $key => $class) if ($iterator = self::find((string) $class)) $all[$key] = $iterator;
+
+        return $all;
+
+    }
 
     //
 
