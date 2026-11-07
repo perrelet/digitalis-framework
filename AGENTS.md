@@ -173,7 +173,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Stored_Markup` | `Feature` | A post column or ACF value a save sends back exactly as stored keeps its markup, so an account without `unfiltered_html` doesn't strip a trusted account's markup from what it left alone. ACF's raw values come from `$_REQUEST['acf']`. `load_feature('wp/stored-markup')` | no |
 | `API_Only_Application_Passwords` | `Feature` | An application password authenticates the API's own requests and never a sign-in form: `wp_signon()` inside a REST request (a plugin's login form, say) treats it as a wrong password. A wrong one that REST refuses is reported to WP Fail2Ban Redux where that plugin runs. `load_feature('wp/api-only-application-passwords')` | no |
 | `Lattice_Resources` | `Feature` | Models through REST (`lattice/v1`) and `wp lattice`: dry runs, a version, a journal with undo, actions shared with wp-admin. Subclass `Model_Resource` per model (or `Options_Page_Resource` per options page); load with `load_feature('lattice/resources')` before `parent::load()`. See [RESOURCES.md](./docs/RESOURCES.md) | no |
-| `Lattice_Jobs` | `Feature` | Durable background work: a class per kind, a row per piece. `handle()` is one step, `next($cursor)` another; returning commits it. Subclass `Job` in `*.job.php`; load with `load_feature('lattice/jobs')` before `parent::load()`. Runs on WordPress cron alone. See [JOBS.md](./docs/JOBS.md) | no |
+| `Lattice_Jobs` | `Feature` | Durable background work: a class per kind, a row per piece. `handle()` is one step, `next($cursor)` another; returning commits it. Subclass `Job` in `*.job.php`; load with `load_feature('lattice/jobs')` before `parent::load()`. Runs on WordPress cron alone. Answers `lattice.iterator.runner`, so an `Iterator`'s Run in background is a job. See [JOBS.md](./docs/JOBS.md) | no |
 | `Proposals` | `Feature` | Changes to published records held for review: a draft copy, a review screen, approval through `Resources::update()`. Every moderated type is a resource whose model uses `Has_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `wp/stored-markup`; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
@@ -195,7 +195,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `CSV_Iterator` | `Iterator` | Batch process CSV rows | yes |
 | `Order_Iterator` | `Iterator` | Batch process WC orders | yes |
 
-The run record (status, total, stalled), the stall rule and `$halt_on_fail` are in [CHEATSHEET.md#iterators](./docs/CHEATSHEET.md#iterators).
+The run record (status, total, stalled), the stall rule and `$halt_on_fail` are in [CHEATSHEET.md#iterators](./docs/CHEATSHEET.md#iterators). A background run is a job: the `lattice/jobs` feature answers the `lattice.iterator.runner` filter, and without it the run is foreground only ([JOBS.md#iterators](./docs/JOBS.md#iterators)). `wp lattice iterator` (`include/_cli/iterator.command.php`) drives a run from the shell: list, status, start `[--run|--foreground]`, batch, stop, reset.
 
 ### Query
 

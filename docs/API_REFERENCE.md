@@ -928,6 +928,20 @@ The run:
 
 Store keys: `index`, the id arrays `processed`, `skip`, `skipped`, `failed` and `retry`, `log` and `errors` (the last `LOG_TAIL` lines each), `status`, `stalled`, `started_at`, `updated_at`, `finished_at`, `elapsed` are per run (`$default_store`); `total` is absent until computed and `null` when unknown; `dry_run` is the page's checkbox, written by `read_request()`, and survives a cron reset like any other setting.
 
+### `Lattice\Iterator_Runner`
+
+The Iterator's background driver, answered by the `lattice.iterator.runner` filter (`$runner`, `$iterator`); the `lattice/jobs` feature registers `Iterator_Job_Runner`, which dispatches a `lattice/iterator` job ([JOBS.md](./JOBS.md#iterators)). The Iterator is a foreground engine driven by the page, a runner or the shell through `run_batch()`; without a runner Run in background and a scheduled start refuse with one line.
+
+```php
+interface Iterator_Runner
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `dispatch()` | `public dispatch(Iterator $iterator): array` | Hands the run to the background from its index: `['id' => ?int, 'queued' => bool, 'held' => bool]`, or `['refused' => true, 'message' => string]` when nothing was dispatched |
+| `cancel()` | `public cancel(Iterator $iterator): ?string` | `cancelled` for a run that had not started, `requested` for one honoured before its next step, `null` when nothing is open |
+| `status()` | `public status(Iterator $iterator): ?array` | The open run or `null`: `id`, `state` (pending, running, stopping), `running`, `stopping`, `since`, `from`, `done`, `total`, `error`, `url` |
+
 ### Iterator Types
 
 | Class | Description |

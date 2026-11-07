@@ -19,6 +19,7 @@ Durable background work that runs on any WordPress host: a kind of work is a cla
 - [Closing: on_end](#closing-on_end)
 - [Pausing and Copied Sites](#pausing-and-copied-sites)
 - [Seeing It](#seeing-it)
+- [Iterators](#iterators)
 - [What It Spans](#what-it-spans)
 - [Limits](#limits)
 
@@ -229,6 +230,14 @@ One option holds why the worker is paused, and since when: `copied`, `by a perso
 
 ---
 
+## Iterators
+
+An `Iterator`'s Run in background, and a `$cron` iterator's scheduled start, dispatch a `lattice/iterator` job (`Iterator_Job`) through the `lattice.iterator.runner` filter this feature answers; without the feature the button refuses with one line naming `load_feature('lattice/jobs')` and the scheduled start logs one line and runs nothing. The job is keyed by the record's option name (`iterator_{key}`), so one run is open per iterator and a second Run in background, a page Start or a Reset is refused while it is. One step is one batch (`Iterator::run_batch()`); the cursor carries `index`, `tick` and `from`, `set_total()` carries the total, and the first step resumes a halted run. A batch refused by a live page lock, or a source answering no items with items remaining, snoozes the step a minute and spends no try; three throwing steps fail the job and leave the record where it stood.
+
+The record stays the run: the page reads status, index, counts and log from it, and the job row is its driver and what Tools → Jobs shows (the page links to it while it is open, and reads Queued, Running or Stopping). Stop on the page is `cancel()`: `cancelled` for a queued run, `requested` for one mid-step. A failed run, or a cancel that was not the page's Stop, writes one error line into the record through `lattice.jobs.ended`. The lease must outlast a batch: size `$batch_size` to it. From the shell, `wp lattice iterator start <key>` dispatches and `--run` drives the job at once; `wp lattice iterator stop <key>` cancels; `wp lattice jobs retry <id>` reruns a failed one.
+
+---
+
 ## What It Spans
 
 | Kind of work | How |
@@ -249,6 +258,7 @@ One option holds why the worker is paused, and since when: `copied`, `by a perso
 | Fan-out | Dispatch many in a step |
 | Fan-in | Dispatch children keyed with the parent's id and `next('spawned', 0)`; then snooze while `Child::find($key)` answers for any. It sees finished, not whether each succeeded |
 | Recurring | A `Cron_Scheduler` task that dispatches with a key |
+| A batch processor's background | An `Iterator`'s Run in background: [Iterators](#iterators) |
 | Throttled, lightly | The job checks and snoozes. Bulk work should be one job of many steps, not many throttled rows |
 
 ---

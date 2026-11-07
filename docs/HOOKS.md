@@ -520,6 +520,11 @@ Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are
 | `lattice.resources.describe` | Filter | `$description`, `$resource` | Add to the guide's description of a resource |
 | `lattice.resources.present` | Filter | `$lines`, `$resource`, `$before`, `$after`, `$model` | Add to a change presented for people |
 | `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
+| `lattice.iterator.runner` | Filter | `$runner`, `$iterator` | The Iterator's background driver, an `Iterator_Runner`; the `lattice/jobs` feature answers it, and `null` leaves the run foreground only |
+| `lattice.iterator.log_directory` | Filter | `$directory`, `$iterator` | Where an iterator's `$log_file` is written when it declares no `$log_directory`; `null` falls to the `error_log` ini's directory |
+| `lattice.jobs.ended` | Action | `$job`, `$state` | After a job ends (`done`, `failed`, `cancelled`, `expired`); the Jobs feature marks an iterator's run from it |
+| `lattice.jobs.budget` | Filter | `$budget` | Seconds a worker run may spend: 45, or three quarters of `max_execution_time` less what the request has spent |
+| `lattice.jobs.keep_days` | Filter | `$days` | `['done' => 30, 'other' => 90]`: how long ended job rows are kept before the daily prune |
 
 The resources hooks are described in [RESOURCES.md](./RESOURCES.md#policy).
 
@@ -787,6 +792,8 @@ class ACF_Customizations extends Feature {
 | `lattice.relationship.partner_updated` | Action | After `Bidirectional_Relationship` writes a partner's field (`$type, $id, $key, $relationship`); `Excerpt_Keywords` rebuilds the partner's keywords on it |
 | `digitalis_woocommerce_account_page_icon` | Filter | Account page icons (`$icon, $slug, $page`) |
 | `lattice.resources.*`, `lattice.journal.keep_days` | Filter | The resources layer's policy hooks: see [Lattice Hooks](#lattice-hooks) and [RESOURCES.md](./RESOURCES.md#policy) |
+| `lattice.iterator.runner`, `lattice.iterator.log_directory` | Filter | The Iterator's background driver (`$runner, $iterator`) and its log directory (`$directory, $iterator`) |
+| `lattice.jobs.ended`, `lattice.jobs.budget`, `lattice.jobs.keep_days` | Action, Filter | The Jobs feature's: after a job ends (`$job, $state`), the worker's seconds (`$budget`), the prune's days (`$days`); see [JOBS.md](./JOBS.md) |
 
 ### Naming Convention
 

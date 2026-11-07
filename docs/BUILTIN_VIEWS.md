@@ -369,7 +369,7 @@ Renders progress UI for batch processing iterators.
 | `iterator` | `Iterator\|null` | `null` | Iterator instance |
 | `log_url` | `string` | `''` | A link to the full log; kept only when the iterator declares `$log_file` and the file exists |
 
-`params()` derives the template's state from the iterator's run record and its lock: `classes`, `label` (Ready, Running, Stopped, Stalled, Halted, Complete), `time`, `eta`, `failed`, `cron`, `store`, `index`, `total` and the resolved `log_url`; the template calls the iterator's accessors for everything else. The stylesheets (`lattice-tokens`, the admin token layer, and `lattice-iterator`) and the script are enqueued by the iterator (`Iterator::enqueue_style()` and `render_controller()`), not by the view; the total is read from the record and computed only when it never was.
+`params()` derives the template's state from the iterator's run record, its lock and the open job (`open_job()`): `classes`, `label` (Ready, Running, Stopped, Stalled, Halted, Complete; Queued, Running or Stopping for a background run), `time` (the elapsed clock, or `Background · started hh:mm`), `job` (a link to the job row while one is open), `eta` (a background run paces from the job's steps), `failed`, `cron`, `store`, `index`, `total` and the resolved `log_url`; the template calls the iterator's accessors for everything else. The stylesheets (`lattice-tokens`, the admin token layer, and `lattice-iterator`) and the script are enqueued by the iterator (`Iterator::enqueue_style()` and `render_controller()`), not by the view; the total is read from the record and computed only when it never was.
 
 #### Usage
 
