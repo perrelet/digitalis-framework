@@ -11,7 +11,9 @@ require_once __DIR__ . '/v1-create-jobs.migration.php';
 require_once __DIR__ . '/jobs.schema.php';
 require_once __DIR__ . '/job.model.php';
 require_once __DIR__ . '/job-end.job.php';
+require_once __DIR__ . '/iterator.job.php';
 require_once __DIR__ . '/jobs-worker.service.php';
+require_once __DIR__ . '/iterator-runner.class.php';
 require_once __DIR__ . '/jobs-tick.cron-scheduler.php';
 require_once __DIR__ . '/jobs-command.class.php';
 require_once __DIR__ . '/jobs.sub-page.php';
@@ -24,8 +26,10 @@ class Lattice_Jobs extends Feature {
     public function get_hooks () {
 
         return [
-            'cli_init'      => 'register_commands',
-            'admin_notices' => 'print_notices',
+            'cli_init'                => 'register_commands',
+            'admin_notices'           => 'print_notices',
+            'lattice.iterator.runner' => 'iterator_runner',
+            'lattice.jobs.ended'      => ['iterator_ended', 10, 'action', 2],
         ];
 
     }
@@ -34,6 +38,7 @@ class Lattice_Jobs extends Feature {
 
         // Hand-required, so the autoloader never calls it.
         Job_End::static_init();
+        Iterator_Job::static_init();
 
         if (!Jobs_Schema::is_current() && ((Jobs_Worker::inst()->get_pause()['why'] ?? '') !== Jobs_Worker::UNINSTALLED)) Jobs_Schema::ensure();
 
@@ -46,6 +51,31 @@ class Lattice_Jobs extends Feature {
     public function register_commands () {
 
         Jobs_Command::register();
+
+    }
+
+    public function iterator_runner ($runner, $iterator) {
+
+        return $runner ?? Iterator_Job_Runner::inst();
+
+    }
+
+    // An Iterator's run ended as a job: one mark in its file, and for a failure, or a cancel that was not the page's Stop, one
+    // line in the record's errors, since the page reads the record and find() reads open rows only.
+    public function iterator_ended ($job, $state) {
+
+        if (!$job instanceof Iterator_Job) return;
+
+        $class = $job->get_args()['iterator'] ?? null;
+
+        if (!is_string($class) || !class_exists($class) || !is_subclass_of($class, Iterator::class)) return;
+
+        $iterator = $class::get_instance();
+        $error    = $job->get_error();
+
+        $iterator->note("--- background run {$state}" . ($error ? ": {$error}" : '') . ' ---');
+
+        if (($state === Job::FAILED) || (($state === Job::CANCELLED) && ($error !== Iterator_Job_Runner::STOPPED))) $iterator->fail("Background run {$state}: {$error}");
 
     }
 

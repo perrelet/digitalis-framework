@@ -341,25 +341,36 @@ abstract class Iterator extends Singleton {
 
     // One batch for a runner (a job's step, the shell). The memoised record is dropped first: one singleton serves every step a
     // worker process takes, and another process may have written since. The token is the caller's, or none (a bare batch, refused
-    // under a live UI lock). The buffers are cleared after the write merged them into the record; kept, the next write would merge
-    // them again.
-    public function run_batch (?string $token = null) : array {
+    // under a live UI lock). An ended run is not run again by a driver that does not mean to: a complete record never (Reset
+    // first), a halted one only on a driver's first batch ($resume), a retry queue always; `ran` says whether a batch ran. The
+    // buffers are cleared after the write merged them into the record; kept, the next write would merge them again.
+    public function run_batch (?string $token = null, bool $resume = false) : array {
 
         $this->forget_row_cache($this->get_option_key());
         $this->store = null;
         $this->token = $token;
 
-        $tick = $this->iterate();
+        $this->warm_up(); // get_index() alone would answer the index this instance held before the drop
+
+        $store  = $this->get_store();
+        $from   = $this->index;
+        $status = $this->get_status();
+        $retry  = is_array($store['retry'] ?? null) ? count($store['retry']) : 0;
+        $ran    = $retry > 0 || !in_array($status, ['complete', 'halted'], true) || ($resume && $status === 'halted');
+        $tick   = $ran ? $this->iterate() : [];
 
         $this->log = $this->errors = [];
 
         return [
+            'ran'     => $ran,
             'refused' => !empty($tick['refused']),
             'status'  => $this->get_status(),
             'stalled' => !empty($this->store['stalled']),
+            'from'    => $from,
             'index'   => $this->get_index(),
             'count'   => (int) ($tick['count'] ?? 0),
             'total'   => $this->get_total(),
+            'retry'   => (int) ($tick['retry_remaining'] ?? 0),
             'message' => $tick['message'] ?? null,
         ];
 
@@ -842,10 +853,12 @@ abstract class Iterator extends Singleton {
 
             if (!$job = $this->open_job()) return null;
 
+            if (!is_int($job['from'] ?? null)) return null; // no step has run since the dispatch
+
             $since = is_int($job['since'] ?? null) ? $job['since'] : null;
             $until = $this->get_updated_at();
             $spent = (is_int($since) && is_int($until)) ? (float) ($until - $since) : 0.0;
-            $done  = $index - (int) ($job['from'] ?? 0); // the wall pace is the job's own: the items since the dispatch
+            $done  = $index - $job['from']; // the wall pace is the job's own: the items since the dispatch
 
         } else {
 

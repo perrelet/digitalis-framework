@@ -9,7 +9,9 @@ class Jobs_Page extends Admin_Sub_Page {
     const STATES = [Job::PENDING, Job::DONE, Job::FAILED, Job::CANCELLED, Job::EXPIRED];
 
     protected $parent     = 'tools.php';
-    protected $slug       = 'lattice-jobs';
+    const SLUG = 'lattice-jobs';
+
+    protected $slug       = self::SLUG;
     protected $title      = 'Jobs';
     protected $menu_title = 'Jobs';
     protected $capability = 'manage_options';
