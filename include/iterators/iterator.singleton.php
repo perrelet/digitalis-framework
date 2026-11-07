@@ -228,7 +228,8 @@ abstract class Iterator extends Singleton {
                 wp_send_json(['total' => $this->get_total_items_wrap(), 'token' => $token]);
 
             case "iterate":
-                if (!$this->holds_lock()) wp_send_json($this->lock_refusal(), 409);
+                if ($job = $this->open_job()) wp_send_json($this->job_refusal($job), 409); // a chain woken after its lock went stale, while a job took the run
+                if (!$this->holds_lock())     wp_send_json($this->lock_refusal(), 409);
                 $this->read_request($_REQUEST);
                 wp_send_json($this->iterate());
 
@@ -361,9 +362,29 @@ abstract class Iterator extends Singleton {
         $status = $this->get_status();
         $retry  = is_array($store['retry'] ?? null) ? count($store['retry']) : 0;
         $ran    = $retry > 0 || !in_array($status, ['complete', 'halted'], true) || ($resume && $status === 'halted');
-        $tick   = $ran ? $this->iterate() : [];
 
-        $this->log = $this->errors = [];
+        try {
+
+            $tick = $ran ? $this->iterate() : [];
+
+        } catch (\Throwable $e) {
+
+            // The items' side effects happened, so the file keeps the lines under a mark; the record never sees them: the
+            // index they belong to was not written, and they would ride the next write otherwise.
+            if ($this->buffer) {
+
+                $this->mark('--- discarded: batch threw ---');
+                $this->flush_buffer();
+
+            }
+
+            throw $e;
+
+        } finally {
+
+            $this->log = $this->errors = [];
+
+        }
 
         return [
             'ran'     => $ran,
@@ -1200,14 +1221,15 @@ abstract class Iterator extends Singleton {
     // The 409 body while a background run is open: the page says Stop, and names the job.
     public function job_refusal (array $job) : array {
 
-        $id = is_int($job['id'] ?? null) ? $job['id'] : null;
+        $id  = is_int($job['id'] ?? null) ? $job['id'] : null;
+        $ref = $id ? " (job #{$id})" : '';
 
         return [
             'refused' => true,
             'status'  => $this->get_status(),
             'run_by'  => 'background',
             'job'     => $id,
-            'message' => 'A background run is in progress' . ($id ? " (job #{$id})" : '') . '; Stop it first.',
+            'message' => !empty($job['stopping']) ? "The background run is stopping{$ref}; wait for its step to end." : "A background run is in progress{$ref}; Stop it first.",
         ];
 
     }
@@ -1344,7 +1366,11 @@ abstract class Iterator extends Singleton {
 
         $class = (string) (self::$registry[$key_or_class] ?? ltrim($key_or_class, '\\'));
 
-        if (!class_exists($class) || !is_subclass_of($class, self::class) || (new \ReflectionClass($class))->getName() !== $class) return null;
+        if (!class_exists($class) || !is_subclass_of($class, self::class)) return null;
+
+        $reflection = new \ReflectionClass($class);
+
+        if ($reflection->getName() !== $class || $reflection->isAbstract()) return null;
 
         $instance = $class::get_instance();
 

@@ -58,7 +58,7 @@ class Iterator_Command extends Command {
             'class'       => get_class($iterator),
             'status'      => $iterator->get_status(),
             'index'       => $iterator->get_index(),
-            'total'       => $iterator->has_total() ? $iterator->get_total() : $iterator->refresh_total(), // counted once per run, as the page does
+            'total'       => $iterator->has_total() ? $iterator->get_total() : (($job || $iterator->live_lock()) ? null : $iterator->refresh_total()), // counted once per run, never under a driver, as the page does
             'stalled'     => !empty($store['stalled']),
             'failed'      => count($store['failed'] ?? []),
             'retry'       => count($store['retry'] ?? []),

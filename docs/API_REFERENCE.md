@@ -834,7 +834,7 @@ abstract class Meta_Box extends Feature
 
 ### `Lattice\Iterator`
 
-Batch processing base class: an admin page under Tools with Start, Stop and Reset, an AJAX loop and an optional WP-cron loop, the run recorded in one option (`iterator_{$key}`, the store). The shell drives the same engine through `wp lattice iterator` (`Iterator_Command`, `include/_cli/iterator.command.php`): `list`, `status`, `start [--run|--foreground]`, `batch`, `stop`, `reset`.
+Batch processing base class: an admin page under Tools with Start, Stop, Reset and Run in background, an AJAX loop and a background run as a job when a runner answers, the run recorded in one option (`iterator_{$key}`, the store). The shell drives the same engine through `wp lattice iterator` (`Iterator_Command`, `include/_cli/iterator.command.php`): `list`, `status`, `start [--run|--foreground]`, `batch`, `stop`, `reset`.
 
 ```php
 abstract class Iterator extends Singleton

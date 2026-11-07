@@ -34,7 +34,7 @@ class Iterator_UI extends View {
         $running  = $cron || ((bool) $lock && !$lock['stale']); // a live driver: the job, this page's lock or another tab's; a stale lock is nobody's
         $status   = $iterator->get_status();
         $stalled  = (bool) ($store['stalled'] ?? false);
-        $total    = $iterator->has_total() ? $iterator->get_total() : $iterator->refresh_total(); // computed once per run, not once per render
+        $total    = $iterator->has_total() ? $iterator->get_total() : ($running ? null : $iterator->refresh_total()); // computed once per run, never under a driver: refresh_total() writes the whole record, and a job's first step may be counting it
         $elapsed  = (int) floor($iterator->get_elapsed());
         $started  = $iterator->get_started_at();
         $eta      = ($cron && $status === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run

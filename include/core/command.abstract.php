@@ -18,7 +18,7 @@ abstract class Command {
 
         if (!defined('WP_CLI') || !WP_CLI) return;
 
-        (new static(...$args))->add();
+        (new static(...$args))->add(); // @phpstan-ignore new.static (the arguments are the subclass constructor's, forwarded: the signatures are meant to differ)
 
     }
 
