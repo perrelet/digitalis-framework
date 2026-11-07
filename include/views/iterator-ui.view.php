@@ -29,8 +29,8 @@ class Iterator_UI extends View {
         $iterator = $p['iterator'];
         $store    = $iterator->get_store();
         $lock     = $iterator->get_lock();
-        $running  = (bool) $lock && !$lock['stale']; // a live driver, this page's or not; a stale lock is nobody's
-        $cron     = $running && $lock['run_by'] === 'cron';
+        $cron     = $iterator->is_doing_cron();                 // a background run is open: a job, not a lock holder
+        $running  = $cron || ((bool) $lock && !$lock['stale']); // a live driver: the job, this page's lock or another tab's; a stale lock is nobody's
         $status   = $iterator->get_status();
         $stalled  = (bool) ($store['stalled'] ?? false);
         $total    = $iterator->has_total() ? $iterator->get_total() : $iterator->refresh_total(); // computed once per run, not once per render

@@ -838,8 +838,6 @@ abstract class Iterator extends Singleton
 | `$cron` | `bool` | `false` | Schedule the run (`cron_condition()` reads it) |
 | `$cron_time` | `string` | `'00:00:00'` | `H:i:s` in `$timezone`: the first start |
 | `$cron_schedule` | `string` | `'daily'` | Schedule of the start event |
-| `$cron_loop_schedule` | `string` | `'every_minute'` | Schedule of the tick event while a cron run is going |
-| `$cron_budget` | `int` | `20` | Seconds of batches one loop fire does |
 | `$lock_window` | `?int` | `null` | Seconds the run lock outlives its last tick; `null` derives it (`get_lock_window()`) |
 | `$labels` | `array` | `['single' => 'item', 'plural' => 'items']` | Both keys |
 | `$ui_options` | `array` | `[]` | Passed to `Iterator_UI` |
@@ -864,7 +862,7 @@ Override points:
 | `get_item_id()` | `public get_item_id(mixed $item): mixed` | Recorded in the store's id arrays; `null` falls back to the index |
 | `get_items_by_id()` | `public get_items_by_id(array $ids): ?array` | Opt in: the items behind failed ids for a retry tick; the base answers `null`. `Post_Iterator` and `User_Iterator` query by id |
 | `get_item_url()` | `public get_item_url(mixed $id): ?string` | A link for a failed id on the page; the base answers `null`, `Post_Iterator` and `User_Iterator` the edit link |
-| `cron_condition()` | `public cron_condition(): bool` | Whether the cron events are scheduled (base: `$cron`) |
+| `cron_condition()` | `public cron_condition(): bool` | Whether the start event is scheduled (base: `$cron`); the start hands the run to the runner, so a `$cron` iterator needs `lattice/jobs` |
 | `on_start()`, `on_batch_complete()`, `on_complete()` | `protected on_batch_complete(int $count, array $results): void` | Lifecycle hooks; the base logs a line |
 | `get_default_store()` | `public get_default_store(): array` | The per-run keys; add your own buckets here |
 | `pre_get_store()`, `pre_update_store()` | `public pre_get_store(array &$store): void` | Around the option read and write |
@@ -880,14 +878,14 @@ The run:
 | `refresh_total()` | `public refresh_total(): ?int` | Calls `get_total_items()` and stores the answer |
 | `get_progress()` | `public get_progress(): float` | `index / total`, at most 1; a complete run with no total reads 1 |
 | `is_complete()` | `public is_complete(): bool` | |
-| `reset()` | `public reset(): array` | The UI's Reset: the store becomes `get_default_store()`. Under another driver's live lock it answers `lock_refusal() + [refused => true]` (the task 409s): Stop first |
+| `reset()` | `public reset(): array` | The UI's Reset: the store becomes `get_default_store()`. While a background run is open (`job_refusal()`) or under a live UI lock (`lock_refusal()`) it answers `refused` (the task 409s): Stop first |
 | `reset_progress()` | `public reset_progress(): array` | The cron start: restores the keys `get_default_store()` declares and drops the total; every other key survives |
 | `get_store()`, `update_store()` | `public get_store(): array` | The option; `update_store()` writes the index and merges this request's log lines |
 | `skip_item()`, `skip_items()` | `public skip_item(mixed $item = null): void` | Ids the loop skips |
 | `get_counts()` | `public get_counts(): array` | `processed`, `skipped` and `failed`, counted from the id arrays |
 | `get_elapsed()` | `public get_elapsed(): float` | Seconds of server time the run has spent in batches (`elapsed`) |
 | `get_started_at()`, `get_updated_at()`, `get_finished_at()` | `public get_started_at(): ?int` | The record's timestamps; `null` for a run that predates them; a retry tick on a complete or halted run moves `finished_at` to its own time |
-| `get_eta()` | `public get_eta(bool $wall = false): ?int` | Seconds remaining at the run's pace: server time per item, or with `$wall` (a cron run) the wall time from the start, or from the last Run in background (`handed_at`, over the items since `handed_index`), to the last tick; `null` until a batch has run against a known total |
+| `get_eta()` | `public get_eta(bool $wall = false): ?int` | Seconds remaining at the run's pace: server time per item, or with `$wall` (a background run) the wall time from the job's dispatch over the items since its `from`, to the last tick; `null` until a batch has run against a known total, and without an open job |
 | `format_time()` | `public format_time(int $timestamp, string $format = 'H:i'): string` | The timestamp in `$timezone` |
 | `get_failed_items()` | `public get_failed_items(): array` | `count` and `items` (`id`, `url` from `get_item_url()`) for the first `FAILED_LIST` failed ids |
 | `supports_retry()` | `public supports_retry(): bool` | Whether the subclass declares both `get_items_by_id()` and `get_item_id()`; the page shows Retry failed when it does |
@@ -896,16 +894,17 @@ The run:
 | `get_batch_size()`, `set_batch_size()` | `public get_batch_size(): int` | The batch size: the class value, or the page's for this request |
 | `read_request()` | `public read_request(array $request): void` | The `iterate` task's run options: `batch_size` (1 to `MAX_BATCH_SIZE`, this request only) and `dry_run` (`'1'` or `'0'`, written to the store; absent leaves it alone) |
 | `is_dry_run()` | `public is_dry_run(): bool` | The store's `dry_run` flag: log lines carry `[dry run]` and nothing else changes; `process_item()` asks before it writes |
-| `get_log()` | `public get_log(): ?Log` | The run's file when `$log_file` is declared and an absolute directory resolves (else a strict violation / log line and `null`); one write per tick, marks for a reset, a handover, a takeover and a discarded snapshot |
-| `background()` | `public background(): array` | Run in background: the lock as `cron`, `handed_at` and `handed_index` stamped, the loop scheduled, the run continued from its index (`refused` under a live lock or on a complete run) |
-| `cron_loop()` | `public cron_loop(): void` | One fire: batches for `$cron_budget` seconds under the cron lock, held off by a live `iterator_{$key} fire` row (stale after the window it carries, its taker's); a non-cron iterator unschedules its loop when the run ends |
+| `get_log()` | `public get_log(): ?Log` | The run's file when `$log_file` is declared and an absolute directory resolves (else a strict violation / log line and `null`); one write per tick, marks for a reset, a handover, a takeover, a discarded snapshot and the runner's notes |
+| `background()` | `public background(): array` | Run in background: the run handed to the runner as a job from its index (`job`, `queued`, `doing_cron`); `refused` on a complete run, without a runner (`NO_RUNNER` names `lattice/jobs`), while a run is open (`run_by` `background`, the job named) or under a live UI lock |
+| `get_runner()`, `open_job()` | `public get_runner(): ?Iterator_Runner` | The background driver the `lattice.iterator.runner` filter answers (the Jobs feature's), or `null`; `open_job()` is its `status()`: the open run or `null` |
+| `run_batch()`, `note()`, `fail()` | `public run_batch(?string $token = null): array` | One batch for a runner or the shell, on a fresh read of the record: `refused`, `status`, `stalled`, `index`, `count`, `total`, `message`; a bare batch (no token) is refused under a live UI lock. `note()` stamps a line to the file; `fail()` writes one error line into the record on a fresh read |
 | `stop()` | `public stop(): array` | The chain's end: releases the lock when this request's token holds it (`released`) |
-| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | A cron run: the lock held as `cron` and not stale; `stop_cron()` releases it and unschedules a non-cron iterator's loop |
-| `take_lock()`, `release_lock()` | `public take_lock(string $run_by): string\|false` | The run lock (`iterator_{$key} lock`, its own row): `ui` or `cron`; the token, or `false` under a live lock. A stale lock is taken over |
+| `is_doing_cron()`, `stop_cron()` | `public is_doing_cron(): bool` | A background run is open (pending, queued or leased); `stop_cron()` asks the runner to cancel it and answers `['cancelled' => 'cancelled'\|'requested'\|null]` |
+| `take_lock()`, `release_lock()` | `public take_lock(bool $retry = true): string\|false` | The page's run lock (`iterator_{$key} lock`, its own row, `run_by` `ui`): the token, or `false` under a live lock. A stale lock is taken over; a row with any other `run_by` (a 0.6 cron lock) reads as nobody's and is deleted |
 | `get_lock()`, `holds_lock()`, `check_lock()` | `public get_lock(): ?array` | `run_by`, `taken_at`, `seen_at` and `stale` for the page (never the token); whether this request holds the lock; whether it may write (holds it, or nobody does; no row at all is free only for a request that never took one, so a driver whose lock went under it is refused). A held lock is touched at the tick, at the write and between items once half the window has passed. The row carries the taker's `window`, so a CLI fire and an FPM page judge staleness by one figure |
-| `get_lock_window()`, `is_lock_stale()`, `lock_refusal()` | `public get_lock_window(): int` | `$lock_window`, else `max(LOCK_STALE, max_execution_time + 30)`, or `LOCK_STALE_UNLIMITED` when the limit is 0; the 409 body `{status, run_by, message}` |
+| `get_lock_window()`, `is_lock_stale()`, `lock_refusal()` | `public get_lock_window(): int` | `$lock_window`, else `max(LOCK_STALE, max_execution_time + 30)`, or `LOCK_STALE_UNLIMITED` when the limit is 0; the 409 body `{status, run_by, message}`; `lock_refusal()` names the open job when no lock is live (`job_refusal()`) |
 
-Store keys: `index`, the id arrays `processed`, `skip`, `skipped`, `failed` and `retry`, `log` and `errors` (the last `LOG_TAIL` lines each), `status`, `stalled`, `started_at`, `updated_at`, `finished_at`, `elapsed`, `handed_at` and `handed_index` (the last Run in background) are per run (`$default_store`); `total` is absent until computed and `null` when unknown; `dry_run` is the page's checkbox, written by `read_request()`, and survives a cron reset like any other setting.
+Store keys: `index`, the id arrays `processed`, `skip`, `skipped`, `failed` and `retry`, `log` and `errors` (the last `LOG_TAIL` lines each), `status`, `stalled`, `started_at`, `updated_at`, `finished_at`, `elapsed` are per run (`$default_store`); `total` is absent until computed and `null` when unknown; `dry_run` is the page's checkbox, written by `read_request()`, and survives a cron reset like any other setting.
 
 ### Iterator Types
 

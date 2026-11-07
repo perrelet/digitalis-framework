@@ -31,11 +31,6 @@ abstract class Iterator extends Singleton {
     protected $cron               = false;
     protected $cron_time          = '00:00:00';
     protected $cron_schedule      = 'daily';
-    protected $cron_loop_schedule = 'every_minute';
-    protected $cron_budget        = 20; // seconds of batches per loop fire
-
-    protected $cron_run_action  = false;
-    protected $cron_loop_action = false;
 
     // The run lock outlives its last tick by this many seconds; null derives the window from max_execution_time (get_lock_window()).
     protected $lock_window = null;
@@ -75,16 +70,18 @@ abstract class Iterator extends Singleton {
         'updated_at'  => null,
         'finished_at' => null,
         'elapsed'     => 0.0,
-        'handed_at'    => null, // the last Run in background: the wall ETA paces from here
-        'handed_index' => null,
     ];
 
     const FAILED_LIST = 50; // ids the page lists; the rest is a count
+
+    const NO_RUNNER = "Background runs need the lattice/jobs feature; load it with load_feature('lattice/jobs').";
 
     protected $items = [];
     protected $retrying = false;
     protected $token = null; // this request's lock token: taken here, adopted by the cron loop, or sent with an iterate request
     protected $store;
+    /** @var Iterator_Runner|null|false */
+    protected $runner = false; // false until the filter has answered once
     protected $index;
     protected $item_id;
 
@@ -128,14 +125,8 @@ abstract class Iterator extends Singleton {
         add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_assets']);
         add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
 
-        // The loop is every iterator's, since Run in background hands any run to it; the scheduled start stays a $cron iterator's.
-        // Core registers no every_minute schedule; a site's own 60-second one under that name is kept.
-        add_filter('cron_schedules', function ($schedules) {
-            $schedules['every_minute'] ??= ['interval' => 60, 'display' => 'Every Minute'];
-            return $schedules;
-        });
-
-        add_action($this->get_loop_action(), [$this, 'cron_loop']);
+        // The 0.6 loop event: a background run is a job now, and a leftover event would fire a hook nobody answers every minute.
+        if (wp_next_scheduled($this->get_option_key() . '_loop')) wp_unschedule_hook($this->get_option_key() . '_loop');
 
         if ($this->cron_condition()) {
 
@@ -151,7 +142,6 @@ abstract class Iterator extends Singleton {
             }
 
             $cron_action_start = $this->get_start_action();
-            $cron_action_loop  = $this->get_loop_action();
 
             add_action($cron_action_start, [$this, 'cron_start']);
 
@@ -166,14 +156,11 @@ abstract class Iterator extends Singleton {
 
             }
 
-            if (!wp_next_scheduled($cron_action_loop)) $this->schedule_event(time(), $this->cron_loop_schedule, $cron_action_loop);
-
         }
 
     }
 
     public function get_start_action () : string { return $this->get_option_key() . '_start'; }
-    public function get_loop_action ()  : string { return $this->get_option_key() . '_loop';  }
 
     // An unregistered schedule is a declaration error: core answers false, nothing fires, and a run would do one batch and stop.
     protected function schedule_event ($timestamp, $schedule, $action) {
@@ -232,7 +219,8 @@ abstract class Iterator extends Singleton {
         switch ($_REQUEST['task']) {
 
             case "total":
-                if (($token = $this->take_lock('ui')) === false) wp_send_json($this->lock_refusal(), 409);
+                if ($job = $this->open_job())                wp_send_json($this->job_refusal($job), 409);
+                if (($token = $this->take_lock()) === false) wp_send_json($this->lock_refusal(), 409);
                 wp_send_json(['total' => $this->get_total_items_wrap(), 'token' => $token]);
 
             case "iterate":
@@ -254,11 +242,13 @@ abstract class Iterator extends Singleton {
             case "stop_cron":
                 wp_send_json($this->stop_cron());
             case "retry":
-                if (!$this->supports_retry()) wp_send_json_error('This iterator cannot serve items by id.', 422);
-                if (($token = $this->take_lock('ui')) === false) wp_send_json($this->lock_refusal(), 409);
+                if (!$this->supports_retry())                wp_send_json_error('This iterator cannot serve items by id.', 422);
+                if ($job = $this->open_job())                wp_send_json($this->job_refusal($job), 409);
+                if (($token = $this->take_lock()) === false) wp_send_json($this->lock_refusal(), 409);
                 wp_send_json(['token' => $token] + $this->retry());
             case "dismiss":
-                if (!$this->check_lock()) wp_send_json($this->lock_refusal(), 409);
+                if ($job = $this->open_job()) wp_send_json($this->job_refusal($job), 409);
+                if (!$this->check_lock())     wp_send_json($this->lock_refusal(), 409);
                 wp_send_json($this->dismiss());
 
             default:
@@ -268,118 +258,130 @@ abstract class Iterator extends Singleton {
 
     }
 
-    // The lock is taken before the reset: a reset under a live UI run would be written back over by its next tick.
+    // The background driver: the lattice.iterator.runner filter, answered by the Jobs feature. Null is a site without one, and
+    // the methods below say so instead of running.
+    public function get_runner () : ?Iterator_Runner {
+
+        if ($this->runner === false) {
+
+            $runner       = apply_filters('lattice.iterator.runner', null, $this);
+            $this->runner = $runner instanceof Iterator_Runner ? $runner : null;
+
+        }
+
+        return $this->runner;
+
+    }
+
+    // The open background run, or null.
+    public function open_job () : ?array {
+
+        return $this->get_runner()?->status($this);
+
+    }
+
+    // The scheduled start: the run handed to the background, then a reset so the job starts from the top (it reads the record at
+    // its first step, after this request). A live UI lock, an open run or a refused dispatch leaves the record as it was and
+    // writes one file line and one error_log line, as does a site without a runner: a $cron iterator declares a background the
+    // site has not loaded.
     public function cron_start () {
 
-        if ($this->take_lock('cron') === false) {
+        if (!$runner = $this->get_runner()) $refused = 'Cron start needs the lattice/jobs feature; nothing ran.';
+        elseif ($job = $this->open_job())   $refused = 'Cron start refused: ' . $this->job_refusal($job)['message'];
+        elseif ($this->live_lock())         $refused = 'Cron start refused: ' . $this->lock_refusal()['message'];
+        else {
 
-            $message = 'Cron start refused: ' . $this->lock_refusal()['message'];
-            $this->mark("--- {$message} ---");
-            error_log('Lattice: ' . static::class . ": {$message}");
+            $dispatch = $runner->dispatch($this);
 
-            return;
+            if (empty($dispatch['refused'])) {
+
+                $this->reset_progress();
+                $this->mark('--- scheduled start handed to the background' . $this->job_suffix($dispatch) . ' ---');
+                return;
+
+            }
+
+            $refused = 'Cron start refused: ' . ($dispatch['message'] ?? 'the runner did not dispatch.');
 
         }
 
-        $this->reset_progress();
-        $this->iterate();
+        $this->mark("--- {$refused} ---");
+        error_log('Lattice: ' . static::class . ": {$refused}");
 
     }
 
-    // Run in background: the run continues from where it stands under the loop, the lock held as cron (cron_start() keeps its reset
-    // for the scheduled start). WP-cron fires on traffic: a quiet site wants a system cron hitting wp-cron.php.
+    // Run in background: the run continues from where it stands as a job. Refused on a complete run, without a runner (the page's
+    // button says so), while a run is open and under a live UI lock.
     public function background () {
 
-        if ($this->get_status() === 'complete') return ['refused' => true, 'status' => 'complete', 'run_by' => null, 'message' => 'The run is complete; Reset first.'];
-        // The fire row is held from the lock to the stamps: a loop fire already due (a $cron iterator's always is) reads the record
-        // under the row, so it cannot read it between the two and write the stamps away with its first batch.
-        $fire = $this->take_fire();
+        $status = $this->get_status();
 
-        try {
+        if ($status === 'complete')         return ['refused' => true, 'status' => $status, 'run_by' => null, 'message' => 'The run is complete; Reset first.'];
+        if (!$runner = $this->get_runner()) return ['refused' => true, 'status' => $status, 'run_by' => null, 'message' => static::NO_RUNNER];
+        if ($job = $this->open_job())       return $this->job_refusal($job);
+        if ($this->live_lock())             return $this->lock_refusal() + ['refused' => true];
 
-            if ($this->take_lock('cron') === false) return $this->lock_refusal() + ['refused' => true];
+        $dispatch = $runner->dispatch($this);
 
-            $this->store['handed_at']    = time();
-            $this->store['handed_index'] = $this->get_index();
-            update_option($this->get_option_key(), $this->store, false);
+        if (!empty($dispatch['refused'])) return ['refused' => true, 'status' => $status, 'run_by' => null, 'message' => (string) ($dispatch['message'] ?? 'The runner did not dispatch.')];
 
-        } finally {
+        $this->mark('--- handed to the background' . $this->job_suffix($dispatch) . ' ---');
 
-            if ($fire) $this->release_fire();
-
-        }
-
-        if (!wp_next_scheduled($this->get_loop_action())) $this->schedule_event(time(), $this->cron_loop_schedule, $this->get_loop_action());
-
-        $this->mark('--- handed to the background loop ---');
-
-        return ['status' => $this->get_status(), 'doing_cron' => true, 'next' => wp_next_scheduled($this->get_loop_action())];
+        return ['status' => $status, 'doing_cron' => true, 'job' => $dispatch['id'] ?? null, 'queued' => !empty($dispatch['queued'])];
 
     }
 
-    // One fire does up to $cron_budget seconds of batches. A second row, iterator_{key} fire, holds the next fire off while this
-    // one runs (WP-cron's own lock lasts 60 s, and a budget plus a long batch crosses it), stale after the lock window so a fire
-    // that died clears itself. The loop adopts the cron run's token, stale or not: a dead fire leaves its lock and the next
-    // continues the run. When the run has ended, or the lock is no longer a cron one, a non-cron iterator unschedules its loop.
-    public function cron_loop () {
+    protected function job_suffix (array $dispatch) : string {
 
-        $this->get_store(); // migrates a pre-upgrade cron flag into the lock
-        $lock = $this->read_lock();
+        if (!empty($dispatch['held'])) return ' (queued behind the current job)';
 
-        if (!$lock || $lock['run_by'] !== 'cron') {
+        return is_int($dispatch['id'] ?? null) ? " (job #{$dispatch['id']})" : '';
 
-            if (!$this->cron_condition()) wp_unschedule_hook($this->get_loop_action());
-            return;
+    }
 
-        }
+    // One batch for a runner (a job's step, the shell). The memoised record is dropped first: one singleton serves every step a
+    // worker process takes, and another process may have written since. The token is the caller's, or none (a bare batch, refused
+    // under a live UI lock). The buffers are cleared after the write merged them into the record; kept, the next write would merge
+    // them again.
+    public function run_batch (?string $token = null) : array {
 
-        if (!$this->take_fire()) return;
-
-        $this->forget_row_cache($this->get_option_key()); // the head read sits in the options cache: a handover's stamps may have landed since
+        $this->forget_row_cache($this->get_option_key());
         $this->store = null;
-        $this->get_store();
+        $this->token = $token;
 
-        $this->token       = $lock['run'];
-        $this->lock_window = (int) ($lock['window'] ?? $this->get_lock_window()); // adopted with the token, so the mid-batch touch keeps the taker's window
-        $until             = microtime(true) + $this->cron_budget;
+        $tick = $this->iterate();
 
-        try {
+        $this->log = $this->errors = [];
 
-            do {
-
-                $tick = $this->iterate();
-
-            } while (empty($tick['refused']) && $this->get_status() === 'running' && empty($this->store['stalled']) && microtime(true) < $until);
-
-        } finally {
-
-            $this->release_fire();
-
-        }
-
-        if ($this->get_status() !== 'running' && !$this->cron_condition()) wp_unschedule_hook($this->get_loop_action());
+        return [
+            'refused' => !empty($tick['refused']),
+            'status'  => $this->get_status(),
+            'stalled' => !empty($this->store['stalled']),
+            'index'   => $this->get_index(),
+            'count'   => (int) ($tick['count'] ?? 0),
+            'total'   => $this->get_total(),
+            'message' => $tick['message'] ?? null,
+        ];
 
     }
 
-    protected function take_fire () : bool {
+    // A stamped line to the run's file from outside: the runner's marks.
+    public function note (string $text) : void {
 
-        $name = $this->get_option_key('fire');
-        $fire = ['taken_at' => time(), 'window' => $this->get_lock_window()]; // judged by the taker's window, as the lock row is: a CLI fire outlives a page's
-
-        if ($this->row_insert($name, $fire)) return true;
-
-        $held = $this->row_read($name);
-
-        if (!$held) return $this->row_insert($name, $fire);
-        if (time() - (int) ($held['taken_at'] ?? 0) <= (int) ($held['window'] ?? $this->get_lock_window())) return false;
-
-        return $this->row_swap($name, $fire, $held);
+        $this->mark($text);
 
     }
 
-    protected function release_fire () : void {
+    // One error line into the record from outside, on a fresh read of it: the runner's failed run. The record is warmed first,
+    // since update_store() writes the index this instance holds, null on a cold singleton.
+    public function fail (string $message) : void {
 
-        $this->row_delete($this->get_option_key('fire'));
+        $this->forget_row_cache($this->get_option_key());
+        $this->store = null;
+        $this->warm_up();
+        $this->error($message);
+        $this->update_store();
+        $this->log = $this->errors = [];
 
     }
 
@@ -828,20 +830,29 @@ abstract class Iterator extends Singleton {
 
     }
 
-    // Seconds remaining at the run's pace: server time per item, or for a cron run, whose pace is the scheduler's gap between
-    // ticks rather than the work inside them, the wall time from the start to the last tick (the record, not the clock, so the
-    // page reads the same figure until the next tick). Null until a batch has run against a known total.
+    // Seconds remaining at the run's pace: server time per item, or for a background run, whose pace is the worker's gaps as much
+    // as the work inside them, the wall time from the dispatch to the last tick (the record, not the clock, so the page reads the
+    // same figure until the next tick). Null until a batch has run against a known total.
     public function get_eta ($wall = false) : ?int {
 
-        $total  = $this->get_total();
-        $index  = $this->get_index();
-        $store  = $this->get_store();
-        $handed = is_int($store['handed_at'] ?? null) ? $store['handed_at'] : null;
-        $since  = max($this->get_started_at() ?? 0, $handed ?? 0) ?: null; // a handover on an idle run is followed by started_at at the first tick
-        $base   = is_null($handed) ? 0 : (int) ($store['handed_index'] ?? 0);
-        $until  = $this->get_updated_at();
-        $spent  = $wall ? (is_int($since) && is_int($until) ? (float) ($until - $since) : 0.0) : $this->get_elapsed();
-        $done   = $wall ? $index - $base : $index; // the wall pace is the background loop's own: the items since the handover
+        $total = $this->get_total();
+        $index = $this->get_index();
+
+        if ($wall) {
+
+            if (!$job = $this->open_job()) return null;
+
+            $since = is_int($job['since'] ?? null) ? $job['since'] : null;
+            $until = $this->get_updated_at();
+            $spent = (is_int($since) && is_int($until)) ? (float) ($until - $since) : 0.0;
+            $done  = $index - (int) ($job['from'] ?? 0); // the wall pace is the job's own: the items since the dispatch
+
+        } else {
+
+            $spent = $this->get_elapsed();
+            $done  = $index;
+
+        }
 
         if (is_null($total) || $done <= 0 || $index >= $total || $spent <= 0) return null;
 
@@ -999,16 +1010,9 @@ abstract class Iterator extends Singleton {
         $legacy = get_option($this->get_option_key('total'), false);
         if ($legacy !== false) delete_option($this->get_option_key('total'));
 
-        // The cron flag lived in its own option until the run lock; a true flag at upgrade is a cron run in progress, taken as its lock.
-        $cron = get_option($this->get_option_key('cron'), null);
-
-        if ($cron !== null) {
-
-            delete_option($this->get_option_key('cron'));
-
-            if ($cron) { $token = $this->token; $this->take_lock('cron'); $this->token = $token; }
-
-        }
+        // The cron flag (to 0.5) and the fire row (0.6) were the loop's; a background run is a job now, so both go unread.
+        if (get_option($this->get_option_key('cron'), null) !== null) delete_option($this->get_option_key('cron'));
+        if (get_option($this->get_option_key('fire'), null) !== null) $this->row_delete($this->get_option_key('fire'));
 
         if (array_key_exists('status', $store)) return;
 
@@ -1055,37 +1059,29 @@ abstract class Iterator extends Singleton {
     
     }
 
-    // One truth: a cron run is the lock held as cron and not stale.
+    // A background run is open: pending, queued or leased. The name is the page's and the docs'; "cron" is what WordPress calls
+    // the thing that fires the tick.
     public function is_doing_cron () {
 
-        $this->get_store();
-        $lock = $this->read_lock();
-
-        return $lock !== null && $lock['run_by'] === 'cron' && !$this->is_lock_stale($lock);
-
-    }
-
-    // Deprecated: the lock is the flag. True takes it as cron (refused under a live run), false releases it.
-    public function set_doing_cron ($state) {
-
-        if ($state) $this->take_lock('cron'); else $this->release_lock();
+        return $this->open_job() !== null;
 
     }
 
     //
 
-    // The run lock is its own row, iterator_{key} lock: {run, run_by, taken_at, seen_at}, taken over only when stale (the row helpers below).
-    public function take_lock (string $run_by, bool $retry = true) {
+    // The page's run lock is its own row, iterator_{key} lock: {run, run_by, taken_at, seen_at, window}, taken over only when stale
+    // (the row helpers below). run_by is always ui: a background run is a job, not a lock holder.
+    public function take_lock (bool $retry = true) {
 
         $token = bin2hex(random_bytes(8));
         $now   = time();
-        $lock  = ['run' => $token, 'run_by' => $run_by, 'taken_at' => $now, 'seen_at' => $now, 'window' => $this->get_lock_window()];
+        $lock  = ['run' => $token, 'run_by' => 'ui', 'taken_at' => $now, 'seen_at' => $now, 'window' => $this->get_lock_window()];
 
         if ($this->row_insert($this->get_lock_name(), $lock)) return $this->token = $token;
 
         $held = $this->read_lock();
 
-        if (!$held) return $retry ? $this->take_lock($run_by, false) : false; // released between the insert and the read
+        if (!$held) return $retry ? $this->take_lock(false) : false; // released between the insert and the read
         if (!$this->is_lock_stale($held) || !$this->row_swap($this->get_lock_name(), $lock, $held)) return false;
 
         $this->mark("--- took over a stale {$held['run_by']} lock, last seen " . ($now - $held['seen_at']) . "s ago ---");
@@ -1106,6 +1102,7 @@ abstract class Iterator extends Singleton {
         $lock = $this->row_read($this->get_lock_name());
 
         if (!$lock || !is_string($lock['run'] ?? null) || !is_string($lock['run_by'] ?? null)) return null;
+        if ($lock['run_by'] !== 'ui') { $this->row_delete($this->get_lock_name()); return null; } // a 0.6 cron lock: the loop that held it is gone
 
         $lock['taken_at'] = (int) ($lock['taken_at'] ?? 0);
         $lock['seen_at']  = (int) ($lock['seen_at'] ?? 0);
@@ -1173,11 +1170,36 @@ abstract class Iterator extends Singleton {
         $lock   = $this->get_lock();
         $run_by = ($lock && !$lock['stale']) ? $lock['run_by'] : null;
 
+        if (!$run_by && ($job = $this->open_job())) return $this->job_refusal($job);
+
         return [
             'status'  => $this->get_status(),
             'run_by'  => $run_by,
             'message' => $run_by ? "A run is in progress ({$run_by}); Stop it first, or wait." : 'No run is in progress; press Start.',
         ];
+
+    }
+
+    // The 409 body while a background run is open: the page says Stop, and names the job.
+    public function job_refusal (array $job) : array {
+
+        $id = is_int($job['id'] ?? null) ? $job['id'] : null;
+
+        return [
+            'refused' => true,
+            'status'  => $this->get_status(),
+            'run_by'  => 'background',
+            'job'     => $id,
+            'message' => 'A background run is in progress' . ($id ? " (job #{$id})" : '') . '; Stop it first.',
+        ];
+
+    }
+
+    public function live_lock () : ?array {
+
+        $lock = $this->read_lock();
+
+        return ($lock && !$this->is_lock_stale($lock)) ? $lock : null;
 
     }
 
@@ -1299,14 +1321,14 @@ abstract class Iterator extends Singleton {
 
     //
 
-    // A cancelled background run on a non-cron iterator leaves no loop firing every minute; a $cron iterator keeps its schedule.
+    // Stop on a background run: the runner cancels the job. `cancelled` ends it now, `requested` before its next step, null is nothing open.
     public function stop_cron () {
 
-        $lock = $this->read_lock();
-        if ($lock && $lock['run_by'] === 'cron') $this->release_lock();
-        if (!$this->cron_condition()) wp_unschedule_hook($this->get_loop_action());
+        $outcome = $this->get_runner()?->cancel($this);
 
-        return true;
+        if ($outcome) $this->mark('--- background run ' . ($outcome === 'cancelled' ? 'stopped' : 'stopping') . ' from the page ---');
+
+        return ['cancelled' => $outcome];
 
     }
 
@@ -1323,7 +1345,8 @@ abstract class Iterator extends Singleton {
 
     public function reset () {
 
-        if (!$this->check_lock()) return $this->lock_refusal() + ['refused' => true];
+        if ($job = $this->open_job()) return $this->job_refusal($job);
+        if (!$this->check_lock())     return $this->lock_refusal() + ['refused' => true];
 
         $this->release_lock();
 
