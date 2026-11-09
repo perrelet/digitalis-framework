@@ -16,6 +16,21 @@ class API_Only_Application_Passwords extends Feature {
 
     }
 
+    // Core reads a password's failure at 90, and unless a plugin asked for the user sooner (WooCommerce does) it has not been tried yet, so a wrong password ran as nobody.
+    public function run () {
+
+        $this->add_hook('rest_authentication_errors', 'settle_user', 89);
+
+    }
+
+    public function settle_user ($result) {
+
+        get_current_user_id();
+
+        return $result;
+
+    }
+
     public function refuse_sign_in ($is_api_request) {
 
         return $is_api_request && !did_action('wp_authenticate');
