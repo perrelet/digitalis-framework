@@ -7,8 +7,9 @@ use Automattic\WooCommerce\Utilities\OrderUtil;
 // HPOS with sync off only: ACF reads an order's meta table only through its placeholder post, and a sync can replay a write nobody made.
 abstract class Order_Model_Resource extends Model_Resource {
 
-    const ORDER_TYPE    = 'shop_order';
-    const CREATE_STATUS = 'pending';
+    const ORDER_TYPE     = 'shop_order';
+    const CREATE_STATUS  = 'pending';
+    const DRAFT_STATUSES = ['pending'];
 
     protected $tally;
 
@@ -231,6 +232,38 @@ abstract class Order_Model_Resource extends Model_Resource {
             $model && in_array($operation, ['trash', 'untrash'], true) => 'delete_post',
             default                             => 'edit_shop_orders',
         };
+
+    }
+
+    // Credentials
+
+    // 'draft' for DRAFT_STATUSES, and each status by its name. A trashed order is judged by the status it had.
+    public function get_conditions () : array {
+
+        $status = function ($model, array $values) : string {
+
+            $status = (string) ($values['status'] ?? ($model ? $this->get_status($model) : static::CREATE_STATUS));
+
+            return (($status === 'trash') && $model) ? OrderUtil::remove_status_prefix((string) $model->get_meta('_wp_trash_meta_status')) : $status;
+
+        };
+
+        $conditions = ['draft' => fn ($model, array $values) => in_array($status($model, $values), static::DRAFT_STATUSES, true)];
+
+        foreach (array_keys($this->get_field('status')?->get_choices() ?? []) as $name) $conditions[$name] ??= fn ($model, array $values) => $status($model, $values) === $name;
+
+        return $conditions;
+
+    }
+
+    // The placeholder post's author is whoever made the order, as WooCommerce's capability mapping reads it.
+    public function get_facts ($model, array $values = [], ?int $user_id = null) : array {
+
+        $facts = parent::get_facts($model, $values, $user_id);
+
+        if ($model) $facts['own'] = (int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id());
+
+        return $facts;
 
     }
 
