@@ -20,6 +20,7 @@ class Resources extends Service {
     protected array $resources = [];
     protected string $credential_reason = '';
     protected ?Step_List $stepping = null;
+    protected int $checking = 0;
     protected array $writing   = [];
     protected ?array $walk     = null;
 
@@ -1708,7 +1709,7 @@ class Resources extends Service {
 
         if (!get_current_user_id()) return false;
 
-        if (in_array($operation, ['list', 'read', 'create', 'update', 'publish', 'trash', 'untrash'], true) && !$resource->can($operation, $model)) return false;
+        if (in_array($operation, ['list', 'read', 'create', 'update', 'publish', 'trash', 'untrash'], true) && !$this->can($resource, $operation, $model)) return false;
 
         if (!apply_filters('lattice.resources.allow', true, wp_get_current_user(), $resource->get_name(), $operation)) return false;
 
@@ -1723,6 +1724,38 @@ class Resources extends Service {
         $this->credential_reason = in_array('review', $answers, true) ? 'lattice_credential_review' : 'lattice_credential';
 
         return false;
+
+    }
+
+    // The account's own right, asked as the layer: the capability stage leaves a read bar to the layer here, which answers it with the credential's reason.
+    protected function can (Model_Resource $resource, string $operation, $model) : bool {
+
+        $this->checking++;
+
+        try {
+
+            return $resource->can($operation, $model);
+
+        } finally {
+
+            $this->checking--;
+
+        }
+
+    }
+
+    public function is_checking () : bool {
+
+        return $this->checking > 0;
+
+    }
+
+    // Whether the credential may read some field of this record.
+    public function credential_reads (Model_Resource $resource, $model) : bool {
+
+        $answers = $this->ask_credential($resource, 'read', $model, array_keys($model ? $resource->get_fields_for($model) : $resource->get_fields()));
+
+        return is_null($answers) || in_array('allow', $answers, true);
 
     }
 
