@@ -137,21 +137,21 @@ class Lattice_Resources extends Feature {
 
     }
 
-    protected function print_version_field ($model) : void {
+    public static function print_version_field ($model) : void {
 
         echo '<input type="hidden" name="' . static::VERSION_FIELD . '" value="' . esc_attr($model->get_version()) . '">';
 
     }
 
-    protected function refuse_stale (Model_Resource $resource, $record_id, int $seen) : void {
+    public static function refuse_stale (Model_Resource $resource, $record_id, int $seen) : void {
 
-        $by = $this->describe_change($resource, $record_id, $seen);
+        $by = static::describe_change($resource, $record_id, $seen);
 
         wp_die(esc_html("This {$resource->get_label()} changed after you opened it" . ($by ? " ({$by})" : '') . ', so your edit was not saved. Open it again to see the change, then make yours.'), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
 
     }
 
-    protected function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
+    public static function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
 
         $row = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
 
