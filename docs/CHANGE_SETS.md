@@ -20,9 +20,11 @@ POST change_set/12/apply_set          { seen: <that answer>, why }
 | Who | May |
 |---|---|
 | `propose_changes` or `edit_posts` | Make a set and list their own |
-| Its author | Read it, change its `purpose` and steps while it is a draft, apply it, rebase it |
+| Its author | Read it, change its `purpose` and steps while it is a draft, apply it, rebase it, withdraw it |
 | `approve_proposals` | Read and list every set |
-| Its author or `approve_proposals` | Undo what it applied, withdraw it, settle a step |
+| Its author or `approve_proposals` | Undo what it applied, settle a step |
+
+Its author is its account and, where a scoped password wrote it, that password: another password on the account, or the account in wp-admin, is not ([CREDENTIALS.md](./CREDENTIALS.md)).
 
 `steps`, `state` and `author_id` are readers: writing one answers `invalid`.
 

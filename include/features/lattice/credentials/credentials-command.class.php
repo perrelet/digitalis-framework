@@ -16,6 +16,7 @@ class Credentials_Command {
         WP_CLI::add_command('lattice credentials set', [$command, 'set'], ['shortdesc' => 'Give a password a policy: its own rules, a shared policy or both.', 'synopsis' => '<user> <uuid> [--input=<file>] [--policy=<name>] [--expires=<when>]']);
         WP_CLI::add_command('lattice credentials clear', [$command, 'clear'], ['shortdesc' => 'Take a password\'s policy away, leaving it a full password.', 'synopsis' => '<user> <uuid>']);
         WP_CLI::add_command('lattice credentials ask', [$command, 'ask'], ['shortdesc' => 'What a password\'s policy answers for one verb on one target.', 'synopsis' => '<user> <uuid> <on> <verb> [--fields=<fields>] [--facts=<json>] [--after=<json>] [--dry-run]']);
+        WP_CLI::add_command('lattice credentials explain', [$command, 'explain'], ['shortdesc' => 'What a password\'s policy really allows here, and where its promise is only coarse.', 'synopsis' => '<user> <uuid>']);
         WP_CLI::add_command('lattice credentials shared', [$command, 'shared'], ['shortdesc' => 'Shared policies: list them, show one, store one or delete one.', 'synopsis' => '[<name>] [--input=<file>] [--delete]']);
 
     }
@@ -101,6 +102,16 @@ class Credentials_Command {
         ], fn ($value) => !is_null($value));
 
         $this->answer(['answer' => Credentials::inst()->answer($entry, $request), 'fields' => Credentials::inst()->answer_fields($entry, $request)]);
+
+    }
+
+    public function explain ($args, $assoc) {
+
+        [$user, $uuid] = $this->find_password($args);
+
+        $entry = Credentials::inst()->get_entry($user->ID, $uuid);
+
+        $this->answer(is_null($entry) ? ['scoped' => false, 'answer' => 'It may do whatever its account may.'] : Credentials::inst()->explain($entry));
 
     }
 

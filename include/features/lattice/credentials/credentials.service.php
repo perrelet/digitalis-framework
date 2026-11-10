@@ -307,6 +307,73 @@ class Credentials extends Service {
 
     }
 
+    // Explaining (S13)
+
+    // What an entry really allows on this site now, and where its promise is only coarse.
+    public function explain (mixed $entry) : array {
+
+        [$policies, $problems, $expires] = $this->read($entry);
+
+        if ($problems) return ['readable' => false, 'problems' => $problems, 'answer' => 'Every request is refused.'];
+
+        // Each rule named by where it comes from: the password's own rules, or its shared policy.
+        $from  = array_values(array_filter([array_key_exists('rules', (array) $entry) ? 'own' : null, isset($entry['policy']) ? "shared {$entry['policy']}" : null]));
+        $rules = array_merge([], ...array_map(fn ($policy, $origin) => array_map(fn ($rule) => ['label' => "{$origin} rule {$rule['position']}"] + $rule, $policy->get_rules()), $policies, $from));
+        $flags = array_merge([], ...array_map(fn ($policy, $origin) => array_map(fn ($line) => "{$origin}: {$line}", $this->get_unknown($policy)), $policies, $from));
+
+        foreach ($rules as $rule) {
+
+            if (is_null($rule['target']) || in_array('reads', $rule['verbs'], true) || in_array('writes', $rule['verbs'], true) || isset($rule['except'])) $flags[] = ucfirst($rule['label']) . " covers what is added later (a wildcard, a verb group or except).";
+            if (($rule['surface'] === 'route') && ($rule['answer'] === 'deny') && preg_match('/\d$/', (string) $rule['target'])) $flags[] = ucfirst($rule['label']) . " denies one record's route, which another spelling of its id may still reach.";
+            if (($rule['surface'] === 'resource') && ($rule['target'] === Credential_Policy::SETS) && in_array('act:approve_proposal', $rule['verbs'], true) && ($rule['answer'] === 'allow')) $flags[] = ucfirst($rule['label']) . " may approve sets other passwords write: two such passwords could approve each other's.";
+            if ($rule['surface'] === 'accounts') $flags[] = ucfirst($rule['label']) . " is on accounts, which open nothing until accounts are a resource (S6a).";
+
+        }
+
+        $resources = [];
+
+        foreach (class_exists(Resources::class) ? Resources::inst()->get_resources() : [] as $name => $resource) {
+
+            $ask = fn (string $verb, array $fields = []) => $this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => $verb, 'fields' => $fields, 'facts' => ['any_record' => true]]);
+
+            $fields = array_keys($resource->get_fields());
+            $reads  = $ask('read', $fields);
+            $writes = $ask('update', $fields);
+            $verbs  = [];
+
+            // A verb on the whole resource: allowed where some field is, reviewed where some field is.
+            foreach (['list', 'read', 'create', 'update', 'trash', 'untrash', 'undo', ...array_map(fn ($action) => "act:{$action}", array_keys($resource->get_actions())), ...array_map(fn ($view) => "view:{$view}", array_keys($resource->get_views()))] as $verb) {
+
+                $answers = $ask($verb, in_array($verb, ['read', 'update', 'create'], true) ? $fields : []);
+
+                $verbs[$verb] = in_array('allow', $answers, true) ? 'allow' : (in_array('review', $answers, true) ? 'review' : 'deny');
+
+            }
+
+            $barred = array_keys(array_filter($reads, fn ($answer) => $answer !== 'allow'));
+            $blind  = array_values(array_intersect($barred, array_keys(array_filter($writes, fn ($answer) => $answer !== 'deny'))));
+
+            if ($blind) $flags[] = "{$name}: may write what it may not read (" . implode(', ', $blind) . '), and whether a write changed anything still shows (L11).';
+            if ($barred && ($resource->get_views() || array_filter($verbs, fn ($answer, $verb) => str_starts_with($verb, 'act:') && ($answer !== 'deny'), ARRAY_FILTER_USE_BOTH))) $flags[] = "{$name}: its views and actions run its own code, which may read what is barred (L12).";
+
+            if (array_filter($verbs, fn ($answer) => $answer !== 'deny')) $resources[$name] = ['verbs' => $verbs, 'barred' => $barred];
+
+        }
+
+        if (array_filter($resources, fn ($resource) => in_array('review', $resource['verbs'], true)) && !isset((class_exists(Resources::class) ? Resources::inst()->get_resource(Credential_Policy::SETS) : null)?->get_actions()['submit_proposal'])) $flags[] = 'Nothing here can review a change (Proposals is not loaded), so review answers deny (S7).';
+
+        return array_filter([
+            'readable'  => true,
+            'expires'   => $expires ? gmdate('c', $expires) : null,
+            'resources' => $resources,
+            'routes'    => array_values(array_map(fn ($rule) => ['rule' => $rule['label'], 'verbs' => $rule['verbs'], 'on' => $rule['target'], 'answer' => $rule['answer'], 'promise' => 'coarse: the code behind a route is unseen'], array_filter($rules, fn ($rule) => $rule['surface'] === 'route'))),
+            'abilities' => array_values(array_map(fn ($rule) => ['rule' => $rule['label'], 'on' => $rule['target'] ?? '*', 'answer' => $rule['answer']], array_filter($rules, fn ($rule) => $rule['surface'] === 'ability'))),
+            'never'     => 'No credential, policy, session, account or role is ever changed, whatever the policy says (S6); an allowed verb whose side effect would change one stops.',
+            'flags'     => array_values(array_unique($flags)),
+        ], fn ($value) => !is_null($value) && ($value !== []));
+
+    }
+
     // Names
 
     // What a policy names that does not exist on this site now, rule by rule; a rule marked waiting is left alone.

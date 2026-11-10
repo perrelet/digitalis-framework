@@ -314,7 +314,9 @@ Another feature has its say over single records:
 - `lattice.resources.forbidden` (`$data, $resource, $model, $operation`): adds to the `data` of the `forbidden` refusal of a write to a known record, so a refusal can say what the account could do instead.
 - `lattice.resources.describe` (`$description, $resource`): adds to the guide's description of a resource.
 
-A record's actions read as unusable where `lattice.resources.allow` refuses them. `Resources::check_update($name, $id, $values)` says what would stop an update, for an account that may read the record, without its right to make it: `problems`, `locked` (field and reason) and `needs` (the capability the record's lock asks), with neither a diff nor consequences. It predicts as that account, so it can differ for a reviewer where a resource shows fields per account. An empty answer means nothing stands in the way.
+A request made with a scoped application password is also asked of its policy ([CREDENTIALS.md](./CREDENTIALS.md)): reads exactly, writes where the values are known, and a refusal it makes says `data.reason: lattice_credential`, or `lattice_credential_review` with `data.propose` where it may be proposed instead. The journal names the password behind each change.
+
+A record's actions read as unusable where `lattice.resources.allow` or a credential refuses them. `Resources::check_update($name, $id, $values)` says what would stop an update, for an account that may read the record, without its right to make it: `problems`, `locked` (field and reason) and `needs` (the capability the record's lock asks), with neither a diff nor consequences. It predicts as that account, so it can differ for a reviewer where a resource shows fields per account. An empty answer means nothing stands in the way.
 
 ---
 
