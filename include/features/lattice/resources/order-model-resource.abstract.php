@@ -93,14 +93,20 @@ abstract class Order_Model_Resource extends Model_Resource {
 
     }
 
-    // status, search, page, per_page
     public function query (array $args) : array {
+
+        return (static::$model_class)::query(apply_filters('lattice.resources.query', $this->get_query_args($args), $this));
+
+    }
+
+    // status, search, page, per_page, as WC_Order_Query arguments.
+    public function get_query_args (array $args) : array {
 
         $statuses = array_keys(array_diff_key(wc_get_order_statuses(), ['wc-checkout-draft' => 0]));
         $status   = (string) ($args['status'] ?? '');
         $status   = ($status === 'trash') ? 'trash' : "wc-{$status}";
 
-        return (static::$model_class)::query(apply_filters('lattice.resources.query', array_filter([
+        return array_filter([
             'type'    => $this->get_order_type(),
             'status'  => (($status === 'trash') || in_array($status, $statuses, true)) ? [$status] : $statuses,
             's'       => (string) ($args['search'] ?? ''),
@@ -109,7 +115,7 @@ abstract class Order_Model_Resource extends Model_Resource {
             'orderby' => 'modified',
             'order'   => 'DESC',
             'return'  => 'ids',
-        ]), $this));
+        ]);
 
     }
 
