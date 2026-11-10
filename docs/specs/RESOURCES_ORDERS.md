@@ -1,6 +1,6 @@
 # Spec: WooCommerce orders as resources
 
-**Status:** Ready
+**Status:** Done
 **Date:** 2026-11-10
 
 Lets a site declare a resource over WooCommerce orders (`shop_order`) stored in HPOS with sync off, with the guarantees a post resource has: versions, the journal, undo, trash, dry runs, change sets and the policy filters. First consumer: `Order_Resource` in digitalis-co ([PROJECT_CHANNEL.md](../../../docs/PROJECT_CHANNEL.md), step 5).
@@ -166,6 +166,8 @@ Done 2026-11-10 on digitalis.ca. The name comes from the password WordPress auth
 ## Phase 6: documentation
 
 A section in [RESOURCES.md](../RESOURCES.md) (declaring an order resource, the seam questions, the hooks and their limits) and one line in AGENTS.md.
+
+Done 2026-11-10: [Orders](../RESOURCES.md#orders), the credential's name in the journal section and CREDENTIALS.md, two limits, and `Lattice_Resources_Orders` in AGENTS.md.
 
 ---
 

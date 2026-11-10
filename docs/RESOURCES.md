@@ -13,6 +13,7 @@ Read and change models through one layer, the way wp-admin does: REST (`lattice/
 - [Writing](#writing)
 - [Actions, Views and Consequences](#actions-views-and-consequences)
 - [Option Pages](#option-pages)
+- [Orders](#orders)
 - [The Version](#the-version)
 - [The Journal and Undo](#the-journal-and-undo)
 - [Trash](#trash)
@@ -44,8 +45,12 @@ include/features/lattice/resources/
 ├── options-page-resource.abstract.php
 ├── options-page.model.php
 ├── options-page-record.class.php
+├── order-model-resource.abstract.php   Order_Model_Resource: WooCommerce orders in HPOS
 ├── journal/
 └── routes/
+
+include/features/lattice/resources-orders/
+└── resources-orders.feature.php      Lattice_Resources_Orders: versions and journals orders written outside the layer
 ```
 
 `Has_Version` (`include/wordpress/`) and `Has_Unsaved_Copies` (`include/acf/`) stay in core: they are model traits.
@@ -233,6 +238,53 @@ Fields come from the groups on that page; the capability is the page's; create i
 
 ---
 
+## Orders
+
+WooCommerce orders (`shop_order`) stored in HPOS with sync off. Elsewhere the resource does not register and the feature does not load: ACF reads an order's meta table only through its placeholder post, and a sync can replay a write nobody made. Refunds and subscriptions are not covered.
+
+The site's order model carries the version and the unsaved copy; the resource sits beside it:
+
+```php
+class Order extends \Digitalis\Order {
+
+    use \Digitalis\Has_Order_Version, \Digitalis\Has_Unsaved_Copies;
+
+}
+
+class Order_Resource extends \Digitalis\Order_Model_Resource {
+
+    protected static $name        = 'order';
+    protected static $model_class = Order::class;
+
+    const CREATE_STATUS  = 'erp-draft';
+    const DRAFT_STATUSES = ['erp-draft'];
+
+}
+```
+
+Load `lattice/resources-orders` after `lattice/resources`; it journals and versions the writes the layer does not make.
+
+**What the resource answers.** `status` is its one field, read by `get_status()` and staged by `set_status()`, its choices WooCommerce's without `wc-` and without `checkout-draft`; sites add theirs. A create is an unsaved order in `CREATE_STATUS` (`pending` unless the resource says). `query()` builds `WC_Order_Query` arguments, so a `lattice.resources.query` filter branches on the resource. Trash is `delete(false)` and `untrash()`, whose save replays the status hooks with only emails suppressed. `read_post`, `edit_post` and `delete_post` map through the placeholder post; listing and creating need `edit_shop_orders`. WooCommerce maps an order's capabilities from its placeholder's author, so an agent that creates an order owns it: an order resource's perimeter rests on `lattice.resources.refuse` or a credential, never on the capability.
+
+**Credentials.** An order's conditions are `draft` (its `DRAFT_STATUSES`) and each status by name, a trashed order judged by the status it had; `own` is the placeholder's author. A key with `writes` on `records: draft` makes, edits, trashes and restores drafts, and cannot move one out of draft.
+
+**Failures.** `WC_Order::save()` catches every exception and answers the id, and each ACF field is a save of its own, so `before_write()` counts the order's before and after saves: a save that started and never ended answers `not_saved`, partial. A subclass that overrides either calls parent.
+
+**Writes outside the layer** (`Lattice_Resources_Orders`):
+
+| Hook | Does |
+|------|------|
+| `load-woocommerce_page_wc-orders` 5 | Claims the edit form's version or refuses it as stale, before `handle_order_update()` writes anything |
+| `woocommerce_order_actions_start` | Prints the version field |
+| order and item before saves, item deletion, trash, untrash | Take "before" once per order |
+| `woocommerce_after_order_object_save`, `woocommerce_trash_order` | Raise the version unless claimed |
+| `woocommerce_before_delete_order` | Writes the `deleted` row (a forced delete only) |
+| `action_scheduler_before_execute` / `after_execute`, `shutdown` | Settle: finish or raise the version, read "after" and write one row per order touched, the action `create`, `trash`, `untrash` or `update` |
+
+An edit-screen save is several order saves, so "before" is taken at the first touch and the row written once at the settle; settling per Action Scheduler action keeps a batch of renewals to a row each. "Before" and "after" read a fresh clone past the order cache. `checkout-draft` and `auto-draft` are journaled from their first real status, and deleting one writes no row. `via` is `cron` under Action Scheduler or WP-Cron, `admin` in wp-admin, `other` elsewhere (WooCommerce's REST API included). The hooks never throw: an error is logged, since a throw inside a save becomes an order note and in a before hook cancels the write. Subscriptions' copies leave the version and set key behind.
+
+---
+
 ## The Version
 
 `Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. A restored revision raises it once more, after its fields come back. `raise_version()` is a single step for raises outside a save. The count is only ever compared, never counted.
@@ -245,7 +297,7 @@ wp-admin's classic editor and options pages carry the version in a hidden field 
 
 ## The Journal and Undo
 
-`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`, `cron`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`). A row may also name a change set: `set_key`, `set_step` and `proposer_id`, which `journal()`, its route (`?set=`, `?proposer=`), the CLI and the Changes screen filter by.
+`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`, `cron`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`). A row may also name a change set: `set_key`, `set_step` and `proposer_id`, which `journal()`, its route (`?set=`, `?proposer=`), the CLI and the Changes screen filter by. A row written with an application password names it: `credential` (its UUID) and `credential_name` (its name then, kept through a rename or a revoke), which the Changes screen and a stale refusal show.
 
 A restored revision is one row, `restore`. WordPress saves the post's columns, then its `wp_restore_post_revision` listeners bring the fields back (its own, ACF's, a site's); the feature journals the save as it would any, then completes that row at priority 100, once the fields are in (`Journal::amend()`, used only for a row written earlier in the same request). Rows are otherwise never changed.
 
@@ -333,4 +385,6 @@ A record's actions read as unusable where `lattice.resources.allow` or a credent
 - A dry run shows the post's columns as sent: WordPress filters them at save, trimming the title, converting entities and applying kses as the acting account, and predicting that save is not safe.
 - An account without `unfiltered_html` undoing a row, or a reviewer without it approving a trusted account's new embed in an ACF field, removes what it cannot keep; the dry run shows it.
 - Content is filtered as the acting account. For an account without `unfiltered_html`, WordPress's kses turns `&` into `&amp;` inside ACF block data, as it does in wp-admin: an approval by such an account carries that into the live content. WordPress also re-serialises block attributes (`\"` to `\u0022`), so compare content with what WordPress stored, not the string sent.
+- An order's AJAX item edits carry no version, so only the edit form is refused as stale. An order resource that reads no items raises the version on an item edit but writes no row.
+- An outside write raises an order's version once per order save, so it can climb by several in one request.
 - Long text is presented shortened; an edit beyond what is shown reads "Changed". `lattice.resources.present` (`$lines, $resource, $before, $after, $model`) lets another feature add to a presented change, a preview link say.

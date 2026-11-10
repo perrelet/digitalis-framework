@@ -66,7 +66,7 @@ wp lattice credentials shared [<name>] [--input=<file>] [--delete]
 | Capabilities | No account capability at all; `read_post` refused for a record the credential may not read, outside the layer |
 | Storage | Before every other listener, and stopping the request: roles, capabilities and level, passwords and reset keys, application passwords, sessions, second factors, accounts made or deleted, role definitions and policies |
 
-A set is its account's and the scoped password's that wrote it; the journal names the password behind every change (`credential`).
+A set is its account's and the scoped password's that wrote it; the journal names the password behind every change (`credential`, and `credential_name` as it was named then).
 
 ## Limits
 
