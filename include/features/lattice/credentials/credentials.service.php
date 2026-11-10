@@ -14,6 +14,45 @@ class Credentials extends Service {
     // Shared policies defined in code, by name; false where two define one name.
     protected array $defined = [];
 
+    // The password this request authenticated with, once WordPress says which: user_id, uuid and its entry, or null for an unscoped one.
+    protected ?array $current = null;
+    protected bool $noted     = false;
+
+    // The first password a request authenticates with is its credential: one checked later (a route checking a password it was sent) never replaces it.
+    public function note_current (int $user_id, string $uuid) : void {
+
+        if ($this->noted) return;
+
+        $this->noted = true;
+
+        $entry = $this->get_entry($user_id, $uuid);
+
+        $this->current = is_null($entry) ? null : ['user_id' => $user_id, 'uuid' => $uuid, 'entry' => $entry];
+
+    }
+
+    public function get_current () : ?array {
+
+        return $this->current;
+
+    }
+
+    // Why a scoped password is refused outright, whatever it asks for, or '' when it is not.
+    public function refuse_entry (mixed $entry) : string {
+
+        if ($this->read($entry)[1]) return 'lattice_credential_unreadable';
+
+        return $this->is_expired($entry) ? 'lattice_credential_expired' : '';
+
+    }
+
+    // A route is reachable when a route rule allows it: decided on the path and, once routes are known, every pattern WordPress could match it to, the most specific rule winning across them.
+    public function may_reach (mixed $entry, array $targets, string $method) : bool {
+
+        return $this->answer($entry, ['surface' => 'route', 'target' => $targets, 'verb' => $method]) === 'allow';
+
+    }
+
     public function define (string $name, array $policy) : void {
 
         $this->defined[$name] = array_key_exists($name, $this->defined) ? false : $policy;
@@ -35,25 +74,43 @@ class Credentials extends Service {
 
         $entries = get_user_meta($user_id, static::META, true);
 
-        if (($entries !== '') && !is_array($entries)) return false;
+        if ($entries === '') return null;
 
-        return $entries[$uuid] ?? null;
-
-    }
-
-    public function set_entry (int $user_id, string $uuid, array $entry) : void {
-
-        update_user_meta($user_id, static::META, [$uuid => $entry] + $this->get_entries($user_id));
+        return is_array($entries) ? ($entries[$uuid] ?? null) : false;
 
     }
 
-    public function clear_entry (int $user_id, string $uuid) : void {
+    // Storage that cannot be read refuses every password on the account, so nothing writes over it: revoking one password must not make the others full ones.
+    protected function is_unreadable (int $user_id) : bool {
+
+        $entries = get_user_meta($user_id, static::META, true);
+
+        return ($entries !== '') && !is_array($entries);
+
+    }
+
+    public function set_entry (int $user_id, string $uuid, array $entry) : bool {
+
+        if ($this->is_unreadable($user_id)) return false;
+
+        // User meta is unslashed as it is stored, so a route rule's \d would arrive as d.
+        update_user_meta($user_id, static::META, wp_slash([$uuid => $entry] + $this->get_entries($user_id)));
+
+        return true;
+
+    }
+
+    public function clear_entry (int $user_id, string $uuid) : bool {
+
+        if ($this->is_unreadable($user_id)) return false;
 
         $entries = $this->get_entries($user_id);
 
         unset($entries[$uuid]);
 
-        $entries ? update_user_meta($user_id, static::META, $entries) : delete_user_meta($user_id, static::META);
+        $entries ? update_user_meta($user_id, static::META, wp_slash($entries)) : delete_user_meta($user_id, static::META);
+
+        return true;
 
     }
 

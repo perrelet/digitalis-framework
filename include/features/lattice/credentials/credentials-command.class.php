@@ -64,7 +64,7 @@ class Credentials_Command {
 
         if ($problems) WP_CLI::error(implode(' ', $problems));
 
-        Credentials::inst()->set_entry($user->ID, $uuid, $entry);
+        if (!Credentials::inst()->set_entry($user->ID, $uuid, $entry)) WP_CLI::error("{$user->user_login}'s stored policies cannot be read, so every password on the account is refused: repair them before setting one.");
 
         $this->answer(['user_id' => $user->ID, 'uuid' => $uuid, 'entry' => $entry]);
 
@@ -74,7 +74,7 @@ class Credentials_Command {
 
         [$user, $uuid] = $this->find_password($args);
 
-        Credentials::inst()->clear_entry($user->ID, $uuid);
+        if (!Credentials::inst()->clear_entry($user->ID, $uuid)) WP_CLI::error("{$user->user_login}'s stored policies cannot be read: repair them first.");
 
         WP_CLI::success("{$uuid} is a full password again.");
 

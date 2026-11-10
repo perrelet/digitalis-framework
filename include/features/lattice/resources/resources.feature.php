@@ -23,6 +23,8 @@ foreach (glob(__DIR__ . '/routes/*.route.php') as $file) require_once $file;
 
 class Lattice_Resources extends Feature {
 
+    protected static $requires = ['lattice/credentials'];
+
     const PRUNE         = 'lattice_journal_prune';
     const VERSION_FIELD = 'lattice_version';
 

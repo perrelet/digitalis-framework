@@ -172,11 +172,11 @@ class Credential_Policy {
 
     protected function match_target (array $rule, array $request) : bool {
 
-        $target = (string) $request['target'];
+        $target = is_array($request['target']) ? '' : (string) $request['target'];
 
         return match ($rule['surface']) {
             'resource' => is_null($rule['target']) ? ($target !== static::SETS) : ($rule['target'] === $target),
-            'route'    => (bool) preg_match('#^' . str_replace('\*', '.*', preg_quote(strtolower($rule['target']), '#')) . '$#', strtolower($target)),
+            'route'    => (bool) array_filter((array) $request['target'], fn ($each) => preg_match('#^' . str_replace('\*', '.*', preg_quote(strtolower($rule['target']), '#')) . '$#', strtolower($each))),
             'ability'  => is_null($rule['target']) || ($rule['target'] === $target) || (str_ends_with($rule['target'], '/*') && (($request['facts']['category'] ?? null) === substr($rule['target'], 0, -2))),
             'accounts' => true,
         };
