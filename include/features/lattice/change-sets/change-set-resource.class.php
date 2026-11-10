@@ -726,7 +726,7 @@ class Change_Set_Resource extends Model_Resource {
         if (!$settled) return new WP_Error('not_saved', 'It could not be settled, and nothing was changed.');
 
         // So it cannot settle a later attempt.
-        if (!$applied && $record && $target->get_post_type()) delete_post_meta($record->get_id(), Resources::SET_KEY);
+        if (!$applied && $record) $target->forget_set_key($record);
 
         return $set;
 

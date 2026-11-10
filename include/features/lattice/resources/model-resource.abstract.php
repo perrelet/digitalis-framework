@@ -117,7 +117,7 @@ abstract class Model_Resource extends Singleton {
 
         if (!$model?->get_id() || !function_exists('acf_get_field_groups')) return $this->get_fields();
 
-        $screen = ['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()];
+        $screen = ['post_id' => $model->get_id()] + $this->get_acf_screen();
 
         if ($this->get_field('terms')?->source === 'model') {
 
@@ -155,7 +155,7 @@ abstract class Model_Resource extends Singleton {
 
         if (!function_exists('acf_get_field_groups')) return [];
 
-        $groups = array_column(acf_get_field_groups(['post_type' => $this->get_post_type()]), null, 'key');
+        $groups = array_column(acf_get_field_groups($this->get_acf_screen()), null, 'key');
 
         foreach (acf_get_field_groups() as $group) if (!isset($groups[$group['key']]) && ($when = array_values(array_filter(array_map([$this, 'get_term_rules'], (array) $group['location']))))) $groups[$group['key']] = $group + ['applies_when' => $when];
 
@@ -346,6 +346,87 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Storage
+
+    public function has_trash () : bool {
+
+        return (bool) $this->get_post_type();
+
+    }
+
+    // Answers whether it landed: a site's wp_insert_post_data may keep the status after WordPress has changed the trash meta, which then goes back.
+    public function move ($model, string $target) : bool {
+
+        $id       = $model->get_id();
+        $trashing = $target === 'trash';
+        $meta     = array_map(fn ($key) => get_post_meta($id, $key, true), array_combine(Resources::TRASH_META, Resources::TRASH_META));
+        $keep     = fn ($new_status, $post_id) => ((int) $post_id === (int) $id) ? $target : $new_status;
+
+        if (!$trashing) add_filter('wp_untrash_post_status', $keep, PHP_INT_MAX, 2);
+
+        try {
+
+            $trashing ? wp_trash_post($id) : wp_untrash_post($id);
+
+        } finally {
+
+            if (!$trashing) remove_filter('wp_untrash_post_status', $keep, PHP_INT_MAX);
+
+            $this->clear_record_cache($id);
+
+            if (!$this->has_moved($model, $target)) foreach ($meta as $key => $value) $trashing ? delete_post_meta($id, $key) : (($value !== '') && update_post_meta($id, $key, $value));
+
+        }
+
+        return $this->has_moved($model, $target);
+
+    }
+
+    public function has_moved ($model, string $target) : bool {
+
+        $status = get_post_status($model->get_id());
+
+        return ($target === 'trash') ? ($status === 'trash') : ($status !== 'trash');
+
+    }
+
+    public function get_previous_status ($model) : string {
+
+        return (string) get_post_meta($model->get_id(), Resources::TRASH_META[0], true) ?: 'draft';
+
+    }
+
+    // Where required fields start to apply; null for never.
+    public function get_required_status () : ?string {
+
+        return 'publish';
+
+    }
+
+    public function clear_record_cache ($id) : void {
+
+        if ($this->get_post_type() && is_numeric($id)) clean_post_cache((int) $id);
+
+    }
+
+    public function get_acf_screen () : array {
+
+        return ['post_type' => $this->get_post_type()];
+
+    }
+
+    public function owns_record ($id) : bool {
+
+        return $this->get_post_type() && is_numeric($id) && (get_post_type((int) $id) === $this->get_post_type());
+
+    }
+
+    public function forget_set_key ($model) : void {
+
+        if ($this->get_post_type()) delete_post_meta($model->get_id(), Resources::SET_KEY);
+
+    }
+
     // The record a set's create step made. Directly, since post_status 'any' leaves out the Trash and exclude_from_search statuses.
     public function find_by_set_key (string $key) : ?object {
 
@@ -362,7 +443,7 @@ abstract class Model_Resource extends Singleton {
     // What another request may have written since this one last looked.
     public function refresh ($model) : void {
 
-        if ($this->get_post_type()) clean_post_cache($model->get_id());
+        $this->clear_record_cache($model->get_id());
 
         if (method_exists($model, 'reload')) $model->reload();
 

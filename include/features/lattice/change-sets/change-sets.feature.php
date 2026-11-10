@@ -28,9 +28,10 @@ class Lattice_Change_Sets extends Feature {
         Change_Sets_Cleanup::get_instance();
 
         $this->add_hooks([
-            'before_delete_post'            => 'mark_broken',
-            'lattice.resources.journal_set' => 'answer_journal_read',
-            Lattice_Resources::PRUNE        => ['prune_sets', 20],
+            'before_delete_post'              => 'mark_broken',
+            'woocommerce_before_delete_order' => 'mark_broken',
+            'lattice.resources.journal_set'   => 'answer_journal_read',
+            Lattice_Resources::PRUNE          => ['prune_sets', 20],
         ]);
 
     }
@@ -55,7 +56,7 @@ class Lattice_Change_Sets extends Feature {
 
         global $wpdb;
 
-        $resource = Resources::inst()->get_resource_for_post_type((string) get_post_type($post_id));
+        $resource = Resources::inst()->get_resource_for_record($post_id);
 
         if (!$resource) return;
 

@@ -63,6 +63,14 @@ class Resources extends Service {
 
     }
 
+    public function get_resource_for_record ($id) : ?Model_Resource {
+
+        foreach ($this->get_resources() as $resource) if ($resource->owns_record($id)) return $resource;
+
+        return null;
+
+    }
+
     public function get_resource_for_page (string $slug) : ?Options_Page_Resource {
 
         foreach ($this->get_resources() as $resource) if (($resource instanceof Options_Page_Resource) && ($resource->get_page_slug() === $slug)) return $resource;
@@ -184,7 +192,7 @@ class Resources extends Service {
             $resource = $this->get_resource($row['resource']);
 
             // A post that has gone can still be read about. A record with no post type that does not read may only have failed to.
-            if (!$model = $resource->find($row['record_id'])) return $this->has_credential() ? in_array('allow', $this->ask_credential($resource, 'read', null, array_keys($resource->get_fields()), null, false, $this->get_gone_facts((string) $row['record_id'])), true) : (bool) $resource->get_post_type();
+            if (!$model = $resource->find($row['record_id'])) return $this->has_credential() ? in_array('allow', $this->ask_credential($resource, 'read', null, array_keys($resource->get_fields()), null, false, $this->get_gone_facts((string) $row['record_id'])), true) : $resource->has_trash();
 
             return !$this->refuse_read($resource, $model);
 
@@ -477,7 +485,7 @@ class Resources extends Service {
 
         if ($resource instanceof WP_Error) return $resource;
 
-        if (!$resource->get_post_type()) return $this->refuse_state("A {$resource->get_label()} has no Trash.");
+        if (!$resource->has_trash()) return $this->refuse_state("A {$resource->get_label()} has no Trash.");
 
         if ($refusal = $this->refuse_update($resource, $model, $operation, $operation)) return $refusal;
 
@@ -491,7 +499,7 @@ class Resources extends Service {
         if (!$trashing && !$trashed)      return $this->refuse_state('It is not in the Trash.');
         if ($trashing && !EMPTY_TRASH_DAYS) return $this->refuse_state('This site deletes for good instead of trashing, which nothing could undo.');
 
-        $target = $trashing ? 'trash' : ((string) get_post_meta($post_id, static::TRASH_META[0], true) ?: 'draft');
+        $target = $trashing ? 'trash' : $resource->get_previous_status($model);
 
         if (!$trashing && in_array($target, ['publish', 'future', 'private'], true) && !$this->may($resource, 'publish', $model)) return $this->forbidden($resource->get_capability('publish'), "It was {$target}, and this account may not publish.");
 
@@ -514,42 +522,29 @@ class Resources extends Service {
 
     protected function run_move (Model_Resource $resource, $model, string $operation, string $target, array $input, string $via, ?int $undoes, Resource_Change $change) : array|WP_Error {
 
-        $trashing = $operation === 'trash';
-        $post_id  = $model->get_id();
-        $seen     = (int) $input['version'];
+        $post_id = $model->get_id();
+        $seen    = (int) $input['version'];
+        $writing = $this->writing_key($resource, $model);
 
         if (!$model->claim_version($seen)) return $this->stale($model);
 
-        $this->writing[(string) $post_id] = true;
+        $this->writing[$writing] = true;
 
         $resource->forget_values($model);
 
         $before = $resource->read($model);
-        $meta   = array_map(fn ($key) => get_post_meta($post_id, $key, true), array_combine(static::TRASH_META, static::TRASH_META));
-        $keep   = fn ($new_status, $id) => ((int) $id === (int) $post_id) ? $target : $new_status;
-
-        if (!$trashing) add_filter('wp_untrash_post_status', $keep, PHP_INT_MAX, 2);
 
         try {
 
-            $trashing ? wp_trash_post($post_id) : wp_untrash_post($post_id);
-            $error = null;
+            $landed = $resource->move($model, $target);
+            $error  = null;
 
         } catch (\Throwable $e) {
 
-            $error = $e->getMessage();
+            $error  = $e->getMessage();
+            $landed = $resource->has_moved($model, $target);
 
         }
-
-        if (!$trashing) remove_filter('wp_untrash_post_status', $keep, PHP_INT_MAX);
-
-        clean_post_cache($post_id);
-
-        $status = get_post_status($post_id);
-        $landed = $trashing ? ($status === 'trash') : ($status !== 'trash');
-
-        // A site's wp_insert_post_data may have kept the status, after WordPress changed the trash meta.
-        if (!$landed) foreach ($meta as $key => $value) $trashing ? delete_post_meta($post_id, $key) : (($value !== '') && update_post_meta($post_id, $key, $value));
 
         $model->finish_version();
 
@@ -560,7 +555,7 @@ class Resources extends Service {
 
         if (!$landed) {
 
-            unset($this->writing[(string) $post_id]);
+            unset($this->writing[$writing]);
 
             return $error ? $this->error('not_saved', "It was not done: {$error} Read it again before the next change.", 500, ['partial' => true]) : $this->refuse_state('A guard refused it: it stays as it was.');
 
@@ -579,7 +574,7 @@ class Resources extends Service {
             'undoes'         => $undoes,
         ]);
 
-        unset($this->writing[(string) $post_id]);
+        unset($this->writing[$writing]);
 
         if ($error) return $this->error('not_saved', "Part was written: {$error} Read it again before the next change.", 500, ['partial' => true]);
 
@@ -956,7 +951,7 @@ class Resources extends Service {
 
         try {
 
-            if ($this->get_resource($row['resource'])?->get_post_type() && is_numeric($row['record_id'])) clean_post_cache((int) $row['record_id']);
+            $this->get_resource($row['resource'])?->clear_record_cache($row['record_id']);
 
             [$resource, $model] = $this->find($row['resource'], $row['record_id']);
 
@@ -1089,11 +1084,11 @@ class Resources extends Service {
         $action   = ($step['op'] === 'act') ? ($resource?->get_actions()[$step['action'] ?? ''] ?? []) : [];
         $fields   = (array) ($step['values'] ?? []);
         $secrets  = ($resource && $fields && ($step['op'] === 'update')) ? array_filter(array_keys($fields), fn ($name) => in_array($name, $resource::SECRET, true) || $resource->get_field($name)?->is_secret()) : [];
-        $no_undo  = (($step['op'] === 'act') && empty($action['undo'])) || (($step['op'] === 'create') && $resource && !$resource->get_post_type()) || ($secrets && (count($secrets) === count($fields)));
+        $no_undo  = (($step['op'] === 'act') && empty($action['undo'])) || (($step['op'] === 'create') && $resource && !$resource->has_trash()) || ($secrets && (count($secrets) === count($fields)));
 
         return array_values(array_filter([
             in_array($step['op'], ['trash', 'untrash', 'act'], true) ? $step['op'] : null,
-            ($resource && !$resource->get_post_type()) ? 'no_post_type' : null,
+            ($resource && !$resource->has_trash()) ? 'no_post_type' : null,
             $no_undo ? 'cannot_be_undone' : null,
             !empty($step['wait']) ? 'wait' : null,
         ]));
@@ -1108,7 +1103,7 @@ class Resources extends Service {
             if ($step['op'] === 'create') return ['result' => $this->call_step($step, ['dry_run' => true, 'why' => $why], 'other'), 'version' => null];
 
             // A record deleted by another request is still in this one's cache.
-            if ($this->get_resource($step['resource'])?->get_post_type() && is_numeric($step['id'] ?? null)) clean_post_cache((int) $step['id']);
+            $this->get_resource($step['resource'])?->clear_record_cache($step['id'] ?? null);
 
             [$resource, $model] = $this->find($step['resource'], $step['id'] ?? 0);
 
@@ -1370,7 +1365,7 @@ class Resources extends Service {
 
             [$values, $removed] = $this->filter_values($values, $fields, $resource->read($model, false));
 
-            foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($fields[$name], $values + $current)) array_push($problems, ...$fields[$name]->check($value, $name, null, true));
+            foreach ($values as $name => $value) if (!in_array($value, [null, '', []], true) || $resource->is_shown($fields[$name], $values + $current)) array_push($problems, ...$fields[$name]->check($value, $name, null, true, $model));
 
             if ($problems) return $this->invalid($problems);
 
@@ -1994,7 +1989,7 @@ class Resources extends Service {
 
     protected function is_trashed (Model_Resource $resource, $model) : bool {
 
-        return $resource->get_post_type() && ($resource->get_status($model) === 'trash');
+        return $resource->has_trash() && ($resource->get_status($model) === 'trash');
 
     }
 
@@ -2115,7 +2110,7 @@ class Resources extends Service {
 
             if (in_array($value, [null, '', []], true) && !$resource->is_shown($field, $values + $current)) continue;
 
-            array_push($problems, ...$field->check($value, $name, $current[$name] ?? null));
+            array_push($problems, ...$field->check($value, $name, $current[$name] ?? null, false, $model));
 
         }
 
@@ -2130,7 +2125,7 @@ class Resources extends Service {
 
         foreach (array_intersect_key($values, $fields) as $name => $sent) {
 
-            if (($fields[$name]->source !== 'acf') || acf_allow_unfiltered_html()) continue;
+            if ((($fields[$name]->source !== 'acf') && empty($fields[$name]->acf['kses'])) || acf_allow_unfiltered_html()) continue;
 
             $values[$name] = Markup::keep_value($fields[$name]->filter($sent), $sent, [$current[$name] ?? null]);
 
@@ -2177,7 +2172,7 @@ class Resources extends Service {
     // ACF lets drafts go without their required fields.
     protected function check_required (Model_Resource $resource, $model, array $record, string $status) : array {
 
-        if (($record['status'] ?? $status) !== 'publish') return [];
+        if (($record['status'] ?? $status) !== $resource->get_required_status()) return [];
 
         // A new record has no terms, so no term-gated group applies to it yet.
         $missing = array_filter($resource->get_fields_for($model, $record), fn ($field) => ($model || empty($field->acf['applies_when'])) && $field->required && !$field->computed && !$field->action_only && in_array($record[$field->name] ?? null, [null, '', []], true) && $resource->is_shown($field, $record));

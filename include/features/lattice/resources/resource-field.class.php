@@ -435,18 +435,18 @@ final class Resource_Field {
     // Checks
 
     // ACF's own first, then what ACF does not check on the server. $restoring lets undo bring back row keys the record no longer has.
-    public function check ($value, string $path, $current = null, bool $restoring = false) : array {
+    public function check ($value, string $path, $current = null, bool $restoring = false, $model = null) : array {
 
         if ($this->computed)    return ["{$path} is worked out by the save, never written."];
         if ($this->action_only) return ["{$path} changes only through an action."];
 
-        return $this->check_shape($value, $path, $current, $restoring) ?: $this->check_with_acf($value, $path);
+        return $this->check_shape($value, $path, $current, $restoring, $model) ?: $this->check_with_acf($value, $path);
 
     }
 
-    protected function check_shape ($value, string $path, $current = null, bool $restoring = false) : array {
+    protected function check_shape ($value, string $path, $current = null, bool $restoring = false, $model = null) : array {
 
-        if ($this->validate) return ($this->validate)($value, $path);
+        if ($this->validate) return ($this->validate)($value, $path, $model, $restoring);
 
         if (in_array($value, [null, '', []], true)) return [];
 
