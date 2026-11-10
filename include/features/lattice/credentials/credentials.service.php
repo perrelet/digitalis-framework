@@ -18,6 +18,7 @@ class Credentials extends Service {
     // The password this request authenticated with, once WordPress says which: user_id, uuid and its entry, or null for an unscoped one.
     protected ?array $current = null;
     protected bool $noted     = false;
+    protected ?string $uuid   = null;
 
     // The first password a request authenticates with is its credential: one checked later (a route checking a password it was sent) never replaces it.
     public function note_current (int $user_id, string $uuid) : void {
@@ -25,6 +26,7 @@ class Credentials extends Service {
         if ($this->noted) return;
 
         $this->noted = true;
+        $this->uuid  = $uuid;
 
         $entry = $this->get_entry($user_id, $uuid);
 
@@ -35,6 +37,20 @@ class Credentials extends Service {
     public function get_current () : ?array {
 
         return $this->current;
+
+    }
+
+    // The password this request authenticated with, scoped or not: what the journal names.
+    public function get_uuid () : ?string {
+
+        return $this->uuid;
+
+    }
+
+    // The scoped password this request authenticated with: what a set belongs to.
+    public function get_scoped_uuid () : ?string {
+
+        return $this->current['uuid'] ?? null;
 
     }
 

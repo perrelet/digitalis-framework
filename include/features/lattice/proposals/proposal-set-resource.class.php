@@ -12,9 +12,8 @@ class Proposal_Set_Resource extends Change_Set_Resource {
         return parent::get_actions() + [
             'submit_proposal'   => ['label' => 'Submit it for review', 'capability' => 'propose_changes', 'when' => fn ($set) => $this->refuse_submitting($set), 'validate' => fn ($set, array $input) => $this->check_ready($set)],
             'rebase_proposal'   => ['label' => 'Start from what is live', 'when' => fn ($set) => $this->refuse_rebasing_proposal($set)],
-            'approve_proposal'  => ['label' => 'Approve and apply it', 'capability' => 'approve_proposals', 'writes_through' => true, 'input' => ['seen' => '?json'], 'when' => fn ($set) => $this->refuse_reviewing($set)],
+            'approve_proposal'  => ['label' => 'Approve and apply it', 'capability' => 'approve_proposals', 'writes_through' => true, 'input' => ['seen' => '?json'], 'when' => fn ($set) => $this->refuse_approving($set)],
             'reject_proposal'   => ['label' => 'Send it back', 'capability' => 'approve_proposals', 'input' => ['note' => '?string'], 'when' => fn ($set) => $this->refuse_reviewing($set)],
-            'withdraw_proposal' => ['label' => 'Withdraw it', 'when' => fn ($set) => $this->refuse_withdrawing($set)],
         ];
 
     }
@@ -45,8 +44,8 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
         // Read before the steps, so a step list that moves meanwhile is stale and not taken as seen.
         $version  = $set->get_version();
-        $reviewer = current_user_can('approve_proposals');
-        $read     = array_combine(array_keys($set->get_steps()), $this->read_steps($set));
+        $reviewer = current_user_can('approve_proposals') && Resources::inst()->credential_allows($this, 'act:approve_proposal', $set) && !($set->get_credential() && $set->is_mine());
+        $read     = array_combine(array_keys($this->get_readable_steps($set)), $this->read_steps($set));
 
         $steps = match (true) {
             $set->is_closed() => $read,
@@ -89,7 +88,8 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
         $steps = [];
 
-        foreach (Resources::inst()->preview_set($set) as $position => $preview) $steps[$position] = array_filter(['conflicts' => $this->label_conflicts($preview['refusal']['data']['conflicts'] ?? [])]) + $preview + $read[$position];
+        // A step hidden from this reader is left out of its preview too.
+        foreach (array_intersect_key(Resources::inst()->preview_set($set), $read) as $position => $preview) $steps[$position] = array_filter(['conflicts' => $this->label_conflicts($preview['refusal']['data']['conflicts'] ?? [])]) + $preview + $read[$position];
 
         return $steps;
 
@@ -144,7 +144,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
         global $wpdb;
 
-        $mine = $wpdb->prepare('author_id = %d', get_current_user_id());
+        $mine = Change_Set::where_mine();
         $ids  = $wpdb->get_col('SELECT set_id FROM ' . Change_Set::table() . ' WHERE ' . $this->open_where(current_user_can('approve_proposals') ? "(submitted_at IS NOT NULL OR {$mine})" : $mine) . ' ORDER BY updated_at DESC, set_id DESC');
 
         return Change_Set::get_instances(array_map('intval', (array) $ids));
@@ -183,13 +183,13 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
     protected function refuse_submitting ($set) : string {
 
-        if ($set->get_author_id() !== get_current_user_id()) return 'Only its author submits it.';
+        if (!$set->is_mine()) return 'Only its author submits it.';
 
         if (($set->get_state() !== Change_Set::DRAFT) && (($set->get_state() !== Change_Set::APPLIED_IN_PART) || $set->get_submitted_at())) return 'It cannot be submitted in this state.';
 
         if (Journal::inst()->has_undone_rows($set->get_key())) return 'Part of it has been undone, so what it says is no longer live: withdraw it.';
 
-        return $this->refuse_unsettled($set);
+        return Resources::inst()->refuse_author($set) ?: $this->refuse_unsettled($set);
 
     }
 
@@ -224,6 +224,19 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
     }
 
+    // Approving also asks: no password approves what it wrote itself (S9), the password that wrote it may still propose every step (S8), and the approver may read every step.
+    protected function refuse_approving ($set) : string {
+
+        if ($refusal = $this->refuse_reviewing($set)) return $refusal;
+
+        if ($set->get_credential() && $set->is_mine()) return 'Its own password wrote it.';
+
+        if (count($this->get_readable_steps($set)) < count($set->get_steps())) return 'It holds a step this password may not read.';
+
+        return Resources::inst()->refuse_author($set);
+
+    }
+
     public function act_approve_proposal ($set, array $input, string $via) {
 
         if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::inst()->preview_set($set)];
@@ -251,19 +264,13 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
     protected function refuse_rebasing_proposal ($set) : string {
 
-        return (($set->get_state() === Change_Set::SUBMITTED) && ($set->get_author_id() === get_current_user_id())) ? $this->refuse_unsettled($set) : $this->refuse_rebasing($set);
+        return (($set->get_state() === Change_Set::SUBMITTED) && $set->is_mine()) ? $this->refuse_unsettled($set) : $this->refuse_rebasing($set);
 
     }
 
     public function act_rebase_proposal ($set, array $input, $change) {
 
         return $this->act_rebase_set($set, $input, $change);
-
-    }
-
-    public function act_withdraw_proposal ($set, array $input, $change) {
-
-        return $this->act_withdraw_set($set, $input, $change);
 
     }
 

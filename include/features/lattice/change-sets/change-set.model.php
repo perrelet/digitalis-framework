@@ -183,7 +183,7 @@ class Change_Set extends Model implements Step_List {
 
         $now = gmdate('Y-m-d H:i:s');
 
-        if ($wpdb->insert(static::table(), ['author_id' => get_current_user_id(), 'purpose' => $this->get_purpose(), 'state' => static::DRAFT, 'created_at' => $now, 'updated_at' => $now]) === false) return new WP_Error('not_saved', 'The set could not be stored.');
+        if ($wpdb->insert(static::table(), ['author_id' => get_current_user_id(), 'credential' => Credentials::inst()->get_scoped_uuid(), 'purpose' => $this->get_purpose(), 'state' => static::DRAFT, 'created_at' => $now, 'updated_at' => $now]) === false) return new WP_Error('not_saved', 'The set could not be stored.');
 
         return static::get_instance((int) $wpdb->insert_id);
 
@@ -308,6 +308,34 @@ class Change_Set extends Model implements Step_List {
     public function get_why () : string {
 
         return $this->get_purpose();
+
+    }
+
+    public function get_credential () : ?string {
+
+        return $this->get_row()['credential'] ?? null;
+
+    }
+
+    // A set belongs to its account and the scoped password that wrote it, if one did; one written without (wp-admin, the CLI, a full password) belongs to its account as before.
+    public function is_mine () : bool {
+
+        if ($this->get_author_id() !== get_current_user_id()) return false;
+
+        // A set written under a policy stays its password's after the policy is cleared.
+        return $this->get_credential() ? ($this->get_credential() === Credentials::inst()->get_uuid()) : is_null(Credentials::inst()->get_scoped_uuid());
+
+    }
+
+    // The SQL that picks the current request's own sets.
+    public static function where_mine () : string {
+
+        global $wpdb;
+
+        $scoped = Credentials::inst()->get_scoped_uuid();
+        $uuid   = Credentials::inst()->get_uuid();
+
+        return $wpdb->prepare('author_id = %d', get_current_user_id()) . ($scoped ? $wpdb->prepare(' AND credential = %s', $scoped) : ($uuid ? $wpdb->prepare(' AND (credential IS NULL OR credential = %s)', $uuid) : ' AND credential IS NULL'));
 
     }
 

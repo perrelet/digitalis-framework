@@ -64,6 +64,7 @@ class Change_Set_Resource extends Model_Resource {
     }
 
     // Each step as anyone may read it, its secrets masked for whoever is reading. A read sent back to set_steps changes nothing.
+    // Another's set shows a scoped reader only the steps it may read.
     public function read_steps ($set) : array {
 
         return array_values(array_map(fn ($step) => array_filter([
@@ -81,7 +82,13 @@ class Change_Set_Resource extends Model_Resource {
             'marker'       => $step['marker'],
             'journal_id'   => $step['journal_id'],
             'error'        => $step['error'],
-        ], fn ($value) => !in_array($value, [null, '', [], false], true)), $set->get_steps()));
+        ], fn ($value) => !in_array($value, [null, '', [], false], true)), $this->get_readable_steps($set)));
+
+    }
+
+    public function get_readable_steps ($set) : array {
+
+        return $set->is_mine() ? $set->get_steps() : array_filter($set->get_steps(), [Resources::inst(), 'may_read_step']);
 
     }
 
@@ -95,7 +102,7 @@ class Change_Set_Resource extends Model_Resource {
 
     public function get_locked_fields ($model) : array {
 
-        if ($model->get_author_id() !== get_current_user_id()) return ['purpose' => 'Only its author changes what a set is for.'];
+        if (!$model->is_mine()) return ['purpose' => 'Only its author changes what a set is for.'];
         if ($model->get_state() !== Change_Set::DRAFT)         return ['purpose' => 'It changes only while the set is a draft.'];
 
         return [];
@@ -128,7 +135,7 @@ class Change_Set_Resource extends Model_Resource {
         $where = ['1 = 1'];
         $state = (string) ($args['state'] ?? $args['status'] ?? '');
 
-        if (!current_user_can('approve_proposals')) $where[] = $wpdb->prepare('author_id = %d', get_current_user_id());
+        if (!current_user_can('approve_proposals')) $where[] = Change_Set::where_mine();
         if ($state !== '')                          $where[] = $wpdb->prepare('state = %s', $state);
 
         $ids = $wpdb->get_col($wpdb->prepare('SELECT set_id FROM ' . Change_Set::table() . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY updated_at DESC, set_id DESC LIMIT %d OFFSET %d', (int) $args['per_page'], ((int) $args['page'] - 1) * (int) $args['per_page']));
@@ -192,7 +199,7 @@ class Change_Set_Resource extends Model_Resource {
         return match ($operation) {
             'create'         => $makes,
             'list'           => $makes || $reviews || $this->has_own_set(),
-            'read', 'update' => $model && ($reviews || ($model->get_author_id() === get_current_user_id())),
+            'read', 'update' => $model && ($reviews || $model->is_mine()),
             default          => false,
         };
 
@@ -202,7 +209,7 @@ class Change_Set_Resource extends Model_Resource {
 
         global $wpdb;
 
-        return (bool) $wpdb->get_var($wpdb->prepare('SELECT 1 FROM ' . Change_Set::table() . ' WHERE author_id = %d LIMIT 1', get_current_user_id()));
+        return (bool) $wpdb->get_var('SELECT 1 FROM ' . Change_Set::table() . ' WHERE ' . Change_Set::where_mine() . ' LIMIT 1');
 
     }
 
@@ -251,7 +258,7 @@ class Change_Set_Resource extends Model_Resource {
 
     protected function refuse_holding ($set) : string {
 
-        if ($set->get_author_id() !== get_current_user_id()) return 'Only its author changes its steps.';
+        if (!$set->is_mine()) return 'Only its author changes its steps.';
         if ($set->get_state() !== Change_Set::DRAFT)         return 'Its steps change only while it is a draft.';
 
         foreach ($set->get_steps() as $step) {
@@ -348,7 +355,7 @@ class Change_Set_Resource extends Model_Resource {
 
         $step = ['op' => $op, 'resource' => $name, 'id' => $id, 'action' => $action, 'input' => $input, 'values' => $values, 'expected' => null, 'wait' => array_key_exists('wait', $sent) ? !empty($sent['wait']) : !empty($kept['wait'])];
 
-        if ($refused = Resources::inst()->refuse_step($step)) return [null, [$refused]];
+        if ($refused = Resources::inst()->refuse_step($step) ?: Resources::inst()->refuse_proposing($step)) return [null, [$refused]];
 
         $target = Resources::inst()->get_resource($name);
 
@@ -457,7 +464,7 @@ class Change_Set_Resource extends Model_Resource {
 
     protected function refuse_applying ($set) : string {
 
-        if ($set->get_author_id() !== get_current_user_id()) return 'Only its author applies a set of their own.';
+        if (!$set->is_mine()) return 'Only its author applies a set of their own.';
         if ($set->get_submitted_at())                        return 'It is with a reviewer.';
         if ($set->is_closed())                               return 'It is closed.';
         if ($set->get_state() === Change_Set::BROKEN)        return 'A record it names has been deleted: withdraw it.';
@@ -619,6 +626,8 @@ class Change_Set_Resource extends Model_Resource {
 
     protected function refuse_withdrawing ($set) : string {
 
+        if (!$set->is_mine()) return 'Only its author withdraws it.';
+
         return $set->is_closed() ? 'It is closed.' : $this->refuse_unsettled($set);
 
     }
@@ -727,7 +736,7 @@ class Change_Set_Resource extends Model_Resource {
 
     protected function refuse_rebasing ($set) : string {
 
-        if ($set->get_author_id() !== get_current_user_id()) return 'Only its author rebases it.';
+        if (!$set->is_mine()) return 'Only its author rebases it.';
 
         if (!in_array($set->get_state(), [Change_Set::DRAFT, Change_Set::AWAITING_REVIEW, Change_Set::APPLIED_IN_PART], true)) return 'It cannot be rebased in this state.';
 

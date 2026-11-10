@@ -25,6 +25,7 @@ class Change_Sets_Table extends Table {
             new Column('created_at',   'DATETIME'),
             new Column('updated_at',   'DATETIME'),
             new Column('submitted_at', 'DATETIME', nullable: true),
+            new Column('credential',   'VARCHAR(36)', nullable: true),
         ];
 
     }

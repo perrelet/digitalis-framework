@@ -13,6 +13,7 @@ require_once __DIR__ . '/resources.service.php';
 require_once __DIR__ . '/journal/journal.db-table.php';
 require_once __DIR__ . '/journal/v1-create-journal.migration.php';
 require_once __DIR__ . '/journal/v2-journal-sets.migration.php';
+require_once __DIR__ . '/journal/v3-journal-credential.migration.php';
 require_once __DIR__ . '/journal/journal.schema.php';
 require_once __DIR__ . '/journal/journal.service.php';
 require_once __DIR__ . '/resources-command.class.php';

@@ -19,6 +19,7 @@ class Resources extends Service {
 
     protected array $resources = [];
     protected string $credential_reason = '';
+    protected ?Step_List $stepping = null;
     protected array $writing   = [];
     protected ?array $walk     = null;
 
@@ -174,7 +175,8 @@ class Resources extends Service {
         // A row keeps only the fields its reader may read.
         return array_values(array_map(fn ($row) => $this->bar_row($row), array_filter($rows, function ($row) use ($readable, $named) {
 
-            if (isset($named["{$row['resource']}:{$row['record_id']}"])) return true;
+            // A set's own rows are named for its author and reviewers; a scoped password reads them as any other.
+            if (isset($named["{$row['resource']}:{$row['record_id']}"]) && !$this->has_credential()) return true;
 
             if (!in_array($row['resource'], $readable, true)) return false;
 
@@ -589,6 +591,12 @@ class Resources extends Service {
     // Each step as the current account would meet it now, nothing written.
     public function preview_set (Step_List $set) : array {
 
+        return $this->for_set($set, fn () => $this->preview_set_now($set));
+
+    }
+
+    protected function preview_set_now (Step_List $set) : array {
+
         $steps = $set->get_steps();
         $plan  = $this->plan_steps($steps);
         $seen  = [];
@@ -623,6 +631,12 @@ class Resources extends Service {
 
     // Walks what is not yet done, each step through this service as the current account, stopping at the first that fails or no longer matches what was seen. $seen, by position: fingerprint, version, step_hash.
     public function apply_set (Step_List $set, array $seen, string $via) : array|WP_Error {
+
+        return $this->for_set($set, fn () => $this->apply_set_now($set, $seen, $via));
+
+    }
+
+    protected function apply_set_now (Step_List $set, array $seen, string $via) : array|WP_Error {
 
         if (!Journal_Schema::is_current()) return $this->refuse_state('The journal is not up to date, so its rows would lose their marks.');
         if ($this->walk)                   return $this->refuse_state('Another set is being walked in this request.');
@@ -1762,18 +1776,29 @@ class Resources extends Service {
     }
 
     // What the request's credential answers field by field, '' standing for the record; null when the request has no scoped credential.
-    protected function ask_credential (Model_Resource $resource, string $verb, $model = null, array $fields = [], ?array $after = null, bool $dry_run = false, ?array $facts = null) : ?array {
+    // $entry: another credential's, as a set's author is asked when a reviewer acts.
+    protected function ask_credential (Model_Resource $resource, string $verb, $model = null, array $fields = [], ?array $after = null, bool $dry_run = false, ?array $facts = null, mixed $entry = null) : ?array {
 
-        if (!$current = Credentials::inst()->get_current()) return null;
+        // A step of someone else's set, previewed or walked by whoever applies it.
+        $walking = ($this->stepping && method_exists($this->stepping, 'is_mine') && !$this->stepping->is_mine()) ? ['step_of_other_set' => true] : [];
 
-        return Credentials::inst()->answer_fields($current['entry'], array_filter([
+        if (is_null($entry)) {
+
+            if (!$current = Credentials::inst()->get_current()) return null;
+
+            $entry = $current['entry'];
+
+        }
+
+        return Credentials::inst()->answer_fields($entry, array_filter([
             'surface'    => 'resource',
             'target'     => $resource->get_name(),
             'verb'       => $verb,
             'fields'     => $fields,
             // Asked before any record is known (a list, the guide), a rule on some records counts, whether it opens or bars.
-            'facts'      => $facts ?? ((!$model && in_array($verb, ['list', 'read'], true)) ? ['any_record' => true] : $resource->get_facts($model)),
-            'after'      => $after,
+            'facts'      => $walking + ($facts ?? ((!$model && in_array($verb, ['list', 'read'], true)) ? ['any_record' => true] : $resource->get_facts($model))),
+            // How the call arrives holds after the change as before it.
+            'after'      => is_null($after) ? null : $walking + $after,
             'dry_run'    => $dry_run,
             'reviewable' => $this->may_propose($resource, $verb),
         ], fn ($value) => !is_null($value)));
@@ -1820,6 +1845,86 @@ class Resources extends Service {
             'review' => 'This password may only propose it.',
             default  => 'This password may not do that.',
         };
+
+    }
+
+    // The set whose steps are being previewed or applied, so a credential is asked whether a step is of someone else's set. Undoing is not applying another's work, so it never counts.
+    protected function for_set (Step_List $set, callable $do) : mixed {
+
+        $was = $this->stepping;
+
+        $this->stepping = $set;
+
+        try {
+
+            return $do();
+
+        } finally {
+
+            $this->stepping = $was;
+
+        }
+
+    }
+
+    // Whether this request's credential allows a verb on a record, asked as it would be done.
+    public function credential_allows (Model_Resource $resource, string $verb, $model = null) : bool {
+
+        return ($this->ask_credential($resource, $verb, $model)[''] ?? 'allow') === 'allow';
+
+    }
+
+    // A step held in a set, asked of the credential holding it or, with $entry, of its author's: proposing never gets round a deny (S8), and nothing is proposed on a record its proposer may not read (D5).
+    public function refuse_proposing (array $step, mixed $entry = null, ?int $user_id = null) : string {
+
+        if (!($resource = $this->get_resource((string) $step['resource'])) || (is_null($entry) && !$this->has_credential())) return '';
+
+        $model  = is_null($step['id']) ? null : $resource->find($step['id']);
+        $facts  = $resource->get_facts($model, [], $user_id);
+        $action = ($step['op'] === 'act') ? ($resource->get_actions()[$step['action']] ?? []) : [];
+        $values = ($step['op'] === 'act') ? (array) ($action['sets'] ?? []) : (array) ($step['values'] ?? []);
+        $after  = (($step['op'] !== 'act') || isset($action['sets'])) ? $resource->get_facts($model, $values, $user_id) : ['own' => false, 'conditions' => fn () => false];
+
+        // A held step keeps its fields' live values as its start, so each field it changes must be one its proposer may read.
+        if (!$this->may_read_step($step, $entry, $user_id)) return 'This password may not propose a change to what it may not read.';
+
+        $answers = $this->ask_credential($resource, ($step['op'] === 'act') ? "act:{$step['action']}" : $step['op'], $model, array_keys($values), $after, false, $facts, $entry);
+
+        return in_array('deny', $answers ?? [], true) ? 'This password may not propose that.' : '';
+
+    }
+
+    // Whether a credential may read what a step names: its record, and each field it changes. $entry and $user_id: its author's, asked for them.
+    public function may_read_step (array $step, mixed $entry = null, ?int $user_id = null) : bool {
+
+        if (!($resource = $this->get_resource((string) $step['resource'])) || is_null($step['id'] ?? null)) return true;
+
+        $model   = $resource->find($step['id']);
+        $values  = array_keys((array) ($step['values'] ?? []));
+        $answers = $this->ask_credential($resource, 'read', $model, $values ?: array_keys($model ? $resource->get_fields_for($model) : $resource->get_fields()), null, false, $model ? $resource->get_facts($model, [], $user_id) : $this->get_gone_facts((string) $step['id']), $entry);
+
+        if (is_null($answers)) return true;
+
+        return $values ? !array_diff($answers, ['allow']) : in_array('allow', $answers, true);
+
+    }
+
+    // A set written by a scoped password is submitted and approved only while that password may still propose every step of it (S8).
+    public function refuse_author (Step_List $set) : string {
+
+        if (!method_exists($set, 'get_credential') || !($uuid = $set->get_credential())) return '';
+
+        $author = $set->get_author_id();
+
+        if (!\WP_Application_Passwords::get_user_application_password($author, $uuid)) return 'The password that wrote it is gone.';
+
+        if (is_null($entry = Credentials::inst()->get_entry($author, $uuid))) return '';
+
+        if (Credentials::inst()->refuse_entry($entry)) return 'The password that wrote it may no longer propose.';
+
+        foreach ($set->get_steps() as $position => $step) if (!in_array($step['marker'] ?? '', ['applied', 'skipped'], true) && $this->refuse_proposing($step, $entry, $author)) return "Its author may no longer propose step {$position}.";
+
+        return '';
 
     }
 

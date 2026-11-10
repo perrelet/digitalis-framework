@@ -5,6 +5,7 @@ namespace Digitalis;
 require_once __DIR__ . '/change-sets.db-table.php';
 require_once __DIR__ . '/change-steps.db-table.php';
 require_once __DIR__ . '/v1-create-change-sets.migration.php';
+require_once __DIR__ . '/v2-change-sets-credential.migration.php';
 require_once __DIR__ . '/change-sets.schema.php';
 
 class Lattice_Change_Sets extends Feature {

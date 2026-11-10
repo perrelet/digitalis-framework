@@ -31,6 +31,7 @@ class Journal_Table extends Table {
             new Column('set_key',        'BIGINT(20) UNSIGNED', nullable: true),
             new Column('set_step',       'SMALLINT(5) UNSIGNED', nullable: true),
             new Column('proposer_id',    'BIGINT(20) UNSIGNED', nullable: true),
+            new Column('credential',     'VARCHAR(36)', nullable: true),
         ];
 
     }

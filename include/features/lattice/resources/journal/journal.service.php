@@ -37,7 +37,7 @@ class Journal extends Service {
             'version_before' => (int) ($row['version_before'] ?? 0),
             'version_after'  => (int) ($row['version_after'] ?? 0),
             'undoes'         => $row['undoes'] ?? null,
-        ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) : []));
+        ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) + ['credential' => Credentials::inst()->get_uuid()] : []));
 
         Resources::inst()->note_row((int) $wpdb->insert_id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
 

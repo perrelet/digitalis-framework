@@ -20,7 +20,7 @@ class Proposals_Admin extends Feature {
         'set_refused' => ['error',   ''],
     ];
 
-    const SET_ACTIONS = ['submit_proposal', 'rebase_proposal', 'approve_proposal', 'reject_proposal', 'withdraw_proposal', 'undo_set', 'settle_step'];
+    const SET_ACTIONS = ['submit_proposal', 'rebase_proposal', 'approve_proposal', 'reject_proposal', 'withdraw_set', 'undo_set', 'settle_step'];
 
     public function get_hooks () {
 

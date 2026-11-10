@@ -439,14 +439,14 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    // What a credential's rule asks of a record, as it is or as it would be with $values; a record being made is the account's own.
-    public function get_facts ($model, array $values = []) : array {
+    // What a credential's rule asks of a record, as it is or as it would be with $values; a record being made is the account's own. $user_id: whose own it is asked for, the current account by default.
+    public function get_facts ($model, array $values = [], ?int $user_id = null) : array {
 
         $conditions = $this->get_conditions();
 
         return [
             'id'         => $model?->get_id(),
-            'own'        => $model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === get_current_user_id())) : true,
+            'own'        => $model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id()))) : true,
             'conditions' => fn (string $name) => isset($conditions[$name]) && (bool) $conditions[$name]($model, $values),
         ];
 

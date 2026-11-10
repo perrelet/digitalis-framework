@@ -48,7 +48,7 @@ class Proposal_Set_Review extends View {
 
         if ($usable('reject_proposal')) $p['reject'] = $url('reject_proposal');
 
-        if ($usable('withdraw_proposal')) $p['forms'][] = ['label' => 'Withdraw', 'url' => $url('withdraw_proposal'), 'confirm' => 'Withdraw this set? What it applied stays.'];
+        if ($usable('withdraw_set')) $p['forms'][] = ['label' => 'Withdraw', 'url' => $url('withdraw_set'), 'confirm' => 'Withdraw this set? What it applied stays.'];
 
         if ($usable('settle_step')) foreach ($set->get_steps() as $position => $step) if ($step['marker'] === 'unknown') foreach (['applied' => 'landed', 'not_applied' => 'did not land'] as $outcome => $words) $p['forms'][] = ['label' => "Step {$position} {$words}", 'url' => $url('settle_step'), 'fields' => ['position' => $position, 'outcome' => $outcome]];
 
