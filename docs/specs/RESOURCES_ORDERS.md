@@ -110,6 +110,8 @@ Following the existing split (ACF on the base, versioning on the site's model, a
 
 A `page_link` limited to `shop_order` matches an order: the reference check reads an HPOS placeholder's order type.
 
+**Scoped credentials** ([CREDENTIALS.md](../CREDENTIALS.md)) reach orders through `get_conditions()` and `get_facts()`, which the base answers for posts only. An order's conditions are `draft` (its `DRAFT_STATUSES`, `pending` unless the resource says) and each status by name, a trashed order judged by the status it had; `own` is the placeholder post's author, whoever made the order. So a key with `writes` on `records: draft` makes and edits drafts, trashes and restores them, and cannot move one out of draft or touch any other order. Proven with such a key set as the request's credential.
+
 Orders take part in change sets and proposal sets as any resource does, through `get_proposable()`. Draft proposals do not apply: `Has_Proposals` is an opt-in trait whose methods take a `Post`.
 
 **Acceptance:** a minimal order resource in digitalis-co (the start of `Order_Resource`) lists, reads, creates, updates, trashes and untrashes through CLI and REST, each write journaled, each with a working undo. A dry run leaves the order, its items and its cache untouched. A change set with two order steps applies, and deleting one of its orders marks it broken.
@@ -151,7 +153,7 @@ How it holds together:
 
 ## Phase 5: the credential in the journal
 
-The journal records the user and the transport, not which application password wrote. `credential_uuid` and `credential_name` columns (migration v3, gated on `Journal_Schema::is_current()` as the set marks are) come from `rest_get_authenticated_app_password()` and `WP_Application_Passwords::get_user_application_password()`. Both are null outside REST. The name is stored as it was when the row was written; the UUID identifies the password after a rename or a revoke. `describe_change()`, the journal route, `wp lattice journal` and the Changes page show the stored name. Independent of the other phases; can land first.
+`lattice/credentials` already stores the password's UUID on every row, scoped or not (`credential`, migration v3). What remains is its name: a `credential_name` column (migration v4, gated on `Journal_Schema::is_current()`) from `WP_Application_Passwords::get_user_application_password()`, stored as it was when the row was written, so a row still names a password after a rename or a revoke. `describe_change()`, the journal route, `wp lattice journal` and the Changes page show it. Null outside REST. Independent of the other phases.
 
 **Acceptance:** two passwords on one user write through REST; their rows name each, and still do after one is renamed and the other revoked. A CLI write's row has neither.
 
