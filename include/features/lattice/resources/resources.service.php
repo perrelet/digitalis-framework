@@ -18,6 +18,7 @@ class Resources extends Service {
     const STATUSES = ['invalid' => 400, 'forbidden' => 403, 'not_found' => 404, 'stale' => 409, 'locked' => 409];
 
     protected array $resources = [];
+    protected string $credential_reason = '';
     protected array $writing   = [];
     protected ?array $walk     = null;
 
@@ -89,7 +90,7 @@ class Resources extends Service {
         return [
             'framework' => DIGITALIS_FRAMEWORK_VERSION,
             'features'  => ['dry_run', 'journal', 'undo', 'trash', 'expected'],
-            'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may($resource, 'list')))),
+            'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may_quietly($resource, 'list')))),
         ];
 
     }
@@ -100,7 +101,7 @@ class Resources extends Service {
             'name'      => $resource->get_name(),
             'label'     => $resource->get_label(),
             'post_type' => $resource->get_post_type() ?: null,
-            'fields'    => array_values(array_map(fn ($field) => $field->describe(), $resource->get_fields())),
+            'fields'    => array_values(array_map(fn ($field) => $field->describe(), array_diff_key($resource->get_fields(), array_flip($this->get_barred($resource))))),
             'actions'   => array_map(fn ($action) => array_filter([
                 'label'          => $action['label'] ?? '',
                 'input'          => $action['input'] ?? [],
@@ -118,9 +119,17 @@ class Resources extends Service {
         if (!$resource = $this->get_resource($name)) return $this->error('not_found', "No resource {$name}.", 404);
         if (!$this->may($resource, 'list'))           return $this->forbidden($resource->get_capability('list'));
 
+        // Each filter, search and sort tests the values of what it names, so none may name a field the credential cannot read.
+        $barred = $this->get_barred($resource);
+
+        if (array_intersect(array_keys($args), $barred) || (!empty($args['search']) && array_intersect(['title', 'content', 'excerpt'], $barred))) return $this->refuse_barred('filter, search or sort by a field it may not read');
+
         $models = $resource->query(['per_page' => min(static::PER_PAGE, max(1, (int) ($args['per_page'] ?? static::PER_PAGE))), 'page' => max(1, (int) ($args['page'] ?? 1))] + $args);
 
-        return array_map(fn ($model) => $this->summarise($resource, $model), $models);
+        // Only a credential's policy hides records here: an account sees in a list what it saw before.
+        if ($this->has_credential()) $models = array_filter($models, fn ($model) => $this->may_quietly($resource, 'read', $model));
+
+        return array_values(array_map(fn ($model) => $this->summarise($resource, $model), $models));
 
     }
 
@@ -144,13 +153,16 @@ class Resources extends Service {
 
         if (!$method = $resource->get_views()[$view] ?? null) return $this->error('not_found', "No view {$view}.", 404);
 
+        // Asked of the credential alone, so lattice.resources.allow sees the operations it always has.
+        if (($this->ask_credential($resource, "view:{$view}", $model)[''] ?? 'allow') !== 'allow') return $this->refuse_barred("open the view {$view}");
+
         return is_callable($method) ? $method($model) : $resource->$method($model);
 
     }
 
     public function journal (array $args = []) : array {
 
-        $readable = array_values(array_filter(array_keys($this->resources), fn ($name) => ($resource = $this->get_resource($name)) && $this->may($resource, 'list')));
+        $readable = array_values(array_filter(array_keys($this->resources), fn ($name) => ($resource = $this->get_resource($name)) && $this->may_quietly($resource, 'list')));
 
         // A feature may answer for the rows of one of its own sets, as "resource:id" for each record they may be on.
         $named = isset($args['set']) ? array_flip((array) apply_filters('lattice.resources.journal_set', [], (int) $args['set'])) : [];
@@ -159,7 +171,8 @@ class Resources extends Service {
 
         $rows = Journal::inst()->query(($named ? [] : ['resources' => $readable]) + $args);
 
-        return array_values(array_filter($rows, function ($row) use ($readable, $named) {
+        // A row keeps only the fields its reader may read.
+        return array_values(array_map(fn ($row) => $this->bar_row($row), array_filter($rows, function ($row) use ($readable, $named) {
 
             if (isset($named["{$row['resource']}:{$row['record_id']}"])) return true;
 
@@ -168,18 +181,33 @@ class Resources extends Service {
             $resource = $this->get_resource($row['resource']);
 
             // A post that has gone can still be read about. A record with no post type that does not read may only have failed to.
-            if (!$model = $resource->find($row['record_id'])) return (bool) $resource->get_post_type();
+            if (!$model = $resource->find($row['record_id'])) return $this->has_credential() ? in_array('allow', $this->ask_credential($resource, 'read', null, array_keys($resource->get_fields()), null, false, $this->get_gone_facts((string) $row['record_id'])), true) : (bool) $resource->get_post_type();
 
             return !$this->refuse_read($resource, $model);
 
-        }));
+        })));
+
+    }
+
+    protected function bar_row (array $row) : array {
+
+        if (!$this->has_credential() || !($resource = $this->get_resource((string) $row['resource']))) return $row;
+
+        $model  = $resource->find($row['record_id']);
+        $barred = array_flip($this->get_barred($resource, $model, $model ? null : $this->get_gone_facts((string) $row['record_id'])));
+
+        foreach (['before', 'after'] as $key) if (is_array($row[$key] ?? null)) $row[$key] = array_diff_key($row[$key], $barred);
+
+        return $row;
 
     }
 
     protected function summarise (Model_Resource $resource, $model) : array {
 
-        return ['id' => $model->get_id()] + $resource->summarise($model) + [
-            'states'   => $resource->get_states($model),
+        $barred = array_flip($this->get_barred($resource, $model));
+
+        return ['id' => $model->get_id()] + array_diff_key($resource->summarise($model), $barred) + [
+            'states'   => array_diff_key($resource->get_states($model), $barred),
             'version'  => $model->get_version(),
             'edit_url' => $resource->get_edit_url($model),
         ];
@@ -190,10 +218,10 @@ class Resources extends Service {
 
         $actions = [];
 
-        foreach ($resource->get_actions() as $name => $action) $actions[$name] = $this->may($resource, $name, $model) ? $this->refuse_action($resource, $model, $action) : 'This account may not do that.';
+        foreach ($resource->get_actions() as $name => $action) $actions[$name] = $this->refuse_action_credential($resource, $model, $name, $action) ?: ($this->may_quietly($resource, $name, $model) ? $this->refuse_action($resource, $model, $action) : 'This account may not do that.');
 
         return $this->summarise($resource, $model) + [
-            'fields'  => $resource->read($model),
+            'fields'  => array_diff_key($resource->read($model), array_flip($this->get_barred($resource, $model))),
             'actions' => array_map(fn ($reason) => $reason ? ['usable' => false, 'reason' => $reason] : ['usable' => true], $actions),
         ];
 
@@ -207,6 +235,8 @@ class Resources extends Service {
         if (!$this->may($resource, 'create'))         return $this->forbidden($resource->get_capability('create'));
 
         [$values, $problems, $removed] = $this->take_values($resource, $input, null);
+
+        if ($refusal = $this->refuse_credential($resource, null, 'create', $values, $input)) return $refusal;
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'));
 
@@ -279,9 +309,14 @@ class Resources extends Service {
 
         [$values, $problems, $removed] = $this->take_values($resource, $input, $model);
 
+        // Before checking the values, so a refused field is answered as refused rather than invalid.
+        if ($refusal = $this->refuse_credential($resource, $model, 'update', $values, $input)) return $refusal;
+
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, $model, $values + $resource->read($model), $resource->get_status($model)));
 
         if (!is_null($expected)) array_push($problems, ...$this->check_expected($expected, $input));
+
+        if (!is_null($expected) && ($barred = array_intersect(array_keys($values), $this->get_barred($resource, $model)))) return $this->refuse_barred('compare ' . implode(', ', $barred) . ', which it may not read');
 
         if ($problems) return $this->invalid($problems);
 
@@ -305,6 +340,9 @@ class Resources extends Service {
         if ($refusal = ($changes_record || $through) ? $this->refuse_update($resource, $model, $action) : $this->refuse_read($resource, $model)) return $refusal;
 
         if (!$this->may($resource, $action, $model)) return $this->forbidden($action);
+
+        // An action whose effects are not declared has an after the policy cannot know.
+        if ($refusal = $this->refuse_credential($resource, $model, "act:{$action}", (array) ($definition['sets'] ?? []), $input, isset($definition['sets']))) return $refusal;
 
         if ($refusal = $this->refuse_record($resource, $model, $action)) return $refusal;
 
@@ -439,6 +477,8 @@ class Resources extends Service {
         if (!$resource->get_post_type()) return $this->refuse_state("A {$resource->get_label()} has no Trash.");
 
         if ($refusal = $this->refuse_update($resource, $model, $operation, $operation)) return $refusal;
+
+        if ($refusal = $this->refuse_credential($resource, $model, $operation, [], $input)) return $refusal;
 
         $trashing = $operation === 'trash';
         $post_id  = $model->get_id();
@@ -1263,11 +1303,11 @@ class Resources extends Service {
         if ($resource instanceof WP_Error)          return $resource;
         if ($refusal = $this->refuse_read($resource, $model)) return $refusal;
 
-        if (!$this->may($resource, 'undo', $model)) return $this->forbidden('undo');
+        if (!$this->may($resource, 'undo', $model, false)) return $this->forbidden('undo');
 
         $at_row = fn () => in_array($model->get_version(), [$row['version_after'], $accepted], true);
 
-        $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id])]);
+        $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => array_map(fn ($row) => $this->bar_row($row), Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id]))]);
 
         $inverse = ['version' => $model->get_version()] + array_intersect_key($input, array_flip(static::CONTROL));
         $trashed = $this->is_trashed($resource, $model);
@@ -1299,6 +1339,9 @@ class Resources extends Service {
 
             $changed = array_filter($row['before'], fn ($value, $name) => $value !== ($row['after'][$name] ?? null), ARRAY_FILTER_USE_BOTH);
             $values  = $this->get_writable_values($resource, $model, $changed);
+
+            // An undo depends on what was there, so it never restores what the credential may not read.
+            if ($barred = array_intersect(array_keys($values), $this->get_barred($resource, $model))) return $this->refuse_barred('restore ' . implode(', ', $barred) . ', which it may not read');
 
             if ($changed && !$values) return $this->error('locked', 'Only secrets changed, and the journal keeps none to restore.', 409, ['reason' => 'Secrets are not kept.']);
 
@@ -1397,6 +1440,8 @@ class Resources extends Service {
         if ($refusal = $this->refuse_read($resource, $model)) return $refusal;
         if ($problems = $this->check_expected($expected, $values)) return $this->invalid($problems);
 
+        if ($barred = array_intersect(array_keys($values), $this->get_barred($resource, $model))) return $this->refuse_barred('compare ' . implode(', ', $barred) . ', which it may not read');
+
         if (method_exists($model, 'reload')) $model->reload();
 
         $resource->forget_values($model);
@@ -1460,6 +1505,8 @@ class Resources extends Service {
     }
 
     protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes, array $removed = []) : array|WP_Error {
+
+        if ($refusal = $this->refuse_credential($resource, $model, 'update', $values, $input)) return $refusal;
 
         if ($refusal = $this->refuse_locked($resource, $model, $values)) return $refusal;
 
@@ -1584,6 +1631,7 @@ class Resources extends Service {
         $was = $before ? array_intersect_key($resource->read($before), $values) : [];
 
         $change->changes      = $this->diff($was, $resource->mask($values, $resource->get_fields_for($before, $values)));
+        $change->barred       = $this->get_barred($resource, $before);
         $change->consequences = $resource->get_consequences($change);
         $change->fingerprint  = md5((string) wp_json_encode([$change->changes, $this->drop_volatile($change->consequences)]));
         $change->removed      = $removed;
@@ -1640,13 +1688,157 @@ class Resources extends Service {
 
     }
 
-    protected function may (Model_Resource $resource, string $operation, $model = null) : bool {
+    // A write is asked leniently here, whether it could be done at least as a rehearsal on some field; the write itself asks precisely (refuse_credential()).
+    // $asked: what the credential is asked, where it differs from the right the account needs (an action needs the right to update, its credential the action).
+    protected function may (Model_Resource $resource, string $operation, $model = null, bool $leniently = true, ?string $asked = null) : bool {
 
         if (!get_current_user_id()) return false;
 
         if (in_array($operation, ['list', 'read', 'create', 'update', 'publish', 'trash', 'untrash'], true) && !$resource->can($operation, $model)) return false;
 
-        return (bool) apply_filters('lattice.resources.allow', true, wp_get_current_user(), $resource->get_name(), $operation);
+        if (!apply_filters('lattice.resources.allow', true, wp_get_current_user(), $resource->get_name(), $operation)) return false;
+
+        // Publishing is decided by the write that sets the status, and holding by the set's step.
+        if (in_array($operation, ['publish', 'hold'], true)) return true;
+
+        $verb    = $this->get_verb($asked ?? $operation);
+        $answers = $this->ask_credential($resource, $verb, $model, $this->get_asked_fields($resource, $model, $verb), null, $leniently && $this->is_write($verb));
+
+        if (is_null($answers) || in_array('allow', $answers, true)) return true;
+
+        $this->credential_reason = in_array('review', $answers, true) ? 'lattice_credential_review' : 'lattice_credential';
+
+        return false;
+
+    }
+
+    // For a may() whose false only filters what is shown, so its reason never reaches a later, unrelated refusal.
+    protected function may_quietly (Model_Resource $resource, string $operation, $model = null) : bool {
+
+        $may = $this->may($resource, $operation, $model);
+
+        $this->credential_reason = '';
+
+        return $may;
+
+    }
+
+    protected function get_verb (string $operation) : string {
+
+        return (in_array($operation, ['list', 'read', 'create', 'update', 'trash', 'untrash', 'undo'], true) || str_starts_with($operation, 'view:')) ? $operation : "act:{$operation}";
+
+    }
+
+    protected function is_write (string $verb) : bool {
+
+        return !in_array($verb, ['list', 'read'], true) && !str_starts_with($verb, 'view:');
+
+    }
+
+    // The fields a record-level question is asked across: any of them answering allow is enough there.
+    protected function get_asked_fields (Model_Resource $resource, $model, string $verb) : array {
+
+        if (in_array($verb, ['read', 'update', 'create'], true)) return array_keys($model ? $resource->get_fields_for($model) : $resource->get_fields());
+
+        return str_starts_with($verb, 'act:') ? array_keys((array) ($resource->get_actions()[substr($verb, 4)]['sets'] ?? [])) : [];
+
+    }
+
+    protected function has_credential () : bool {
+
+        return (bool) Credentials::inst()->get_current();
+
+    }
+
+    // Review needs something to review with: Proposals, and a resource that takes the verb in a set. Otherwise it answers deny (S7).
+    protected function may_propose (Model_Resource $resource, string $verb) : bool {
+
+        if (!isset($this->get_resource('change_set')?->get_actions()['submit_proposal'])) return false;
+
+        $proposable = $resource->get_proposable();
+
+        return str_starts_with($verb, 'act:') ? isset($proposable[substr($verb, 4)], $resource->get_actions()[substr($verb, 4)]) : isset($proposable[$verb]);
+
+    }
+
+    // What the request's credential answers field by field, '' standing for the record; null when the request has no scoped credential.
+    protected function ask_credential (Model_Resource $resource, string $verb, $model = null, array $fields = [], ?array $after = null, bool $dry_run = false, ?array $facts = null) : ?array {
+
+        if (!$current = Credentials::inst()->get_current()) return null;
+
+        return Credentials::inst()->answer_fields($current['entry'], array_filter([
+            'surface'    => 'resource',
+            'target'     => $resource->get_name(),
+            'verb'       => $verb,
+            'fields'     => $fields,
+            // Asked before any record is known (a list, the guide), a rule on some records counts, whether it opens or bars.
+            'facts'      => $facts ?? ((!$model && in_array($verb, ['list', 'read'], true)) ? ['any_record' => true] : $resource->get_facts($model)),
+            'after'      => $after,
+            'dry_run'    => $dry_run,
+            'reviewable' => $this->may_propose($resource, $verb),
+        ], fn ($value) => !is_null($value)));
+
+    }
+
+    // A record nothing can find any more is judged as no one's, holding no named condition.
+    protected function get_gone_facts (string $record_id) : array {
+
+        return ['id' => $record_id, 'own' => false, 'conditions' => fn () => false];
+
+    }
+
+    // A write, asked precisely: the fields it sends, the record before and after, and whether it is a dry run. With $known false nothing is known of after, so no condition, ownership or id holds there.
+    protected function ask_write (Model_Resource $resource, $model, string $verb, array $values, bool $dry_run, bool $known = true) : string {
+
+        $after = $known ? $resource->get_facts($model, $values) : ['own' => false, 'conditions' => fn () => false];
+
+        $answers = $this->ask_credential($resource, $verb, $model, array_keys($values), $after, $dry_run);
+
+        return is_null($answers) ? 'allow' : Credential_Policy::strictest($answers);
+
+    }
+
+    protected function refuse_credential (Model_Resource $resource, $model, string $verb, array $values, array $input, bool $known = true) : ?WP_Error {
+
+        $answer = $this->ask_write($resource, $model, $verb, $values, !empty($input['dry_run']), $known);
+
+        if ($answer === 'allow') return null;
+
+        $this->credential_reason = ($answer === 'review') ? 'lattice_credential_review' : 'lattice_credential';
+
+        return $this->forbidden($verb);
+
+    }
+
+    // An action as its credential answers it, effects included, for describing a record: '' when nothing stops it there.
+    protected function refuse_action_credential (Model_Resource $resource, $model, string $name, array $action) : string {
+
+        if (!$this->has_credential()) return '';
+
+        return match ($this->ask_write($resource, $model, "act:{$name}", (array) ($action['sets'] ?? []), false, isset($action['sets']))) {
+            'allow'  => '',
+            'review' => 'This password may only propose it.',
+            default  => 'This password may not do that.',
+        };
+
+    }
+
+    protected function refuse_barred (string $what) : WP_Error {
+
+        $this->credential_reason = 'lattice_credential';
+
+        return $this->forbidden('read', "This password may not {$what}.");
+
+    }
+
+    // The fields a credential may not read on this record, or on the resource when there is none.
+    protected function get_barred (Model_Resource $resource, $model = null, ?array $facts = null) : array {
+
+        if (!$this->has_credential()) return [];
+
+        $answers = $this->ask_credential($resource, 'read', $model, array_keys($model ? $resource->get_fields_for($model) : $resource->get_fields()), null, false, $facts);
+
+        return array_keys(array_filter($answers, fn ($answer) => $answer !== 'allow'));
 
     }
 
@@ -1654,7 +1846,7 @@ class Resources extends Service {
 
         $data = fn (string $needs) => (array) apply_filters('lattice.resources.forbidden', ['needs' => $needs], $resource, $model, $operation);
 
-        if (!$this->may($resource, $right, $model)) return $this->forbidden($needs = $resource->get_capability($right, $model), data: $data($needs));
+        if (!$this->may($resource, $right, $model, true, $operation)) return $this->forbidden($needs = $resource->get_capability($right, $model), data: $data($needs));
 
         if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.', $data($lock));
 
@@ -1949,6 +2141,17 @@ class Resources extends Service {
     }
 
     protected function forbidden (string $needs, string $message = 'This account may not do that.', array $data = []) : WP_Error {
+
+        // A refusal the credential made says so, and one it would allow proposed says where to propose it.
+        if ($reason = $this->credential_reason) {
+
+            $this->credential_reason = '';
+
+            $default = $message === 'This account may not do that.';
+
+            return $this->error('forbidden', ($reason === 'lattice_credential_review') ? 'This password may not do that: propose it in a change_set instead.' : ($default ? 'This password may not do that.' : $message), 403, ['needs' => $needs, 'reason' => $reason] + (($reason === 'lattice_credential_review') ? ['propose' => true] : []) + $data);
+
+        }
 
         return $this->error('forbidden', $message, 403, ['needs' => $needs] + $data);
 

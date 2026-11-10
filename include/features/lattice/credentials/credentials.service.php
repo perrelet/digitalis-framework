@@ -10,6 +10,7 @@ class Credentials extends Service {
     const META       = '_lattice_credential_policies';
     const SHARED     = 'lattice_credential_policies';
     const ENTRY_KEYS = ['version', 'expires', 'rules', 'policy'];
+    const LAYER      = '/lattice/v1/';
 
     // Shared policies defined in code, by name; false where two define one name.
     protected array $defined = [];
@@ -49,13 +50,25 @@ class Credentials extends Service {
     // A route is reachable when a route rule allows it: decided on the path and, once routes are known, every pattern WordPress could match it to, the most specific rule winning across them.
     public function may_reach (mixed $entry, array $targets, string $method) : bool {
 
+        // The layer's own routes are opened by resource rules alone, since the layer decides each request itself; a route rule never opens them. A path some other route also matches is decided by route rules.
+        if (!array_filter($targets, fn ($target) => !str_starts_with(strtolower($target) . '/', static::LAYER))) return $this->opens_layer($entry);
+
         return $this->answer($entry, ['surface' => 'route', 'target' => $targets, 'verb' => $method]) === 'allow';
+
+    }
+
+    public function opens_layer (mixed $entry) : bool {
+
+        [$policies, $problems] = $this->read($entry);
+
+        return $policies && !$problems && !array_filter($policies, fn ($policy) => !$policy->opens('resource'));
 
     }
 
     public function define (string $name, array $policy) : void {
 
         $this->defined[$name] = array_key_exists($name, $this->defined) ? false : $policy;
+        $this->read           = [];
 
     }
 
@@ -143,6 +156,8 @@ class Credentials extends Service {
 
         update_option(static::SHARED, $stored, false);
 
+        $this->read = [];
+
         return $id;
 
     }
@@ -154,6 +169,8 @@ class Credentials extends Service {
         unset($stored[$id]);
 
         update_option(static::SHARED, $stored, false);
+
+        $this->read = [];
 
     }
 
@@ -188,8 +205,16 @@ class Credentials extends Service {
 
     // Reading an entry
 
-    // [policies, problems, expires]: each policy must allow, as surfaces must.
+    protected array $read = [];
+
+    // [policies, problems, expires]: each policy must allow, as surfaces must. Read once per request.
     public function read (mixed $entry) : array {
+
+        return $this->read[md5(serialize($entry))] ??= $this->read_entry($entry);
+
+    }
+
+    protected function read_entry (mixed $entry) : array {
 
         if (!is_array($entry)) return [[], ['An entry is an object.'], null];
 

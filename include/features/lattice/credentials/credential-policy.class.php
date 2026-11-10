@@ -40,6 +40,13 @@ class Credential_Policy {
 
     }
 
+    // Whether any rule on this surface may grant something.
+    public function opens (string $surface) : bool {
+
+        return (bool) array_filter($this->rules, fn ($rule) => ($rule['surface'] === $surface) && ($rule['answer'] !== 'deny'));
+
+    }
+
     public function proposes () : bool {
 
         return (bool) array_filter($this->rules, fn ($rule) => $rule['answer'] === 'review');
@@ -120,7 +127,10 @@ class Credential_Policy {
 
         }
 
-        return static::strictest($answers);
+        $answer = static::strictest($answers);
+
+        // Where nothing can review the change, review answers deny (S7).
+        return (($answer === 'review') && (($request['reviewable'] ?? true) === false)) ? 'deny' : $answer;
 
     }
 
@@ -208,7 +218,7 @@ class Credential_Policy {
 
         }
 
-        if (!isset($rule['records'])) return true;
+        if (!isset($rule['records']) || !empty($facts['any_record'])) return true;
 
         $records = $rule['records'];
 

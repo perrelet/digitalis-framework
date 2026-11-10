@@ -418,6 +418,40 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Named conditions a credential's rule may hold a record to, each asked of the record and the values it would hold. A trashed record is judged by the status it had before.
+    public function get_conditions () : array {
+
+        if (!$this->get_post_type()) return [];
+
+        $status = function ($model, array $values) : string {
+
+            $status = (string) ($values['status'] ?? ($model ? $this->get_status($model) : 'draft'));
+
+            return (($status === 'trash') && $model) ? (string) get_post_meta($model->get_id(), '_wp_trash_meta_status', true) : $status;
+
+        };
+
+        return [
+            'draft'     => fn ($model, array $values) => in_array($status($model, $values), ['draft', 'pending', 'auto-draft'], true),
+            'published' => fn ($model, array $values) => $status($model, $values) === 'publish',
+            'private'   => fn ($model, array $values) => $status($model, $values) === 'private',
+        ];
+
+    }
+
+    // What a credential's rule asks of a record, as it is or as it would be with $values; a record being made is the account's own.
+    public function get_facts ($model, array $values = []) : array {
+
+        $conditions = $this->get_conditions();
+
+        return [
+            'id'         => $model?->get_id(),
+            'own'        => $model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === get_current_user_id())) : true,
+            'conditions' => fn (string $name) => isset($conditions[$name]) && (bool) $conditions[$name]($model, $values),
+        ];
+
+    }
+
     public function get_edit_url ($model) : string {
 
         return admin_url('post.php?action=edit&post=' . $model->get_id());
