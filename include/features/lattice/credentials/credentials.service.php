@@ -19,14 +19,16 @@ class Credentials extends Service {
     protected ?array $current = null;
     protected bool $noted     = false;
     protected ?string $uuid   = null;
+    protected ?string $name   = null;
 
     // The first password a request authenticates with is its credential: one checked later (a route checking a password it was sent) never replaces it.
-    public function note_current (int $user_id, string $uuid) : void {
+    public function note_current (int $user_id, string $uuid, string $name = '') : void {
 
         if ($this->noted) return;
 
         $this->noted = true;
         $this->uuid  = $uuid;
+        $this->name  = ($name === '') ? null : $name;
 
         $entry = $this->get_entry($user_id, $uuid);
 
@@ -44,6 +46,13 @@ class Credentials extends Service {
     public function get_uuid () : ?string {
 
         return $this->uuid;
+
+    }
+
+    // Its name as it authenticated: a row keeps it through a rename or a revoke.
+    public function get_name () : ?string {
+
+        return $this->name;
 
     }
 

@@ -159,6 +159,8 @@ Done 2026-11-10 on digitalis.ca, in one wp-cli process with each step settled as
 
 **Acceptance:** two passwords on one user write through REST; their rows name each, and still do after one is renamed and the other revoked. A CLI write's row has neither.
 
+Done 2026-11-10 on digitalis.ca. The name comes from the password WordPress authenticated (`application_password_did_authenticate`), noted beside its UUID by `Credentials::note_current()` and read by `get_name()`. Two scratch passwords on one account each wrote a scratch order through the layer's REST route, in processes of their own with the authentication hook fired as WordPress fires it: each row named its password in the route, `wp lattice journal`, the Changes page and the stale refusal ("jamie with the password P5 beta, through the API"), and still did after one was renamed and the other revoked. A CLI write's row had neither.
+
 ---
 
 ## Phase 6: documentation

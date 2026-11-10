@@ -62,7 +62,7 @@ class Changes_Page extends Admin_Sub_Page {
 
         echo '<tr>';
         echo '<td>' . esc_html(get_date_from_gmt($row['at'], 'Y-m-d H:i')) . '</td>';
-        echo '<td>' . esc_html($user ? $user->display_name : '—') . '</td>';
+        echo '<td>' . esc_html($user ? $user->display_name : '—') . (($row['credential_name'] ?? null) ? '<br>' . esc_html($row['credential_name']) : '') . '</td>';
         echo '<td>' . esc_html($row['via']) . '</td>';
         echo '<td>' . esc_html($resource?->get_label() ?? $row['resource']) . ' ' . $record . ' (' . $history . ')</td>';
         echo '<td>' . esc_html($row['action'] . ($row['undoes'] ? " of #{$row['undoes']}" : '')) . $this->render_set($row) . '</td>';

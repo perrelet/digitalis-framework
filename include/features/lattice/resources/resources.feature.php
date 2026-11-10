@@ -15,6 +15,7 @@ require_once __DIR__ . '/journal/journal.db-table.php';
 require_once __DIR__ . '/journal/v1-create-journal.migration.php';
 require_once __DIR__ . '/journal/v2-journal-sets.migration.php';
 require_once __DIR__ . '/journal/v3-journal-credential.migration.php';
+require_once __DIR__ . '/journal/v4-journal-credential-name.migration.php';
 require_once __DIR__ . '/journal/journal.schema.php';
 require_once __DIR__ . '/journal/journal.service.php';
 require_once __DIR__ . '/resources-command.class.php';
@@ -159,7 +160,9 @@ class Lattice_Resources extends Feature {
 
         $how = ['rest' => 'through the API', 'cli' => 'through WP-CLI', 'admin' => 'in wp-admin'][$row['via']] ?? '';
 
-        return implode(', ', array_filter([(get_userdata($row['user_id']) ?: null)?->display_name ?: 'someone', $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
+        $who = ((get_userdata($row['user_id']) ?: null)?->display_name ?: 'someone') . (($row['credential_name'] ?? null) ? " with the password {$row['credential_name']}" : '');
+
+        return implode(', ', array_filter([$who, $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
 
     }
 

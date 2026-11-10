@@ -86,7 +86,7 @@ class Lattice_Credentials extends Feature {
 
     public function note_password ($wp_user, $item) {
 
-        Credentials::inst()->note_current((int) $wp_user->ID, (string) ($item['uuid'] ?? ''));
+        Credentials::inst()->note_current((int) $wp_user->ID, (string) ($item['uuid'] ?? ''), (string) ($item['name'] ?? ''));
 
     }
 

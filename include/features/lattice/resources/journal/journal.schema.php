@@ -5,7 +5,7 @@ namespace Digitalis;
 final class Journal_Schema extends DB\Schema {
 
     protected static $slug    = 'lattice_journal';
-    protected static $version = 3;
+    protected static $version = 4;
 
     public static function get_tables () : array {
 
@@ -15,7 +15,7 @@ final class Journal_Schema extends DB\Schema {
 
     public static function get_migrations () : array {
 
-        return [1 => V1_Create_Journal::class, 2 => V2_Journal_Sets::class, 3 => V3_Journal_Credential::class];
+        return [1 => V1_Create_Journal::class, 2 => V2_Journal_Sets::class, 3 => V3_Journal_Credential::class, 4 => V4_Journal_Credential_Name::class];
 
     }
 
