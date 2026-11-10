@@ -8,6 +8,7 @@ require_once __DIR__ . '/model-resource.abstract.php';
 require_once __DIR__ . '/options-page.model.php';
 require_once __DIR__ . '/options-page-record.class.php';
 require_once __DIR__ . '/options-page-resource.abstract.php';
+require_once __DIR__ . '/order-model-resource.abstract.php';
 require_once __DIR__ . '/step-list.interface.php';
 require_once __DIR__ . '/resources.service.php';
 require_once __DIR__ . '/journal/journal.db-table.php';

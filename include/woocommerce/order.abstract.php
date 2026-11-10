@@ -83,7 +83,7 @@ class Order extends Model {
     // WC_Abstract_Order::__clone() is empty, so a cloned WC_Order shares its meta and items with the original.
     public function __clone () {
 
-        if ($this->get_id()) $this->wc_order = new WC_Order($this->get_id());
+        $this->wc_order = $this->wc_order->get_id() ? new WC_Order($this->wc_order->get_id()) : clone $this->wc_order;
 
     }
 
@@ -108,7 +108,18 @@ class Order extends Model {
 
         }
 
-        return $saved ? $id : new WP_Error('not_saved', 'The order was not saved.');
+        if (!$saved) return new WP_Error('not_saved', 'The order was not saved.');
+
+        if ($this->is_new()) {
+
+            $this->is_new = false;
+            $this->id     = $id;
+
+            $this->cache_instance();
+
+        }
+
+        return $id;
 
     }
 
