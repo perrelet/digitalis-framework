@@ -23,7 +23,7 @@ The [resources layer](./RESOURCES.md) loads it, so wherever the layer runs, poli
 ```
 
 - **Anything unmatched is denied.** A policy that cannot be read (an unknown key, a malformed rule, a shared policy that is gone) denies everything.
-- **The most specific rule wins, then the strictest.** Target first (a wildcard, a wildcard with a condition, a named target, a named target with a condition), then the verb (a group before a named verb). Order means nothing. A request touching several fields takes the strictest of their answers.
+- **The most specific rule wins, then the strictest.** Target first (a wildcard, a wildcard with a condition, a named target, a named target with a condition), then the verb (a group before a named verb). On the same target, a rule narrowing in every way another does (by field, by record, by how the call arrives), and more, is the more specific; rules narrowing in different ways (one by field, one by record) are neither, so the strictest of them decides before any verb is weighed. An `except` rule asked about the whole record (a trash, an action) counts as narrowing no field. Order means nothing. A request touching several fields takes the strictest of their answers.
 - **A credential's own rules and its shared policy must both allow.** A shared policy is a baseline the password's own rules narrow.
 - **`expires`** is a date (the end of that day in the site's zone) or a time with a zone, never relative.
 

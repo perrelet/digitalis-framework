@@ -114,27 +114,37 @@ class Credential_Policy {
 
     protected function answer_one (array $request, ?string $field) : string {
 
-        $best    = null;
-        $answers = [];
+        $matches = [];
 
-        foreach ($this->rules as $rule) {
+        foreach ($this->rules as $rule) if ($match = $this->match($rule, $request, $field)) $matches[] = $match + ['answer' => $rule['answer']];
 
-            if (!$rank = $this->match($rule, $request, $field)) continue;
+        $deciding = array_filter($matches, fn ($match) => !array_filter($matches, fn ($other) => $this->outranks($other, $match)));
 
-            if (($best === null) || ($rank > $best)) [$best, $answers] = [$rank, []];
-
-            if ($rank === $best) $answers[] = $rule['answer'];
-
-        }
-
-        $answer = static::strictest($answers);
+        $answer = static::strictest(array_column($deciding, 'answer'));
 
         // Where nothing can review the change, review answers deny (S7).
         return (($answer === 'review') && (($request['reviewable'] ?? true) === false)) ? 'deny' : $answer;
 
     }
 
-    // The rule's rank when it matches: its target, then the verb, so the verb only decides between rules on the same target.
+    // The target decides first. On the same target, a rule narrowing in every way another does, and more, outranks it; rules narrowing in different ways (one by field, one by record) are neither, so the strictest of them decides; only rules narrowing the same way are told apart by the verb.
+    protected function outranks (array $match, array $other) : bool {
+
+        if ($match['rank'][0] !== $other['rank'][0]) return $match['rank'][0] > $other['rank'][0];
+
+        if ($match['narrows'] !== $other['narrows']) return !array_diff($other['narrows'], $match['narrows']);
+
+        return $match['rank'] > $other['rank'];
+
+    }
+
+    protected function narrows (array $rule) : array {
+
+        return array_keys(array_filter(['fields' => isset($rule['fields']) || isset($rule['except']), 'records' => isset($rule['records']), 'when' => isset($rule['when'])]));
+
+    }
+
+    // The rule's rank when it matches: its target, then the verb.
     protected function match (array $rule, array $request, ?string $field) : ?array {
 
         if ($rule['surface'] !== $request['surface']) return null;
@@ -145,7 +155,12 @@ class Credential_Policy {
         if (!$this->match_field($rule, $field))                  return null;
         if (!$this->match_facts($rule, $request['facts'] ?? [])) return null;
 
-        return [...$rule['rank'], $verb_rank];
+        [$rank, $narrows] = [$rule['rank'], $rule['narrows'] ?? []];
+
+        // Asked of the whole record, a rule leaving fields out has narrowed nothing.
+        if (is_null($field) && isset($rule['except']) && !($narrows = array_values(array_diff($narrows, ['fields'])))) $rank[0]--;
+
+        return ['rank' => [...$rank, $verb_rank], 'narrows' => $narrows];
 
     }
 
@@ -265,6 +280,7 @@ class Credential_Policy {
 
         $read['waiting'] = !empty($rule['waiting']);
         $read['rank']    = $this->rank($read);
+        $read['narrows'] = $this->narrows($read);
 
         return [$read, []];
 
