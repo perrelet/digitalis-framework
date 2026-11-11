@@ -7,7 +7,6 @@ use WP_REST_Request;
 use WP_REST_Response;
 use WeakMap;
 
-// A route that judges a form: its `$args` checked the form's way, at the endpoint, for every client (docs/FORMS.md).
 class Form_Route extends Route {
 
     const REDIRECT_HEADER = 'X-Lattice-Redirect';
@@ -23,7 +22,7 @@ class Form_Route extends Route {
 
     }
 
-    // WordPress's own required and per-argument checks move into one route-level check, so every problem comes back at once.
+    // Every rule moves into one check, so all problems come back at once.
     public function get_definition () {
 
         if (!is_null($this->definition_cache)) return $this->definition_cache;
@@ -43,7 +42,7 @@ class Form_Route extends Route {
 
         $definition['validate_callback'] = function (WP_REST_Request $request) use ($own) {
 
-            $result = $this->check($request);
+            $result = $this->check_rules($request);
 
             return (is_wp_error($result) || !$own) ? $result : call_user_func($own, $request);
 
@@ -71,7 +70,7 @@ class Form_Route extends Route {
 
     }
 
-    // Asked once per request: the check asks first, then WordPress's dispatch reuses the answer.
+    // Memoised: the check and WordPress's dispatch both ask.
     public function permission_wrap (WP_REST_Request $request) {
 
         $this->verdicts ??= new WeakMap();
@@ -82,21 +81,21 @@ class Form_Route extends Route {
 
     }
 
-    public function check (WP_REST_Request $request) {
+    public function check_rules (WP_REST_Request $request) {
 
         $permission = $this->permission_wrap($request);
 
-        if (is_wp_error($permission)) return $this->refused_permission($permission->get_error_code(), $permission->get_error_message(), (array) $permission->get_error_data());
-        if (!$permission)             return $this->refused_permission('rest_forbidden', __('Sorry, you are not allowed to do that.'), ['status' => rest_authorization_required_code()]);
+        if (is_wp_error($permission)) return $this->refuse_permission($permission->get_error_code(), $permission->get_error_message(), (array) $permission->get_error_data());
+        if (!$permission)             return $this->refuse_permission('rest_forbidden', __('Sorry, you are not allowed to do that.'), ['status' => rest_authorization_required_code()]);
 
-        $values   = Form_Rules::submitted($request);
+        $values   = Form_Rules::get_submitted($request);
         $problems = [];
 
         foreach ($this->get_rules($request) as $name => $rule) {
 
-            if (!Form_Rules::applies($rule, $values)) {
+            if (!Form_Rules::is_applicable($rule, $values)) {
 
-                // Hidden by `when`: whatever was sent reads as not sent, so the handler gets the default.
+                // Not set to null in the sanitizer: WordPress sanitizes defaults too.
                 if (array_key_exists($name, $values)) $request->set_param($name, null);
                 continue;
 
@@ -104,22 +103,22 @@ class Form_Route extends Route {
 
             if (!empty($rule['costly'])) continue;
 
-            if ($problem = $this->judge($name, $rule, $values[$name] ?? null, $request)) $problems[$name] = $problem;
+            if ($problem = $this->judge_rule($name, $rule, $values[$name] ?? null, $request)) $problems[$name] = $problem;
 
         }
 
-        return $problems ? Form_Rules::refusal($problems) : true;
+        return $problems ? Form_Rules::refuse($problems) : true;
 
     }
 
-    protected function judge (string $name, array $rule, $value, WP_REST_Request $request) : ?string {
+    protected function judge_rule (string $name, array $rule, $value, WP_REST_Request $request) : ?string {
 
-        if (Form_Rules::is_empty($value)) return empty($rule['required']) ? null : Form_Rules::message('missing', $name, $rule);
+        if (Form_Rules::is_empty($value)) return empty($rule['required']) ? null : Form_Rules::get_message('missing', $name, $rule);
 
         if (!empty($rule['type'])) {
 
             $valid = rest_validate_value_from_schema($value, $rule, $name);
-            if (is_wp_error($valid)) return Form_Rules::message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
+            if (is_wp_error($valid)) return Form_Rules::get_message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
 
         }
 
@@ -127,14 +126,14 @@ class Form_Route extends Route {
 
         $valid = call_user_func($rule['validate_callback'], $value, $request, $name);
 
-        if ($valid === false)  return Form_Rules::message('invalid', $name, $rule);
-        if (is_wp_error($valid)) return Form_Rules::message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
+        if ($valid === false)  return Form_Rules::get_message('invalid', $name, $rule);
+        if (is_wp_error($valid)) return Form_Rules::get_message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
 
         return null;
 
     }
 
-    // Empty reads as not sent, so get_param() gives the default.
+    // Null falls through to the default.
     public function sanitize_arg ($value, WP_REST_Request $request, string $name) {
 
         $rule = $this->get_rules($request)[$name] ?? [];
@@ -148,7 +147,6 @@ class Form_Route extends Route {
 
     }
 
-    // The costly rules (a person check) only once the gate has passed: the rules, the permission and the nonce.
     public function callback_wrap (WP_REST_Request $request) {
 
         if ($this->get_require_nonce() && is_wp_error($nonce = $this->check_nonce($request))) return $this->respond($nonce);
@@ -161,12 +159,12 @@ class Form_Route extends Route {
 
     protected function check_costly (WP_REST_Request $request) {
 
-        $values   = Form_Rules::submitted($request);
+        $values   = Form_Rules::get_submitted($request);
         $problems = [];
 
         foreach ($this->get_rules($request) as $name => $rule) {
 
-            if (empty($rule['costly']) || !Form_Rules::applies($rule, $values)) continue;
+            if (empty($rule['costly']) || !Form_Rules::is_applicable($rule, $values)) continue;
 
             if (empty($rule['validate_callback'])) return new WP_Error('lattice_form_unavailable', 'This form cannot be checked just now. Please try again later.', ['status' => 503]);
 
@@ -174,16 +172,16 @@ class Form_Route extends Route {
 
             if (is_wp_error($valid) && ((int) ($valid->get_error_data()['status'] ?? 0) >= 500)) return $valid;
 
-            if ($valid === false)    $problems[$name] = Form_Rules::message('invalid', $name, $rule);
-            if (is_wp_error($valid)) $problems[$name] = Form_Rules::message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
+            if ($valid === false)    $problems[$name] = Form_Rules::get_message('invalid', $name, $rule);
+            if (is_wp_error($valid)) $problems[$name] = Form_Rules::get_message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
 
         }
 
-        return $problems ? Form_Rules::refusal($problems) : true;
+        return $problems ? Form_Rules::refuse($problems) : true;
 
     }
 
-    // One shape for every client; the form handler turns it into a 303 or HX-Redirect for a page.
+    // The form handler turns this into a 303, or HX-Redirect for htmx.
     public function redirect (string $url) : WP_REST_Response {
 
         $url = wp_validate_redirect($url, wp_get_referer() ?: home_url('/'));
@@ -198,7 +196,7 @@ class Form_Route extends Route {
 
     }
 
-    protected function refused_permission (string $code, string $message, array $data) : WP_Error {
+    protected function refuse_permission (string $code, string $message, array $data) : WP_Error {
 
         return new WP_Error($code, $message, ['permission' => true] + $data);
 

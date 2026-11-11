@@ -2,7 +2,6 @@
 
 namespace Digitalis;
 
-// What a refused form says above its fields: announced, with a link to each field at fault.
 class Form_Summary extends View {
 
     protected static $defaults = [

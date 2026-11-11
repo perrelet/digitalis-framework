@@ -17,12 +17,11 @@ require_once __DIR__ . '/form-rules.utility.php';
 require_once __DIR__ . '/form-route.route.php';
 require_once __DIR__ . '/form-summary.view.php';
 
-// Forms that check themselves (docs/FORMS.md): a form posts to its own page, which hands the post to its Form_Route and draws the result.
+// docs/FORMS.md
 class Lattice_Forms extends Feature {
 
     const FIELD = '_lattice_form';
 
-    // The controls a browser can focus to say a required field is empty.
     const REQUIRABLE = [Input::class, Textarea::class, Select::class, Checkbox::class, Radio::class];
     const NOT_REQUIRABLE = [Checkbox_Group::class, Hidden::class];
 
@@ -35,16 +34,16 @@ class Lattice_Forms extends Feature {
     public function get_hooks () {
 
         return [
-            'do_parse_request'      => ['set_aside', 0],
-            'parse_request'         => ['give_back', 0],
-            'template_redirect'     => ['dispatch', 1],
+            'do_parse_request'      => ['set_aside_post', 0],
+            'parse_request'         => ['restore_rest_post', 0],
+            'template_redirect'     => ['dispatch_post', 1],
             'Digitalis/Form/Params' => 'bind_form',
         ];
 
     }
 
-    // Before WordPress reads the request, so a field named `name` or `s` never becomes a query.
-    public function set_aside ($parse) {
+    // Before parse_request, so a field named `s` never becomes a query.
+    public function set_aside_post ($parse) {
 
         if ((($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') || !isset($_POST[static::FIELD])) return $parse;
 
@@ -58,8 +57,7 @@ class Lattice_Forms extends Feature {
 
     }
 
-    // A request to the REST API itself keeps its body, as if nothing had happened.
-    public function give_back ($wp) {
+    public function restore_rest_post ($wp) {
 
         if (!$this->body || empty($wp->query_vars['rest_route'])) return;
 
@@ -68,13 +66,13 @@ class Lattice_Forms extends Feature {
 
     }
 
-    public function dispatch () {
+    public function dispatch_post () {
 
         if (!$this->body) return;
 
-        [$path, $id] = $this->read_target((string) ($this->body[static::FIELD] ?? ''));
+        [$path, $id] = $this->parse_target((string) ($this->body[static::FIELD] ?? ''));
 
-        if (!$path || is_null($params = $this->match($path))) return;
+        if (!$path || is_null($params = $this->match_form_route($path))) return;
 
         nocache_headers();
 
@@ -98,11 +96,11 @@ class Lattice_Forms extends Feature {
 
         }
 
-        $this->answer($id, $response);
+        $this->keep_answer($id, $response);
 
     }
 
-    protected function read_target (string $target) : array {
+    protected function parse_target (string $target) : array {
 
         [$path, $id] = array_pad(explode('#', $target, 2), 2, '');
 
@@ -113,8 +111,8 @@ class Lattice_Forms extends Feature {
 
     }
 
-    // The route WordPress would match, and only if it is a form route's: a post can reach nothing else.
-    protected function match (string $path) : ?array {
+    // Only form routes can be reached.
+    protected function match_form_route (string $path) : ?array {
 
         foreach (rest_get_server()->get_routes() as $route => $handlers) {
 
@@ -136,7 +134,7 @@ class Lattice_Forms extends Feature {
 
     }
 
-    protected function answer (string $id, WP_REST_Response $response) {
+    protected function keep_answer (string $id, WP_REST_Response $response) {
 
         $data = $response->get_data();
 
@@ -153,7 +151,7 @@ class Lattice_Forms extends Feature {
 
             }
 
-            $this->end();
+            $this->end_request();
 
         }
 
@@ -185,7 +183,7 @@ class Lattice_Forms extends Feature {
 
     }
 
-    protected function end () {
+    protected function end_request () {
 
         exit;
 
@@ -197,7 +195,6 @@ class Lattice_Forms extends Feature {
 
     }
 
-    // A form given a `route` and an `id` posts to its page, takes its fields' rules from the route, and draws its result.
     public function bind_form ($p, $form) {
 
         if (empty($p['route'])) return $p;
@@ -237,7 +234,7 @@ class Lattice_Forms extends Feature {
 
         $fields = (array) $p['fields'];
 
-        $p['field_params'] = $this->merge_params($this->field_params($id, $rules, $fields, $result), (array) ($p['field_params'] ?? []));
+        $p['field_params'] = $this->merge_params($this->get_field_params($id, $rules, $fields, $result), (array) ($p['field_params'] ?? []));
 
         $before = [new Hidden(['name' => static::FIELD, 'value' => ltrim($path, '/') . "#{$id}", 'id' => "{$id}-target", 'wrap' => false])];
 
@@ -246,7 +243,7 @@ class Lattice_Forms extends Feature {
         if ($result) {
 
             if (isset($result['markup'])) $fields = [new Component(['tag' => 'div', 'classes' => ['form-answer'], 'content' => $result['markup']])];
-            elseif ($summary = $this->summary($id, $result, $rules)) array_unshift($before, $summary);
+            elseif ($summary = $this->make_summary($id, $result, $rules)) array_unshift($before, $summary);
 
         }
 
@@ -256,19 +253,19 @@ class Lattice_Forms extends Feature {
 
     }
 
-    protected function field_params (string $id, array $rules, array $fields, ?array $result) : array {
+    protected function get_field_params (string $id, array $rules, array $fields, ?array $result) : array {
 
         $params = [];
         $first  = true;
 
         foreach ($rules as $name => $rule) {
 
-            $class = $this->field_class($name, $fields);
+            $class = $this->find_field_class($name, $fields);
             $param = ['id' => "{$id}-{$name}"];
 
             if (!empty($rule['when'])) $param['condition'] = array_values($rule['when']);
 
-            if ($class) $param = array_merge($param, $this->browser_params($class, $rule));
+            if ($class) $param = array_merge($param, $this->get_browser_params($class, $rule));
 
             if ($class && (is_a($class, Checkbox::class, true) || is_a($class, Checkbox_Group::class, true))) $param['null_value'] = null;
 
@@ -295,14 +292,14 @@ class Lattice_Forms extends Feature {
 
     }
 
-    // Only what the browser checks the same way: never pattern, never required on a group, a hidden-by-condition field or an unfocusable control.
-    protected function browser_params (string $class, array $rule) : array {
+    // No pattern: PCRE and JavaScript differ.
+    protected function get_browser_params (string $class, array $rule) : array {
 
         $params = [];
 
-        if (!empty($rule['required']) && empty($rule['when']) && $this->requirable($class)) $params['required'] = true;
+        if (!empty($rule['required']) && empty($rule['when']) && $this->is_requirable($class)) $params['required'] = true;
 
-        if (($rule['format'] ?? '') === 'email' && (is_a($class, Input::class, true)) && $this->default_type($class) === 'text') $params['type'] = 'email';
+        if (($rule['format'] ?? '') === 'email' && (is_a($class, Input::class, true)) && $this->get_default_type($class) === 'text') $params['type'] = 'email';
 
         if (isset($rule['maxLength'])) $params['attributes']['maxlength'] = (int) $rule['maxLength'];
         if (isset($rule['minLength'])) $params['attributes']['minlength'] = (int) $rule['minLength'];
@@ -318,9 +315,9 @@ class Lattice_Forms extends Feature {
 
     }
 
-    protected function requirable (string $class) : bool {
+    protected function is_requirable (string $class) : bool {
 
-        if ($this->is_custom_control($class)) return false;
+        if ($this->is_unfocusable($class)) return false;
 
         foreach (static::NOT_REQUIRABLE as $not) if (is_a($class, $not, true)) return false;
         foreach (static::REQUIRABLE as $can)     if (is_a($class, $can, true)) return true;
@@ -329,20 +326,20 @@ class Lattice_Forms extends Feature {
 
     }
 
-    // A subclass that draws its own control (Select_Nice, Date_Picker) hides the native one, which the browser cannot focus.
-    protected function is_custom_control (string $class) : bool {
+    // Hides its native control, which the browser can't focus.
+    protected function is_unfocusable (string $class) : bool {
 
         return in_array($class, apply_filters('lattice.forms.unfocusable', ['Digitalis\\Field\\Select_Nice', 'Digitalis\\Field\\Date_Picker', 'Digitalis\\Field\\Date_Range']), true);
 
     }
 
-    protected function default_type (string $class) : string {
+    protected function get_default_type (string $class) : string {
 
         return (string) ($class::get_defaults()['type'] ?? 'text');
 
     }
 
-    protected function field_class (string $name, array $fields) : ?string {
+    protected function find_field_class (string $name, array $fields) : ?string {
 
         foreach ($fields as $field) {
 
@@ -350,7 +347,7 @@ class Lattice_Forms extends Feature {
 
             if (is_a($class, Field_Group::class, true)) {
 
-                if ($found = $this->field_class($name, (array) ($field['fields'] ?? []))) return $found;
+                if ($found = $this->find_field_class($name, (array) ($field['fields'] ?? []))) return $found;
                 continue;
 
             }
@@ -363,7 +360,7 @@ class Lattice_Forms extends Feature {
 
     }
 
-    protected function summary (string $id, array $result, array $rules) : ?View {
+    protected function make_summary (string $id, array $result, array $rules) : ?View {
 
         $problems = (array) ($result['problems'] ?? []);
 

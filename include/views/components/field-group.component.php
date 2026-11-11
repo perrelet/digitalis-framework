@@ -21,7 +21,6 @@ class Field_Group extends Component {
         'field_params'  => [],
     ];
 
-    // Params merged into fields by name: lists that merge, everything else replaced.
     const MERGED_PARAMS = ['attributes', 'classes', 'row_classes'];
 
     public function params (&$p) {

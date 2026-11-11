@@ -5,7 +5,6 @@ namespace Digitalis;
 use WP_Error;
 use WP_REST_Request;
 
-// What a form route's rules read: the values as submitted, `when`, emptiness and the messages (docs/FORMS.md).
 class Form_Rules extends Utility {
 
     const MESSAGES = [
@@ -30,8 +29,8 @@ class Form_Rules extends Utility {
         'rest_one_of_multiple_matches'=> 'Please check this answer.',
     ];
 
-    // WordPress's precedence, lowest first so the highest wins; defaults are never a submitted value.
-    public static function submitted (WP_REST_Request $request) : array {
+    // WordPress's precedence, lowest first; defaults excluded.
+    public static function get_submitted (WP_REST_Request $request) : array {
 
         return array_merge((array) $request->get_url_params(), (array) $request->get_query_params(), (array) $request->get_body_params(), (array) $request->get_json_params());
 
@@ -46,7 +45,7 @@ class Form_Rules extends Utility {
 
     }
 
-    public static function applies (array $rule, array $values) : bool {
+    public static function is_applicable (array $rule, array $values) : bool {
 
         if (empty($rule['when']) || !is_array($rule['when'])) return true;
 
@@ -56,7 +55,7 @@ class Form_Rules extends Utility {
 
     }
 
-    // The operators fields.js judges a field's `condition` with, so the two agree.
+    // Same operators as fields.js.
     public static function compare ($current, string $operator, $expected) : bool {
 
         $values = array_map('strval', is_array($current) ? array_values($current) : [$current]);
@@ -67,10 +66,10 @@ class Form_Rules extends Utility {
             case '==':  return in_array((string) $expected, $values, true);
             case '!=':
             case '!==': return !in_array((string) $expected, $values, true);
-            case '<':   return static::numeric($values, fn ($v) => $v <  (float) $expected);
-            case '<=':  return static::numeric($values, fn ($v) => $v <= (float) $expected);
-            case '>':   return static::numeric($values, fn ($v) => $v >  (float) $expected);
-            case '>=':  return static::numeric($values, fn ($v) => $v >= (float) $expected);
+            case '<':   return static::any_numeric($values, fn ($v) => $v <  (float) $expected);
+            case '<=':  return static::any_numeric($values, fn ($v) => $v <= (float) $expected);
+            case '>':   return static::any_numeric($values, fn ($v) => $v >  (float) $expected);
+            case '>=':  return static::any_numeric($values, fn ($v) => $v >= (float) $expected);
 
         }
 
@@ -78,7 +77,7 @@ class Form_Rules extends Utility {
 
     }
 
-    protected static function numeric (array $values, callable $test) : bool {
+    protected static function any_numeric (array $values, callable $test) : bool {
 
         foreach ($values as $value) if (($value !== '') && is_numeric($value) && $test((float) $value)) return true;
 
@@ -86,9 +85,9 @@ class Form_Rules extends Utility {
 
     }
 
-    public static function message (string $code, string $name, array $rule, string $fallback = '') : string {
+    public static function get_message (string $code, string $name, array $rule, string $fallback = '') : string {
 
-        if ($code === 'missing') $default = static::missing_message($rule);
+        if ($code === 'missing') $default = static::get_missing_message($rule);
         else                     $default = static::MESSAGES[$code] ?? ($fallback ?: static::MESSAGES['invalid']);
 
         $message = $rule['messages'][$code] ?? $default;
@@ -97,7 +96,7 @@ class Form_Rules extends Utility {
 
     }
 
-    protected static function missing_message (array $rule) : string {
+    protected static function get_missing_message (array $rule) : string {
 
         switch ($rule['type'] ?? '') {
 
@@ -110,7 +109,7 @@ class Form_Rules extends Utility {
 
     }
 
-    public static function refusal (array $problems) : WP_Error {
+    public static function refuse (array $problems) : WP_Error {
 
         return new WP_Error('rest_invalid_param', sprintf('Invalid parameter(s): %s', implode(', ', array_keys($problems))), ['status' => 400, 'params' => $problems]);
 

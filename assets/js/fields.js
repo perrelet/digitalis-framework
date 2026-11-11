@@ -38,9 +38,9 @@ class Digitalis_Fields {
 
         const update = () => {
 
-            const current = this.read(scope, name);
+            const current = this.read_value(scope, name);
 
-            // No field by that name: leave the row as it is, as before.
+            // A missing control leaves the row as it was.
             if (current === null) return;
 
             this.check_field(row, current, value, operator, bound);
@@ -56,8 +56,7 @@ class Digitalis_Fields {
 
     }
 
-    // The value a submit would send: ticked boxes only, a list when there are several.
-    read (scope, name) {
+    read_value (scope, name) {
 
         const elements = [...scope.querySelectorAll(`[name="${name}"], [name="${name}[]"]`)];
         if (!elements.length) return null;
@@ -85,7 +84,7 @@ class Digitalis_Fields {
         if (active) row.removeAttribute('data-field-inactive');
         else        row.setAttribute('data-field-inactive', 'true');
 
-        // Only a form bound to a route stops hidden fields posting; other forms post them as they always have.
+        // Unbound forms still post hidden fields.
         if (bound) row.querySelectorAll('input, select, textarea').forEach(input => {
 
             if (!active && !input.disabled) { input.disabled = true; input.dataset.fieldDisabled = 'true'; }
@@ -95,7 +94,7 @@ class Digitalis_Fields {
 
     }
 
-    // The same operators the server judges a rule's `when` with.
+    // Same operators as Form_Rules::compare().
     compare (current, expected, operator = '=') {
 
         const values = (Array.isArray(current) ? current : [current]).map(String);
@@ -106,17 +105,17 @@ class Digitalis_Fields {
             case '==':  return values.includes(String(expected));
             case '!=':
             case '!==': return !values.includes(String(expected));
-            case '<':   return this.numeric(values, v => v <  parseFloat(expected));
-            case '<=':  return this.numeric(values, v => v <= parseFloat(expected));
-            case '>':   return this.numeric(values, v => v >  parseFloat(expected));
-            case '>=':  return this.numeric(values, v => v >= parseFloat(expected));
+            case '<':   return this.any_numeric(values, v => v <  parseFloat(expected));
+            case '<=':  return this.any_numeric(values, v => v <= parseFloat(expected));
+            case '>':   return this.any_numeric(values, v => v >  parseFloat(expected));
+            case '>=':  return this.any_numeric(values, v => v >= parseFloat(expected));
             default:    return false;
 
         }
 
     }
 
-    numeric (values, test) {
+    any_numeric (values, test) {
 
         return values.some(v => (v !== '') && !isNaN(parseFloat(v)) && test(parseFloat(v)));
 
