@@ -43,6 +43,9 @@ final class Migration_Runner {
 
         try {
 
+            // Read again under the lock: a request that waited behind another's run would otherwise run it again.
+            if (($installed = (int) $this->read_option($this->get_option_key($module_slug))) >= $target) return;
+
             $migrations = $schema_class::get_migrations();
             $this->assert_migrations_are_valid($module_slug, $migrations);
 
@@ -231,15 +234,25 @@ final class Migration_Runner {
 
     }
 
+    // add_option upserts, so two requests could both believe they hold it. An ignored insert has one winner, and a stale lock is taken by the one update that still finds what it read.
     private function acquire_lock (string $lock_key) : bool {
 
-        $now      = time();
-        $existing = (int) get_option($lock_key, 0);
+        $now     = time();
+        $options = $this->wpdb->options;
 
-        if ($existing > 0 && ($now - $existing) < self::LOCK_TTL_SECONDS) return false;
+        if ($this->wpdb->query($this->wpdb->prepare("INSERT IGNORE INTO {$options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", $lock_key, $now))) return true;
 
-        if (!add_option($lock_key, $now, '', false)) update_option($lock_key, $now, false);
-        return true;
+        $existing = $this->read_option($lock_key);
+
+        if (is_null($existing) || (($now - (int) $existing) < self::LOCK_TTL_SECONDS)) return false;
+
+        return (bool) $this->wpdb->query($this->wpdb->prepare("UPDATE {$options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $now, $lock_key, $existing));
+
+    }
+
+    private function read_option (string $name) : ?string {
+
+        return $this->wpdb->get_var($this->wpdb->prepare("SELECT option_value FROM {$this->wpdb->options} WHERE option_name = %s", $name));
 
     }
 
