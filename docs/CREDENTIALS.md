@@ -54,6 +54,20 @@ wp lattice credentials shared [<name>] [--input=<file>] [--delete]
 
 `explain` says what a policy allows on this site, where the promise is only coarse, and flags rules that match nothing, rules covering what is added later, single-record route denies, powers to approve others' sets and fields written but not read. A credential reads its own explanation in the guide, under `credential`.
 
+## Accounts
+
+A resource over the user model (a site's `User_Resource`, see [RESOURCES.md](./RESOURCES.md#accounts)) is reached only by rules naming it, never by `resource:*`, and every allow or review rule on it lists `roles`:
+
+```json
+{ "verbs": ["create", "update", "act:send_password_reset"], "on": "resource:account", "roles": ["subscriber", "customer"], "answer": "review" }
+```
+
+- An allow or review covers an account only while every role it holds or is given is listed, it holds at least one unless the list names `none`, it holds no stored capability beyond them and it is not the password's own account.
+- A deny is never narrowed: without `roles` it holds on every account, with them on any account holding one; on these resources any matching deny decides.
+- `act:delete` is reached by an allow or review only by that name, never by `writes` or `act:*`.
+- `records` may be `made_by_credential`, or a condition the site declares (`teacher`).
+- Roles are judged on this site only; a user sync carries a change to others, where the account may be staff. `explain` says so, and from the CLI counts the covered accounts holding each declared condition, as they are now.
+
 ## Where it holds
 
 | Stage | Decides |
@@ -63,8 +77,8 @@ wp lattice credentials shared [<name>] [--input=<file>] [--delete]
 | The layer (`Resources::may()`) | Resource rules: verbs, fields, records, dry runs, undo as the write it makes, every read door (records, lists and their filters, views, the journal, the guide, dry runs, `expected`) |
 | Sets | Each held step is asked of its holder; submitting and approving ask the author password's current policy; a password never approves its own set; a reviewer reads every step |
 | Abilities | Ability rules, by the ability's real category |
-| Capabilities | No account capability at all; `read_post` refused for a record the credential may not read, outside the layer |
-| Storage | Before every other listener, and stopping the request: roles, capabilities and level, passwords and reset keys, application passwords, sessions, second factors, accounts made or deleted, role definitions and policies |
+| Capabilities | No account capability, except in the layer's own check of an account resource, which asks the account's live rights; `read_post` refused for a record the credential may not read, outside the layer |
+| Storage | Before every other listener, and stopping the request: roles, capabilities and level, passwords and reset keys, application passwords, sessions, second factors, accounts made or deleted, role definitions and policies. They stand aside only for the layer's own write of an account resource: that account and the values it staged |
 
 A set is its account's and the scoped password's that wrote it; the journal names the password behind every change (`credential`, and `credential_name` as it was named then).
 
@@ -76,5 +90,5 @@ A set is its account's and the scoped password's that wrote it; the journal name
 - A cache keyed by user can serve one credential's view to another.
 - Writing a field the credential cannot read still shows whether the value matched, and a resource's views and consequences may read what is barred.
 - `own` is the account's, so agents kept apart use separate accounts.
-- A user switch mid-request leaves the capability stage behind (storage still holds), WordPress's REST serves published posts without asking `read_post`, and a stop inside a layer write skips its journal row.
-- Account management waits for an `account` resource: until then a scoped password changes no account.
+- A user switch mid-request leaves the capability stage behind (storage still holds), WordPress's REST serves published posts without asking `read_post`, and a stop outside the layer leaves no journal row (inside a layer write it is journaled as partial).
+- Whoever may change an account's email may take it over, on every site a user sync reaches; capabilities a plugin grants in code are invisible to the roles a rule names.

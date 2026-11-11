@@ -489,6 +489,8 @@ Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are
 | `lattice.resources.present` | Filter | `$lines`, `$resource`, `$before`, `$after`, `$model` | Add to a change presented for people |
 | `lattice.resources.journal_set` | Filter | `$named`, `$set_id` | The records whose rows a read by `set` shows whatever the reader may list, as `resource:id` |
 | `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
+| `lattice.journal.account_values_days` | Filter | `$days` | How long values in journal rows about an account are kept (365) |
+| `lattice.resources.erased` | Action | `$resource`, `$user_id` | An account's rows were scrubbed; change sets break and scrub the sets naming it |
 | `lattice.change_set.cleanup_days` | Filter | `$days` | How long a draft or `broken` set may sit idle before it is withdrawn (90) |
 | `lattice.change_set.submitted` | Action | `$set` | A set was offered for review (Proposals) |
 | `lattice.change_set.rejected` | Action | `$set` | A set was handed back; `get_note()` is the note (Proposals) |

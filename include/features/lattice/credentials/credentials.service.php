@@ -39,9 +39,13 @@ class Credentials extends Service {
 
     public function get_roles_reached (string $target, string $verb) : ?array {
 
-        if (!$current = $this->get_current()) return null;
+        return ($current = $this->get_current()) ? $this->list_roles_named($current['entry'], $target, $verb) : null;
 
-        [$policies, $problems] = $this->read($current['entry']);
+    }
+
+    public function list_roles_named (mixed $entry, string $target, ?string $verb = null) : array {
+
+        [$policies, $problems] = $this->read($entry);
 
         if ($problems || !$policies) return [];
 
@@ -51,7 +55,7 @@ class Credentials extends Service {
 
             $roles = [];
 
-            foreach ($policy->get_rules() as $rule) if (($rule['surface'] === 'resource') && ($rule['target'] === $target) && ($rule['answer'] !== 'deny') && isset($rule['roles']) && array_intersect($rule['verbs'], [$verb, 'reads'])) $roles = [...$roles, ...$rule['roles']];
+            foreach ($policy->get_rules() as $rule) if (($rule['surface'] === 'resource') && ($rule['target'] === $target) && ($rule['answer'] !== 'deny') && isset($rule['roles']) && (is_null($verb) || array_intersect($rule['verbs'], [$verb, 'reads']))) $roles = [...$roles, ...$rule['roles']];
 
             $reached = is_null($reached) ? array_unique($roles) : array_intersect($reached, $roles);
 
@@ -344,7 +348,7 @@ class Credentials extends Service {
     // Explaining (S13)
 
     // What an entry really allows on this site now, and where its promise is only coarse.
-    public function explain (mixed $entry) : array {
+    public function explain (mixed $entry, bool $count = false) : array {
 
         [$policies, $problems, $expires] = $this->read($entry);
 
@@ -393,17 +397,103 @@ class Credentials extends Service {
 
         }
 
+        $accounts = [];
+
+        foreach (class_exists(Resources::class) ? Resources::inst()->get_resources() : [] as $name => $resource) {
+
+            $named = array_filter($rules, fn ($rule) => ($rule['surface'] === 'resource') && ($rule['target'] === $name));
+
+            if (!$resource->is_named_only() || !$named) continue;
+
+            $email = ($this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => 'update', 'fields' => ['email'], 'facts' => ['any_record' => true], 'named_only' => true])['email'] ?? 'deny') !== 'deny';
+
+            array_push($flags, ...$this->flag_accounts($name, $resources[$name]['verbs'] ?? [], $email, $named));
+
+            if ($count && method_exists($resource, 'count_conditions') && ($counts = $resource->count_conditions($this->list_roles_named($entry, $name)))) $accounts[$name] = $counts;
+
+        }
+
         if (array_filter($resources, fn ($resource) => in_array('review', $resource['verbs'], true)) && !isset((class_exists(Resources::class) ? Resources::inst()->get_resource(Credential_Policy::SETS) : null)?->get_actions()['submit_proposal'])) $flags[] = 'Nothing here can review a change (Proposals is not loaded), so review answers deny (S7).';
 
         return array_filter([
             'readable'  => true,
             'expires'   => $expires ? gmdate('c', $expires) : null,
             'resources' => $resources,
+            'accounts'  => $accounts ?: null,
             'routes'    => array_values(array_map(fn ($rule) => ['rule' => $rule['label'], 'verbs' => $rule['verbs'], 'on' => $rule['target'], 'answer' => $rule['answer'], 'promise' => 'coarse: the code behind a route is unseen'], array_filter($rules, fn ($rule) => $rule['surface'] === 'route'))),
             'abilities' => array_values(array_map(fn ($rule) => ['rule' => $rule['label'], 'on' => $rule['target'] ?? '*', 'answer' => $rule['answer']], array_filter($rules, fn ($rule) => $rule['surface'] === 'ability'))),
             'never'     => 'No credential, policy, session, account or role is ever changed, whatever the policy says (S6); an allowed verb whose side effect would change one stops.',
             'flags'     => array_values(array_unique($flags)),
         ], fn ($value) => !is_null($value) && ($value !== []));
+
+    }
+
+    // A10, A0, E8, L18.
+    protected function flag_accounts (string $name, array $verbs, bool $email, array $rules) : array {
+
+        $flags   = ["{$name}: capabilities a plugin grants in code are invisible to the roles a rule names (L18)."];
+        $changes = array_filter($verbs, fn ($answer, $verb) => !in_array($verb, ['list', 'read'], true) && !str_starts_with($verb, 'view:') && ($answer !== 'deny'), ARRAY_FILTER_USE_BOTH);
+
+        if ($changes) $flags[] = "{$name}: roles are judged on this site only, so an account covered here may be staff on another site a user sync reaches (A2, L21).";
+        if ($email) $flags[] = "{$name}: may change an email, so whoever holds this password may take over any account it covers, and all it holds, on every site a user sync carries a change to (S6a).";
+        if (($verbs['act:delete'] ?? 'deny') !== 'deny') $flags[] = "{$name}: may delete accounts, and nothing undoes a delete on any site (A7, L22).";
+        if (($verbs['act:send_password_reset'] ?? 'deny') === 'allow') $flags[] = "{$name}: sends password resets without review, a mass mailing over many accounts (A10).";
+
+        foreach ($rules as $rule) {
+
+            if ($rule['answer'] !== 'deny') {
+
+                if (!isset($rule['roles'])) $flags[] = ucfirst($rule['label']) . ' names no roles, so it matches nothing (A0).';
+                if (in_array(Credential_Policy::NO_ROLE, $rule['roles'] ?? [], true)) $flags[] = ucfirst($rule['label']) . ' names none: an account with no role here is often a copy of one that lives elsewhere (E8).';
+                if (($rule['records'] ?? null) === 'made_by_credential') $flags[] = ucfirst($rule['label']) . ' covers what this password made, for as long as the password lasts (A10).';
+
+                continue;
+
+            }
+
+            foreach ($rules as $allow) if (($allow['answer'] !== 'deny') && $this->is_same_origin($rule, $allow) && $this->do_rules_meet($rule, $allow) && $this->would_outrank($allow, $rule)) $flags[] = ucfirst($rule['label']) . "'s deny overrides the narrower " . $allow['label'] . ' here (A0).';
+
+        }
+
+        return $flags;
+
+    }
+
+    protected function is_same_origin (array $rule, array $other) : bool {
+
+        return strstr($rule['label'], ' rule ', true) === strstr($other['label'], ' rule ', true);
+
+    }
+
+    protected function do_rules_meet (array $rule, array $other) : bool {
+
+        $covers = fn (string $token, string $verb) => ($token === $verb)
+            || (($token === 'reads') && (in_array($verb, ['list', 'read'], true) || str_starts_with($verb, 'view:')))
+            || (($token === 'writes') && !in_array($verb, ['list', 'read', 'reads'], true) && !str_starts_with($verb, 'view:'))
+            || (($token === 'act:*') && str_starts_with($verb, 'act:'))
+            || (($token === 'view:*') && str_starts_with($verb, 'view:'));
+
+        $verbs = (bool) array_filter($rule['verbs'], fn ($a) => array_filter($other['verbs'], fn ($b) => $covers($a, $b) || $covers($b, $a)));
+
+        $fields = match (true) {
+            isset($rule['fields'], $other['fields']) => (bool) array_intersect($rule['fields'], $other['fields']),
+            isset($rule['fields'], $other['except']) => (bool) array_diff($rule['fields'], $other['except']),
+            isset($rule['except'], $other['fields']) => (bool) array_diff($other['fields'], $rule['except']),
+            default                                  => true,
+        };
+
+        return $verbs && $fields;
+
+    }
+
+    // As section 4 would decide without A0.
+    protected function would_outrank (array $allow, array $deny) : bool {
+
+        if ($allow['narrows'] !== $deny['narrows']) return !array_diff($deny['narrows'], $allow['narrows']);
+
+        $named = fn (array $rule) => (bool) array_filter($rule['verbs'], fn ($verb) => !in_array($verb, ['reads', 'writes', 'act:*', 'view:*'], true));
+
+        return $named($allow) && !$named($deny);
 
     }
 
@@ -442,6 +532,8 @@ class Credentials extends Service {
         if (!$resource = $resources?->get_resource($rule['target'])) return ["resource {$rule['target']}"];
 
         $missing = array_map(fn ($role) => "role {$role}", array_diff($rule['roles'] ?? [], [...array_keys(wp_roles()->roles), Credential_Policy::NO_ROLE]));
+
+        if ((($rule['records'] ?? null) === 'own') && $resource->is_named_only()) $missing[] = "own on resource {$rule['target']}, whose rules never cover their own account";
 
         if ((isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential')) && !$resource->is_named_only()) $missing[] = "accounts on resource {$rule['target']}, which holds none";
         $fields  = array_keys($resource->get_fields());

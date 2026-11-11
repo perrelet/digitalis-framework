@@ -392,6 +392,27 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
+    public function count_conditions (array $roles) : array {
+
+        if (!$conditions = $this->get_conditions()) return [];
+
+        // Beyond QUERY_ROLES the query does not narrow, so the count is unknown.
+        if (!$meta = $this->build_covered_query($roles)) return array_fill_keys(array_keys($conditions), $roles ? null : 0);
+
+        $counts = array_fill_keys(array_keys($conditions), 0);
+
+        for ($page = 1; $ids = (new \WP_User_Query(['fields' => 'ID', 'number' => 500, 'paged' => $page, 'meta_query' => $meta, 'orderby' => 'ID']))->get_results(); $page++) {
+
+            cache_users($ids);
+
+            foreach ($ids as $id) if ($model = $this->find((int) $id)) foreach ($conditions as $name => $condition) $counts[$name] += (int) (bool) $condition($model, []);
+
+        }
+
+        return $counts;
+
+    }
+
     public function get_status ($model) : string {
 
         return '';

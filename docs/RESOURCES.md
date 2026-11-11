@@ -14,6 +14,7 @@ Read and change models through one layer, the way wp-admin does: REST (`lattice/
 - [Actions, Views and Consequences](#actions-views-and-consequences)
 - [Option Pages](#option-pages)
 - [Orders](#orders)
+- [Accounts](#accounts)
 - [The Version](#the-version)
 - [The Journal and Undo](#the-journal-and-undo)
 - [Trash](#trash)
@@ -284,6 +285,32 @@ Load `lattice/resources-orders` after `lattice/resources`; it journals and versi
 An edit-screen save is several order saves, so "before" is taken at the first touch and the row written once at the settle; settling per Action Scheduler action keeps a batch of renewals to a row each. "Before" and "after" read a fresh clone past the order cache. `checkout-draft` and `auto-draft` are journaled from their first real status, and deleting one writes no row. `via` is `cron` under Action Scheduler or WP-Cron, `admin` in wp-admin, `other` elsewhere (WooCommerce's REST API included). The hooks never throw: an error is logged, since a throw inside a save becomes an order note and in a before hook cancels the write. Subscriptions' copies leave the version and set key behind.
 
 ---
+
+## Accounts
+
+A site subclasses `User_Resource` and registers it, naming any ACF or meta fields it opens and the conditions it declares:
+
+```php
+class Account_Resource extends \Digitalis\User_Resource {
+
+    protected static $name = 'account';
+
+    public function get_conditions () : array {
+
+        return ['teacher' => fn ($account, array $values) => (bool) get_user_meta($account->get_id(), 'teacher_id', true)];
+
+    }
+
+}
+```
+
+- **Records** are `Account` models (`User` with a version and unsaved copies). Changes are staged and written on `save()`, so a dry run never writes. A bare number is never an account: user ids overlap post ids.
+- **Fields:** `login` (on create only), `email`, `display_name`, `first_name`, `last_name`, `nickname`, `url`, `description`, `roles` and `notify` (create only: WordPress's new-user mail). No password field. No ACF group unless the site names it.
+- **Actions:** `send_password_reset` (the site's own lost-password mail) and `delete` (`reassign` required, `confirm` required, no undo).
+- **Rights:** listing and reading need `list_users`; updating and a reset need `edit_user` with the id; giving roles needs `promote_user` with the id (`promote_users` on a create) and roles the account may give; creating needs `create_users`; deleting needs `delete_user` with the id.
+- **Outside changes** (a profile screen, a user sync, an erasure) raise the version and write one `changed` row per account per request, naming the fields and holding no values.
+- **Erasure:** `Resources::erase_account($user_id)` replaces the values and why of every row about the account with `[erased]`, keeping the row; WordPress's privacy exporter and eraser list and scrub them, and `lattice.resources.erased` tells others (change sets). Values in rows about an account expire after a year (`lattice.journal.account_values_days`) in the daily prune. Nothing undoes an erased or expired row.
+- `Model_Resource::get_value_needs()`, `get_before_facts()`, `find_made()`, `get_summary_fields()` and `get_search_fields()` are the seams it uses; another resource may use them too.
 
 ## The Version
 

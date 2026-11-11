@@ -60,6 +60,10 @@ Each with the reason in `reason`. Nothing overwrites `broken`, which a delete of
 
 Each day the feature withdraws `draft` and `broken` sets idle past `lattice.change_set.cleanup_days` (90), journaled `via: cron`, skipping a set with a step unsettled. Sets `applied` or `withdrawn` are deleted, with their steps, a day after `lattice.journal.keep_days` passes, so never before their rows. A step whose row has been pruned is named as not undoable.
 
+## Erasure
+
+When an account is erased (`lattice.resources.erased`), an open set touching it is broken, then every set naming it loses its steps' values, its purpose, note and reason, its own rows' values and the why it gave other rows. A set that cannot be broken keeps its values and is logged. Sets naming an account are broken, if open, and lose their values the same way after a year.
+
 ## Extending
 
 Proposals registers its own resource under the name `change_set`, extending `Change_Set_Resource`, and the feature's hooks ask for whichever is registered; see [Sets](./PROPOSALS.md#sets). `walk_set($set, $seen, $why, $via, $action)` is the walk with its outcome applied to the set, for an action that writes through the service, under the lock.

@@ -111,7 +111,7 @@ class Credentials_Command {
 
         $entry = Credentials::inst()->get_entry($user->ID, $uuid);
 
-        $this->answer(is_null($entry) ? ['scoped' => false, 'answer' => 'It may do whatever its account may.'] : Credentials::inst()->explain($entry));
+        $this->answer(is_null($entry) ? ['scoped' => false, 'answer' => 'It may do whatever its account may.'] : Credentials::inst()->explain($entry, true));
 
     }
 
