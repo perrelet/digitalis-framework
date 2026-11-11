@@ -11,13 +11,14 @@ class Human_Check extends \Digitalis\Field {
     protected static $defaults = [
         'action' => null,
         'label'  => false,
+        'widget' => [],
     ];
 
     public function params (&$p) {
 
-        $widget = Lattice_Human_Check::inst()->get_widget((string) $p['action']);
+        $widget = Lattice_Human_Check::inst()->get_widget((string) $p['action'], (array) $p['widget']);
 
-        $p['widget'] = $widget;
+        $p['widget_config'] = $widget;
 
         parent::params($p);
 
@@ -35,13 +36,13 @@ class Human_Check extends \Digitalis\Field {
 
     public function condition () {
 
-        return $this['widget'] || current_user_can('manage_options');
+        return $this['widget_config'] || current_user_can('manage_options');
 
     }
 
     public function view () {
 
-        if (!$this['widget']) {
+        if (!$this['widget_config']) {
 
             echo "<p class='human-check-notice'>The person check has no keys, so this form cannot be sent.</p>";
             return;

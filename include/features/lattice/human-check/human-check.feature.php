@@ -60,16 +60,19 @@ class Lattice_Human_Check extends Feature {
 
     }
 
-    public function get_widget (string $action) : ?array {
+    // Options add to the provider's params and never replace them: a provider pins what its flow needs.
+    public function get_widget (string $action, array $options = []) : ?array {
 
         if (!($provider = $this->get_provider($action)) || !($keys = $this->get_keys($provider))) return null;
 
         unset($keys['secret']);
 
+        $options = array_merge((array) apply_filters('lattice.human_check.widget', [], $action, get_class($provider)), $options);
+
         return [
             'script'  => $provider->get_script_url(),
             'adapter' => $provider->get_adapter_url(),
-            'params'  => $provider->get_widget_params($action, $keys),
+            'params'  => $provider->get_widget_params($action, $keys) + $options,
         ];
 
     }

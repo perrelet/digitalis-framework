@@ -26,6 +26,7 @@ class Turnstile_Provider extends Human_Check_Provider {
             'sitekey'             => (string) ($keys['site_key'] ?? ''),
             'action'              => $action,
             'refresh-expired'     => 'auto',
+            'execution'           => 'render',
             'response-field-name' => $this->get_token_field(),
         ];
 

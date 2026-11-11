@@ -83,10 +83,10 @@ protected $args = [
 ```
 
 ```php
-new Field\Human_Check(['name' => 'human'])
+new Field\Human_Check(['name' => 'human', 'widget' => ['theme' => 'dark']])
 ```
 
-Declared `costly`, the form is unavailable rather than open on a site that has not loaded the feature. The field takes the argument's name, and the action from the rule. The rule runs last, after the permission and the nonce, and checks the token with the provider: the action and this site's hostname must match (`lattice.human_check.hostnames` widens the hosts), and a token passes once. A refused token shows under the field; a provider that cannot answer, or wrong or missing keys, make the form unavailable (503), logged and remembered for 30 seconds. A submit waits for the token while a challenge shows, and goes without one only when the provider's script fails.
+Declared `costly`, the form is unavailable rather than open on a site that has not loaded the feature. The field takes the argument's name, and the action from the rule. Its `widget` holds the provider's own display options (Turnstile's `theme`, `size`, `language`), which add to the provider's params and never replace them. The rule runs last, after the permission and the nonce, and checks the token with the provider: the action and this site's hostname must match (`lattice.human_check.hostnames` widens the hosts), and a token passes once. A refused token shows under the field; a provider that cannot answer, or wrong or missing keys, make the form unavailable (503), logged and remembered for 30 seconds. A submit waits for the token while a challenge shows, and goes without one only when the provider's script fails.
 
 | Filter | What |
 |---|---|
@@ -94,8 +94,9 @@ Declared `costly`, the form is unavailable rather than open on a site that has n
 | `lattice.human_check.provider` | The provider's class, given the action (default `Turnstile_Provider`) |
 | `lattice.human_check.hostnames` | The hosts a token may come from (default the site's) |
 | `lattice.human_check.timeout` | Seconds to wait for the provider (3) |
+| `lattice.human_check.widget` | Display options for every widget, given the action and the provider's class; a field's own `widget` wins |
 
-A provider is a `Human_Check_Provider`: its script and adapter (`render`, `reset`, `remove` in `LatticeHumanCheck.register()`), its widget's params, its token field, `verify()` answering `passed`, `failed` or `unavailable` and the hosts a Content-Security-Policy must allow (Turnstile: `challenges.cloudflare.com`). Widgets render explicitly, so another plugin's own scan for its provider's class never draws them twice. After rotating keys or switching provider, purge cached pages. Without a persistent object cache, a spent token can pass again within the provider's first few seconds.
+A provider is a `Human_Check_Provider`: its script and adapter (`render`, `reset`, `remove` in `LatticeHumanCheck.register()`), its widget's params (pinning whatever its flow needs, such as Turnstile's `execution`, and mapping any display option that belongs in its script's address, such as another provider's language), its token field, `verify()` answering `passed`, `failed` or `unavailable` and the hosts a Content-Security-Policy must allow (Turnstile: `challenges.cloudflare.com`). Widgets render explicitly, so another plugin's own scan for its provider's class never draws them twice. After rotating keys or switching provider, purge cached pages. Without a persistent object cache, a spent token can pass again within the provider's first few seconds.
 
 ## Limits
 
