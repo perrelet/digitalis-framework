@@ -39,9 +39,23 @@ class Lattice_Resources extends Feature {
 
     protected ?array $last_save = null;
 
+    public function add_exporter ($exporters) {
+
+        return $exporters + ['lattice-journal' => ['exporter_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'export_personal_data']]];
+
+    }
+
+    public function add_eraser ($erasers) {
+
+        return $erasers + ['lattice-journal' => ['eraser_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'erase_personal_data']]];
+
+    }
+
     public function get_hooks () {
 
         return [
+            'wp_privacy_personal_data_exporters' => 'add_exporter',
+            'wp_privacy_personal_data_erasers'   => 'add_eraser',
             'save_post'                                       => 'raise_version',
             'pre_post_update'                                 => 'take_before',
             'wp_after_insert_post'                            => ['settle_save', 100],

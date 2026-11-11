@@ -32,12 +32,107 @@ class Lattice_Change_Sets extends Feature {
             'woocommerce_before_delete_order' => 'mark_broken',
             'lattice.resources.journal_set'   => 'answer_journal_read',
             Lattice_Resources::PRUNE          => ['prune_sets', 20],
+            'lattice.resources.erased'        => 'erase_account',
         ]);
+
+    }
+
+    // An account erased: an open set touching it is broken, so no walk applies a placeholder, then every set naming it loses its values, its own rows' values and the why it gave other rows (A12). A set naming several accounts is broken and scrubbed whole.
+    public function erase_account ($resource, $user_id) {
+
+        global $wpdb;
+
+        $ids = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT set_id FROM ' . Change_Set::steps_table() . ' WHERE resource = %s AND record_id = %s', $resource->get_name(), (string) $user_id)));
+
+        $this->scrub_sets($this->break_open($ids, "{$resource->get_label()} {$user_id} was erased."), '_scrubbed');
+
+    }
+
+    // Open sets broken before their values go, so no walk applies a placeholder. Answers the sets that may be scrubbed: one that could not be broken keeps its values and is logged, to be tried again.
+    protected function break_open (array $ids, string $why) : array {
+
+        $ready = [];
+
+        foreach ($ids as $id) {
+
+            try {
+
+                if (!$set = $this->get_resource()->find($id)) continue;
+
+                if (!in_array($set->get_state(), [...Change_Set::CLOSED, Change_Set::BROKEN], true)) $this->get_resource()->mark_broken($set, $why);
+
+                $ready[] = $id;
+
+            } catch (\Throwable $e) {
+
+                error_log("Change sets: set {$id} could not be marked broken, so it keeps its values: " . $e->getMessage());
+
+            }
+
+        }
+
+        return $ready;
+
+    }
+
+    // Each step's values, the set's purpose, note and reason, the set's own journal rows and the why its steps gave other rows.
+    protected function scrub_sets (array $ids, string $mark) : void {
+
+        global $wpdb;
+
+        if (!$ids) return;
+
+        $in = implode(', ', array_map('intval', $ids));
+
+        foreach ((array) $wpdb->get_results('SELECT step_id, input, proposed, expected, removed, error FROM ' . Change_Set::steps_table() . " WHERE set_id IN ({$in})", ARRAY_A) as $step) {
+
+            $erased = [];
+
+            foreach (['input', 'proposed', 'expected', 'removed'] as $column) $erased[$column] = is_null($step[$column]) ? null : wp_json_encode(Journal::erase(json_decode($step[$column], true)));
+
+            $erased['error'] = is_null($step['error']) ? null : Journal::ERASED;
+
+            $wpdb->update(Change_Set::steps_table(), $erased, ['step_id' => (int) $step['step_id']]);
+
+        }
+
+        $wpdb->query($wpdb->prepare('UPDATE ' . Change_Set::table() . " SET purpose = %s, note = IF(note IS NULL, NULL, %s), reason = IF(reason IS NULL, NULL, %s) WHERE set_id IN ({$in})", Journal::ERASED, Journal::ERASED, Journal::ERASED));
+
+        foreach ($ids as $id) Journal::inst()->scrub('change_set', (string) $id, $mark);
+
+        $wpdb->query($wpdb->prepare('UPDATE ' . Journal_Table::get_name($wpdb) . " SET why = %s WHERE set_key IN ({$in}) AND why <> ''", Journal::ERASED));
+
+    }
+
+    // Sets naming an account keep its values no longer than the journal does (E9).
+    public function expire_sets () {
+
+        global $wpdb;
+
+        $names = array_map(fn ($resource) => $resource->get_name(), array_filter(Resources::inst()->get_resources(), fn ($resource) => $resource->is_named_only()));
+
+        if (!$names) return;
+
+        $days = (int) apply_filters('lattice.journal.account_values_days', Journal::ACCOUNT_VALUES_DAYS);
+        $ids  = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT sets.set_id FROM ' . Change_Set::table() . ' AS sets JOIN ' . Change_Set::steps_table() . " AS steps ON steps.set_id = sets.set_id WHERE sets.updated_at < %s AND sets.purpose <> %s AND steps.resource IN ('" . implode("', '", array_map('esc_sql', $names)) . "')", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS), Journal::ERASED)));
+
+        $this->scrub_sets($this->break_open($ids, 'Its values expired.'), '_expired');
 
     }
 
     // After the journal's own, so a set never outlives none of its rows. Every action raises updated_at, so its rows are older still.
     public function prune_sets () {
+
+        try {
+
+            $this->expire_sets();
+
+        } catch (\Throwable $e) {
+
+            error_log('Change sets: expiring values failed: ' . $e->getMessage());
+
+        }
+
 
         $days = (int) apply_filters('lattice.journal.keep_days', Journal::KEEP_DAYS) + 1;
 

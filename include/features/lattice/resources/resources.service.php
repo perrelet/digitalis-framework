@@ -921,7 +921,7 @@ class Resources extends Service {
     // Whether anything could reverse this row, whatever else has happened since.
     protected function row_has_inverse (array $row) : bool {
 
-        if (!$resource = $this->get_resource($row['resource'])) return false;
+        if (Journal::is_scrubbed($row) || !$resource = $this->get_resource($row['resource'])) return false;
 
         if (!$resource->find($row['record_id'])) return false;
 
@@ -1323,6 +1323,9 @@ class Resources extends Service {
     public function undo (int $row_id, array $input, string $via, ?int $accepted = null) : array|WP_Error {
 
         if (!$row = Journal::inst()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
+
+        // An erased or expired row holds no values to put back.
+        if (Journal::is_scrubbed($row)) return $this->error('locked', 'Its values were erased, so there is nothing to put back.', 409, ['reason' => 'erased']);
 
         [$resource, $model] = $this->find($row['resource'], $row['record_id']);
 
@@ -1772,6 +1775,59 @@ class Resources extends Service {
         $given = $user_id ? get_userdata($user_id)?->user_login : $login;
 
         return (!is_null($given) && ($given === $made->get_column('user_login'))) ? $made : null;
+
+    }
+
+    // An account erased: the rows about it in every resource over accounts lose their values, and whatever else holds them (a set's steps) hears so. A site that erases another way than WordPress's own tools calls this (A12).
+    public function erase_account (int $user_id) : int {
+
+        $done = 0;
+
+        foreach ($this->get_resources() as $resource) if ($resource->is_named_only()) {
+
+            $done += Journal::inst()->scrub($resource->get_name(), (string) $user_id, '_scrubbed');
+
+            do_action('lattice.resources.erased', $resource, $user_id);
+
+        }
+
+        return $done;
+
+    }
+
+    // WordPress's personal data tools: an export lists the rows about the account with that address, an erasure scrubs them.
+    public function export_personal_data (string $email, int $page = 1) : array {
+
+        $user  = get_user_by('email', $email);
+        $items = [];
+
+        $rows = [];
+
+        foreach ($user ? $this->get_resources() : [] as $resource) if ($resource->is_named_only()) for ($at = 1; $found = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $user->ID, 'page' => $at]); $at++) array_push($rows, ...$found);
+
+        foreach ($rows as $row) $items[] = [
+            'group_id'    => 'lattice-journal',
+            'group_label' => 'Changes to your account',
+            'item_id'     => "lattice-journal-{$row['id']}",
+            'data'        => [
+                ['name' => 'When',    'value' => $row['at']],
+                ['name' => 'Through', 'value' => $row['via']],
+                ['name' => 'Change',  'value' => $row['action']],
+                ['name' => 'Fields',  'value' => implode(', ', array_keys(array_diff_key((array) ($row['after'] ?? []), array_flip(['_partial', '_scrubbed', '_expired', '_fields'])))) ?: implode(', ', (array) ($row['after']['_fields'] ?? []))],
+                ['name' => 'Values',  'value' => wp_json_encode(['before' => $row['before'], 'after' => $row['after']])],
+            ],
+        ];
+
+        return ['data' => $items, 'done' => true];
+
+    }
+
+    public function erase_personal_data (string $email, int $page = 1) : array {
+
+        $user = get_user_by('email', $email);
+        $done = $user ? $this->erase_account((int) $user->ID) : 0;
+
+        return ['items_removed' => $done > 0, 'items_retained' => $done > 0, 'messages' => $done ? ["{$done} journal rows kept as a record that changes happened, their values erased."] : [], 'done' => true];
 
     }
 

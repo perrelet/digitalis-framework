@@ -9,6 +9,9 @@ class Journal extends Service {
     const PER_PAGE = 50;
 
     const MARKS = ['set_key', 'set_step', 'proposer_id'];
+    const ERASED = '[erased]';
+    // How long the values in a row about an account are kept: one renewal cycle, when an old address is likeliest to be needed (SCOPED_CREDENTIALS.md E9).
+    const ACCOUNT_VALUES_DAYS = 365;
 
     protected function get_table () : string {
 
@@ -147,7 +150,85 @@ class Journal extends Service {
 
         $days = (int) apply_filters('lattice.journal.keep_days', static::KEEP_DAYS);
 
-        return (int) $wpdb->query($wpdb->prepare("DELETE FROM {$this->get_table()} WHERE `at` < %s", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS)));
+        $pruned = (int) $wpdb->query($wpdb->prepare("DELETE FROM {$this->get_table()} WHERE `at` < %s", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS)));
+
+        // After the delete, so a failure here never keeps old rows.
+        try {
+
+            $this->expire_accounts();
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice journal: expiring account values failed: ' . $e->getMessage());
+
+        }
+
+        return $pruned;
+
+    }
+
+    // A person's details out of the rows about them: every value and the why replaced, keys, ids and control markers (_partial) kept, the row marked $mark (_scrubbed or _expired). The row stays as the record that a change happened (A12).
+    public function scrub (string $resource, string $record_id, string $mark, ?string $before = null) : int {
+
+        global $wpdb;
+
+        $where = $wpdb->prepare('resource = %s AND record_id = %s', $resource, $record_id) . ($before ? $wpdb->prepare(' AND `at` < %s', $before) : '');
+        $rows  = (array) $wpdb->get_results("SELECT id, `before`, `after`, why FROM {$this->get_table()} WHERE {$where}", ARRAY_A);
+        $done  = 0;
+
+        foreach ($rows as $row) {
+
+            $after = is_null($row['after']) ? [] : (array) json_decode($row['after'], true);
+
+            $done += (int) $wpdb->update($this->get_table(), [
+                'before' => is_null($row['before']) ? null : wp_json_encode(static::erase(json_decode($row['before'], true))),
+                'after'  => wp_json_encode(static::erase($after) + [$mark => true]),
+                'why'    => ($row['why'] === '') ? '' : static::ERASED,
+            ], ['id' => (int) $row['id']]);
+
+        }
+
+        return $done;
+
+    }
+
+    // Values become the placeholder; a key starting with an underscore is the layer's own and is kept as it is.
+    public static function erase (mixed $value) : mixed {
+
+        if (!is_array($value)) return is_null($value) ? null : static::ERASED;
+
+        $erased = [];
+
+        foreach ($value as $key => $each) $erased[$key] = (is_string($key) && str_starts_with($key, '_')) ? $each : static::erase($each);
+
+        return $erased;
+
+    }
+
+    public static function is_scrubbed (array $row) : bool {
+
+        return !empty($row['after']['_scrubbed']) || !empty($row['after']['_expired']);
+
+    }
+
+    // Rows about an account older than its values are kept lose their values; the rows stay until the journal's own prune (E9).
+    public function expire_accounts () : int {
+
+        global $wpdb;
+
+        $days   = (int) apply_filters('lattice.journal.account_values_days', static::ACCOUNT_VALUES_DAYS);
+        $before = gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS);
+        $done   = 0;
+
+        foreach (Resources::inst()->get_resources() as $resource) {
+
+            if (!$resource->is_named_only()) continue;
+
+            foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT DISTINCT record_id FROM {$this->get_table()} WHERE resource = %s AND `at` < %s AND `after` NOT LIKE %s AND `after` NOT LIKE %s", $resource->get_name(), $before, '%' . $wpdb->esc_like('"_scrubbed"') . '%', '%' . $wpdb->esc_like('"_expired"') . '%')) as $record_id) $done += $this->scrub($resource->get_name(), (string) $record_id, '_expired', $before);
+
+        }
+
+        return $done;
 
     }
 
