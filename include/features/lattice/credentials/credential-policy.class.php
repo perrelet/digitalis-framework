@@ -9,10 +9,9 @@ class Credential_Policy {
     const KEYS            = ['version', 'rules'];
     const RULE_KEYS       = ['verbs', 'on', 'answer', 'fields', 'except', 'records', 'roles', 'when', 'waiting'];
     const RESOURCE_VERBS  = ['list', 'read', 'create', 'update', 'trash', 'untrash', 'undo'];
-    const ACCOUNT_VERBS   = ['list', 'read', 'create', 'update', 'delete'];
-    const ACCOUNT_FIELDS  = ['email', 'password', 'second_factor', 'role'];
     const METHODS         = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
     const WHEN            = ['step_of_other_set'];
+    const NO_ROLE         = 'none';
     const SETS            = 'change_set';
     // What a review rule carries: making, holding and offering the credential's own sets.
     const PROPOSING       = ['list', 'read', 'create', 'update', 'view:review', 'act:set_steps', 'act:submit_proposal', 'act:rebase_proposal', 'act:rebase_set', 'act:withdraw_set'];
@@ -118,7 +117,8 @@ class Credential_Policy {
 
         foreach ($this->rules as $rule) if ($match = $this->match($rule, $request, $field)) $matches[] = $match + ['answer' => $rule['answer']];
 
-        $deciding = array_filter($matches, fn ($match) => !array_filter($matches, fn ($other) => $this->outranks($other, $match)));
+        // On a resource reached only by name (A0), an owner's deny holds whatever is beside it.
+        $deciding = (!empty($request['named_only']) && in_array('deny', array_column($matches, 'answer'), true)) ? [['answer' => 'deny']] : array_filter($matches, fn ($match) => !array_filter($matches, fn ($other) => $this->outranks($other, $match)));
 
         $answer = static::strictest(array_column($deciding, 'answer'));
 
@@ -140,7 +140,7 @@ class Credential_Policy {
 
     protected function narrows (array $rule) : array {
 
-        return array_keys(array_filter(['fields' => isset($rule['fields']) || isset($rule['except']), 'records' => isset($rule['records']), 'when' => isset($rule['when'])]));
+        return array_keys(array_filter(['fields' => isset($rule['fields']) || isset($rule['except']), 'records' => isset($rule['records']) || isset($rule['roles']), 'when' => isset($rule['when'])]));
 
     }
 
@@ -153,7 +153,7 @@ class Credential_Policy {
 
         if (!$this->match_target($rule, $request))               return null;
         if (!$this->match_field($rule, $field))                  return null;
-        if (!$this->match_facts($rule, $request['facts'] ?? [])) return null;
+        if (!$this->match_facts($rule, $request, $request['facts'] ?? [])) return null;
 
         [$rank, $narrows] = [$rule['rank'], $rule['narrows'] ?? []];
 
@@ -171,6 +171,8 @@ class Credential_Policy {
         foreach ($rule['verbs'] as $token) {
 
             if (($token === $verb) || (($verb === 'HEAD') && ($token === 'GET'))) return 1;
+
+            if (!empty($request['named_only']) && in_array($verb, ['act:delete', 'rehearse:act:delete'], true) && ($rule['answer'] !== 'deny')) continue;
 
             if ($this->in_group($token, $verb, $request['surface'])) return 0;
 
@@ -200,10 +202,9 @@ class Credential_Policy {
         $target = is_array($request['target']) ? '' : (string) $request['target'];
 
         return match ($rule['surface']) {
-            'resource' => is_null($rule['target']) ? ($target !== static::SETS) : ($rule['target'] === $target),
+            'resource' => is_null($rule['target']) ? (($target !== static::SETS) && empty($request['named_only'])) : ($rule['target'] === $target),
             'route'    => (bool) array_filter((array) $request['target'], fn ($each) => preg_match('#^' . str_replace('\*', '.*', preg_quote(strtolower($rule['target']), '#')) . '$#', strtolower($each))),
             'ability'  => is_null($rule['target']) || ($rule['target'] === $target) || (str_ends_with($rule['target'], '/*') && (($request['facts']['category'] ?? null) === substr($rule['target'], 0, -2))),
-            'accounts' => true,
         };
 
     }
@@ -218,20 +219,37 @@ class Credential_Policy {
 
     }
 
-    protected function match_facts (array $rule, array $facts) : bool {
+    // An allow or review covers an account only while every role it holds or is given is listed, it holds at least one unless the list names none, it holds no stored capability beyond them and it is not the credential's own (A1). A deny matches any account holding or given a listed role (A0). On a resource reached only by name, an allow or review names its roles.
+    protected function match_roles (array $rule, array $request, array $facts) : bool {
+
+        if (!isset($rule['roles'])) return empty($request['named_only']) || ($rule['answer'] === 'deny');
+
+        // Asked of any record (a list, the guide), an allow or review on roles may apply; a deny on roles leaves rows out as each is asked, rather than closing the list.
+        if (!empty($facts['any_record'])) return $rule['answer'] !== 'deny';
+
+        $creating = preg_replace('/^rehearse:/', '', (string) $request['verb']) === 'create';
+
+        if ($creating ? !array_key_exists('gives', $facts) : !array_key_exists('roles', $facts)) return false;
+
+        $held  = (array) ($facts['roles'] ?? []);
+        $given = (array) ($facts['gives'] ?? []);
+        $roles = $creating ? $given : $held;
+        $none  = in_array(static::NO_ROLE, $rule['roles'], true);
+
+        if ($rule['answer'] === 'deny') return (bool) array_intersect([...$held, ...$given], $rule['roles']) || ($none && !$roles);
+
+        if (!empty($facts['self']) || !empty($facts['extra_caps'])) return false;
+        if (!$creating && !array_key_exists('extra_caps', $facts)) return false;
+
+        return ($roles || $none) && !array_diff([...$held, ...$given], $rule['roles']);
+
+    }
+
+    protected function match_facts (array $rule, array $request, array $facts) : bool {
 
         if (isset($rule['when']) && empty($facts[$rule['when']])) return false;
 
-        if (isset($rule['roles'])) {
-
-            $held  = (array) ($facts['roles'] ?? []);
-            $given = (array) ($facts['gives'] ?? []);
-
-            // An account qualifies only if every role it holds is listed and it holds nothing beyond them; one being made holds nothing yet, and is given at least one.
-            if (array_key_exists('roles', $facts) ? (!$held || array_diff($held, $rule['roles']) || !array_key_exists('extra_caps', $facts) || $facts['extra_caps']) : !$given) return false;
-            if (array_diff($given, $rule['roles'])) return false;
-
-        }
+        if (!$this->match_roles($rule, $request, $facts)) return false;
 
         if (!isset($rule['records']) || !empty($facts['any_record'])) return true;
 
@@ -270,8 +288,7 @@ class Credential_Policy {
             'resource' => $this->read_resource_rule($read, $rule),
             'route'    => $this->read_route_rule($read, $rule),
             'ability'  => $this->read_ability_rule($read, $rule),
-            'accounts' => $this->read_accounts_rule($read, $rule),
-            default    => ['It is on a resource, a route, an ability or accounts.'],
+            default    => ['It is on a resource, a route or an ability.'],
         };
 
         if ($problems) return [null, $problems];
@@ -300,9 +317,9 @@ class Credential_Policy {
         // Groups never reach the sets, so a rule that would rely on one is refused rather than ignored.
         if (($read['target'] === static::SETS) && array_filter($read['verbs'], fn ($verb) => !preg_match('/^(rehearse:)?(list|read|create|update|trash|untrash|undo|(act|view):[a-z0-9_]+)$/', $verb))) $problems[] = 'On change_set each verb is named.';
 
-        if (($rule['records'] ?? null) === 'made_by_credential') $problems[] = 'made_by_credential is for accounts.';
+        if (isset($rule['roles']) && (!is_array($rule['roles']) || !$rule['roles'] || !array_is_list($rule['roles']) || array_filter($rule['roles'], fn ($role) => !is_string($role) || ($role === '')))) $problems[] = 'Its roles are a list of names, none among them where an account may hold no role.';
 
-        return [...$problems, ...$this->read_conditions($rule, ['fields', 'except', 'records', 'when'])];
+        return [...$problems, ...$this->read_conditions($rule, ['fields', 'except', 'records', 'roles', 'when'])];
 
     }
 
@@ -329,22 +346,6 @@ class Credential_Policy {
         if ($read['answer'] === 'review') $problems[] = 'Only the layer\'s verbs can be reviewed.';
 
         return [...$problems, ...$this->read_conditions($rule, [])];
-
-    }
-
-    protected function read_accounts_rule (array &$read, array $rule) : array {
-
-        $problems = [];
-
-        if (!is_null($read['target'])) $problems[] = 'It is on accounts.';
-
-        foreach ($read['verbs'] as $verb) if (!in_array($verb, [...static::ACCOUNT_VERBS, 'reads', 'writes'], true)) $problems[] = "No verb {$verb} on accounts.";
-
-        if (!is_array($rule['roles'] ?? null) || !$rule['roles'] || array_filter($rule['roles'], fn ($role) => !is_string($role))) $problems[] = 'It names the roles it may manage.';
-        if (array_diff([...(array) ($rule['fields'] ?? []), ...(array) ($rule['except'] ?? [])], static::ACCOUNT_FIELDS)) $problems[] = 'Its fields are among ' . implode(', ', static::ACCOUNT_FIELDS) . '.';
-        if (isset($rule['records']) && !is_array($rule['records']) && ($rule['records'] !== 'made_by_credential')) $problems[] = 'Its records are a list of ids or made_by_credential.';
-
-        return [...$problems, ...$this->read_conditions($rule, ['fields', 'except', 'records', 'roles'])];
 
     }
 
@@ -387,12 +388,12 @@ class Credential_Policy {
     // A wildcard, then a wildcard with a condition, a named target, a named target with a condition; a route by how much of it is fixed.
     protected function rank (array $rule) : array {
 
-        $conditioned = (int) (isset($rule['fields']) || isset($rule['except']) || isset($rule['records']) || isset($rule['when']));
+        $conditioned = (int) (isset($rule['fields']) || isset($rule['except']) || isset($rule['records']) || isset($rule['roles']) || isset($rule['when']));
 
         return match ($rule['surface']) {
             'route'   => [str_starts_with($rule['target'], '*') ? 0 : 2, strlen(str_replace('*', '', $rule['target']))],
             'ability' => [is_null($rule['target']) ? 0 : (str_ends_with($rule['target'], '/*') ? 1 : 2), 0],
-            default   => [(is_null($rule['target']) && ($rule['surface'] !== 'accounts') ? 0 : 2) + $conditioned, 0],
+            default   => [(is_null($rule['target']) ? 0 : 2) + $conditioned, 0],
         };
 
     }

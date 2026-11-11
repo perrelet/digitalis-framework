@@ -335,7 +335,6 @@ class Credentials extends Service {
             if (is_null($rule['target']) || in_array('reads', $rule['verbs'], true) || in_array('writes', $rule['verbs'], true) || isset($rule['except'])) $flags[] = ucfirst($rule['label']) . " covers what is added later (a wildcard, a verb group or except).";
             if (($rule['surface'] === 'route') && ($rule['answer'] === 'deny') && preg_match('/\d$/', (string) $rule['target'])) $flags[] = ucfirst($rule['label']) . " denies one record's route, which another spelling of its id may still reach.";
             if (($rule['surface'] === 'resource') && ($rule['target'] === Credential_Policy::SETS) && in_array('act:approve_proposal', $rule['verbs'], true) && ($rule['answer'] === 'allow')) $flags[] = ucfirst($rule['label']) . " may approve sets other passwords write: two such passwords could approve each other's.";
-            if ($rule['surface'] === 'accounts') $flags[] = ucfirst($rule['label']) . " is on accounts, which open nothing until accounts are a resource (S6a).";
 
         }
 
@@ -402,7 +401,6 @@ class Credentials extends Service {
             'resource' => $this->find_missing_on_resource($rule),
             'route'    => $this->route_exists($rule['target']) ? [] : ["route {$rule['target']}"],
             'ability'  => $this->ability_exists($rule['target']) ? [] : ["ability {$rule['target']}"],
-            'accounts' => array_map(fn ($role) => "role {$role}", array_diff($rule['roles'], array_keys(wp_roles()->roles))),
         };
 
     }
@@ -416,7 +414,7 @@ class Credentials extends Service {
 
         if (!$resource = $resources?->get_resource($rule['target'])) return ["resource {$rule['target']}"];
 
-        $missing = [];
+        $missing = array_map(fn ($role) => "role {$role}", array_diff($rule['roles'] ?? [], [...array_keys(wp_roles()->roles), Credential_Policy::NO_ROLE]));
         $fields  = array_keys($resource->get_fields());
 
         foreach ([...($rule['fields'] ?? []), ...($rule['except'] ?? [])] as $field) if (!in_array($field, $fields, true)) $missing[] = "field {$field}";
