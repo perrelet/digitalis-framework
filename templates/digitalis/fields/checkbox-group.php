@@ -1,4 +1,4 @@
-<?php if ($name): ?>
+<?php if ($name && !is_null($null_value)): ?>
     <input type='hidden' name='<?= $name ?>' value='<?= $null_value ?>'>
 <?php endif; ?>
 <?php $i = 0; foreach ($options as $option => $option_label): ?>

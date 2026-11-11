@@ -11,7 +11,9 @@ class Form extends Field_Group {
     ];
 
     public function params (&$p) {
-    
+
+        $p = apply_filters('Digitalis/Form/Params', $p, $this);
+
         if ($p['method']) $p['attributes']['method'] = $p['method'];
         if ($p['action']) $p['attributes']['action'] = $p['action'];
     

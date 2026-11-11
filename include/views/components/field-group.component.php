@@ -18,7 +18,11 @@ class Field_Group extends Component {
         'condition'     => null,
         'classes'       => ['digitalis-field-group', 'field-group'],
         'attributes'    => [],
+        'field_params'  => [],
     ];
+
+    // Params merged into fields by name: lists that merge, everything else replaced.
+    const MERGED_PARAMS = ['attributes', 'classes', 'row_classes'];
 
     public function params (&$p) {
 
@@ -38,6 +42,8 @@ class Field_Group extends Component {
                 'field' => Input::class,
             ]);
 
+            if ($p['field_params']) $field = $this->apply_field_params($field, $p['field_params']);
+
             $field = apply_filters('Digitalis/Field_Group/Field', $field, $p, static::class);
 
             if (isset($field['options'])) $field['options'] = $this->get_field_options($field['options'], $field);
@@ -47,6 +53,7 @@ class Field_Group extends Component {
         if ($p['condition']) {
 
             $p['attributes']['data-field-condition'] = json_encode($p['condition']);
+            $p['attributes']['data-field-id']        = $p['id'] ?: "field-group-{$p['view_index']}";
 
             wp_enqueue_script('digitalis-fields', DIGITALIS_FRAMEWORK_URI . "assets/js/fields.js", [], DIGITALIS_FRAMEWORK_VERSION, [
                 'in_footer' => true,
@@ -61,6 +68,27 @@ class Field_Group extends Component {
     public function get_fields () {
 
         return $this['fields'];
+
+    }
+
+    protected function apply_field_params ($field, array $map) {
+
+        $class = ($field instanceof View) ? get_class($field) : $field['field'];
+
+        if (is_a($class, Field_Group::class, true)) {
+
+            $field['field_params'] = array_merge((array) ($field['field_params'] ?? []), $map);
+            return $field;
+
+        }
+
+        $name = rtrim((string) ($field['name'] ?? $field['key'] ?? ''), '[]');
+
+        if (($name === '') || !isset($map[$name])) return $field;
+
+        foreach ($map[$name] as $key => $value) $field[$key] = (in_array($key, static::MERGED_PARAMS, true) && is_array($value)) ? array_merge((array) ($field[$key] ?? []), $value) : $value;
+
+        return $field;
 
     }
 
