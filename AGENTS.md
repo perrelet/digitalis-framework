@@ -170,6 +170,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Lattice_Jobs` | `Feature` | Durable background work: a class per kind, a row per piece. `handle()` is one step, `next($cursor)` another; returning commits it. Subclass `Job` in `*.job.php`; load with `load_feature('lattice/jobs')` before `parent::load()`. Runs on WordPress cron alone. See [JOBS.md](./docs/JOBS.md) | no |
 | `Lattice_Credentials` | `Feature` | A policy per application password that only narrows its account: allow, review or deny per verb and target, for resources, routes and abilities, with `wp lattice credentials`. Loaded by `lattice/resources`. See [CREDENTIALS.md](./docs/CREDENTIALS.md) | no |
 | `Lattice_Change_Sets` | `Feature` | A held list of the layer's calls, applied by its author: several records and types, conflicts per field, a walk that stops and goes on, undo. Load with `load_feature('lattice/change-sets')`. See [CHANGE_SETS.md](./docs/CHANGE_SETS.md) | no |
+| `Lattice_Forms` | `Feature` | Forms that check themselves: a route extending `Form_Route` checks its `$args` the form's way for every client (every problem at once, empty as missing, `when`, costly rules last), and a `Form` given `route` and `id` posts to its own page and draws the result, htmx an enhancement. Load with `load_feature('lattice/forms')` before `parent::load()`. See [FORMS.md](./docs/FORMS.md) | no |
 | `Proposals` | `Feature` | Changes held for review: a change set offered through the API, or a draft copy of a published record, with a review screen and approval through the layer. A moderated type is a resource whose model uses `Has_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `lattice/change-sets`, and `Stored_Markup` where a model is moderated; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
@@ -625,6 +626,7 @@ Examples:
 | Copy-paste patterns | [docs/CHEATSHEET.md](./docs/CHEATSHEET.md) |
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
 | Durable background work: jobs, steps, retries, keys | [docs/JOBS.md](./docs/JOBS.md) |
+| Forms checked by their route, drawn again with their result | [docs/FORMS.md](./docs/FORMS.md) |
 | Models through REST and WP-CLI: resources, dry runs, the journal | [docs/RESOURCES.md](./docs/RESOURCES.md) |
 | A held list of the layer's calls: change sets | [docs/CHANGE_SETS.md](./docs/CHANGE_SETS.md) |
 | Changes held for review: proposals | [docs/PROPOSALS.md](./docs/PROPOSALS.md) |
