@@ -265,6 +265,8 @@ class Lattice_Forms extends Feature {
 
             if (!empty($rule['when'])) $param['condition'] = array_values($rule['when']);
 
+            if (!empty($rule['field_params'])) $param = array_merge($param, (array) $rule['field_params']);
+
             if ($class) $param = array_merge($param, $this->get_browser_params($class, $rule));
 
             if ($class && (is_a($class, Checkbox::class, true) || is_a($class, Checkbox_Group::class, true))) $param['null_value'] = null;
