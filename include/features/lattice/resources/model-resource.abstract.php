@@ -560,9 +560,9 @@ abstract class Model_Resource extends Singleton {
     }
 
     // The record before a write, as a credential's rule asks it: by default as it is. $values: what the write sends.
-    public function get_before_facts ($model, array $values) : array {
+    public function get_before_facts ($model, array $values, ?int $user_id = null) : array {
 
-        return $this->get_facts($model);
+        return $this->get_facts($model, [], $user_id);
 
     }
 
@@ -576,6 +576,20 @@ abstract class Model_Resource extends Singleton {
     public function get_proposable () : array {
 
         return ['update' => [], 'create' => []] + static::PROPOSABLE;
+
+    }
+
+    // The record a create made before it failed, found from the unsaved model it was made from; null where none can be found.
+    public function find_made ($model) : ?object {
+
+        return null;
+
+    }
+
+    // A capability these values need beyond the verb, or null: giving roles, say. Asked as the layer asks capabilities.
+    public function get_value_needs ($model, array $values) : ?string {
+
+        return null;
 
     }
 
