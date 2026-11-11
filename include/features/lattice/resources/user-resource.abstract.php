@@ -257,21 +257,55 @@ abstract class User_Resource extends Model_Resource {
 
     public function get_consequences (Resource_Change $change) : array {
 
-        if (!$change->before) return [];
+        if (!$change->before) return $this->build_mail_consequences($change);
 
         $id    = $change->before->get_id();
         $holds = array_keys(array_filter($this->get_conditions(), fn ($condition) => (bool) $condition($change->before, [])));
         $named = $holds ? [['kind' => 'conditions', 'label' => 'This account is: ' . implode(', ', $holds) . '.', 'items' => $holds]] : [];
 
-        if ($change->operation === 'send_password_reset') return [...$named, ['kind' => 'mail', 'label' => "The site's reset mail goes to account {$id}'s own address.", 'items' => [(string) $change->before->get_column('user_email')]]];
-
-        if ($change->operation !== 'delete') return $named;
+        if ($change->operation !== 'delete') return [...$named, ...$this->build_mail_consequences($change)];
 
         global $wpdb;
 
         $posts = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_author = %d AND post_type <> 'revision'", $id));
 
         return [...$named, ['kind' => 'deleted', 'label' => "Account {$id} is deleted and nothing undoes it.", 'items' => [$id]], ['kind' => 'content', 'label' => "{$posts} posts and other records move to account " . (int) ($change->input['reassign'] ?? 0) . '.', 'items' => []]];
+
+    }
+
+    protected function build_mail_consequences (Resource_Change $change) : array {
+
+        $mail = fn (string $label, string $address) => [['kind' => 'mail', 'label' => $label, 'items' => $this->list_readable_address($change, $address)]];
+
+        if (!$change->before) return $change->after->get_staged('notify') ? $mail("WordPress's new-user mail goes to the new address, with a link to set a password.", $change->after->get_column('user_email')) : [];
+
+        $wp_user = $change->before->get_wp_user();
+
+        if ($change->operation === 'send_password_reset') return apply_filters('send_retrieve_password_email', true, $wp_user->user_login, $wp_user) ? $mail("The site's reset mail goes to account {$wp_user->ID}'s own address.", $wp_user->user_email) : [];
+
+        $userdata = $change->after->build_update_data();
+        $user     = $this->build_core_user($wp_user);
+
+        if (!isset($userdata['user_email']) || ($user['user_email'] === $userdata['user_email'])) return [];
+
+        return apply_filters('send_email_change_email', true, $user, $userdata) ? $mail('WordPress mails the old address to say the email changed.', $wp_user->user_email) : [];
+
+    }
+
+    // As wp_update_user() builds it for its filters (E14).
+    protected function build_core_user (\WP_User $wp_user) : array {
+
+        $user = $wp_user->to_array();
+
+        foreach (_get_additional_user_keys($wp_user) as $key) $user[$key] = get_user_meta($wp_user->ID, $key, true);
+
+        return add_magic_quotes($user);
+
+    }
+
+    protected function list_readable_address (Resource_Change $change, string $address) : array {
+
+        return in_array('email', $change->barred, true) ? [] : [$address];
 
     }
 

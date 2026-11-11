@@ -64,11 +64,18 @@ class Account extends User {
 
     }
 
-    protected function save_staged () {
+    // User_Resource's dry run asks wp_update_user()'s filters with this (E14).
+    public function build_update_data () : array {
 
         $update = array_intersect_key($this->staged, array_flip([...array_diff(static::COLUMNS, ['user_login']), ...static::META]));
 
-        if ($update && is_wp_error($saved = wp_update_user(['ID' => $this->get_id()] + $update))) return $saved;
+        return $update ? ['ID' => $this->get_id()] + $update : [];
+
+    }
+
+    protected function save_staged () {
+
+        if (($update = $this->build_update_data()) && is_wp_error($saved = wp_update_user($update))) return $saved;
 
         if ($this->has_staged('roles')) {
 
