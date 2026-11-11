@@ -71,6 +71,32 @@ class Signup_Route extends \Digitalis\Form_Route {
 
 The form handler sets the post aside before WordPress reads the request (so a field named `name` or `s` never becomes a query), gives it back to a REST request and at `template_redirect` hands it to the route with `rest_do_request()`, only if the posted path matches a `Form_Route`. A signed-in visitor without a valid `wp_rest` nonce is dispatched as a visitor. An accepted `redirect()` is a 303, or `HX-Redirect` for htmx.
 
+## Proving a person
+
+`load_feature('lattice/human-check')` (it loads `lattice/forms`) adds one rule and one field:
+
+```php
+protected $args = [
+    'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+    'human' => ['human_check' => 'signup'],
+];
+```
+
+```php
+new Field\Human_Check(['name' => 'human'])
+```
+
+The field takes the argument's name, and the action from the rule. The rule runs last, after the permission and the nonce, and checks the token with the provider: the action and this site's hostname must match (`lattice.human_check.hostnames` widens the hosts), and a token passes once. A refused token shows under the field; a provider that cannot answer, or wrong or missing keys, make the form unavailable (503), logged and remembered for 30 seconds. A submit waits for the token while a challenge shows, and goes without one only when the provider's script fails.
+
+| Filter | What |
+|---|---|
+| `lattice.human_check.keys` | `['site_key' => …, 'secret' => …]`, given the provider's class |
+| `lattice.human_check.provider` | The provider's class, given the action (default `Turnstile_Provider`) |
+| `lattice.human_check.hostnames` | The hosts a token may come from (default the site's) |
+| `lattice.human_check.timeout` | Seconds to wait for the provider (3) |
+
+A provider is a `Human_Check_Provider`: its script and adapter (`render`, `reset`, `remove` in `LatticeHumanCheck.register()`), its widget's params, its token field, `verify()` answering `passed`, `failed` or `unavailable` and the hosts a Content-Security-Policy must allow (Turnstile: `challenges.cloudflare.com`). Widgets render explicitly, so another plugin's own scan for its provider's class never draws them twice. After rotating keys or switching provider, purge cached pages. Without a persistent object cache, a spent token can pass again within the provider's first few seconds.
+
 ## Limits
 
 Form-encoded posts; no files; scalars and lists of scalars (a nested object's problem lands on its top field); one form per route; the page must draw the form for a result to show. A handler runs inside the page request: it answers rather than prints, and `REST_REQUEST` is not defined there.
