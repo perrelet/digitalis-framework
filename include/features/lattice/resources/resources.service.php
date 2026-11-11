@@ -97,11 +97,11 @@ class Resources extends Service {
 
     public function guide () : array {
 
-        return [
+        return apply_filters('lattice.resources.guide', [
             'framework' => DIGITALIS_FRAMEWORK_VERSION,
             'features'  => ['dry_run', 'journal', 'undo', 'trash', 'expected'],
             'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may_quietly($resource, 'list')))),
-        ] + (($current = Credentials::inst()->get_current()) ? ['credential' => Credentials::inst()->explain($current['entry'])] : []);
+        ] + (($current = Credentials::inst()->get_current()) ? ['credential' => Credentials::inst()->explain($current['entry'])] : []));
 
     }
 

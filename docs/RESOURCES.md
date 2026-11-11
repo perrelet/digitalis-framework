@@ -365,6 +365,7 @@ Another feature has its say over single records:
 - `lattice.resources.journal` (`$journal, $resource, $model`): `false` keeps a record's changes out of the journal.
 - `lattice.resources.forbidden` (`$data, $resource, $model, $operation`): adds to the `data` of the `forbidden` refusal of a write to a known record, so a refusal can say what the account could do instead.
 - `lattice.resources.describe` (`$description, $resource`): adds to the guide's description of a resource.
+- `lattice.resources.guide` (`$guide`): adds to the guide as a whole, such as a brief for the caller.
 
 A request made with a scoped application password is also asked of its policy ([CREDENTIALS.md](./CREDENTIALS.md)): reads exactly, writes where the values are known, and a refusal it makes says `data.reason: lattice_credential`, or `lattice_credential_review` with `data.propose` where it may be proposed instead. The journal names the password behind each change.
 
