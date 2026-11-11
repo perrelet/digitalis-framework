@@ -132,7 +132,7 @@ class Resources extends Service {
         // Each filter, search and sort tests the values of what it names, so none may name a field the credential cannot read.
         $barred = $this->get_barred($resource);
 
-        if (array_intersect(array_keys($args), $barred) || (!empty($args['search']) && array_intersect(['title', 'content', 'excerpt'], $barred))) return $this->refuse_barred('filter, search or sort by a field it may not read');
+        if (array_intersect(array_keys($args), $barred) || (!empty($args['search']) && array_intersect($resource->get_search_fields(), $barred))) return $this->refuse_barred('filter, search or sort by a field it may not read');
 
         $models = $resource->query(['per_page' => min(static::PER_PAGE, max(1, (int) ($args['per_page'] ?? static::PER_PAGE))), 'page' => max(1, (int) ($args['page'] ?? 1))] + $args);
 
@@ -217,7 +217,9 @@ class Resources extends Service {
 
         $barred = array_flip($this->get_barred($resource, $model));
 
-        return ['id' => $model->get_id()] + array_diff_key($resource->summarise($model), $barred) + [
+        $hidden = array_filter($resource->get_summary_fields(), fn ($field) => isset($barred[$field]));
+
+        return ['id' => $model->get_id()] + array_diff_key($resource->summarise($model), $barred, $hidden) + [
             'states'   => array_diff_key($resource->get_states($model), $barred),
             'version'  => $model->get_version(),
             'edit_url' => $resource->get_edit_url($model),
@@ -1821,6 +1823,7 @@ class Resources extends Service {
         return Credentials::inst()->answer_fields($entry, array_filter([
             'surface'    => 'resource',
             'target'     => $resource->get_name(),
+            'named_only' => $resource->is_named_only() ?: null,
             'verb'       => $verb,
             'fields'     => $fields,
             // Asked before any record is known (a list, the guide), a rule on some records counts, whether it opens or bars.
@@ -1845,7 +1848,8 @@ class Resources extends Service {
 
         $after = $known ? $resource->get_facts($model, $values) : ['own' => false, 'conditions' => fn () => false];
 
-        $answers = $this->ask_credential($resource, $verb, $model, array_keys($values), $after, $dry_run);
+        // A record being made has no before: it is judged as it will be, which is asked anyway.
+        $answers = $this->ask_credential($resource, $verb, $model, array_keys($values), $after, $dry_run, $model ? $resource->get_before_facts($model, $values) : ($known ? $after : null));
 
         return is_null($answers) ? 'allow' : Credential_Policy::strictest($answers);
 

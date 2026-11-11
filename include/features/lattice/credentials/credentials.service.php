@@ -11,6 +11,8 @@ class Credentials extends Service {
     const SHARED     = 'lattice_credential_policies';
     const ENTRY_KEYS = ['version', 'expires', 'rules', 'policy'];
     const LAYER      = '/lattice/v1/';
+    // An account a scoped password made, by the password's uuid (made_by_credential).
+    const MADE_BY    = '_lattice_made_by_credential';
 
     // Shared policies defined in code, by name; false where two define one name.
     protected array $defined = [];
@@ -33,6 +35,31 @@ class Credentials extends Service {
         $entry = $this->get_entry($user_id, $uuid);
 
         $this->current = is_null($entry) ? null : ['user_id' => $user_id, 'uuid' => $uuid, 'entry' => $entry];
+
+    }
+
+    // The roles the current credential's allow and review rules name for this verb on this resource, every policy it holds narrowing the others; null without a scoped credential. A list query holds no more than these.
+    public function get_roles_reached (string $target, string $verb) : ?array {
+
+        if (!$current = $this->get_current()) return null;
+
+        [$policies, $problems] = $this->read($current['entry']);
+
+        if ($problems || !$policies) return [];
+
+        $reached = null;
+
+        foreach ($policies as $policy) {
+
+            $roles = [];
+
+            foreach ($policy->get_rules() as $rule) if (($rule['surface'] === 'resource') && ($rule['target'] === $target) && ($rule['answer'] !== 'deny') && isset($rule['roles']) && array_intersect($rule['verbs'], [$verb, 'reads'])) $roles = [...$roles, ...$rule['roles']];
+
+            $reached = is_null($reached) ? array_unique($roles) : array_intersect($reached, $roles);
+
+        }
+
+        return array_values($reached ?? []);
 
     }
 
@@ -342,7 +369,7 @@ class Credentials extends Service {
 
         foreach (class_exists(Resources::class) ? Resources::inst()->get_resources() : [] as $name => $resource) {
 
-            $ask = fn (string $verb, array $fields = []) => $this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => $verb, 'fields' => $fields, 'facts' => ['any_record' => true]]);
+            $ask = fn (string $verb, array $fields = []) => $this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => $verb, 'fields' => $fields, 'facts' => ['any_record' => true]] + ($resource->is_named_only() ? ['named_only' => true] : []));
 
             $fields = array_keys($resource->get_fields());
             $reads  = $ask('read', $fields);
@@ -409,12 +436,18 @@ class Credentials extends Service {
 
         $resources = class_exists(Resources::class) ? Resources::inst() : null;
 
+        // resource:* never reaches a resource holding accounts (A0), so roles there match nothing.
+        if (is_null($rule['target']) && (isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential'))) return ['accounts on resource:*, which never reaches one'];
+
         // Under resource:* a field must exist on some resource, or a typo in except would leave the real field open everywhere.
         if (is_null($rule['target'])) return array_map(fn ($field) => "field {$field}", array_diff([...($rule['fields'] ?? []), ...($rule['except'] ?? [])], array_merge([], ...array_values(array_map(fn ($resource) => array_keys($resource->get_fields()), $resources?->get_resources() ?? [])))));
 
         if (!$resource = $resources?->get_resource($rule['target'])) return ["resource {$rule['target']}"];
 
         $missing = array_map(fn ($role) => "role {$role}", array_diff($rule['roles'] ?? [], [...array_keys(wp_roles()->roles), Credential_Policy::NO_ROLE]));
+
+        // On a resource holding no accounts these match nothing, so the policy would say what it does not do.
+        if ((isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential')) && !$resource->is_named_only()) $missing[] = "accounts on resource {$rule['target']}, which holds none";
         $fields  = array_keys($resource->get_fields());
 
         foreach ([...($rule['fields'] ?? []), ...($rule['except'] ?? [])] as $field) if (!in_array($field, $fields, true)) $missing[] = "field {$field}";
@@ -430,7 +463,7 @@ class Credentials extends Service {
 
         $records = $rule['records'] ?? null;
 
-        if (is_string($records) && ($records !== 'own') && !isset((method_exists($resource, 'get_conditions') ? $resource->get_conditions() : [])[$records])) $missing[] = "condition {$records}";
+        if (is_string($records) && ($records !== 'own') && !(($records === 'made_by_credential') && $resource->is_named_only()) && !isset((method_exists($resource, 'get_conditions') ? $resource->get_conditions() : [])[$records])) $missing[] = "condition {$records}";
 
         return $missing;
 

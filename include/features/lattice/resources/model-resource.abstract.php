@@ -545,6 +545,34 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Reached only by rules naming it, never by resource:* (SCOPED_CREDENTIALS.md A0): a resource over accounts.
+    public function is_named_only () : bool {
+
+        return false;
+
+    }
+
+    // Which field each part of a summary shows, so a summary leaves out what a credential may not read.
+    public function get_summary_fields () : array {
+
+        return ['title' => 'title', 'status' => 'status'];
+
+    }
+
+    // The record before a write, as a credential's rule asks it: by default as it is. $values: what the write sends.
+    public function get_before_facts ($model, array $values) : array {
+
+        return $this->get_facts($model);
+
+    }
+
+    // What a list's search reads, so a credential barred from one of them cannot search.
+    public function get_search_fields () : array {
+
+        return ['title', 'content', 'excerpt'];
+
+    }
+
     public function get_proposable () : array {
 
         return ['update' => [], 'create' => []] + static::PROPOSABLE;
