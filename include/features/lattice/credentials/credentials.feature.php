@@ -189,7 +189,9 @@ class Lattice_Credentials extends Feature {
 
         if (!Credentials::inst()->get_current()) return $check;
 
-        foreach (array_filter([(string) (get_metadata_by_mid('user', (int) $meta_id)->meta_key ?? ''), (string) $key]) as $each) $this->guard_meta($check, 0, $each, $value);
+        $row = get_metadata_by_mid('user', (int) $meta_id);
+
+        foreach (array_filter([(string) ($row->meta_key ?? ''), (string) $key]) as $each) $this->guard_meta($check, (int) ($row->user_id ?? 0), $each, $value);
 
         return $check;
 
@@ -263,7 +265,12 @@ class Lattice_Credentials extends Feature {
 
     public function guard_delete ($user_id, $reassign) {
 
-        if (Credentials::inst()->get_current()) $this->stop('This password may not delete an account.');
+        if (!Credentials::inst()->get_current()) return;
+
+        // The layer's own allowed delete of that account, its content to the account the action checked (A7).
+        if (!$this->stopped && ($account = $this->account_write((int) $user_id)) && $account->get_staged('delete') && ((int) $reassign === (int) $account->get_staged('reassign'))) return;
+
+        $this->stop('This password may not delete an account.');
 
     }
 
@@ -302,6 +309,9 @@ class Lattice_Credentials extends Feature {
         global $wpdb;
 
         $prefix = strtolower($wpdb->get_blog_prefix());
+
+        // An allowed delete takes every row of that account with it, its own passwords and sessions included: the one case S6 allows (A7).
+        if ($account->get_staged('delete')) return true;
 
         if ($key === "{$prefix}capabilities") return !array_diff(array_keys(array_filter((array) maybe_unserialize($value))), $account->get_account_roles());
 

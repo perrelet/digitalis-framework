@@ -7,6 +7,9 @@ abstract class User_Resource extends Model_Resource {
 
     protected static $model_class = Account::class;
 
+    // A reset may be proposed; a delete may not, since its content's target would have to be judged for the author.
+    const PROPOSABLE = ['send_password_reset' => []];
+
     // Of more than this many listed roles, a list is narrowed row by row rather than in its query.
     const QUERY_ROLES = 5;
 
@@ -194,6 +197,84 @@ abstract class User_Resource extends Model_Resource {
     public function find_made ($model) : ?object {
 
         return ($id = username_exists($model->get_column('user_login'))) ? $this->find((int) $id) : null;
+
+    }
+
+    // A reset sends the site's own lost-password mail to the account's address, so the owner chooses the password (E2). Deleting hands the account's content to a covered account and nothing undoes it (A7).
+    public function get_actions () : array {
+
+        return [
+            // Neither changes a field, so both declare no effects: a rule on roles judges the account as it is (section 4).
+            'send_password_reset' => ['label' => 'Send a password reset', 'capability' => 'edit_user', 'changes_record' => false, 'sets' => []],
+            'delete'              => ['label' => 'Delete', 'capability' => 'delete_user', 'input' => ['reassign' => 'int'], 'changes_record' => false, 'sets' => [], 'confirm' => true, 'validate' => fn ($model, array $input) => $this->check_reassign($model, (int) $input['reassign'])],
+        ];
+
+    }
+
+    // Its content goes to another account this request may delete as well, so a scoped credential hands it only to one its rule covers, never its own.
+    protected function check_reassign ($model, int $reassign) : array {
+
+        if (($reassign === (int) $model->get_id()) || !($target = $this->find($reassign))) return ['reassign is another account.'];
+
+        return Resources::inst()->credential_allows($this, 'act:delete', $target) ? [] : ['reassign is an account this password may hand content to.'];
+
+    }
+
+    public function act_send_password_reset ($model, array $input, Resource_Change $change) {
+
+        $model->stage('reset', true);
+
+        try {
+
+            $sent = retrieve_password($model->get_column('user_login'));
+
+        } finally {
+
+            $model->stage('reset', false);
+
+        }
+
+        return is_wp_error($sent) ? $sent : $model;
+
+    }
+
+    public function act_delete ($model, array $input, Resource_Change $change) {
+
+        if (!function_exists('wp_delete_user')) require_once ABSPATH . 'wp-admin/includes/user.php';
+
+        $model->stage('delete', true);
+        $model->stage('reassign', (int) $input['reassign']);
+
+        try {
+
+            return wp_delete_user($model->get_id(), (int) $input['reassign']) ? $model : new \WP_Error('not_saved', 'WordPress did not delete the account.');
+
+        } finally {
+
+            $model->stage('delete', false);
+
+        }
+
+    }
+
+    // What deleting moves, and that nothing undoes it. A site adds what its own plugins lose (subscriptions, course progress) and what its user sync does.
+    public function get_consequences (Resource_Change $change) : array {
+
+        if (!$change->before) return [];
+
+        $id    = $change->before->get_id();
+        $holds = array_keys(array_filter($this->get_conditions(), fn ($condition) => (bool) $condition($change->before, [])));
+        $named = $holds ? [['kind' => 'conditions', 'label' => 'This account is: ' . implode(', ', $holds) . '.', 'items' => $holds]] : [];
+
+        if ($change->operation === 'send_password_reset') return [...$named, ['kind' => 'mail', 'label' => "The site's reset mail goes to account {$id}'s own address.", 'items' => [(string) $change->before->get_column('user_email')]]];
+
+        if ($change->operation !== 'delete') return $named;
+
+        global $wpdb;
+
+        $posts = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_author = %d AND post_type <> 'revision'", $id));
+
+        return [...$named, ['kind' => 'deleted', 'label' => "Account {$id} is deleted and nothing undoes it.", 'items' => [$id]], ['kind' => 'content', 'label' => "{$posts} posts and other records move to account " . (int) ($change->input['reassign'] ?? 0) . '.', 'items' => []]];
 
     }
 

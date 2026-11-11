@@ -375,7 +375,7 @@ class Resources extends Service {
 
         if ($refusal = $this->refuse_trashed($resource, $model)) return $refusal;
 
-        if (isset($definition['capability']) && !current_user_can($definition['capability'])) return $this->forbidden($definition['capability']);
+        if (isset($definition['capability']) && !$this->can_capability($resource, $definition['capability'], $model)) return $this->forbidden($definition['capability']);
 
         if ($reason = $this->refuse_action($resource, $model, $definition)) return $this->error('locked', $reason, 409, ['reason' => $reason]);
 
@@ -1796,6 +1796,25 @@ class Resources extends Service {
 
     }
 
+    // An action's own capability, asked of the record as the layer asks capabilities, so a meta capability (delete_user) is asked of that record.
+    protected function can_capability (Model_Resource $resource, string $capability, $model) : bool {
+
+        $this->checking++;
+        $this->checking_accounts += (int) $resource->is_named_only();
+
+        try {
+
+            return current_user_can($capability, ...(($model && $model->get_id()) ? [$model->get_id()] : []));
+
+        } finally {
+
+            $this->checking--;
+            $this->checking_accounts -= (int) $resource->is_named_only();
+
+        }
+
+    }
+
     // The layer asking an account resource's capabilities, which the capability stage stands aside for (A11).
     public function is_checking_accounts () : bool {
 
@@ -2115,7 +2134,7 @@ class Resources extends Service {
 
     protected function refuse_action (Model_Resource $resource, $model, array $action) : string {
 
-        if (isset($action['capability']) && !current_user_can($action['capability'])) return "This account lacks {$action['capability']}.";
+        if (isset($action['capability']) && !$this->can_capability($resource, $action['capability'], $model)) return "This account lacks {$action['capability']}.";
 
         return isset($action['when']) ? (string) ($action['when'])($model) : '';
 
