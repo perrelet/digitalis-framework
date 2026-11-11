@@ -21,7 +21,9 @@ class Resources extends Service {
     protected string $credential_reason = '';
     protected ?Step_List $stepping = null;
     protected int $checking = 0;
+    protected int $checking_accounts = 0;
     protected array $writing   = [];
+    protected ?Model_Resource $creating = null;
     protected ?array $walk     = null;
 
     public function register (Model_Resource $resource) : void {
@@ -250,6 +252,7 @@ class Resources extends Service {
         [$values, $problems, $removed] = $this->take_values($resource, $input, null);
 
         if ($refusal = $this->refuse_credential($resource, null, 'create', $values, $input)) return $refusal;
+        if ($refusal = $this->refuse_value_needs($resource, null, $values))                 return $refusal;
 
         array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'));
 
@@ -259,13 +262,15 @@ class Resources extends Service {
         if ($refusal = $this->refuse_publish($resource, null, $values)) return $refusal;
 
         $model    = $resource->make_model($values);
+        $made     = $model;
         $change   = $this->build($resource, 'create', null, $resource->get_unsaved_copy($model, $values), $values, [], $input, $via, $removed);
 
         if (!empty($input['dry_run'])) return $change->describe();
 
         if ($this->misses_confirm($change, $input)) return $this->stale($model, 'What it would do has changed since its dry run: run it again.');
 
-        $this->writing['new'] = true;
+        $this->writing['new'] = $model;
+        $this->creating        = $resource;
 
         try {
 
@@ -277,12 +282,21 @@ class Resources extends Service {
 
         } catch (\Throwable $e) {
 
-            // A listener may throw after the row exists, so running it again could make a second.
+            // A listener may throw after the row exists, so running it again could make a second: what was made is found, journaled as partial and named.
             $result = new WP_Error('not_saved', $e->getMessage());
+
+            if ((is_wp_error($model) || !$model->get_id() || (method_exists($model, 'is_unsaved') && $model->is_unsaved())) && ($found = $resource->find_made($made))) {
+
+                $model = $found;
+
+                if ($this->is_journaled($resource, $model)) Journal::inst()->write(['via' => $via, 'resource' => $resource->get_name(), 'record_id' => $model->get_id(), 'action' => 'create', 'why' => $change->why, 'before' => null, 'after' => ['_partial' => true] + $resource->read($model)]);
+
+            }
 
         } finally {
 
             unset($this->writing['new']);
+            $this->creating = null;
 
             if (!is_wp_error($model) && $model->get_id()) unset($this->writing[$this->writing_key($resource, $model)]);
 
@@ -403,7 +417,7 @@ class Resources extends Service {
 
         if ($changes_record && !$model->claim_version((int) $input['version'])) return $this->stale($model);
 
-        $this->writing[$this->writing_key($resource, $model)] = true;
+        $this->writing[$this->writing_key($resource, $model)] = $model;
 
         $resource->forget_values($model);
 
@@ -530,7 +544,7 @@ class Resources extends Service {
 
         if (!$model->claim_version($seen)) return $this->stale($model);
 
-        $this->writing[$writing] = true;
+        $this->writing[$writing] = $model;
 
         $resource->forget_values($model);
 
@@ -1518,6 +1532,9 @@ class Resources extends Service {
 
     protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes, array $removed = []) : array|WP_Error {
 
+        // Every write of values, undo and a set's step included, asks what the values themselves need (A11).
+        if ($refusal = $this->refuse_value_needs($resource, $model, $values)) return $refusal;
+
         if ($refusal = $this->refuse_credential($resource, $model, 'update', $values, $input)) return $refusal;
 
         if ($refusal = $this->refuse_locked($resource, $model, $values)) return $refusal;
@@ -1550,7 +1567,7 @@ class Resources extends Service {
 
         if (!$claimed && !$model->claim_version($seen)) return $this->stale($model);
 
-        $this->writing[$this->writing_key($resource, $model)] = true;
+        $this->writing[$this->writing_key($resource, $model)] = $model;
 
         $resource->forget_values($model);
 
@@ -1728,6 +1745,7 @@ class Resources extends Service {
     protected function can (Model_Resource $resource, string $operation, $model) : bool {
 
         $this->checking++;
+        $this->checking_accounts += (int) $resource->is_named_only();
 
         try {
 
@@ -1736,8 +1754,52 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
+            $this->checking_accounts -= (int) $resource->is_named_only();
 
         }
+
+    }
+
+    // The account the layer is writing now, with what it staged, for the storage stage to stand aside for that write alone (A4): one being updated by its id, or one being made, matched by the login it is given.
+    public function get_account_write (int $user_id, ?string $login = null) : ?object {
+
+        foreach ($this->get_resources() as $resource) if ($resource->is_named_only() && is_object($model = $this->writing["{$resource->get_name()}:{$user_id}"] ?? null)) return $model;
+
+        $made = $this->writing['new'] ?? null;
+
+        if (!is_object($made) || !$this->creating?->is_named_only()) return null;
+
+        $given = $user_id ? get_userdata($user_id)?->user_login : $login;
+
+        return (!is_null($given) && ($given === $made->get_column('user_login'))) ? $made : null;
+
+    }
+
+    // A capability the values themselves need beyond the verb, asked as the layer asks capabilities.
+    protected function refuse_value_needs (Model_Resource $resource, $model, array $values) : ?WP_Error {
+
+        $this->checking++;
+        $this->checking_accounts += (int) $resource->is_named_only();
+
+        try {
+
+            $needs = $resource->get_value_needs($model, $values);
+
+        } finally {
+
+            $this->checking--;
+            $this->checking_accounts -= (int) $resource->is_named_only();
+
+        }
+
+        return $needs ? $this->forbidden($needs) : null;
+
+    }
+
+    // The layer asking an account resource's capabilities, which the capability stage stands aside for (A11).
+    public function is_checking_accounts () : bool {
+
+        return $this->checking_accounts > 0;
 
     }
 
@@ -1827,7 +1889,7 @@ class Resources extends Service {
             'verb'       => $verb,
             'fields'     => $fields,
             // Asked before any record is known (a list, the guide), a rule on some records counts, whether it opens or bars.
-            'facts'      => $walking + ($facts ?? ((!$model && in_array($verb, ['list', 'read'], true)) ? ['any_record' => true] : $resource->get_facts($model))),
+            'facts'      => $walking + ($facts ?? ((!$model && (in_array($verb, ['list', 'read'], true) || (($verb === 'create') && $resource->is_named_only()))) ? ['any_record' => true] : $resource->get_facts($model))),
             // How the call arrives holds after the change as before it.
             'after'      => is_null($after) ? null : $walking + $after,
             'dry_run'    => $dry_run,
@@ -1912,7 +1974,6 @@ class Resources extends Service {
         if (!($resource = $this->get_resource((string) $step['resource'])) || (is_null($entry) && !$this->has_credential())) return '';
 
         $model  = is_null($step['id']) ? null : $resource->find($step['id']);
-        $facts  = $resource->get_facts($model, [], $user_id);
         $action = ($step['op'] === 'act') ? ($resource->get_actions()[$step['action']] ?? []) : [];
         $values = ($step['op'] === 'act') ? (array) ($action['sets'] ?? []) : (array) ($step['values'] ?? []);
         $after  = (($step['op'] !== 'act') || isset($action['sets'])) ? $resource->get_facts($model, $values, $user_id) : ['own' => false, 'conditions' => fn () => false];
@@ -1920,6 +1981,8 @@ class Resources extends Service {
         // A held step keeps its fields' live values as its start, so each field it changes must be one its proposer may read.
         if (!$this->may_read_step($step, $entry, $user_id)) return 'This password may not propose a change to what it may not read.';
 
+        // Before the step as ask_write() asks it: the roles it gives count before as after, and a record being made is judged as it will be.
+        $facts   = $model ? $resource->get_before_facts($model, $values, $user_id) : $after;
         $answers = $this->ask_credential($resource, ($step['op'] === 'act') ? "act:{$step['action']}" : $step['op'], $model, array_keys($values), $after, false, $facts, $entry);
 
         return in_array('deny', $answers ?? [], true) ? 'This password may not propose that.' : '';

@@ -10,6 +10,66 @@ abstract class User_Resource extends Model_Resource {
     // Of more than this many listed roles, a list is narrowed row by row rather than in its query.
     const QUERY_ROLES = 5;
 
+    protected array $outside = [];
+
+    // Changes made outside the layer (a profile screen, a shop's account form, a user sync, an erasure) raise the version, so a write based on an older read is refused, and are journaled once per account per request, naming the fields but holding no values (A13).
+    public function init () {
+
+        parent::init();
+
+        $columns = ['user_email' => 'email', 'display_name' => 'display_name', 'user_url' => 'url'];
+
+        add_action('profile_update', function ($user_id, $old) use ($columns) { $new = get_userdata((int) $user_id); foreach ($columns as $column => $field) if ($old && $new && ((string) $old->$column !== (string) $new->$column)) $this->outside((int) $user_id, $field); }, 10, 2);
+
+        foreach (['set_user_role', 'add_user_role', 'remove_user_role'] as $hook) add_action($hook, fn ($user_id) => $this->outside((int) $user_id, 'roles'));
+
+        foreach (['added_user_meta', 'updated_user_meta', 'deleted_user_meta'] as $hook) add_action($hook, function ($meta_id, $user_id, $key) { if (in_array($key, Account::META, true)) foreach ((array) $user_id as $id) $this->outside((int) $id, $key); }, 10, 3);
+
+    }
+
+    protected function outside (int $user_id, string $field) : void {
+
+        if (!$user_id || Resources::inst()->get_account_write($user_id) || !($model = $this->find($user_id))) return;
+
+        if (!isset($this->outside[$user_id])) {
+
+            $model->raise_version();
+
+            if (!$this->outside) add_action('shutdown', fn () => $this->journal_outside(), 0);
+
+        }
+
+        // The set a walk is applying when the change happens, named without a step.
+        $this->outside[$user_id]['_marks'] ??= array_diff_key(Resources::inst()->get_held_marks([]), ['set_step' => 0]);
+        $this->outside[$user_id][$field] = true;
+
+    }
+
+    protected function journal_outside () : void {
+
+        foreach ($this->outside as $user_id => $fields) {
+
+            $marks = $fields['_marks'];
+
+            unset($fields['_marks']);
+
+            Journal::inst()->write([
+                'via'       => is_admin() ? 'admin' : 'other',
+                'resource'  => $this->get_name(),
+                'record_id' => $user_id,
+                'action'    => 'changed',
+                'why'       => '',
+                'before'    => null,
+                'after'     => ['_fields' => array_keys($fields)],
+                'set_key'   => $marks['set_key'] ?? null,
+            ] + $marks);
+
+        }
+
+        $this->outside = [];
+
+    }
+
     public function get_post_type () : string {
 
         return '';
@@ -24,26 +84,82 @@ abstract class User_Resource extends Model_Resource {
 
     public function get_model_fields () : array {
 
-        $column = fn (string $column) => fn ($user) => (string) $user->get_wp_user()->$column;
-        $meta   = fn (string $key) => fn ($user) => (string) get_user_meta($user->get_id(), $key, true);
+        $column = fn (string $column) => ['get' => fn ($user) => $user->get_column($column), 'set' => fn ($user, $value) => $user->stage($column, (string) $value)];
+        $meta   = fn (string $key) => ['get' => fn ($user) => $user->get_meta_value($key), 'set' => fn ($user, $value) => $user->stage($key, (string) $value)];
 
         return [
-            'login'        => ['type' => 'text',     'label' => 'Login',        'get' => $column('user_login')],
-            'email'        => ['type' => 'email',    'label' => 'Email',        'get' => $column('user_email')],
-            'display_name' => ['type' => 'text',     'label' => 'Display name', 'get' => $column('display_name')],
-            'first_name'   => ['type' => 'text',     'label' => 'First name',   'get' => $meta('first_name')],
-            'last_name'    => ['type' => 'text',     'label' => 'Last name',    'get' => $meta('last_name')],
-            'nickname'     => ['type' => 'text',     'label' => 'Nickname',     'get' => $meta('nickname')],
-            'url'          => ['type' => 'url',      'label' => 'Website',      'get' => $column('user_url')],
-            'description'  => ['type' => 'textarea', 'label' => 'Biography',    'get' => $meta('description')],
-            'roles'        => ['type' => 'roles',    'label' => 'Roles',        'get' => fn ($user) => array_values((array) $user->get_wp_user()->roles)],
+            'login'        => ['type' => 'text',     'label' => 'Login',        'validate' => fn ($login, $path) => $this->check_login($login, $path)] + $column('user_login'),
+            'email'        => ['type' => 'email',    'label' => 'Email',        'validate' => fn ($email, $path) => is_email((string) $email) ? [] : ["{$path} is an email address."]] + $column('user_email'),
+            'display_name' => ['type' => 'text',     'label' => 'Display name'] + $column('display_name'),
+            'first_name'   => ['type' => 'text',     'label' => 'First name'] + $meta('first_name'),
+            'last_name'    => ['type' => 'text',     'label' => 'Last name'] + $meta('last_name'),
+            'nickname'     => ['type' => 'text',     'label' => 'Nickname'] + $meta('nickname'),
+            'url'          => ['type' => 'url',      'label' => 'Website',      'validate' => fn ($url, $path) => (($url === '') || (esc_url_raw((string) $url) === $url)) ? [] : ["{$path} is a web address."]] + $column('user_url'),
+            'description'  => ['type' => 'textarea', 'label' => 'Biography'] + $meta('description'),
+            'roles'        => ['type' => 'roles',    'label' => 'Roles',        'validate' => fn ($roles, $path) => $this->check_roles($roles, $path),
+                               'get' => fn ($user) => $user->get_account_roles(), 'set' => fn ($user, $roles) => $user->stage('roles', array_values(array_unique((array) $roles)))],
+            // On create only: WordPress's own new-user mail, so the person sets their password (E12).
+            'notify'       => ['type' => 'true_false', 'label' => 'Send the new-user mail', 'get' => fn ($user) => (bool) $user->get_staged('notify', false), 'set' => fn ($user, $notify) => $user->stage('notify', (bool) $notify)],
         ];
+
+    }
+
+    protected function check_login ($login, string $path) : array {
+
+        if (!is_string($login) || !validate_username($login)) return ["{$path} is a valid login."];
+
+        return username_exists($login) ? ["{$path} is taken."] : [];
+
+    }
+
+    protected function check_roles ($roles, string $path) : array {
+
+        if (!is_array($roles) || !array_is_list($roles)) return ["{$path} is a list of roles."];
+
+        return ($unknown = array_diff($roles, array_keys(wp_roles()->roles))) ? ["{$path} has no role " . implode(', ', $unknown) . '.'] : [];
 
     }
 
     public function get_locked_fields ($model) : array {
 
-        return ['login' => 'WordPress never changes a login.'];
+        return $model?->get_id() ? ['login' => 'WordPress never changes a login.', 'notify' => 'The new-user mail is sent when an account is made.'] : [];
+
+    }
+
+    public function make_model (array $values) : object {
+
+        $account = (static::$model_class)::create([]);
+
+        foreach (['login' => 'user_login', 'email' => 'user_email'] as $field => $key) if (isset($values[$field])) $account->stage($key, (string) $values[$field]);
+
+        $account->stage('roles', array_values(array_unique((array) ($values['roles'] ?? []))));
+
+        if (!empty($values['notify'])) $account->stage('notify', true);
+
+        return $account;
+
+    }
+
+    // A random password nobody sees, the first role given, this credential's mark and the set's marks with the insert, so user_register's listeners already find them; then the new-user mail if asked.
+    public function insert_model ($model, array $meta = []) : object {
+
+        $roles   = $model->get_account_roles();
+        $current = class_exists(Credentials::class) ? Credentials::inst()->get_current() : null;
+
+        if ($current) $meta[Credentials::MADE_BY] = $current['uuid'];
+
+        $id = wp_insert_user([
+            'user_login' => $model->get_column('user_login'),
+            'user_email' => $model->get_column('user_email'),
+            'user_pass'  => wp_generate_password(32, true, true),
+            'role'       => $roles[0] ?? '',
+        ] + ($meta ? ['meta_input' => $meta] : []));
+
+        if (is_wp_error($id)) return $id;
+
+        if ($model->get_staged('notify')) wp_new_user_notification($id, null, 'user');
+
+        return (static::$model_class)::get_instance($id);
 
     }
 
@@ -67,11 +183,17 @@ abstract class User_Resource extends Model_Resource {
     }
 
     // The roles a write gives are a fact before it as after (A1), so two rules each covering one end cannot carry an account between them.
-    public function get_before_facts ($model, array $values) : array {
+    public function get_before_facts ($model, array $values, ?int $user_id = null) : array {
 
-        $facts = $this->get_facts($model);
+        $facts = $this->get_facts($model, [], $user_id);
 
-        return ['gives' => $this->get_facts($model, $values)['gives']] + $facts;
+        return ['gives' => $this->get_facts($model, $values, $user_id)['gives']] + $facts;
+
+    }
+
+    public function find_made ($model) : ?object {
+
+        return ($id = username_exists($model->get_column('user_login'))) ? $this->find((int) $id) : null;
 
     }
 
@@ -87,7 +209,12 @@ abstract class User_Resource extends Model_Resource {
 
         $id = (int) $id;
 
-        return ($id && get_userdata($id)) ? (static::$model_class)::get_instance($id) : null;
+        if (!$id || !($wp_user = get_userdata($id)) || !($model = (static::$model_class)::get_instance($id))) return null;
+
+        // A model is kept per id for the request, so it takes the account as it is now, not as it was when first found.
+        $model->set_wp_user($wp_user);
+
+        return $model;
 
     }
 
@@ -262,15 +389,33 @@ abstract class User_Resource extends Model_Resource {
         return match ($operation) {
             'update'  => 'edit_user',
             'create'  => 'create_users',
+            'roles'   => 'promote_user',
             'publish' => 'do_not_allow',
             default   => 'list_users',
         };
 
     }
 
+    // Giving roles needs the right to promote this account and each role among those the account may give (A11).
+    public function get_value_needs ($model, array $values) : ?string {
+
+        if (!array_key_exists('roles', $values)) return null;
+
+        $roles = array_values((array) $values['roles']);
+
+        if ($model && ($roles === array_values((array) $model->get_wp_user()->roles))) return null;
+
+        if (!($model ? current_user_can('promote_user', $model->get_id()) : current_user_can('promote_users'))) return 'promote_user';
+
+        if (!function_exists('get_editable_roles')) require_once ABSPATH . 'wp-admin/includes/user.php';
+
+        return array_diff($roles, array_keys(get_editable_roles())) ? 'promote_user' : null;
+
+    }
+
     public function can (string $operation, $model = null) : bool {
 
-        $meta = $model && ($operation === 'update');
+        $meta = $model && in_array($operation, ['update', 'roles'], true);
 
         return current_user_can($this->get_capability($operation, $model), ...($meta ? [$model->get_id()] : []));
 
