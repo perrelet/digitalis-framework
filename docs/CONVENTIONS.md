@@ -4,6 +4,22 @@ Preferred patterns where more than one syntax is valid. These won't break anythi
 
 ---
 
+## Code style: read this first, it is not optional
+
+Every agent working in this codebase follows these rules. They are the house style, and code that breaks them gets sent back.
+
+1. **Code is self-documenting.** Names carry the meaning. Name a method for what it does, starting with a verb: `register_fields()`, `build_query()`, `find_account()`, `is_expired()`. Not a noun: `fields()`, `query()`, `account()`, `expiry()`.
+2. **Comments are reserved only for genuine gotchas and important references** that are not evident from reading the code: a coupling to another file, behaviour a maintainer would otherwise "fix" wrongly, a section of a spec. A comment never restates what the code, or a method's name, already says.
+3. **Less is more.** Where a comment stays, it is one line, as terse and simple as possible. No docblocks, no multi-line explanations, no narrating the design. If it will not fit on one line, cut it.
+4. **Very short labelling comments** may split a large class into sections: `// Records`, `// Policy`.
+
+Before you commit, list every comment you added with `git diff | grep -E '^\+\s*//'` and delete any that is not a gotcha or a reference. Reviews do not check this; you do.
+
+Right: `// User ids overlap post ids: a bare number is never an account.`
+Wrong: `// Finds the account by its id and returns it, or null when there is none.`
+
+---
+
 ## Views
 
 ### Instantiate views with `new` — don't call `View::render()` statically
