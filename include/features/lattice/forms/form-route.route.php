@@ -70,6 +70,17 @@ class Form_Route extends Route {
 
     }
 
+    // As WordPress's dispatch will set them: the pattern's captures from the encoded path, as strings.
+    public function make_request (string $path) : WP_REST_Request {
+
+        $request = new WP_REST_Request('POST', $path);
+
+        if (preg_match('@^' . $this->get_rest_path() . '$@i', $path, $matches)) $request->set_url_params(array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
+
+        return $request;
+
+    }
+
     // Memoised: the check and WordPress's dispatch both ask.
     public function permission_wrap (WP_REST_Request $request) {
 

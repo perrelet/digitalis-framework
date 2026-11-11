@@ -217,7 +217,7 @@ class Lattice_Forms extends Feature {
 
         $id     = (string) $p['id'];
         $path   = $route->get_path((array) ($p['route_params'] ?? []));
-        $rules  = $route->get_rules(new WP_REST_Request('POST', $path));
+        $rules  = $route->get_rules($route->make_request($path));
         $result = $this->get_result($id);
         $page   = add_query_arg([]);
 

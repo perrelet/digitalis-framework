@@ -63,7 +63,7 @@ class Signup_Route extends \Digitalis\Form_Route {
 ]) ?>
 ```
 
-`route` and a stable `id` are all a form needs. It then posts to its own page, carries its target, prints a nonce for a signed-in viewer, takes its fields' browser attributes (`required`, `type="email"`, `maxlength`, `min`, `max`, never `pattern`) and display conditions (from `when`) from the route and draws its result: the values as sent, each message beneath its field (`aria-invalid`, `aria-describedby`), an announced summary, focus on the first field at fault. Where htmx is enqueued it also posts through htmx to the same page and swaps itself in place. A second copy on a page takes its own `id`.
+`route` and a stable `id` are all a form needs. It then posts to its own page, carries its target, prints a nonce for a signed-in viewer, takes its fields' browser attributes (`required`, `type="email"`, `maxlength`, `min`, `max`, never `pattern`) and display conditions (from `when`) from the route and draws its result: the values as sent, each message beneath its field (`aria-invalid`, `aria-describedby`), an announced summary, focus on the first field at fault. Where htmx is enqueued it also posts through htmx to the same page and swaps itself in place. A second copy on a page takes its own `id`. A route with a pattern takes its values as `route_params`. To judge several forms, a route overrides `get_rules()`, starting from the parent's, and reads its URL params there: drawn or posted, they are the pattern's captures from the encoded path, as strings.
 
 `Field_Group` takes `field_params` (name => params) for any field by name; `Field` takes `error`.
 
@@ -78,7 +78,7 @@ The form handler sets the post aside before WordPress reads the request (so a fi
 ```php
 protected $args = [
     'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
-    'human' => ['human_check' => 'signup'],
+    'human' => ['human_check' => 'signup', 'costly' => true],
 ];
 ```
 
@@ -86,7 +86,7 @@ protected $args = [
 new Field\Human_Check(['name' => 'human'])
 ```
 
-The field takes the argument's name, and the action from the rule. The rule runs last, after the permission and the nonce, and checks the token with the provider: the action and this site's hostname must match (`lattice.human_check.hostnames` widens the hosts), and a token passes once. A refused token shows under the field; a provider that cannot answer, or wrong or missing keys, make the form unavailable (503), logged and remembered for 30 seconds. A submit waits for the token while a challenge shows, and goes without one only when the provider's script fails.
+Declared `costly`, the form is unavailable rather than open on a site that has not loaded the feature. The field takes the argument's name, and the action from the rule. The rule runs last, after the permission and the nonce, and checks the token with the provider: the action and this site's hostname must match (`lattice.human_check.hostnames` widens the hosts), and a token passes once. A refused token shows under the field; a provider that cannot answer, or wrong or missing keys, make the form unavailable (503), logged and remembered for 30 seconds. A submit waits for the token while a challenge shows, and goes without one only when the provider's script fails.
 
 | Filter | What |
 |---|---|
@@ -99,4 +99,4 @@ A provider is a `Human_Check_Provider`: its script and adapter (`render`, `reset
 
 ## Limits
 
-Form-encoded posts; no files; scalars and lists of scalars (a nested object's problem lands on its top field); one form per route; the page must draw the form for a result to show. A handler runs inside the page request: it answers rather than prints, and `REST_REQUEST` is not defined there.
+Form-encoded posts; no files; scalars and lists of scalars (a nested object's problem lands on its top field); one set of fields per route address; the page must draw the form for a result to show. A handler runs inside the page request: it answers rather than prints, and `REST_REQUEST` is not defined there.
