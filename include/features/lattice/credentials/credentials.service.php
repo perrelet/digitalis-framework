@@ -11,7 +11,6 @@ class Credentials extends Service {
     const SHARED     = 'lattice_credential_policies';
     const ENTRY_KEYS = ['version', 'expires', 'rules', 'policy'];
     const LAYER      = '/lattice/v1/';
-    // An account a scoped password made, by the password's uuid (made_by_credential).
     const MADE_BY    = '_lattice_made_by_credential';
 
     // Shared policies defined in code, by name; false where two define one name.
@@ -38,7 +37,6 @@ class Credentials extends Service {
 
     }
 
-    // The roles the current credential's allow and review rules name for this verb on this resource, every policy it holds narrowing the others; null without a scoped credential. A list query holds no more than these.
     public function get_roles_reached (string $target, string $verb) : ?array {
 
         if (!$current = $this->get_current()) return null;
@@ -436,7 +434,6 @@ class Credentials extends Service {
 
         $resources = class_exists(Resources::class) ? Resources::inst() : null;
 
-        // resource:* never reaches a resource holding accounts (A0), so roles there match nothing.
         if (is_null($rule['target']) && (isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential'))) return ['accounts on resource:*, which never reaches one'];
 
         // Under resource:* a field must exist on some resource, or a typo in except would leave the real field open everywhere.
@@ -446,7 +443,6 @@ class Credentials extends Service {
 
         $missing = array_map(fn ($role) => "role {$role}", array_diff($rule['roles'] ?? [], [...array_keys(wp_roles()->roles), Credential_Policy::NO_ROLE]));
 
-        // On a resource holding no accounts these match nothing, so the policy would say what it does not do.
         if ((isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential')) && !$resource->is_named_only()) $missing[] = "accounts on resource {$rule['target']}, which holds none";
         $fields  = array_keys($resource->get_fields());
 

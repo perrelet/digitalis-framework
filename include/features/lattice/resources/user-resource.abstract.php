@@ -2,35 +2,35 @@
 
 namespace Digitalis;
 
-// WordPress accounts as a resource (SCOPED_CREDENTIALS.md section 18). A site registers its own subclass, naming any ACF or meta fields it opens and the conditions it declares. Reached only by rules naming it (A0).
+// A site subclasses and registers it, naming its own fields and conditions (SCOPED_CREDENTIALS.md 18).
 abstract class User_Resource extends Model_Resource {
 
     protected static $model_class = Account::class;
 
-    // A reset may be proposed; a delete may not, since its content's target would have to be judged for the author.
+    // Not delete: its reassign would have to be judged for the author.
     const PROPOSABLE = ['send_password_reset' => []];
 
-    // Of more than this many listed roles, a list is narrowed row by row rather than in its query.
+    // Beyond this, rows are narrowed one by one.
     const QUERY_ROLES = 5;
 
     protected array $outside = [];
 
-    // Changes made outside the layer (a profile screen, a shop's account form, a user sync, an erasure) raise the version, so a write based on an older read is refused, and are journaled once per account per request, naming the fields but holding no values (A13).
+    // Outside changes raise the version and are journaled without values (A13).
     public function init () {
 
         parent::init();
 
         $columns = ['user_email' => 'email', 'display_name' => 'display_name', 'user_url' => 'url'];
 
-        add_action('profile_update', function ($user_id, $old) use ($columns) { $new = get_userdata((int) $user_id); foreach ($columns as $column => $field) if ($old && $new && ((string) $old->$column !== (string) $new->$column)) $this->outside((int) $user_id, $field); }, 10, 2);
+        add_action('profile_update', function ($user_id, $old) use ($columns) { $new = get_userdata((int) $user_id); foreach ($columns as $column => $field) if ($old && $new && ((string) $old->$column !== (string) $new->$column)) $this->note_outside_change((int) $user_id, $field); }, 10, 2);
 
-        foreach (['set_user_role', 'add_user_role', 'remove_user_role'] as $hook) add_action($hook, fn ($user_id) => $this->outside((int) $user_id, 'roles'));
+        foreach (['set_user_role', 'add_user_role', 'remove_user_role'] as $hook) add_action($hook, fn ($user_id) => $this->note_outside_change((int) $user_id, 'roles'));
 
-        foreach (['added_user_meta', 'updated_user_meta', 'deleted_user_meta'] as $hook) add_action($hook, function ($meta_id, $user_id, $key) { if (in_array($key, Account::META, true)) foreach ((array) $user_id as $id) $this->outside((int) $id, $key); }, 10, 3);
+        foreach (['added_user_meta', 'updated_user_meta', 'deleted_user_meta'] as $hook) add_action($hook, function ($meta_id, $user_id, $key) { if (in_array($key, Account::META, true)) foreach ((array) $user_id as $id) $this->note_outside_change((int) $id, $key); }, 10, 3);
 
     }
 
-    protected function outside (int $user_id, string $field) : void {
+    protected function note_outside_change (int $user_id, string $field) : void {
 
         if (!$user_id || Resources::inst()->get_account_write($user_id) || !($model = $this->find($user_id))) return;
 
@@ -38,17 +38,17 @@ abstract class User_Resource extends Model_Resource {
 
             $model->raise_version();
 
-            if (!$this->outside) add_action('shutdown', fn () => $this->journal_outside(), 0);
+            if (!$this->outside) add_action('shutdown', fn () => $this->journal_outside_changes(), 0);
 
         }
 
-        // The set a walk is applying when the change happens, named without a step.
+        // Without its step, so undo_set never counts it as the set's own.
         $this->outside[$user_id]['_marks'] ??= array_diff_key(Resources::inst()->get_held_marks([]), ['set_step' => 0]);
         $this->outside[$user_id][$field] = true;
 
     }
 
-    protected function journal_outside () : void {
+    protected function journal_outside_changes () : void {
 
         foreach ($this->outside as $user_id => $fields) {
 
@@ -101,7 +101,7 @@ abstract class User_Resource extends Model_Resource {
             'description'  => ['type' => 'textarea', 'label' => 'Biography'] + $meta('description'),
             'roles'        => ['type' => 'roles',    'label' => 'Roles',        'validate' => fn ($roles, $path) => $this->check_roles($roles, $path),
                                'get' => fn ($user) => $user->get_account_roles(), 'set' => fn ($user, $roles) => $user->stage('roles', array_values(array_unique((array) $roles)))],
-            // On create only: WordPress's own new-user mail, so the person sets their password (E12).
+            // Create only (E12).
             'notify'       => ['type' => 'true_false', 'label' => 'Send the new-user mail', 'get' => fn ($user) => (bool) $user->get_staged('notify', false), 'set' => fn ($user, $notify) => $user->stage('notify', (bool) $notify)],
         ];
 
@@ -143,7 +143,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // A random password nobody sees, the first role given, this credential's mark and the set's marks with the insert, so user_register's listeners already find them; then the new-user mail if asked.
+    // Marks go in with the insert, so user_register's listeners see them.
     public function insert_model ($model, array $meta = []) : object {
 
         $roles   = $model->get_account_roles();
@@ -166,7 +166,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // No ACF group is a field unless the site names it (18.4).
+    // No ACF group unless the site names it (18.4).
     protected function get_type_groups () : array {
 
         return [];
@@ -185,7 +185,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // The roles a write gives are a fact before it as after (A1), so two rules each covering one end cannot carry an account between them.
+    // Given roles count before as after (A1).
     public function get_before_facts ($model, array $values, ?int $user_id = null) : array {
 
         $facts = $this->get_facts($model, [], $user_id);
@@ -200,18 +200,16 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // A reset sends the site's own lost-password mail to the account's address, so the owner chooses the password (E2). Deleting hands the account's content to a covered account and nothing undoes it (A7).
     public function get_actions () : array {
 
         return [
-            // Neither changes a field, so both declare no effects: a rule on roles judges the account as it is (section 4).
+            // No field changes: declared, so a roles rule can judge them (section 4).
             'send_password_reset' => ['label' => 'Send a password reset', 'capability' => 'edit_user', 'changes_record' => false, 'sets' => []],
             'delete'              => ['label' => 'Delete', 'capability' => 'delete_user', 'input' => ['reassign' => 'int'], 'changes_record' => false, 'sets' => [], 'confirm' => true, 'validate' => fn ($model, array $input) => $this->check_reassign($model, (int) $input['reassign'])],
         ];
 
     }
 
-    // Its content goes to another account this request may delete as well, so a scoped credential hands it only to one its rule covers, never its own.
     protected function check_reassign ($model, int $reassign) : array {
 
         if (($reassign === (int) $model->get_id()) || !($target = $this->find($reassign))) return ['reassign is another account.'];
@@ -257,7 +255,6 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // What deleting moves, and that nothing undoes it. A site adds what its own plugins lose (subscriptions, course progress) and what its user sync does.
     public function get_consequences (Resource_Change $change) : array {
 
         if (!$change->before) return [];
@@ -292,7 +289,7 @@ abstract class User_Resource extends Model_Resource {
 
         if (!$id || !($wp_user = get_userdata($id)) || !($model = (static::$model_class)::get_instance($id))) return null;
 
-        // A model is kept per id for the request, so it takes the account as it is now, not as it was when first found.
+        // Models are cached per id: take the account as it is now.
         $model->set_wp_user($wp_user);
 
         return $model;
@@ -313,7 +310,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // A bare number is a post's or an order's: an account is never found by one, since user ids and post ids overlap.
+    // User ids overlap post ids: a bare number is never an account.
     public function owns_record ($id) : bool {
 
         return false;
@@ -338,7 +335,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // search, page, per_page. Under a scoped credential the query holds only accounts the credential's rules could cover, so pages and counts stay true; each row is still asked on its own.
+    // search, page, per_page
     public function query (array $args) : array {
 
         $query = array_filter([
@@ -350,14 +347,14 @@ abstract class User_Resource extends Model_Resource {
             'order'          => 'DESC',
         ]);
 
-        if (class_exists(Credentials::class) && !is_null($roles = Credentials::inst()->get_roles_reached($this->get_name(), 'list')) && ($covered = $this->covered_query($roles))) $query['meta_query'] = $covered;
+        if (class_exists(Credentials::class) && !is_null($roles = Credentials::inst()->get_roles_reached($this->get_name(), 'list')) && ($covered = $this->build_covered_query($roles))) $query['meta_query'] = $covered;
 
         return (static::$model_class)::query(apply_filters('lattice.resources.query', $query, $this));
 
     }
 
-    // Exact stored roles: every ordering of every set of the listed roles, and under none an empty or missing row. WordPress ANDs role arguments with a meta query, so none are given.
-    protected function covered_query (array $roles) : array {
+    // WordPress ANDs role arguments with a meta query, so none are given.
+    protected function build_covered_query (array $roles) : array {
 
         global $wpdb;
 
@@ -367,7 +364,7 @@ abstract class User_Resource extends Model_Resource {
 
         if (count($named) > static::QUERY_ROLES) return [];
 
-        $values = array_map(fn ($sequence) => serialize(array_fill_keys($sequence, true)), $this->sequences($named));
+        $values = array_map(fn ($sequence) => serialize(array_fill_keys($sequence, true)), $this->list_role_orders($named));
 
         if ($none) $values[] = serialize([]);
 
@@ -379,7 +376,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    protected function sequences (array $roles) : array {
+    protected function list_role_orders (array $roles) : array {
 
         $sequences = [];
 
@@ -387,7 +384,7 @@ abstract class User_Resource extends Model_Resource {
 
             $sequences[] = [$role];
 
-            foreach ($this->sequences(array_values(array_diff_key($roles, [$i => 0]))) as $rest) $sequences[] = [$role, ...$rest];
+            foreach ($this->list_role_orders(array_values(array_diff_key($roles, [$i => 0]))) as $rest) $sequences[] = [$role, ...$rest];
 
         }
 
@@ -419,14 +416,13 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // Conditions a site declares on its accounts (on somm: teacher, pro, referrer), each fn ($model, array $values) : bool.
+    // name => fn ($model, array $values) : bool
     public function get_conditions () : array {
 
         return [];
 
     }
 
-    // What a credential's rule asks of an account (A1): its roles as they are, or as $values would leave them, the roles a write gives, whether it holds a stored capability beyond its roles, whether it is the asking account's own, and whether this credential made it. A record being made holds nothing yet: only what it is given.
     public function get_facts ($model, array $values = [], ?int $user_id = null) : array {
 
         $conditions = $this->get_conditions();
@@ -446,7 +442,7 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // A stored capability that is not one of the account's roles: a stored false narrows, so it does not count.
+    // A stored false narrows, so it does not count.
     public function has_extra_caps ($model) : bool {
 
         $roles = array_keys(wp_roles()->roles);
@@ -477,7 +473,6 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
-    // Giving roles needs the right to promote this account and each role among those the account may give (A11).
     public function get_value_needs ($model, array $values) : ?string {
 
         if (!array_key_exists('roles', $values)) return null;

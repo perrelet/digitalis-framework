@@ -149,8 +149,8 @@ class Lattice_Credentials extends Feature {
 
         if (!($current = Credentials::inst()->get_current()) || ((int) $user_id !== $current['user_id'])) return $caps;
 
-        // The layer's own check of an account resource asks the account's live rights (A11); nothing else does.
-        if (in_array($cap, static::ACCOUNT_CAPS, true)) return $this->layer_checking() ? $caps : ['do_not_allow'];
+        // Only the layer's own check of an account resource (A11).
+        if (in_array($cap, static::ACCOUNT_CAPS, true)) return $this->is_layer_checking() ? $caps : ['do_not_allow'];
 
         // A read bar holds for code that checks capabilities, outside the layer, which asks the policy itself.
         if (($cap === 'read_post') && class_exists(Resources::class) && !Resources::inst()->is_checking() && ($post = get_post($args[0] ?? null)) && ($resource = Resources::inst()->get_resource_for_post_type($post->post_type)) && !Resources::inst()->credential_reads($resource, $resource->find($post->ID))) return ['do_not_allow'];
@@ -161,7 +161,7 @@ class Lattice_Credentials extends Feature {
 
     public function limit_roles ($roles) {
 
-        return (Credentials::inst()->get_current() && !$this->layer_checking()) ? [] : $roles;
+        return (Credentials::inst()->get_current() && !$this->is_layer_checking()) ? [] : $roles;
 
     }
 
@@ -176,7 +176,7 @@ class Lattice_Credentials extends Feature {
         // MySQL matches a meta key ignoring case, trailing spaces and accents, so a key outside plain ASCII could reach a guarded one.
         $key = strtolower(rtrim((string) $key));
 
-        if (!$this->stopped && ($account = $this->account_write((int) $user_id)) && $this->permits_meta($account, $key, $value)) return $check;
+        if (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $this->permits_meta($account, $key, $value)) return $check;
 
         $guarded = !preg_match('/^[\x20-\x7e]*$/', $key) || in_array($key, array_map('strtolower', ['_application_passwords', 'session_tokens', Credentials::META, Credentials::MADE_BY, $wpdb->get_blog_prefix() . 'capabilities', $wpdb->get_blog_prefix() . 'user_level']), true) || str_starts_with($key, '_two_factor_');
 
@@ -227,16 +227,14 @@ class Lattice_Credentials extends Feature {
 
         if (!Credentials::inst()->get_current()) return $data;
 
-        $account = $this->stopped ? null : $this->account_write($update ? (int) $user_id : 0, $update ? null : (string) ($data['user_login'] ?? ''));
+        $account = $this->stopped ? null : $this->find_account_write($update ? (int) $user_id : 0, $update ? null : (string) ($data['user_login'] ?? ''));
 
-        // The layer's own create, matched by the login it staged (A4, A5).
         if (!$update) return ($account && (($data['user_login'] ?? '') === $account->get_column('user_login'))) ? $data : $this->stop('This password may not make an account.');
 
         $stored = get_userdata((int) $user_id);
 
-        // The layer's own write of an allowed email change, bound to the address it staged, and of a reset key where it sends the person their link (A4).
         $email_allowed = $account && $account->has_staged('user_email') && (($data['user_email'] ?? '') === $account->get_column('user_email'));
-        $reset_allowed = $account && $this->sends_link($account);
+        $reset_allowed = $account && $this->is_sending_link($account);
 
         // A reset key set by its caller is a known reset link.
         if ($stored && ((!$email_allowed && (($data['user_email'] ?? $stored->user_email) !== $stored->user_email)) || (isset($data['user_pass']) && ($data['user_pass'] !== $stored->user_pass)) || (!$reset_allowed && !empty($data['user_activation_key']) && ($data['user_activation_key'] !== $stored->user_activation_key)))) $this->stop('This password may not change an account\'s email, password or reset key.');
@@ -252,8 +250,8 @@ class Lattice_Credentials extends Feature {
 
         if (!Credentials::inst()->get_current() || !$old_user_data) return;
 
-        // The layer's own create sets the random password it generated, for the account it just made (A4).
-        if (!$this->stopped && ($account = $this->account_write((int) $user_id)) && $account->is_unsaved()) return;
+        // wp_insert_user() sets the new account's password through here.
+        if (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $account->is_unsaved()) return;
 
         $wpdb->update($wpdb->users, ['user_pass' => $old_user_data->user_pass, 'user_activation_key' => $old_user_data->user_activation_key], ['ID' => (int) $user_id]);
 
@@ -267,8 +265,7 @@ class Lattice_Credentials extends Feature {
 
         if (!Credentials::inst()->get_current()) return;
 
-        // The layer's own allowed delete of that account, its content to the account the action checked (A7).
-        if (!$this->stopped && ($account = $this->account_write((int) $user_id)) && $account->get_staged('delete') && ((int) $reassign === (int) $account->get_staged('reassign'))) return;
+        if (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $account->get_staged('delete') && ((int) $reassign === (int) $account->get_staged('reassign'))) return;
 
         $this->stop('This password may not delete an account.');
 
@@ -278,39 +275,37 @@ class Lattice_Credentials extends Feature {
 
         if (!Credentials::inst()->get_current()) return $allow;
 
-        return (!$this->stopped && ($account = $this->account_write((int) $user_id)) && $this->sends_link($account)) ? $allow : false;
+        return (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $this->is_sending_link($account)) ? $allow : false;
 
     }
 
     protected bool $stopped = false;
 
-    protected function layer_checking () : bool {
+    protected function is_layer_checking () : bool {
 
         return class_exists(Resources::class) && Resources::inst()->is_checking_accounts();
 
     }
 
-    // The layer's write sends the person their own link: the new-user mail (E12) or a reset (E2).
-    protected function sends_link ($account) : bool {
+    protected function is_sending_link ($account) : bool {
 
         return (bool) ($account->get_staged('notify') || $account->get_staged('reset'));
 
     }
 
-    protected function account_write (int $user_id, ?string $login = null) : ?object {
+    protected function find_account_write (int $user_id, ?string $login = null) : ?object {
 
         return class_exists(Resources::class) ? Resources::inst()->get_account_write($user_id, $login) : null;
 
     }
 
-    // What the layer's write of this account may store: the roles it staged and the level WordPress works out from them, and its own marks.
     protected function permits_meta ($account, string $key, $value) : bool {
 
         global $wpdb;
 
         $prefix = strtolower($wpdb->get_blog_prefix());
 
-        // An allowed delete takes every row of that account with it, its own passwords and sessions included: the one case S6 allows (A7).
+        // The one case S6 allows (A7).
         if ($account->get_staged('delete')) return true;
 
         if ($key === "{$prefix}capabilities") return !array_diff(array_keys(array_filter((array) maybe_unserialize($value))), $account->get_account_roles());
@@ -319,7 +314,6 @@ class Lattice_Credentials extends Feature {
 
     }
 
-    // Inside one of the layer's writes a refusal throws, so the layer journals what landed; once refused, every later guarded write in the request stops (A9).
     protected function stop (string $message) : never {
 
         $this->stopped = true;

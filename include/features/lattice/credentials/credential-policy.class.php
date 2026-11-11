@@ -117,7 +117,7 @@ class Credential_Policy {
 
         foreach ($this->rules as $rule) if ($match = $this->match($rule, $request, $field)) $matches[] = $match + ['answer' => $rule['answer']];
 
-        // On a resource reached only by name (A0), an owner's deny holds whatever is beside it.
+        // A deny decides outright here (A0).
         $deciding = (!empty($request['named_only']) && in_array('deny', array_column($matches, 'answer'), true)) ? [['answer' => 'deny']] : array_filter($matches, fn ($match) => !array_filter($matches, fn ($other) => $this->outranks($other, $match)));
 
         $answer = static::strictest(array_column($deciding, 'answer'));
@@ -127,7 +127,7 @@ class Credential_Policy {
 
     }
 
-    // The target decides first. On the same target, a rule narrowing in every way another does, and more, outranks it; rules narrowing in different ways (one by field, one by record) are neither, so the strictest of them decides; only rules narrowing the same way are told apart by the verb.
+    // Section 4: narrowing in every way another does, and more, outranks it; different narrowings tie.
     protected function outranks (array $match, array $other) : bool {
 
         if ($match['rank'][0] !== $other['rank'][0]) return $match['rank'][0] > $other['rank'][0];
@@ -138,13 +138,12 @@ class Credential_Policy {
 
     }
 
-    protected function narrows (array $rule) : array {
+    protected function get_narrowing (array $rule) : array {
 
         return array_keys(array_filter(['fields' => isset($rule['fields']) || isset($rule['except']), 'records' => isset($rule['records']) || isset($rule['roles']), 'when' => isset($rule['when'])]));
 
     }
 
-    // The rule's rank when it matches: its target, then the verb.
     protected function match (array $rule, array $request, ?string $field) : ?array {
 
         if ($rule['surface'] !== $request['surface']) return null;
@@ -157,7 +156,7 @@ class Credential_Policy {
 
         [$rank, $narrows] = [$rule['rank'], $rule['narrows'] ?? []];
 
-        // Asked of the whole record, a rule leaving fields out has narrowed nothing.
+        // Asked of the whole record, except narrows nothing.
         if (is_null($field) && isset($rule['except']) && !($narrows = array_values(array_diff($narrows, ['fields'])))) $rank[0]--;
 
         return ['rank' => [...$rank, $verb_rank], 'narrows' => $narrows];
@@ -219,12 +218,12 @@ class Credential_Policy {
 
     }
 
-    // An allow or review covers an account only while every role it holds or is given is listed, it holds at least one unless the list names none, it holds no stored capability beyond them and it is not the credential's own (A1). A deny matches any account holding or given a listed role (A0). On a resource reached only by name, an allow or review names its roles.
+    // Allow and review: A1. Deny: any listed role (A0).
     protected function match_roles (array $rule, array $request, array $facts) : bool {
 
         if (!isset($rule['roles'])) return empty($request['named_only']) || ($rule['answer'] === 'deny');
 
-        // Asked of any record (a list, the guide), an allow or review on roles may apply; a deny on roles leaves rows out as each is asked, rather than closing the list.
+        // A deny on roles leaves rows out one by one rather than closing the list.
         if (!empty($facts['any_record'])) return $rule['answer'] !== 'deny';
 
         $creating = preg_replace('/^rehearse:/', '', (string) $request['verb']) === 'create';
@@ -297,7 +296,7 @@ class Credential_Policy {
 
         $read['waiting'] = !empty($rule['waiting']);
         $read['rank']    = $this->rank($read);
-        $read['narrows'] = $this->narrows($read);
+        $read['narrows'] = $this->get_narrowing($read);
 
         return [$read, []];
 

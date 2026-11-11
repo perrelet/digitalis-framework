@@ -4,7 +4,6 @@ namespace Digitalis;
 
 use WP_User;
 
-// A WordPress account as a resource's record: the framework's User, with a version, unsaved copies for dry runs, and changes staged until save(): a copy only stages, so a dry run never writes or touches the account it was copied from.
 class Account extends User {
 
     use Has_Version, Has_Unsaved_Copies;
@@ -50,7 +49,7 @@ class Account extends User {
 
     }
 
-    // Columns and names through wp_update_user(), then roles only when they change: the first is set, the rest added, and none set leaves no role.
+    // set_role('') leaves no role.
     public function save ($user_data = []) {
 
         try {
@@ -59,7 +58,6 @@ class Account extends User {
 
         } finally {
 
-            // What did not land is not kept, so no later write carries it unasked.
             $this->staged = [];
 
         }

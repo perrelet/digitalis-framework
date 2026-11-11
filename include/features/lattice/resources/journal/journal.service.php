@@ -10,7 +10,7 @@ class Journal extends Service {
 
     const MARKS = ['set_key', 'set_step', 'proposer_id'];
     const ERASED = '[erased]';
-    // How long the values in a row about an account are kept: one renewal cycle, when an old address is likeliest to be needed (SCOPED_CREDENTIALS.md E9).
+    // One renewal cycle (E9).
     const ACCOUNT_VALUES_DAYS = 365;
 
     protected function get_table () : string {
@@ -167,7 +167,7 @@ class Journal extends Service {
 
     }
 
-    // A person's details out of the rows about them: every value and the why replaced, keys, ids and control markers (_partial) kept, the row marked $mark (_scrubbed or _expired). The row stays as the record that a change happened (A12).
+    // The row stays as the record of a change (A12).
     public function scrub (string $resource, string $record_id, string $mark, ?string $before = null) : int {
 
         global $wpdb;
@@ -192,7 +192,7 @@ class Journal extends Service {
 
     }
 
-    // Values become the placeholder; a key starting with an underscore is the layer's own and is kept as it is.
+    // Underscore keys are the layer's own and are kept.
     public static function erase (mixed $value) : mixed {
 
         if (!is_array($value)) return is_null($value) ? null : static::ERASED;
@@ -211,7 +211,6 @@ class Journal extends Service {
 
     }
 
-    // Rows about an account older than its values are kept lose their values; the rows stay until the journal's own prune (E9).
     public function expire_accounts () : int {
 
         global $wpdb;

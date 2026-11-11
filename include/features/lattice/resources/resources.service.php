@@ -282,7 +282,7 @@ class Resources extends Service {
 
         } catch (\Throwable $e) {
 
-            // A listener may throw after the row exists, so running it again could make a second: what was made is found, journaled as partial and named.
+            // A listener may throw after the insert: name what was made, so a retry makes no second.
             $result = new WP_Error('not_saved', $e->getMessage());
 
             if ((is_wp_error($model) || !$model->get_id() || (method_exists($model, 'is_unsaved') && $model->is_unsaved())) && ($found = $resource->find_made($made))) {
@@ -1324,7 +1324,6 @@ class Resources extends Service {
 
         if (!$row = Journal::inst()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
 
-        // An erased or expired row holds no values to put back.
         if (Journal::is_scrubbed($row)) return $this->error('locked', 'Its values were erased, so there is nothing to put back.', 409, ['reason' => 'erased']);
 
         [$resource, $model] = $this->find($row['resource'], $row['record_id']);
@@ -1535,7 +1534,6 @@ class Resources extends Service {
 
     protected function write_values (Model_Resource $resource, $model, array $values, array $input, string $via, string $operation, int $seen, ?int $undoes, array $removed = []) : array|WP_Error {
 
-        // Every write of values, undo and a set's step included, asks what the values themselves need (A11).
         if ($refusal = $this->refuse_value_needs($resource, $model, $values)) return $refusal;
 
         if ($refusal = $this->refuse_credential($resource, $model, 'update', $values, $input)) return $refusal;
@@ -1763,7 +1761,7 @@ class Resources extends Service {
 
     }
 
-    // The account the layer is writing now, with what it staged, for the storage stage to stand aside for that write alone (A4): one being updated by its id, or one being made, matched by the login it is given.
+    // For the storage stage (A4): an update by id, a create by its staged login.
     public function get_account_write (int $user_id, ?string $login = null) : ?object {
 
         foreach ($this->get_resources() as $resource) if ($resource->is_named_only() && is_object($model = $this->writing["{$resource->get_name()}:{$user_id}"] ?? null)) return $model;
@@ -1778,7 +1776,7 @@ class Resources extends Service {
 
     }
 
-    // An account erased: the rows about it in every resource over accounts lose their values, and whatever else holds them (a set's steps) hears so. A site that erases another way than WordPress's own tools calls this (A12).
+    // For sites that erase other than through WordPress's privacy tools.
     public function erase_account (int $user_id) : int {
 
         $done = 0;
@@ -1795,7 +1793,6 @@ class Resources extends Service {
 
     }
 
-    // WordPress's personal data tools: an export lists the rows about the account with that address, an erasure scrubs them.
     public function export_personal_data (string $email, int $page = 1) : array {
 
         $user  = get_user_by('email', $email);
@@ -1831,7 +1828,6 @@ class Resources extends Service {
 
     }
 
-    // A capability the values themselves need beyond the verb, asked as the layer asks capabilities.
     protected function refuse_value_needs (Model_Resource $resource, $model, array $values) : ?WP_Error {
 
         $this->checking++;
@@ -1852,7 +1848,7 @@ class Resources extends Service {
 
     }
 
-    // An action's own capability, asked of the record as the layer asks capabilities, so a meta capability (delete_user) is asked of that record.
+    // With the record, so a meta capability (delete_user) is asked of it.
     protected function can_capability (Model_Resource $resource, string $capability, $model) : bool {
 
         $this->checking++;
@@ -1871,7 +1867,6 @@ class Resources extends Service {
 
     }
 
-    // The layer asking an account resource's capabilities, which the capability stage stands aside for (A11).
     public function is_checking_accounts () : bool {
 
         return $this->checking_accounts > 0;
@@ -1985,7 +1980,7 @@ class Resources extends Service {
 
         $after = $known ? $resource->get_facts($model, $values) : ['own' => false, 'conditions' => fn () => false];
 
-        // A record being made has no before: it is judged as it will be, which is asked anyway.
+        // A create has no before: judge it as it will be.
         $answers = $this->ask_credential($resource, $verb, $model, array_keys($values), $after, $dry_run, $model ? $resource->get_before_facts($model, $values) : ($known ? $after : null));
 
         return is_null($answers) ? 'allow' : Credential_Policy::strictest($answers);
@@ -2056,7 +2051,7 @@ class Resources extends Service {
         // A held step keeps its fields' live values as its start, so each field it changes must be one its proposer may read.
         if (!$this->may_read_step($step, $entry, $user_id)) return 'This password may not propose a change to what it may not read.';
 
-        // Before the step as ask_write() asks it: the roles it gives count before as after, and a record being made is judged as it will be.
+        // Before facts as ask_write() asks them.
         $facts   = $model ? $resource->get_before_facts($model, $values, $user_id) : $after;
         $answers = $this->ask_credential($resource, ($step['op'] === 'act') ? "act:{$step['action']}" : $step['op'], $model, array_keys($values), $after, false, $facts, $entry);
 

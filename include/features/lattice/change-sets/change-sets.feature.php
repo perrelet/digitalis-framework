@@ -37,7 +37,6 @@ class Lattice_Change_Sets extends Feature {
 
     }
 
-    // An account erased: an open set touching it is broken, so no walk applies a placeholder, then every set naming it loses its values, its own rows' values and the why it gave other rows (A12). A set naming several accounts is broken and scrubbed whole.
     public function erase_account ($resource, $user_id) {
 
         global $wpdb;
@@ -48,7 +47,7 @@ class Lattice_Change_Sets extends Feature {
 
     }
 
-    // Open sets broken before their values go, so no walk applies a placeholder. Answers the sets that may be scrubbed: one that could not be broken keeps its values and is logged, to be tried again.
+    // Break first, so no walk applies a placeholder; one that cannot be broken keeps its values.
     protected function break_open (array $ids, string $why) : array {
 
         $ready = [];
@@ -75,7 +74,6 @@ class Lattice_Change_Sets extends Feature {
 
     }
 
-    // Each step's values, the set's purpose, note and reason, the set's own journal rows and the why its steps gave other rows.
     protected function scrub_sets (array $ids, string $mark) : void {
 
         global $wpdb;
@@ -104,7 +102,6 @@ class Lattice_Change_Sets extends Feature {
 
     }
 
-    // Sets naming an account keep its values no longer than the journal does (E9).
     public function expire_sets () {
 
         global $wpdb;
