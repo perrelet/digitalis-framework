@@ -34,11 +34,14 @@ class Lattice_Human_Check extends Feature {
 
         if (empty($rule[static::KEYWORD])) return $rule;
 
-        $action = (string) $rule[static::KEYWORD];
+        $action   = (string) $rule[static::KEYWORD];
+        $provider = $this->get_provider($action);
 
-        $rule['costly']            = true;
-        $rule['validate_callback'] = fn ($value, WP_REST_Request $request) => $this->verify($action, (string) $request->get_param($this->get_provider($action)?->get_token_field() ?? ''));
-        $rule['field_params']      = array_merge((array) ($rule['field_params'] ?? []), ['action' => $action]);
+        $rule['costly']       = true;
+        $rule['field_params'] = array_merge((array) ($rule['field_params'] ?? []), ['action' => $action]);
+
+        // Unchecked without a provider or keys: its route then cannot serve (Form_Route::get_unavailable_reason()).
+        if ($provider && $this->get_keys($provider) && preg_match('/^[A-Za-z0-9_-]{1,32}$/', $action)) $rule['validate_callback'] = fn ($value, WP_REST_Request $request) => $this->verify($action, (string) $request->get_param($provider->get_token_field()));
 
         return $rule;
 

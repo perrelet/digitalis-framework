@@ -160,6 +160,14 @@ class Lattice_Forms extends Feature {
             $error = $response->as_error();
             $about = (array) $error->get_error_data();
 
+            // Its message alone: a form to send again would only be refused again.
+            if ($error->get_error_code() === Form_Route::UNAVAILABLE) {
+
+                $this->results[$id] = ['markup' => "<p class='form-unavailable' role='status'>" . esc_html($error->get_error_message()) . '</p>'];
+                return;
+
+            }
+
             $this->results[$id] = [
                 'message'  => $error->get_error_message(),
                 'problems' => (array) ($about['params'] ?? []),
@@ -215,11 +223,15 @@ class Lattice_Forms extends Feature {
 
         }
 
-        $id     = (string) $p['id'];
-        $path   = $route->get_path((array) ($p['route_params'] ?? []));
-        $rules  = $route->get_rules($route->make_request($path));
-        $result = $this->get_result($id);
-        $page   = add_query_arg([]);
+        $id      = (string) $p['id'];
+        $path    = $route->get_path((array) ($p['route_params'] ?? []));
+        $request = $route->make_request($path);
+        $rules   = $route->get_rules($request);
+        $result  = $this->get_result($id);
+        $page    = add_query_arg([]);
+
+        // A held answer is always drawn, so a refusal is never swallowed.
+        if (!$result && ($p['unavailable'] = $route->find_unavailable_reason($request))) return $p;
 
         $p['method']                         = 'post';
         $p['action']                         = $page;

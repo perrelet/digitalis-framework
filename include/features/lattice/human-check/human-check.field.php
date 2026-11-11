@@ -36,18 +36,11 @@ class Human_Check extends \Digitalis\Field {
 
     public function condition () {
 
-        return $this['widget_config'] || current_user_can('manage_options');
+        return (bool) $this['widget_config'];
 
     }
 
     public function view () {
-
-        if (!$this['widget_config']) {
-
-            echo "<p class='human-check-notice'>The person check has no keys, so this form cannot be sent.</p>";
-            return;
-
-        }
 
         echo $this['element'];
         echo wp_get_script_tag(['src' => Lattice_Human_Check::inst()->get_loader_url(), 'async' => true]);

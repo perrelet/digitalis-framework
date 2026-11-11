@@ -10,6 +10,7 @@ use WeakMap;
 class Form_Route extends Route {
 
     const REDIRECT_HEADER = 'X-Lattice-Redirect';
+    const UNAVAILABLE     = 'lattice_form_unavailable';
 
     protected $rules;
     protected $verdicts;
@@ -99,6 +100,8 @@ class Form_Route extends Route {
         if (is_wp_error($permission)) return $this->refuse_permission($permission->get_error_code(), $permission->get_error_message(), (array) $permission->get_error_data());
         if (!$permission)             return $this->refuse_permission('rest_forbidden', __('Sorry, you are not allowed to do that.'), ['status' => rest_authorization_required_code()]);
 
+        if ($this->find_unavailable_reason($request)) return static::refuse_unavailable();
+
         $values   = Form_Rules::get_submitted($request);
         $problems = [];
 
@@ -177,7 +180,7 @@ class Form_Route extends Route {
 
             if (empty($rule['costly']) || !Form_Rules::is_applicable($rule, $values)) continue;
 
-            if (empty($rule['validate_callback'])) return new WP_Error('lattice_form_unavailable', 'This form cannot be checked just now. Please try again later.', ['status' => 503]);
+            if (empty($rule['validate_callback'])) return static::refuse_unavailable();
 
             $valid = call_user_func($rule['validate_callback'], $values[$name] ?? null, $request, $name);
 
@@ -189,6 +192,53 @@ class Form_Route extends Route {
         }
 
         return $problems ? Form_Rules::refuse($problems) : true;
+
+    }
+
+    // Availability
+
+    // URL params and site state only, never the body or the user: drawing and posting must agree (docs/FORMS.md).
+    public function get_unavailable_reason (WP_REST_Request $request) : string {
+
+        foreach ($this->get_rules($request) as $name => $rule) if (!empty($rule['costly']) && empty($rule['validate_callback'])) return "Nothing can check {$name}.";
+
+        return '';
+
+    }
+
+    // A broken reason makes the form unavailable, never a page fatal.
+    public function find_unavailable_reason (WP_REST_Request $request) : string {
+
+        try {
+
+            $reason = $this->get_unavailable_reason($request);
+
+        } catch (\Throwable $e) {
+
+            $reason = 'Its reason threw: ' . $e->getMessage();
+
+        }
+
+        if ($reason) $this->log_unavailable($reason);
+
+        return $reason;
+
+    }
+
+    protected function log_unavailable (string $reason) : void {
+
+        $once = 'lattice_form_unavailable_' . md5($this->get_rest_path() . $reason);
+
+        if (get_transient($once)) return;
+
+        set_transient($once, 1, HOUR_IN_SECONDS);
+        error_log("Lattice form {$this->get_rest_path()} unavailable: {$reason}");
+
+    }
+
+    public static function refuse_unavailable () : WP_Error {
+
+        return new WP_Error(static::UNAVAILABLE, 'This form isn\'t available.', ['status' => 503]);
 
     }
 
