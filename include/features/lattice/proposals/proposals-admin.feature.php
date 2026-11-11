@@ -71,6 +71,9 @@ class Proposals_Admin extends Feature {
         if (!in_array($screen?->post_type, Proposal::get_post_types(), true) && !str_ends_with((string) $hook, Proposals::inst('proposals')->get_page_slug())) return;
 
         wp_enqueue_style('lattice-proposals', plugin_dir_url(__FILE__) . 'proposals.css', [], DIGITALIS_FRAMEWORK_VERSION);
+
+        // wp_text_diff() on a set's review.
+        if (!empty($_GET['set'])) wp_enqueue_style('revisions');
         wp_enqueue_script('lattice-proposals', plugin_dir_url(__FILE__) . 'proposals.js', [], DIGITALIS_FRAMEWORK_VERSION, true);
         wp_localize_script('lattice-proposals', 'latticeProposals', ['box' => Proposal_Review_Box::ID, 'notePrompt' => 'Why does it need changes? (optional)', 'noteField' => static::NOTE]);
 
@@ -200,10 +203,17 @@ class Proposals_Admin extends Feature {
 
         if (!isset($result['outcome'])) return ['set_done', 'Done.'];
 
-        if ($result['outcome'] === 'applied') return ['set_done', 'Done: every step landed.'];
-        if ($result['outcome'] === 'undone')  return ['set_done', 'Done: what it applied is undone.'];
+        if ($result['outcome'] === 'applied') return ['set_done', 'Done: every change is live.'];
+        if ($result['outcome'] === 'undone')  return ['set_done', 'Done: every change it made is undone.'];
 
-        return ['set_stopped', trim("It stopped ({$result['outcome']}). " . ($result['reason'] ?? ''))];
+        if ($result['outcome'] === 'awaiting_look') return ['set_stopped', ($action === 'undo_set')
+            ? 'Paused: part of it is undone. What is left could only be checked once that landed: look below, then press Undo what it applied again.'
+            : 'Paused: part of it is live. The next change could only be checked once that landed: look below, then approve again.'];
+
+        // The walk counts steps from 0; the page counts changes from 1.
+        $reason = preg_replace_callback('/\bStep (\d+)/', fn ($match) => 'Change ' . ((int) $match[1] + 1), (string) ($result['reason'] ?: $result['outcome']));
+
+        return ['set_stopped', "It stopped: {$reason}"];
 
     }
 

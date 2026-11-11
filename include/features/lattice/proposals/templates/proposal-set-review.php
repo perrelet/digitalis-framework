@@ -1,97 +1,117 @@
-<h1 class="wp-heading-inline">Proposed Changes</h1>
-<a href="<?= esc_url(Digitalis\Proposal::get_queue_url()) ?>" class="page-title-action">Back to the queue</a>
+<?php use Digitalis\{Proposal, Proposal_Notice, Proposal_Set_Review}; ?>
+
+<div class="lattice-review">
+
+<p class="lattice-review-back"><a href="<?= esc_url(Proposal::get_queue_url()) ?>">&larr; Proposed changes</a></p>
 <hr class="wp-header-end">
 
 <?php if ($refusal): ?>
 
-    <?= new Digitalis\Proposal_Notice(['type' => 'error', 'inline' => true, 'message' => $refusal]) ?>
+    <?= new Proposal_Notice(['type' => 'error', 'inline' => true, 'message' => $refusal]) ?>
 
 <?php else: ?>
 
-    <h2><?= nl2br(esc_html($review['purpose'] ?: 'A set with no purpose')) ?></h2>
+    <header class="lattice-review-head">
+        <h1><?= nl2br(esc_html($review['purpose'] ?: 'A set with no purpose')) ?></h1>
+        <p class="lattice-review-byline">
+            By <strong><?= esc_html($byline['author']) ?></strong><?php if ($byline['password']): ?>, with the password <strong><?= esc_html($byline['password']) ?></strong><?php endif; ?>
+            <?php if ($byline['when']): ?><span class="lattice-review-dot">&middot;</span> offered <time title="<?= esc_attr($byline['when']) ?>"><?= esc_html($byline['ago']) ?></time><?php endif; ?>
+        </p>
+    </header>
 
-    <p class="lattice-proposal-muted">
-        <span class="lattice-set-flag"><?= esc_html($review['state']) ?></span>
-        By <strong><?= esc_html(get_userdata($review['author_id'])->display_name ?? '∅') ?></strong><?= $review['submitted_at'] ? ' · offered for review ' . esc_html($review['submitted_at']) . ' UTC' : '' ?>
-    </p>
-
-    <?php if ($review['note'] ?? ''): ?><?= new Digitalis\Proposal_Notice(['type' => 'warning', 'inline' => true, 'title' => 'A reviewer asked for changes:', 'message' => $review['note']]) ?><?php endif; ?>
-    <?php if ($review['reason'] ?? ''): ?><?= new Digitalis\Proposal_Notice(['type' => 'warning', 'inline' => true, 'title' => 'It stopped:', 'message' => $review['reason']]) ?><?php endif; ?>
-    <?php if ($review['undone'] && !$review['closed']): ?><?= new Digitalis\Proposal_Notice(['type' => 'warning', 'inline' => true, 'message' => 'What it applied has been undone, at least in part, so it cannot go on: withdraw it.']) ?><?php endif; ?>
-    <?php if ($review['unsettled']): ?><?= new Digitalis\Proposal_Notice(['type' => 'warning', 'inline' => true, 'message' => 'A step may or may not have landed. Check the record, then say which: nothing else can happen until then.']) ?><?php endif; ?>
-    <?php if ($refused): ?><?= new Digitalis\Proposal_Notice(['type' => 'error', 'inline' => true, 'message' => 'Approving would be refused, for the reasons below, and you may not be able to fix that. Send it back to tell its author why.']) ?><?php endif; ?>
-    <?php if ($review['as'] === 'author'): ?><p><em>You see what can be said without the right to write these records. A reviewer sees each step's preview.</em></p><?php endif; ?>
-
-    <?php foreach ($review['records'] as $record => $positions): ?>
-
-        <div class="lattice-set-record">
-
-            <h3><?= esc_html($record) ?></h3>
-
-            <table class="widefat striped lattice-set-steps">
-                <tbody>
-                    <?php foreach ($positions as $position): $step = $review['steps'][$position]; ?>
-                        <tr>
-                            <th scope="row">
-                                <?= esc_html('Step ' . $position . ': ' . $step['op'] . (empty($step['action']) ? '' : " {$step['action']}")) ?>
-                                <br>
-                                <?php if ($step['marker'] ?? ''): ?><span class="lattice-set-flag"><?= esc_html($step['marker']) ?></span><?php endif; ?>
-                                <?php foreach ((array) ($step['flags'] ?? []) as $flag): ?><span class="lattice-set-flag"><?= esc_html($flag) ?></span><?php endforeach; ?>
-                            </th>
-                            <td>
-                                <?php if (!empty($step['reached'])): ?><p><strong>Previewed when reached</strong>, after step <?= esc_html(implode(', ', (array) ($step['after'] ?? []))) ?>, which will then be live.</p><?php endif; ?>
-                                <?php if (($step['checked'] ?? null) === false && empty($step['reached']) && empty($step['done'])): ?><p><em>Not checked for you.</em></p><?php endif; ?>
-                                <?php foreach (['values' => 'Holds', 'input' => 'Input', 'removed' => 'Filtering removed', 'applied' => 'Would apply', 'skipped' => 'Already live', 'withheld' => 'Withheld', 'problems' => 'Problems', 'locked' => 'Locked', 'error' => 'Error'] as $key => $label): ?>
-                                    <?php if (!empty($step[$key])): ?><p><strong><?= esc_html($label) ?></strong></p><pre><?= esc_html(Digitalis\Proposal_Set_Review::show($step[$key])) ?></pre><?php endif; ?>
-                                <?php endforeach; ?>
-                                <?php foreach ((array) ($step['conflicts'] ?? []) as $conflict): ?>
-                                    <?= new Digitalis\Proposal_Notice(['type' => 'warning', 'inline' => true, 'title' => 'Conflict on ' . $conflict['field'] . ':', 'message' => !empty($conflict['masking']) ? 'this may be a difference in how a secret is masked, not someone\'s change.' : 'it no longer holds what this started from.']) ?>
-                                    <pre><?= esc_html(Digitalis\Proposal_Set_Review::show(array_diff_key($conflict, ['field' => 0, 'masking' => 0]))) ?></pre>
-                                <?php endforeach; ?>
-                                <?php if (!empty($step['refusal'])): ?><?= new Digitalis\Proposal_Notice(['type' => 'error', 'inline' => true, 'message' => is_array($step['refusal']) ? ($step['refusal']['message'] ?? '') : $step['refusal']]) ?><?php endif; ?>
-                                <?php if (!empty($step['preview']['changes'])): ?>
-                                    <table class="widefat lattice-proposal-changes">
-                                        <thead><tr><th>Would change</th><th>Live</th><th>Proposed</th></tr></thead>
-                                        <tbody>
-                                            <?php foreach ($step['preview']['changes'] as $change): ?>
-                                                <tr>
-                                                    <th scope="row"><?= esc_html($change['field'] ?? '') ?></th>
-                                                    <td><?= nl2br(esc_html(Digitalis\Proposal_Set_Review::show_cell($change['before'] ?? ''))) ?></td>
-                                                    <td><?= nl2br(esc_html(Digitalis\Proposal_Set_Review::show_cell($change['after'] ?? ''))) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                <?php endif; ?>
-                                <?php if (!empty($step['preview']['removed'])): ?><p><strong>Filtering would remove, as you</strong></p><pre><?= esc_html(Digitalis\Proposal_Set_Review::show($step['preview']['removed'])) ?></pre><?php endif; ?>
-                                <?php if (!empty($step['preview']['consequences'])): ?><p><strong>What follows</strong></p><pre><?= esc_html(Digitalis\Proposal_Set_Review::show($step['preview']['consequences'])) ?></pre><?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-
-        </div>
-
-    <?php endforeach; ?>
-
-    <?php if ($undo): ?>
-        <p><strong>Undoing it, newest first</strong></p>
-        <ul class="lattice-proposal-list">
-            <?php foreach ($undo as $row): ?>
-                <li><?= esc_html("{$row['action']} {$row['resource']} {$row['record_id']}" . (!empty($row['passed_over']) ? ': nothing to reverse' : (empty($row['can_undo']) ? ': cannot be undone' : ''))) ?></li>
-            <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
-
-    <div class="lattice-proposal-actions">
-        <?php foreach ($forms as $form): ?>
-            <form method="post" action="<?= esc_url($form['url']) ?>">
-                <?php foreach ((array) ($form['fields'] ?? []) as $name => $value): ?><input type="hidden" name="<?= esc_attr($name) ?>" value="<?= esc_attr($value) ?>"><?php endforeach; ?>
-                <button type="submit" class="button<?= empty($form['primary']) ? '' : ' button-primary' ?>"<?= empty($form['confirm']) ? '' : ' data-lattice-proposal-confirm="' . esc_attr($form['confirm']) . '"' ?>><?= esc_html($form['label']) ?></button>
-            </form>
-        <?php endforeach; ?>
-        <?php if ($reject): ?><button type="button" class="button" data-lattice-proposal-reject="<?= esc_url($reject) ?>">Send back with a note</button><?php endif; ?>
+    <div class="lattice-review-status is-<?= esc_attr($status['tone']) ?>">
+        <strong><?= esc_html($status['label']) ?></strong>
+        <?php if ($status['message']): ?><span><?= esc_html($status['message']) ?></span><?php endif; ?>
     </div>
 
+    <?php if ($review['note'] ?? ''): ?><?= new Proposal_Notice(['type' => 'warning', 'inline' => true, 'title' => 'A reviewer asked for changes:', 'message' => $review['note']]) ?><?php endif; ?>
+    <?php if ($review['as'] === 'author'): ?><p class="lattice-review-byline"><em>You see what can be said without the right to write these records. A reviewer sees each change's preview.</em></p><?php endif; ?>
+    <?php if ($refused): ?><?= new Proposal_Notice(['type' => 'error', 'inline' => true, 'message' => 'Approving would be refused, for the reasons below, and you may not be able to fix that. Send it back to tell its author why.']) ?><?php endif; ?>
+
+    <ol class="lattice-review-steps">
+
+        <?php foreach ($steps as $step): ?>
+
+            <li class="lattice-review-step is-<?= esc_attr($step['state']['tone']) ?>">
+
+                <div class="lattice-review-step-head">
+                    <span class="lattice-review-number"><?= (int) $step['number'] ?></span>
+                    <div class="lattice-review-step-title">
+                        <strong><?= esc_html($step['does']) ?></strong>
+                        <span class="lattice-review-record">
+                            <span class="lattice-review-type"><?= esc_html($step['type']) ?></span>
+                            <?php if ($step['url']): ?><a href="<?= esc_url($step['url']) ?>"><?= esc_html($step['record']) ?></a><?php else: ?><?= esc_html($step['record']) ?><?php endif; ?>
+                        </span>
+                    </div>
+                    <span class="lattice-review-pill is-<?= esc_attr($step['state']['tone']) ?>"><?= esc_html($step['state']['label']) ?></span>
+                </div>
+
+                <?php foreach ($step['notes'] as $note): ?>
+                    <?= new Proposal_Notice(['type' => $note['type'], 'inline' => true, 'message' => $note['message']]) ?>
+                <?php endforeach; ?>
+
+                <?php if ($step['lines']): ?>
+                    <div class="lattice-review-changes">
+                        <?php foreach ($step['lines'] as $line): ?>
+                            <div class="lattice-review-change">
+                                <div class="lattice-review-field"><?= esc_html($line['label'] ?? $line['field'] ?? '') ?></div>
+                                <?php if ($line['long'] && function_exists('wp_text_diff') && ($diff = wp_text_diff((string) ($line['before'] ?? ''), (string) ($line['after'] ?? ''), ['show_split_view' => true]))): ?>
+                                    <div class="lattice-review-diff"><?= $diff ?></div>
+                                <?php else: ?>
+                                    <div class="lattice-review-values">
+                                        <del class="lattice-review-before"><?= nl2br(esc_html(Proposal_Set_Review::show_cell($line['before'] ?? ''))) ?></del>
+                                        <span class="lattice-review-arrow" aria-hidden="true">&rarr;</span>
+                                        <ins class="lattice-review-after"><?= nl2br(esc_html(Proposal_Set_Review::show_cell($line['after'] ?? ''))) ?></ins>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($step['consequences']): ?>
+                    <ul class="lattice-review-follows">
+                        <?php foreach ($step['consequences'] as $consequence): ?>
+                            <li>
+                                <?= esc_html($consequence['label']) ?>
+                                <?php if ($consequence['items']): ?><span class="lattice-review-items"><?= esc_html(implode(', ', $consequence['items'])) ?></span><?php endif; ?>
+                                <?php if ($consequence['extras']): ?><span class="lattice-review-extras"><?= esc_html(implode(' · ', $consequence['extras'])) ?></span><?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
+                <details class="lattice-review-details"><summary>Details</summary><pre><?= esc_html($step['details']) ?></pre></details>
+
+            </li>
+
+        <?php endforeach; ?>
+
+    </ol>
+
+    <?php if ($undo): ?>
+        <section class="lattice-review-undo">
+            <h2>Undoing it, newest first</h2>
+            <ol>
+                <?php foreach ($undo as $row): ?>
+                    <li><?php if ($row['number']): ?><span class="lattice-review-type">Change <?= (int) $row['number'] ?></span> <?php endif; ?><?= esc_html($row['what']) ?><?php if ($row['note']): ?> <em><?= esc_html($row['note']) ?></em><?php endif; ?></li>
+                <?php endforeach; ?>
+            </ol>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($forms || $reject): ?>
+        <div class="lattice-review-actions">
+            <?php foreach ($forms as $form): ?>
+                <form method="post" action="<?= esc_url($form['url']) ?>">
+                    <?php foreach ((array) ($form['fields'] ?? []) as $name => $value): ?><input type="hidden" name="<?= esc_attr($name) ?>" value="<?= esc_attr($value) ?>"><?php endforeach; ?>
+                    <button type="submit" class="button button-large<?= empty($form['primary']) ? '' : ' button-primary' ?>"<?= empty($form['confirm']) ? '' : ' data-lattice-proposal-confirm="' . esc_attr($form['confirm']) . '"' ?>><?= esc_html($form['label']) ?></button>
+                </form>
+            <?php endforeach; ?>
+            <?php if ($reject): ?><button type="button" class="button button-large" data-lattice-proposal-reject="<?= esc_url($reject) ?>">Send back with a note</button><?php endif; ?>
+        </div>
+    <?php endif; ?>
+
 <?php endif; ?>
+
+</div>
