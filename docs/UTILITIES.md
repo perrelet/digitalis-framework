@@ -237,7 +237,7 @@ $page = Log::read_page($path, 2, ['bpp' => 50000]);
 | Arg | Default | Description |
 |-----|---------|-------------|
 | `bpp` | `200000` | Bytes per page |
-| `overflow` | `500` | Extra bytes read on each edge to find clean line boundaries |
+| `overflow` | `500` | How far a page reads past its end to finish its last line; the newer page starts after that line |
 
 `$page` clamps to the file: `0`, or a negative beyond `-max`, reads page 1; a page past the last reads the last; the last page holds the remainder.
 

@@ -178,7 +178,7 @@ class Log extends Service {
         $look_bwd = $overflow && ($offset != $min_offset);
         $look_fwd = $overflow && ($page > 1);
 
-        $over_bwd = $look_bwd ? min($overflow, $filesize + $offset) : 0;
+        $over_bwd = $look_bwd ? 1 : 0; // the byte before the page says whether a line runs into it
         $over_fwd = $look_fwd ? min($overflow, ($page - 1) * $bpp) : 0; // only the bytes after the page exist to read; past the end, the read fell short and the cut found the file's first line
 
         if ($look_bwd) {
@@ -189,7 +189,7 @@ class Log extends Service {
 
         $start = $filesize + $offset; // absolute, so a file that grew past the snapshot reads the same bytes
         $lines = file_get_contents($path, false, null, $start, $maxlen);
-        if ($lines === false) return '';
+        if (($lines === false) || ($lines === '')) return ''; // a file cut shorter than the snapshot
 
         if ($look_bwd || $look_fwd) {
 
@@ -207,18 +207,10 @@ class Log extends Service {
 
             if ($look_bwd) {
 
-                $cut = max(0, strlen($lines) - ($bpp + $over_fwd));
-
-                if (($cut > 0) && ($lines[$cut - 1] === "\n")) {
-
-                    $prev_nl = $cut; // the previous page's line ended before this page: it starts here, an empty line of its own included
-
-                } else {
-
-                    $pos     = strrpos(substr($lines, 0, $cut + 1), "\n"); // a line runs into this page: start where it starts, or just after a newline that ends it at the page's first byte
-                    $prev_nl = ($pos === false) ? 0 : ($pos + 1);
-
-                }
+                // A line that runs into this page belongs to the older page, which reads forward to its end (or $overflow bytes): start where that page stops.
+                $reach   = min($overflow, $page * $bpp);
+                $pos     = ($lines[0] === "\n") ? 0 : strpos($lines, "\n", 1);
+                $prev_nl = (($pos !== false) && ($pos <= $reach)) ? ($pos + 1) : min(strlen($lines), $reach + 1);
 
             } else {
 
