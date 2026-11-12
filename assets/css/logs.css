@@ -8,6 +8,10 @@
     gap: 16px;
 }
 
+/* Core's .button sets display, which beats the attribute. */
+
+.lattice .digitalis-logs [hidden] { display: none !important; }
+
 /* Tabs: core's .nav-tab-wrapper does the drawing. */
 
 :where(.lattice) .pagination-links {

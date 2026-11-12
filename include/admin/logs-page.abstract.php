@@ -47,6 +47,12 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     }
 
+    public function enqueue_script () {
+
+        if (function_exists('wp_enqueue_script_module')) wp_enqueue_script_module('@lattice/logs', LATTICE_URI . 'assets/js/logs.js', [], LATTICE_VERSION); // WordPress 6.5
+
+    }
+
     protected function filter_logs (&$logs) {
     
         $logs[] = [
@@ -246,6 +252,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
     public function callback () {
 
         $this->enqueue_style();
+        $this->enqueue_script();
 
         echo "<h1>" . esc_html($this->title) . "</h1>";
 
@@ -302,13 +309,17 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         if ($pagination) $pagination = "<span class='pagination-links'>{$pagination}</span>";
 
-        echo "<div class='lattice'><div class='digitalis-logs'>"; // the token scope: admin-tokens.css styles nothing outside it
+        $can_view = ($current['permissions']['view'] ?? 0) && current_user_can($current['permissions']['view']);
+        $labels   = ['confirmClear' => 'Are you sure you want to empty this log file?'];
+        $root     = $can_view ? " data-lattice='logs' data-log='" . esc_attr($current['slug']) . "' data-labels='" . esc_attr(wp_json_encode($labels)) . "'" : '';
+
+        echo "<div class='lattice'><div class='digitalis-logs'{$root}>"; // the token scope: admin-tokens.css styles nothing outside it
 
             echo "<span id='hash-top'></span>";
             
             if (count($logs) > 1) $this->render_menu($logs, $current);
 
-            if (!($current['permissions']['view'] ?? 0) || !current_user_can($current['permissions']['view'])) {
+            if (!$can_view) {
 
                 echo "<div class='notice notice-error'><p>You do not have permission to view this log file.</p></div>";
                 echo "</div></div>";
@@ -340,23 +351,21 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     echo "<div class='size'>" . esc_html($size) . "<a class='goto top' href='#hash-top' aria-label='Jump to top'></a></div>";
                 echo "</div>";
 
-                echo "<span id='hash-bottom'></span>";
-
-                echo "<script>window.addEventListener('load', function() { setTimeout(() => window.scrollTo(0, document.querySelector('#hash-bottom').offsetTop), 100) });</script>";
+                echo "<span id='hash-bottom' data-el='bottom'></span>";
 
             echo "</div>";
 
             if ($pagination) echo $pagination;
 
-            echo "<form method='post' class='actions' action='" . esc_url($this->get_page_url()) . "'>";
+            echo "<form method='post' class='actions' data-el='clear' action='" . esc_url($this->get_page_url()) . "'>";
 
                 echo "<input type='hidden' name='nonce' value='" . wp_create_nonce('clear-log') . "'>";
                 echo "<input type='hidden' name='log' value='" . esc_attr($current['slug']) . "'>";
-                echo "<button type='button' class='button' onclick='location.reload();'>♻️ Refresh Log</button>";
+                echo "<a class='button' href='" . esc_url(remove_query_arg(['cleared', 'refused'])) . "'>♻️ Refresh Log</a>";
                 
                 if (($current['permissions']['clear'] ?? 0) && current_user_can($current['permissions']['clear'])) {
 
-                    echo "<button class='button clear' type='submit' name='clear-log' value='1' onclick='return confirm(`Are you sure you want to empty this log file?`)'>🗑️ Clear Log</button>";
+                    echo "<button class='button clear' type='submit' name='clear-log' value='1'>🗑️ Clear Log</button>";
         
                 }
                 
