@@ -642,4 +642,5 @@ Examples:
 | Changes held for review: proposals | [docs/PROPOSALS.md](./docs/PROPOSALS.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |
+| Writing a script: module shape, data attributes, requests, state | [docs/SCRIPTS.md](./docs/SCRIPTS.md) |
 | Moving a consumer onto a new framework version, the first strict boot | [docs/UPGRADING.md](./docs/UPGRADING.md) |
