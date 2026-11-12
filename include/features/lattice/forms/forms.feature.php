@@ -230,6 +230,10 @@ class Lattice_Forms extends Feature {
         $result  = $this->get_result($id);
         $page    = add_query_arg([]);
 
+        $fields = (array) $p['fields'];
+
+        $p['field_params'] = $this->merge_params($this->get_field_params($id, $rules, $fields, $result), (array) ($p['field_params'] ?? []));
+
         // A held answer is always drawn, so a refusal is never swallowed.
         if (!$result && ($p['unavailable'] = $route->find_unavailable_reason($request))) return $p;
 
@@ -243,10 +247,6 @@ class Lattice_Forms extends Feature {
             'hx-target' => 'this',
             'hx-swap'   => 'outerHTML',
         ];
-
-        $fields = (array) $p['fields'];
-
-        $p['field_params'] = $this->merge_params($this->get_field_params($id, $rules, $fields, $result), (array) ($p['field_params'] ?? []));
 
         $before = [new Hidden(['name' => static::FIELD, 'value' => ltrim($path, '/') . "#{$id}", 'id' => "{$id}-target", 'wrap' => false])];
 
