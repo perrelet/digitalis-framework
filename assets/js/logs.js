@@ -1,6 +1,7 @@
 // Root attributes, the tail task and its answer: docs/ADMIN.md, Logs Page.
 
-const BOTTOM_SLACK_PX = 40;
+const EDGE_SLACK_PX = 40;
+const PREFERENCES   = { wrap: 'is-unwrapped', newest: 'is-newest' };
 
 class Logs {
 
@@ -23,7 +24,7 @@ class Logs {
         for (const el of root.querySelectorAll('[data-el]')) this.#els[el.dataset.el] = el;
 
         for (const name of ['url', 'action', 'nonce', 'log', 'size', 'key', 'bpp', 'plain', 'poll', 'labels']) if (!(name in this.#config)) throw new Error(`Lattice logs: data-${name} is missing on the root.`);
-        for (const name of ['entries', 'partial', 'bottom', 'live', 'status', 'pill'])                           if (!this.#els[name])         throw new Error(`Lattice logs: the "${name}" element is missing in the root.`);
+        for (const name of ['lines', 'entries', 'partial', 'bottom', 'live', 'status', 'pill', 'view', 'resize']) if (!this.#els[name])         throw new Error(`Lattice logs: the "${name}" element is missing in the root.`);
 
         this.#labels = JSON.parse(this.#config.labels);
         this.#size   = this.#config.size;
@@ -31,11 +32,18 @@ class Logs {
 
         root.addEventListener('click', event => this.#click(event));
         root.addEventListener('submit', event => this.#submit(event));
+        root.addEventListener('change', event => this.#change(event));
         document.addEventListener('visibilitychange', () => this.#watchVisibility());
         window.addEventListener('scroll', () => this.#watchScroll(), { passive: true });
 
-        this.#els.live.hidden = false;
-        this.#scrollToBottom();
+        this.#els.live.hidden   = false;
+        this.#els.view.hidden   = false;
+        this.#els.resize.hidden = true;
+
+        if (this.#recall('wrap') === 'off')  this.#togglePreference('wrap');
+        if (this.#recall('newest') === 'on') this.#togglePreference('newest');
+
+        this.#scrollToNewest();
 
     }
 
@@ -43,16 +51,19 @@ class Logs {
 
     #click (event) {
 
-        const control = event.target.closest('[data-task], [data-action]');
+        // Buttons only: the root's own data-action is the ajax action, and the page size select acts on change.
+        const control = event.target.closest('[data-task], button[data-action]');
 
-        // The root matches too: its data-action is the ajax action.
-        if (!control || control === this.#root || !this.#root.contains(control) || control.disabled) return;
+        if (!control || !this.#root.contains(control) || control.disabled) return;
 
         event.preventDefault();
 
         if (control.dataset.task === 'tail')     this.#refresh();
         if (control.dataset.action === 'live')   this.#setState(this.#state === 'idle' ? 'live' : 'idle');
         if (control.dataset.action === 'follow') this.#followNewLines();
+        if (control.dataset.action === 'copy')   this.#copyPage();
+
+        if (control.dataset.action in PREFERENCES) this.#remember(control.dataset.action, this.#togglePreference(control.dataset.action));
 
     }
 
@@ -60,6 +71,12 @@ class Logs {
 
         if (event.target !== this.#els.clear) return;
         if (!window.confirm(this.#labels.confirmClear)) event.preventDefault();
+
+    }
+
+    #change (event) {
+
+        if (event.target.dataset.action === 'resize') event.target.form.requestSubmit();
 
     }
 
@@ -72,7 +89,7 @@ class Logs {
 
     #watchScroll () {
 
-        if (this.#unseen && this.#isAtBottom()) this.#forgetUnseen();
+        if (this.#unseen && this.#isAtNewest()) this.#forgetUnseen();
 
     }
 
@@ -120,6 +137,35 @@ class Logs {
 
     }
 
+    async #copyPage () {
+
+        const lines = [...this.#els.lines.querySelectorAll('pre')].map(pre => pre.textContent).filter(text => text !== '');
+
+        try {
+
+            await navigator.clipboard.writeText(lines.join('\n') + '\n');
+            this.#els.status.textContent = this.#labels.copied;
+
+        } catch {
+
+            this.#els.status.textContent = this.#labels.copyFailed;
+
+        }
+
+    }
+
+    #remember (preference, value) {
+
+        try { localStorage.setItem(`lattice:logs:${preference}`, value); } catch { return; }
+
+    }
+
+    #recall (preference) {
+
+        try { return localStorage.getItem(`lattice:logs:${preference}`); } catch { return null; }
+
+    }
+
     // Requests
 
     async #request (task, data, signal) {
@@ -158,7 +204,7 @@ class Logs {
 
     #paintTail (answer) {
 
-        const follows = this.#isAtBottom();
+        const follows = this.#isAtNewest();
 
         if (answer.reset) this.#els.entries.replaceChildren();
 
@@ -170,7 +216,7 @@ class Logs {
         this.#els.partial.insertAdjacentHTML('beforeend', answer.partial);
 
         if (answer.reset) this.#forgetUnseen();
-        if (answer.reset || follows) this.#els.bottom.scrollIntoView({ block: 'end' });
+        if (answer.reset || follows) this.#showNewest();
         if (!answer.count) return;
 
         this.#els.status.textContent = this.#countLines(answer.count);
@@ -197,7 +243,19 @@ class Logs {
     #followNewLines () {
 
         this.#forgetUnseen();
-        this.#els.bottom.scrollIntoView({ block: 'end' });
+        this.#showNewest();
+
+    }
+
+    #togglePreference (preference) {
+
+        const control = this.#els.view.querySelector(`[data-action="${preference}"]`);
+        const pressed = control.getAttribute('aria-pressed') !== 'true';
+
+        control.setAttribute('aria-pressed', String(pressed));
+        this.#root.classList.toggle(PREFERENCES[preference], preference === 'wrap' ? !pressed : pressed);
+
+        return pressed ? 'on' : 'off';
 
     }
 
@@ -207,16 +265,31 @@ class Logs {
 
     }
 
-    #isAtBottom () {
+    #readsNewestFirst () {
 
-        return this.#els.bottom.getBoundingClientRect().top <= window.innerHeight + BOTTOM_SLACK_PX;
+        return this.#root.classList.contains(PREFERENCES.newest);
 
     }
 
-    #scrollToBottom () {
+    #isAtNewest () {
 
-        // A link to one entry (#b1024) outranks the newest lines.
-        if (window.location.hash) return;
+        if (this.#readsNewestFirst()) return this.#els.lines.getBoundingClientRect().top >= -EDGE_SLACK_PX;
+
+        return this.#els.bottom.getBoundingClientRect().top <= window.innerHeight + EDGE_SLACK_PX;
+
+    }
+
+    #showNewest () {
+
+        if (this.#readsNewestFirst()) this.#els.lines.scrollIntoView({ block: 'start' });
+        else                          this.#els.bottom.scrollIntoView({ block: 'end' });
+
+    }
+
+    #scrollToNewest () {
+
+        // A link to one entry (#at) outranks the newest lines, and newest first already opens on them.
+        if (window.location.hash || this.#readsNewestFirst()) return;
 
         this.#els.bottom.scrollIntoView({ block: 'end' });
 

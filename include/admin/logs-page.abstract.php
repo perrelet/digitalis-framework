@@ -313,7 +313,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
             'next_text' => "&raquo;",
         ]) : false;
 
-        if ($pagination) $pagination = "<span class='pagination-links'>{$pagination}</span>";
+        if ($pagination) $pagination = "<span class='pagination-links'>{$pagination}<span class='page-of'>Page " . number_format_i18n($page) . " of " . number_format_i18n($total) . "</span></span>";
 
         $can_view = ($current['permissions']['view'] ?? 0) && current_user_can($current['permissions']['view']);
         $action   = "lattice_logs_{$this->slug}";
@@ -357,6 +357,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             }
 
+            $this->render_controls($current, $bytes_per_page, $plain);
+
             if ($pagination && ($bytes >= 5000)) echo $pagination;
 
             echo "<div class='digitalis-log'>";
@@ -370,7 +372,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     echo "<div class='size'>" . esc_html($size) . "<a class='goto bottom' href='#hash-bottom' aria-label='Jump to bottom'></a></div>";
                 echo "</div>";
 
-                echo "<div class='lines'>";
+                echo "<div class='lines' data-el='lines'>";
                     echo "<div class='entries' data-el='entries'>{$view['html']}</div>";
                     echo "<pre class='partial' data-el='partial'>{$view['partial']}</pre>";
                 echo "</div>";
@@ -572,13 +574,62 @@ abstract class Logs_Page extends Admin_Sub_Page {
             'newLine'      => '1 new line',
             'newLines'     => '%d new lines',
             'fault'        => 'The log could not be read. Reload the page to try again.',
+            'copied'       => 'Copied this page.',
+            'copyFailed'   => 'The browser refused the copy.',
         ];
+
+    }
+
+    const PAGE_SIZES = [50000, 200000, 1000000];
+
+    // Page size and Download work as forms; Wrap, Newest first and Copy exist only with the script, which reveals them.
+    protected function render_controls (array $log, int $bpp, bool $plain) {
+
+        $action = "lattice_logs_{$this->slug}";
+        $sizes  = array_unique(array_merge(self::PAGE_SIZES, [$bpp]));
+        sort($sizes);
+
+        echo "<div class='controls'>";
+
+            echo "<form method='get' class='page-size'>";
+
+                foreach (['page' => $this->slug, 'log' => $log['slug'], 'plain' => $plain ? 1 : ''] as $name => $value) {
+
+                    if ((string) $value !== '') echo "<input type='hidden' name='" . esc_attr($name) . "' value='" . esc_attr((string) $value) . "'>";
+
+                }
+
+                echo "<label>Page size <select name='bpp' data-action='resize'>";
+                    foreach ($sizes as $size) echo "<option value='{$size}'" . selected($size, $bpp, false) . ">" . esc_html(($size >= 1000000) ? round($size / 1000000, 1) . ' MB' : round($size / 1000, 1) . ' KB') . "</option>"; // decimal, as the sizes are declared: size_format() would say 195 KB
+                echo "</select></label>";
+                echo "<button class='button' data-el='resize'>Apply</button>";
+
+            echo "</form>";
+
+            $url = $plain ? remove_query_arg(['plain', 'cleared', 'refused', 'at']) : add_query_arg('plain', 1, remove_query_arg(['cleared', 'refused', 'at']));
+
+            echo "<a class='button" . ($plain ? ' is-active' : '') . "' href='" . esc_url($url) . "'" . ($plain ? " aria-current='true'" : '') . ">Plain</a>";
+
+            echo "<span class='view' data-el='view' hidden>";
+                echo "<button type='button' class='button' data-action='wrap' aria-pressed='true'>Wrap</button>";
+                echo "<button type='button' class='button' data-action='newest' aria-pressed='false'>Newest first</button>";
+                echo "<button type='button' class='button' data-action='copy'>Copy page</button>";
+            echo "</span>";
+
+            echo "<form method='post' class='download' action='" . esc_url(admin_url('admin-ajax.php')) . "'>";
+                foreach (['action' => $action, 'nonce' => wp_create_nonce($action), 'task' => 'download', 'log' => $log['slug']] as $name => $value) echo "<input type='hidden' name='" . esc_attr($name) . "' value='" . esc_attr($value) . "'>";
+                echo "<button class='button'>Download</button>";
+            echo "</form>";
+
+        echo "</div>";
 
     }
 
     public function ajax () {
 
         $answer = $this->answer_task(wp_unslash($_POST));
+
+        if (isset($answer['file'])) $this->send_file($answer['file']);
 
         if ($answer['status'] === 200) wp_send_json($answer['body']);
 
@@ -598,9 +649,25 @@ abstract class Logs_Page extends Admin_Sub_Page {
         if (!($log['permissions']['view'] ?? 0) || !current_user_can($log['permissions']['view'])) return ['status' => 403, 'body' => 'You do not have permission to view this log file.'];
 
         return match ($read('task')) {
-            'tail'  => ['status' => 200, 'body' => $this->tail($log, (int) $read('size'), $read('key'), (int) $read('bpp'), (bool) $read('plain'))],
-            default => ['status' => 422, 'body' => 'Unknown task.'],
+            'tail'     => ['status' => 200, 'body' => $this->tail($log, (int) $read('size'), $read('key'), (int) $read('bpp'), (bool) $read('plain'))],
+            'download' => ['status' => 200, 'body' => null, 'file' => $log['path']],
+            default    => ['status' => 422, 'body' => 'Unknown task.'],
         };
+
+    }
+
+    protected function send_file (string $path) {
+
+        while (ob_get_level()) ob_end_clean(); // a buffer would hold the whole file in memory
+
+        nocache_headers();
+        header('Content-Type: text/plain; charset=utf-8');
+        header('X-Content-Type-Options: nosniff');
+        header('Content-Disposition: attachment; filename="' . str_replace(['"', '\\'], '', basename($path)) . '"');
+        header('Content-Length: ' . (int) filesize($path));
+
+        readfile($path);
+        exit;
 
     }
 

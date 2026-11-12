@@ -138,7 +138,7 @@ printf(
 
 Classes belong to the stylesheet and `data-*` attributes to the script, so either can be renamed without the other. Markup carries no `onclick` and no inline `<script>`.
 
-The root's `data-action` is the ajax action, so `closest('[data-action]')` from anywhere inside the root finds the root itself: a delegated listener that looks for view controls excludes it (`control === this.#root`).
+The root's `data-action` is the ajax action, so `closest('[data-action]')` from anywhere inside the root finds the root itself: a delegated listener looks for the control's element (`button[data-action]`) or excludes the root.
 
 ## Without the Script
 

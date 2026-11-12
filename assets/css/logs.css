@@ -293,3 +293,49 @@
 :where(.lattice) .digitalis-log .entry .locate:hover { color: var(--log-text); }
 
 :where(.lattice) .digitalis-log .entry.is-target { background: var(--log-bar); }
+
+/* Reading controls: page size, plain, the view toggles and download. */
+
+:where(.lattice) .digitalis-logs .controls,
+:where(.lattice) .digitalis-logs .controls form,
+:where(.lattice) .digitalis-logs .controls .view {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+:where(.lattice) .digitalis-logs .controls .download { margin-left: auto; }
+
+:where(.lattice) .digitalis-logs .controls label {
+    font-size: 13px;
+    color: var(--text-2);
+}
+
+:where(.lattice) .digitalis-logs .controls .button.is-active,
+:where(.lattice) .digitalis-logs .controls .button[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    color: var(--accent);
+}
+
+:where(.lattice) .pagination-links .page-of {
+    margin-left: 8px;
+    color: var(--text-3);
+    line-height: 28px;
+}
+
+:where(.lattice) .digitalis-logs.is-unwrapped .digitalis-log .lines pre {
+    text-wrap: nowrap;
+    overflow-wrap: normal;
+}
+
+:where(.lattice) .digitalis-logs.is-unwrapped .digitalis-log .lines { overflow-x: auto; }
+
+/* Newest first reverses the paint, not the document: the tail still appends and Copy reads file order. */
+
+:where(.lattice) .digitalis-logs.is-newest .digitalis-log .lines,
+:where(.lattice) .digitalis-logs.is-newest .digitalis-log .entries {
+    display: flex;
+    flex-direction: column-reverse;
+}

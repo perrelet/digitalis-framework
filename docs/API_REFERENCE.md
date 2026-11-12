@@ -799,7 +799,7 @@ Abstract admin page that reads log files as entries. See [ADMIN.md](./ADMIN.md#l
 |--------|---------|-------------|
 | `filter_logs(&$logs)` | `void` | Declare the logs: `Log` instances or rows |
 | `get_logs()` | `array` | The declared rows, each with `state` and parsed `permissions` |
-| `find_log(?string $slug)` | `?array` | The row for a slug, or the first |
+| `find_log(?string $slug, bool $exact = false)` | `?array` | The row for a slug, or the first; with `$exact`, null for a slug no row has |
 | `get_syntax_rules()` | `array` | Per theme: `entry`, `levels` and `tokens` patterns |
 | `get_log_syntax_rules($log)` | `array` | The row's themes merged and checked |
 | `get_page_url()` | `string` | The page's own URL |
@@ -808,6 +808,8 @@ Abstract admin page that reads log files as entries. See [ADMIN.md](./ADMIN.md#l
 | `clear_log(array $log, string $nonce)` | `string` | `cleared`, `permission`, `expired` or `failed` |
 | `get_labels()` | `array` | Protected. Every string the script prints |
 | `render_search(array $log, array $search)` | `void` | Protected. The search form and the level chips |
+| `render_controls(array $log, int $bpp, bool $plain)` | `void` | Protected. Page size, Plain, the view toggles and Download |
+| `send_file(string $path)` | `void` | Protected. Streams a log as an attachment and exits |
 | `render_results(array $log, array $search, int $filesize, bool $plain)` | `void` | Protected. The results view |
 | `ajax()` | `void` | `wp_ajax_lattice_logs_{slug}`: sends `answer_task()` |
 | `answer_task(array $request)` | `array` | `['status', 'body']` for a task request, guards included |

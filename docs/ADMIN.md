@@ -272,7 +272,7 @@ The root is `.digitalis-logs[data-lattice='logs']`, printed only for a viewer wh
 | `data-size`, `data-key` | The offset just past the last complete line on page 1, and a hash of the 64 bytes before it |
 | `data-bpp`, `data-plain` | The page size and the plain flag the page was rendered with |
 | `data-poll` | Milliseconds between two reads while live (`protected $tail_interval`, seconds, default 3) |
-| `data-labels` | JSON from `get_labels()`: `confirmClear`, `live`, `paused`, `newLine`, `newLines`, `fault` |
+| `data-labels` | JSON from `get_labels()`: `confirmClear`, `live`, `paused`, `newLine`, `newLines`, `fault`, `copied`, `copyFailed` |
 
 | Element | Is |
 |---|---|
@@ -283,11 +283,14 @@ The root is `.digitalis-logs[data-lattice='logs']`, printed only for a viewer wh
 | `data-el='status'` | `role='status'`: the state's label, then "n new lines" |
 | `data-el='pill'` | `data-action='follow'`: counts lines that arrived while the reader was scrolled up, and jumps down |
 | `data-el='clear'` | The Clear form, which the script confirms |
+| `data-el='lines'` | The entries and the partial together: what Copy reads and Newest first scrolls to |
+| `data-el='view'` | The wrapper of Wrap (`data-action='wrap'`), Newest first (`newest`) and Copy page (`copy`), `hidden` until the script |
+| `data-el='resize'` | The page size form's Apply button, which the script hides: the select (`data-action='resize'`) then submits on change |
 | `data-task='tail'` | On Refresh, page 1 only: one request, no reload |
 
 States: `idle`, `live`, `paused` (the tab is hidden), as `is-*` on the root and `aria-pressed` on the toggle.
 
-One task, `tail`, POSTed with `log`, `size`, `key`, `bpp` and `plain`. Guards answer through `wp_send_json_error()`: 403 for the nonce, 404 for a log that is not declared or has no readable file, 403 for the view permission, 422 for an unknown task.
+Two tasks. `download` is posted by the Download form itself and answers the file as an attachment (`text/plain`, `nosniff`), under the view permission. `tail` is POSTed by the script with `log`, `size`, `key`, `bpp` and `plain`. Guards answer through `wp_send_json_error()`: 403 for the nonce, 404 for a log that is not declared or has no readable file, 403 for the view permission, 422 for an unknown task.
 
 | Answer | When | Fields |
 |---|---|---|
@@ -295,6 +298,10 @@ One task, `tail`, POSTed with `log`, `size`, `key`, `bpp` and `plain`. Guards an
 | Reset | The file is shorter than `size`, the bytes before it changed (a clear, a rotation, a rewrite) or more than a page was appended | `reset: true`, `size`, `key`, `html` (page 1 afresh), `partial` |
 
 Lines that arrive later for an entry already on the page (a trace written in a second write) render as a "continued" entry, and a repeat of the page's last entry starts a new fold, until the next reload. `filter_logs()` runs on every poll of every open tab, so it only declares.
+
+### Reading Controls
+
+Above the log: a page size select (50 KB, 200 KB, 1 MB and the current size when it is another; any positive `?bpp=` still pages), a Plain link (`?plain=1`), Download and, with the script, Wrap, Newest first and Copy page. Wrap and Newest first are remembered per browser under `lattice:logs:wrap` and `lattice:logs:newest`, and show as `is-unwrapped` and `is-newest` on the root. Newest first reverses the paint with `flex-direction: column-reverse`: the document stays in file order, so the tail still appends and Copy still reads oldest to newest. The pagination says "Page n of m".
 
 ### Search
 
