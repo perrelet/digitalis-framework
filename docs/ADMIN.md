@@ -259,7 +259,42 @@ Clear posts to the page's own URL (`get_page_url()`), is handled on `admin_init`
 
 The page renders the log tail with pagination, inside a `<div class='lattice'>` scope: the log switcher is core's tab strip (`nav-tab-wrapper`, `nav-tab`, `nav-tab-active`), the actions are core buttons, and the styles come from `assets/css/logs.css` (handle `lattice-logs`, depending on `lattice-tokens`, enqueued on `admin_enqueue_scripts` for the page's own request and from `callback()` elsewhere). The dark reading surface declares a `--log-*` token group on `.digitalis-log` for retuning.
 
-The page's script is the module `@lattice/logs` (`assets/js/logs.js`, enqueued by `enqueue_script()` beside the stylesheet, on WordPress 6.5 and later). It follows [SCRIPTS.md](./SCRIPTS.md): the root is `.digitalis-logs[data-lattice='logs']`, printed only for a viewer who may read the log, with `data-log` (the slug) and `data-labels` (JSON, `confirmClear`). The script writes to `data-el='bottom'` (the scroll target on boot, unless the URL carries a hash) and listens on `data-el='clear'` (the Clear form, which it confirms). Without the script the page reads the same: Refresh is a link and Clear posts without asking, guarded by its nonce and capability.
+The page's script is the module `@lattice/logs` (`assets/js/logs.js`, enqueued by `enqueue_script()` beside the stylesheet, on WordPress 6.5 and later). It follows [SCRIPTS.md](./SCRIPTS.md). Without it the page reads the same: Refresh is a link and Clear posts without asking, guarded by its nonce and capability.
+
+### The Script Contract
+
+The root is `.digitalis-logs[data-lattice='logs']`, printed only for a viewer who may read the log:
+
+| Attribute | Holds |
+|---|---|
+| `data-url`, `data-action`, `data-nonce` | `admin-ajax.php`, and `lattice_logs_{slug}` as both the action and the nonce action |
+| `data-log` | The log's slug |
+| `data-size`, `data-key` | The offset just past the last complete line on page 1, and a hash of the 64 bytes before it |
+| `data-bpp`, `data-plain` | The page size and the plain flag the page was rendered with |
+| `data-poll` | Milliseconds between two reads while live (`protected $tail_interval`, seconds, default 3) |
+| `data-labels` | JSON from `get_labels()`: `confirmClear`, `live`, `paused`, `newLine`, `newLines`, `fault` |
+
+| Element | Is |
+|---|---|
+| `data-el='entries'` | The entries; the script appends to it |
+| `data-el='partial'` | A last line with no newline yet; replaced on every answer |
+| `data-el='bottom'` | The scroll target on boot (unless the URL has a hash) and while following |
+| `data-el='live'` | The Live toggle's wrapper, `hidden` until the script; the toggle is `data-action='live'`, `disabled` with a reason off page 1 |
+| `data-el='status'` | `role='status'`: the state's label, then "n new lines" |
+| `data-el='pill'` | `data-action='follow'`: counts lines that arrived while the reader was scrolled up, and jumps down |
+| `data-el='clear'` | The Clear form, which the script confirms |
+| `data-task='tail'` | On Refresh, page 1 only: one request, no reload |
+
+States: `idle`, `live`, `paused` (the tab is hidden), as `is-*` on the root and `aria-pressed` on the toggle.
+
+One task, `tail`, POSTed with `log`, `size`, `key`, `bpp` and `plain`. Guards answer through `wp_send_json_error()`: 403 for the nonce, 404 for a log that is not declared or has no readable file, 403 for the view permission, 422 for an unknown task.
+
+| Answer | When | Fields |
+|---|---|---|
+| Appended | The bytes before `size` still hash to `key` | `size`, `key`, `html` (the complete appended lines as entries), `count` (lines), `partial` (the unterminated remainder's markup, or `''`) |
+| Reset | The file is shorter than `size`, the bytes before it changed (a clear, a rotation, a rewrite) or more than a page was appended | `reset: true`, `size`, `key`, `html` (page 1 afresh), `partial` |
+
+Lines that arrive later for an entry already on the page (a trace written in a second write) render as a "continued" entry, and a repeat of the page's last entry starts a new fold, until the next reload. `filter_logs()` runs on every poll of every open tab, so it only declares.
 
 ### Entries and Themes
 

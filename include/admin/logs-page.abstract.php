@@ -20,6 +20,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     const DEFAULT_BYTES_PER_PAGE = 200000;
     protected $bytes_per_page = self::DEFAULT_BYTES_PER_PAGE;
+    protected $tail_interval  = 3; // seconds between two reads while the page is live
 
     protected $logs = [];
     protected $_logs;
@@ -29,6 +30,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         parent::__construct();
         add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_style']);
         add_action('admin_init', [$this, 'handle_clear']);
+        add_action("wp_ajax_lattice_logs_{$this->slug}", [$this, 'ajax']);
         add_filter('removable_query_args', [$this, 'filter_removable_query_args']);
 
     }
@@ -291,13 +293,10 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $filesize     = (int) filesize($current['path']);
         $total        = max(1, (int) ceil($filesize / $bytes_per_page));
         $page         = min($page, $total); // read_page() clamps too; the pagination must mark the page it shows
-        $bytes        = 0;
-        $start        = 0;
-        $chunk        = Log::read_page($current['path'], $page, ['bpp' => $bytes_per_page, 'overflow' => 500, 'size' => $filesize], $bytes, $start);
-        $more         = ($filesize > $bytes);
         $plain        = !empty($_GET['plain']);
-        $format       = new Log_Format($this->get_log_syntax_rules($current));
-        $head         = $start ? (string) file_get_contents($current['path'], false, null, 0, Log_Format::HEAD_BYTES) : '';
+        $view         = $this->render_page($current, $page, $bytes_per_page, $filesize, $plain);
+        $bytes        = $view['bytes'];
+        $more         = ($filesize > $bytes);
 
         $pagination = $more ? paginate_links([
             'base'      => add_query_arg('paged', '%#%', remove_query_arg(['cleared', 'refused'])),
@@ -310,8 +309,22 @@ abstract class Logs_Page extends Admin_Sub_Page {
         if ($pagination) $pagination = "<span class='pagination-links'>{$pagination}</span>";
 
         $can_view = ($current['permissions']['view'] ?? 0) && current_user_can($current['permissions']['view']);
-        $labels   = ['confirmClear' => 'Are you sure you want to empty this log file?'];
-        $root     = $can_view ? " data-lattice='logs' data-log='" . esc_attr($current['slug']) . "' data-labels='" . esc_attr(wp_json_encode($labels)) . "'" : '';
+        $action   = "lattice_logs_{$this->slug}";
+        $root     = '';
+
+        if ($can_view) foreach ([
+            'lattice' => 'logs',
+            'url'     => admin_url('admin-ajax.php'),
+            'action'  => $action,
+            'nonce'   => wp_create_nonce($action),
+            'log'     => $current['slug'],
+            'size'    => $view['size'],
+            'key'     => $view['key'],
+            'bpp'     => $bytes_per_page,
+            'plain'   => (int) $plain,
+            'poll'    => max(1, (int) $this->tail_interval) * 1000,
+            'labels'  => wp_json_encode($this->get_labels()),
+        ] as $name => $value) $root .= " data-{$name}='" . esc_attr((string) $value) . "'";
 
         echo "<div class='lattice'><div class='digitalis-logs'{$root}>"; // the token scope: admin-tokens.css styles nothing outside it
 
@@ -341,9 +354,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
                 echo "</div>";
 
                 echo "<div class='lines'>";
-
-                    foreach ($format->parse($chunk, $start, $head) as $entry) echo $this->render_entry($entry, $format, $plain);
-
+                    echo "<div class='entries' data-el='entries'>{$view['html']}</div>";
+                    echo "<pre class='partial' data-el='partial'>{$view['partial']}</pre>";
                 echo "</div>";
 
                 echo "<div class='log-info'>";
@@ -361,8 +373,13 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 echo "<input type='hidden' name='nonce' value='" . wp_create_nonce('clear-log') . "'>";
                 echo "<input type='hidden' name='log' value='" . esc_attr($current['slug']) . "'>";
-                echo "<a class='button' href='" . esc_url(remove_query_arg(['cleared', 'refused'])) . "'>♻️ Refresh Log</a>";
-                
+                echo "<a class='button' href='" . esc_url(remove_query_arg(['cleared', 'refused'])) . "'" . ($page === 1 ? " data-task='tail'" : '') . ">♻️ Refresh Log</a>";
+
+                echo "<span class='live' data-el='live' hidden>";
+                    echo "<button type='button' class='button' data-action='live' aria-pressed='false'" . ($page === 1 ? '' : ' disabled') . ">Live</button>";
+                    if ($page !== 1) echo "<span class='reason'>Live follows the newest page.</span>";
+                echo "</span>";
+
                 if (($current['permissions']['clear'] ?? 0) && current_user_can($current['permissions']['clear'])) {
 
                     echo "<button class='button clear' type='submit' name='clear-log' value='1'>🗑️ Clear Log</button>";
@@ -371,8 +388,139 @@ abstract class Logs_Page extends Admin_Sub_Page {
                 
             echo "</form>";
 
+            echo "<p class='status' data-el='status' role='status'></p>";
+            echo "<button type='button' class='button button-primary pill' data-el='pill' data-action='follow' hidden></button>";
+
         echo "</div></div>";
     
+    }
+
+    protected function get_labels () : array {
+
+        return [
+            'confirmClear' => 'Are you sure you want to empty this log file?',
+            'live'         => 'Live: new lines appear as they are written.',
+            'paused'       => 'Paused while this tab is hidden.',
+            'newLine'      => '1 new line',
+            'newLines'     => '%d new lines',
+            'fault'        => 'The log could not be read. Reload the page to try again.',
+        ];
+
+    }
+
+    public function ajax () {
+
+        $answer = $this->answer_task(wp_unslash($_POST));
+
+        if ($answer['status'] === 200) wp_send_json($answer['body']);
+
+        wp_send_json_error($answer['body'], $answer['status']);
+
+    }
+
+    // ['status' => 200, 'body' => the task's answer], or a refusal whose body is the message the script shows.
+    public function answer_task (array $request) : array {
+
+        $read = fn ($name) => is_scalar($request[$name] ?? null) ? (string) $request[$name] : '';
+        $log  = $this->get_logs()[$read('log')] ?? null;
+
+        if (!wp_verify_nonce($read('nonce'), "lattice_logs_{$this->slug}")) return ['status' => 403, 'body' => 'This page has expired. Reload it and try again.'];
+        if (!$log || ($log['state'] !== 'ready'))                            return ['status' => 404, 'body' => 'This log is not available.'];
+
+        if (!($log['permissions']['view'] ?? 0) || !current_user_can($log['permissions']['view'])) return ['status' => 403, 'body' => 'You do not have permission to view this log file.'];
+
+        return match ($read('task')) {
+            'tail'  => ['status' => 200, 'body' => $this->tail($log, (int) $read('size'), $read('key'), (int) $read('bpp'), (bool) $read('plain'))],
+            default => ['status' => 422, 'body' => 'Unknown task.'],
+        };
+
+    }
+
+    // What was appended after $size, cut at the last newline. The page is rendered afresh (reset) when the bytes before $size are
+    // no longer the ones the reader has: a clear, a rotation, a rewrite, or more than a page appended.
+    public function tail (array $log, int $size, string $key, int $bpp = 0, bool $plain = false) : array {
+
+        $path = $log['path'];
+        $bpp  = ($bpp > 0) ? $bpp : self::DEFAULT_BYTES_PER_PAGE;
+
+        clearstatcache(true, $path);
+        $now = is_file($path) ? (int) filesize($path) : 0;
+
+        if (($size < 0) || ($now < $size) || (($now - $size) > $bpp) || ($this->read_key($path, $size) !== $key)) {
+
+            $view = $this->render_page($log, 1, $bpp, $now, $plain);
+
+            return ['reset' => true, 'size' => $view['size'], 'key' => $view['key'], 'html' => $view['html'], 'partial' => $view['partial']];
+
+        }
+
+        $text = ($now > $size) ? (string) file_get_contents($path, false, null, $size, $now - $size) : '';
+        $cut  = $this->find_cut($text);
+
+        return [
+            'size'    => $size + $cut,
+            'key'     => $this->read_key($path, $size + $cut),
+            'html'    => $this->render_entries($log, substr($text, 0, $cut), $size, $plain, 'continued'),
+            'count'   => substr_count($text, "
+"),
+            'partial' => $this->render_partial($log, substr($text, $cut), $plain),
+        ];
+
+    }
+
+    // Page 1 ends where the file does, so an unterminated last line is held apart for the tail to complete in place.
+    private function render_page (array $log, int $page, int $bpp, int $filesize, bool $plain) : array {
+
+        $bytes = $start = 0;
+        $chunk = Log::read_page($log['path'], $page, ['bpp' => $bpp, 'overflow' => 500, 'size' => $filesize], $bytes, $start);
+        $cut   = ($page === 1) ? $this->find_cut($chunk) : strlen($chunk);
+
+        return [
+            'bytes'   => $bytes,
+            'size'    => $start + $cut,
+            'key'     => $this->read_key($log['path'], $start + $cut),
+            'html'    => $this->render_entries($log, substr($chunk, 0, $cut), $start, $plain, 'continued from the previous page'),
+            'partial' => $this->render_partial($log, substr($chunk, $cut), $plain),
+        ];
+
+    }
+
+    private function render_entries (array $log, string $text, int $offset, bool $plain, string $note) : string {
+
+        $format = new Log_Format($this->get_log_syntax_rules($log));
+        $head   = $offset ? (string) file_get_contents($log['path'], false, null, 0, Log_Format::HEAD_BYTES) : '';
+        $html   = '';
+
+        foreach ($format->parse($text, $offset, $head) as $entry) $html .= $this->render_entry($entry, $format, $plain, $note);
+
+        return $html;
+
+    }
+
+    private function render_partial (array $log, string $text, bool $plain) : string {
+
+        if ($plain || ($text === '')) return htmlspecialchars($text, Log_Format::ESCAPE);
+
+        return (new Log_Format($this->get_log_syntax_rules($log)))->tokenize($text);
+
+    }
+
+    private function find_cut (string $text) : int {
+
+        $newline = strrpos($text, "
+");
+
+        return ($newline === false) ? 0 : $newline + 1;
+
+    }
+
+    // Names the bytes just before an offset: a file that was cleared and grew back past it no longer hashes the same.
+    private function read_key (string $path, int $size) : string {
+
+        $from = max(0, $size - 64);
+
+        return md5(($size > 0 && is_file($path)) ? (string) file_get_contents($path, false, null, $from, $size - $from) : '');
+
     }
 
     protected function render_notice (array $logs) {
@@ -447,7 +595,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
     
     }
 
-    private function render_entry (array $entry, Log_Format $format, bool $plain) : string {
+    private function render_entry (array $entry, Log_Format $format, bool $plain, string $note) : string {
 
         $paint = fn ($line) => $plain ? htmlspecialchars($line, Log_Format::ESCAPE) : $format->tokenize($line);
         $body  = implode("\n", array_map($paint, $entry['body']));
@@ -455,7 +603,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         if (is_null($entry['head'])) {
 
-            return "<div class='entry continued' id='b{$entry['offset']}'><p class='note'>continued from the previous page</p><pre class='body'>{$body}</pre></div>";
+            return "<div class='entry continued' id='b{$entry['offset']}'><p class='note'>{$note}</p><pre class='body'>{$body}</pre></div>";
 
         }
 

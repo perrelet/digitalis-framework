@@ -170,6 +170,8 @@
 
 :where(.lattice) .digitalis-logs form.actions {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
 }
 
@@ -181,3 +183,50 @@
 :where(.lattice) .digitalis-logs form.actions .clear:hover {
     background: color-mix(in srgb, var(--err) 8%, var(--surface));
 }
+
+/* Live: the toggle, the status line and the pill that counts lines arriving below the fold. */
+
+:where(.lattice) .digitalis-logs form.actions .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+:where(.lattice) .digitalis-logs form.actions .live .reason,
+:where(.lattice) .digitalis-logs .status {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-3);
+}
+
+:where(.lattice) .digitalis-logs .status:empty { display: none; }
+
+:where(.lattice) .digitalis-logs [data-action='live'][aria-pressed='true'] {
+    border-color: var(--running);
+    background: var(--running);
+    color: var(--surface);
+}
+
+:where(.lattice) .digitalis-logs.is-paused [data-action='live'][aria-pressed='true'] { opacity: 0.6; }
+
+:where(.lattice) .digitalis-logs .pill {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 10;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+}
+
+:where(.lattice) .digitalis-log .partial {
+    margin: 0;
+    padding-left: 11px;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    text-wrap: wrap;
+    overflow-wrap: anywhere;
+    color: var(--log-muted);
+}
+
+:where(.lattice) .digitalis-log .partial:empty { display: none; }

@@ -806,6 +806,10 @@ Abstract admin page that reads log files as entries. See [ADMIN.md](./ADMIN.md#l
 | `enqueue_style()`, `enqueue_script()` | `void` | The stylesheet and the `@lattice/logs` module; `callback()` calls both |
 | `handle_clear()` | `void` | The Clear request, on `admin_init` |
 | `clear_log(array $log, string $nonce)` | `string` | `cleared`, `permission`, `expired` or `failed` |
+| `get_labels()` | `array` | Protected. Every string the script prints |
+| `ajax()` | `void` | `wp_ajax_lattice_logs_{slug}`: sends `answer_task()` |
+| `answer_task(array $request)` | `array` | `['status', 'body']` for a task request, guards included |
+| `tail(array $log, int $size, string $key, int $bpp = 0, bool $plain = false)` | `array` | What was appended after `$size`, or a reset. See ADMIN.md, The Script Contract |
 | `resolve_error_log($ini, $debug_log, $content_dir)` | `string` | Static. The path PHP logs to |
 
 ### `Lattice\Log_Format`
