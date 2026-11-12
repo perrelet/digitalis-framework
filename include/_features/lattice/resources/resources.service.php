@@ -1772,7 +1772,7 @@ class Resources extends Service {
 
         if (!is_object($made) || !$this->creating?->is_named_only()) return null;
 
-        $given = $user_id ? get_userdata($user_id)?->user_login : $login;
+        $given = $user_id ? (get_userdata($user_id) ?: null)?->user_login : $login;
 
         return (!is_null($given) && ($given === $made->get_column('user_login'))) ? $made : null;
 
@@ -2081,7 +2081,7 @@ class Resources extends Service {
 
         if (!method_exists($set, 'get_credential') || !($uuid = $set->get_credential())) return '';
 
-        $author = $set->get_author_id();
+        $author = $set->get_proposer_id();
 
         if (!\WP_Application_Passwords::get_user_application_password($author, $uuid)) return 'The password that wrote it is gone.';
 

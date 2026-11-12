@@ -168,7 +168,7 @@ abstract class Order_Model_Resource extends Model_Resource {
 
     public function has_moved ($model, string $target) : bool {
 
-        $status = (string) wc_get_order($model->get_id())?->get_status();
+        $status = (string) (wc_get_order($model->get_id()) ?: null)?->get_status();
 
         return ($target === 'trash') ? ($status === 'trash') : ($status && ($status !== 'trash'));
 
