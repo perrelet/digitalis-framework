@@ -223,7 +223,7 @@ Comments are for what the code cannot say.
 
 ## Gates
 
-- `php bin/scripts.php` reads every script outside the table below, with string and template contents blanked, and fails on `var`, `setInterval`, `XMLHttpRequest`, `console.`, `document.write`, a block comment, an assignment to `innerHTML` or `outerHTML`, an assignment to a property of `window`, `globalThis` or `self` (`window.location` excepted), a loose `==` or `!=`, a commented-out statement or a CR. It fails too when the table names a file that is gone. CI runs it beside `bin/boundaries.php`, with the syntax check above.
+- `php bin/scripts.php` reads every script outside the table below, with string and template contents blanked, and fails on `var`, `setInterval`, `XMLHttpRequest`, `console.`, `document.write`, a block comment, an assignment to `innerHTML` or `outerHTML`, an assignment to a property of `window`, `globalThis` or `self` (`window.location` excepted), a loose `==` or `!=`, a commented-out statement or a CR. It fails too when the table names a file that is gone. CI runs it beside `bin/boundaries.php`, with the syntax check above. `php bin/scripts.php --check file.js` checks one file while it is being written.
 - Every behaviour a script adds comes with a browser probe that fails on the commit before it.
 
 ## Existing Scripts
