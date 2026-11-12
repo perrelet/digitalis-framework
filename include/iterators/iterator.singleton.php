@@ -390,7 +390,7 @@ abstract class Iterator extends Singleton {
             'ran'     => $ran,
             'refused' => !empty($tick['refused']),
             'status'  => $this->get_status(),
-            'stalled' => !empty($this->store['stalled']),
+            'stalled' => !empty($this->get_store()['stalled']),
             'from'    => $from,
             'index'   => $this->get_index(),
             'count'   => (int) ($tick['count'] ?? 0),

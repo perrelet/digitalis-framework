@@ -218,7 +218,7 @@ final class Resource_Field {
 
             if (($was = (array) ($before[$taxonomy] ?? [])) == ($is = (array) ($after[$taxonomy] ?? []))) continue;
 
-            $names   = fn (array $ids) => array_map(fn ($id) => get_term((int) $id)?->name ?? "#{$id}", $ids);
+            $names   = fn (array $ids) => array_map(fn ($id) => get_term((int) $id)->name ?? "#{$id}", $ids);
             $lines[] = ['field' => "{$path}.{$taxonomy}", 'label' => "{$label} › " . (get_taxonomy($taxonomy)?->labels->singular_name ?? $taxonomy), 'before' => $this->shorten_list($names($was)), 'after' => $this->shorten_list($names($is))];
 
         }
@@ -238,8 +238,8 @@ final class Resource_Field {
             in_array($this->type, static::CHOICE_TYPES, true)                 => (string) ($this->get_choices()[(string) $value] ?? $value),
             in_array($this->type, ['image', 'file', 'gallery'], true) && $id  => wp_basename((string) get_attached_file($id)) ?: "#{$id}",
             in_array($this->type, ['post_object', 'relationship', 'page_link'], true) && $id => get_the_title($id) ?: "#{$id}",
-            ($this->type === 'taxonomy') && $id                                => get_term($id)?->name ?? "#{$id}",
-            ($this->type === 'user') && $id                                    => get_userdata($id)?->display_name ?? "#{$id}",
+            ($this->type === 'taxonomy') && $id                                => get_term($id)->name ?? "#{$id}",
+            ($this->type === 'user') && $id                                    => (get_userdata($id) ?: null)->display_name ?? "#{$id}",
             default                                                            => wp_html_excerpt(wp_strip_all_tags((string) $value), 100, '…'),
         };
 

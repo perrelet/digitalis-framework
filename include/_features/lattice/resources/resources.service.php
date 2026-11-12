@@ -647,7 +647,7 @@ class Resources extends Service {
         if (!$change->changes && $removed) return $this->error('locked', 'Filtering for this account removes the whole change: ' . implode(', ', array_keys($removed)) . '.', 409, ['reason' => 'Nothing is left to write.', 'removed' => $removed]);
 
         if (!empty($input['dry_run'])) return $change->describe();
-        if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false] + array_filter(['removed' => $removed]);
+        if (!$change->changes)         return $this->describe_record($resource, $model) + ['changed' => false];
 
         if ($refusal = $this->refuse_publish($resource, $model, $values)) return $refusal;
 

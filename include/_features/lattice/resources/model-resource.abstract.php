@@ -294,7 +294,7 @@ abstract class Model_Resource extends Singleton {
 
         $copy = $model->get_unsaved_copy($this->to_raw($values, $this->get_fields_for($model, $values)));
 
-        if (method_exists($copy, 'get_wp_post') && $copy->get_wp_post()) $copy->set_wp_post(clone $copy->get_wp_post());
+        if (is_object($copy) && method_exists($copy, 'get_wp_post') && $copy->get_wp_post()) $copy->set_wp_post(clone $copy->get_wp_post());
 
         $this->stage_model_values($copy, $values);
 
@@ -410,9 +410,9 @@ abstract class Model_Resource extends Singleton {
             $model && ($operation === 'read')   => 'read_post',
             $model && ($operation === 'update') => 'edit_post',
             $model && in_array($operation, ['trash', 'untrash'], true) => 'delete_post',
-            $operation === 'create'             => $caps?->create_posts ?? 'edit_posts',
-            $operation === 'publish'            => $caps?->publish_posts ?? 'publish_posts',
-            default                             => $caps?->edit_posts ?? 'edit_posts',
+            $operation === 'create'             => $caps->create_posts ?? 'edit_posts',
+            $operation === 'publish'            => $caps->publish_posts ?? 'publish_posts',
+            default                             => $caps->edit_posts ?? 'edit_posts',
         };
 
     }

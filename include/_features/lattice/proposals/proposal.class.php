@@ -6,6 +6,7 @@ namespace Lattice;
 
 use WP_Error;
 
+/** @phpstan-consistent-constructor */
 class Proposal {
 
     const META = [

@@ -71,7 +71,7 @@ class Job extends Model {
 
         $types = [];
 
-        foreach (array_keys(static::$class_map[self::class] ?? []) as $class) if ($class::get_type()) $types[$class::get_type()] = $class;
+        foreach (array_keys(static::$class_map[self::class] ?? []) as $class) if (is_string($class) && $class::get_type()) $types[$class::get_type()] = $class;
 
         return $types;
 
@@ -407,6 +407,7 @@ class Job extends Model {
 
     }
 
+    /** @phpstan-impure */
     protected function refresh () : bool {
 
         $this->row = static::read_where('id = %d', [$this->id]) ?? [];

@@ -26,6 +26,7 @@ parameters:
     - stubs/wp-comment.stub.php
   dynamicConstantNames:   # site-varying: typed as string/bool, not as the placeholder literal
     - WP_DEBUG
+    - EMPTY_TRASH_DAYS
     - COOKIE_DOMAIN
     - COOKIEPATH
     - ABSPATH
