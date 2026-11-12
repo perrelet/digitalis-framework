@@ -97,6 +97,16 @@ final class Resource_Field {
 
     }
 
+    public function holds_secret () : bool {
+
+        if ($this->is_secret()) return true;
+
+        foreach ([$this->sub_fields, ...array_values($this->layouts)] as $fields) foreach ($fields as $field) if ($field->holds_secret()) return true;
+
+        return false;
+
+    }
+
     public function is_multiple () : bool {
 
         return in_array($this->type, static::MULTIPLE, true) || !empty($this->acf['multiple']);
@@ -265,9 +275,15 @@ final class Resource_Field {
 
     }
 
+    public static function mask_value ($value) {
+
+        return in_array($value, [null, '', []], true) ? '' : (static::is_mask($value) ? $value : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']');
+
+    }
+
     public function mask ($value) {
 
-        if ($this->is_secret()) return in_array($value, [null, '', []], true) ? '' : (static::is_mask($value) ? $value : '[set ' . substr(wp_hash(maybe_serialize($value)), 0, 8) . ']');
+        if ($this->is_secret()) return static::mask_value($value);
 
         return $this->map_rows($value, fn (array $fields, array $row) => static::map_row($fields, $row, fn ($field, $one) => $field->mask($one)));
 
@@ -421,18 +437,18 @@ final class Resource_Field {
     // Checks
 
     // ACF's own first, then what ACF does not check on the server. $restoring lets undo bring back row keys the record no longer has.
-    public function check ($value, string $path, $current = null, bool $restoring = false) : array {
+    public function check ($value, string $path, $current = null, bool $restoring = false, $model = null) : array {
 
         if ($this->computed)    return ["{$path} is worked out by the save, never written."];
         if ($this->action_only) return ["{$path} changes only through an action."];
 
-        return $this->check_shape($value, $path, $current, $restoring) ?: $this->check_with_acf($value, $path);
+        return $this->check_shape($value, $path, $current, $restoring, $model) ?: $this->check_with_acf($value, $path);
 
     }
 
-    protected function check_shape ($value, string $path, $current = null, bool $restoring = false) : array {
+    protected function check_shape ($value, string $path, $current = null, bool $restoring = false, $model = null) : array {
 
-        if ($this->validate) return ($this->validate)($value, $path);
+        if ($this->validate) return ($this->validate)($value, $path, $model, $restoring);
 
         if (in_array($value, [null, '', []], true)) return [];
 
@@ -535,12 +551,21 @@ final class Resource_Field {
             in_array($this->type, static::CHOICE_TYPES, true)              => (!empty($this->acf['allow_custom']) || !empty($this->acf['other_choice']) || array_key_exists((string) $value, $this->get_choices())) ? '' : 'is one of ' . implode(', ', array_keys($this->get_choices())),
             (bool) $this->get_format()                                    => $this->is_formatted((string) $value) ? '' : 'is a date as ' . $this->get_format(),
             in_array($this->type, ['post_object', 'relationship'], true),
-            ($this->type === 'page_link') && is_numeric($value)           => ($id && get_post_status($id) && (!$types || in_array(get_post_type($id), $types, true))) ? '' : 'is the id of a ' . implode(' or ', $types ?: ['post']),
+            ($this->type === 'page_link') && is_numeric($value)           => ($id && get_post_status($id) && (!$types || in_array(static::get_record_type($id), $types, true))) ? '' : 'is the id of a ' . implode(' or ', $types ?: ['post']),
             $this->type === 'taxonomy'                                    => ($id && term_exists($id, (string) ($this->acf['taxonomy'] ?? ''))) ? '' : 'is the id of a term in ' . ($this->acf['taxonomy'] ?? 'its taxonomy'),
             $this->type === 'user'                                        => ($id && get_userdata($id)) ? '' : 'is the id of a user',
             in_array($this->type, ['image', 'file', 'gallery'], true)     => ($id && get_post_type($id) === 'attachment') ? '' : 'is the id of a file in the media library',
             default                                                       => '',
         };
+
+    }
+
+    // An HPOS order's post is a placeholder that names no order type.
+    protected static function get_record_type (int $id) : string {
+
+        $type = (string) get_post_type($id);
+
+        return (($type === 'shop_order_placehold') && class_exists(\Automattic\WooCommerce\Utilities\OrderUtil::class)) ? (string) \Automattic\WooCommerce\Utilities\OrderUtil::get_order_type($id) : $type;
 
     }
 

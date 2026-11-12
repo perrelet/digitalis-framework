@@ -10,6 +10,8 @@ final class Resource_Change {
     public array  $consequences = [];
     public string $fingerprint  = '';
     public array  $removed      = [];
+    // Fields its reader may not read: the change still holds them, so it knows what it would do, and its description leaves them out.
+    public array  $barred       = [];
 
     public function __construct (
         public /* readonly */ Model_Resource $resource,
@@ -38,7 +40,7 @@ final class Resource_Change {
             'id'           => $this->before?->get_id(),
             'version'      => $this->before?->get_version(),
             'operation'    => $this->operation,
-            'changes'      => $this->changes,
+            'changes'      => array_values(array_filter($this->changes, fn ($line) => !in_array(strtok($line['field'], '.'), $this->barred, true))),
             'consequences' => $this->consequences,
             'fingerprint'  => $this->fingerprint,
         ] + array_filter(['removed' => $this->removed]);

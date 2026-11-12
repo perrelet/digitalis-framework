@@ -11,6 +11,9 @@ class Journal extends Service {
     const PER_PAGE = 50;
 
     const MARKS = ['set_key', 'set_step', 'proposer_id'];
+    const ERASED = '[erased]';
+    // One renewal cycle (E9).
+    const ACCOUNT_VALUES_DAYS = 365;
 
     protected function get_table () : string {
 
@@ -23,6 +26,8 @@ class Journal extends Service {
     public function write (array $row) : int {
 
         global $wpdb;
+
+        if (!array_key_exists('set_key', $row)) $row += Resources::inst()->get_held_marks($row);
 
         $wpdb->insert($this->get_table(), [
             'at'             => gmdate('Y-m-d H:i:s'),
@@ -37,7 +42,9 @@ class Journal extends Service {
             'version_before' => (int) ($row['version_before'] ?? 0),
             'version_after'  => (int) ($row['version_after'] ?? 0),
             'undoes'         => $row['undoes'] ?? null,
-        ] + (Journal_Schema::is_current() ? array_intersect_key($row, array_flip(static::MARKS)) : []));
+        ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) + ['credential' => Credentials::inst()->get_uuid(), 'credential_name' => is_null($name = Credentials::inst()->get_name()) ? null : mb_substr($name, 0, 255)] : []));
+
+        Resources::inst()->note_row((int) $wpdb->insert_id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
 
         return (int) $wpdb->insert_id;
 
@@ -105,13 +112,124 @@ class Journal extends Service {
 
     }
 
+    // Every row of a set, oldest first: a page holds too few for a walk, and a walk's own rows would shift the pages.
+    public function rows_for_set (int $key) : array {
+
+        global $wpdb;
+
+        if (!Journal_Schema::is_current()) return [];
+
+        return array_map([$this, 'decode'], (array) $wpdb->get_results($wpdb->prepare("SELECT * FROM {$this->get_table()} WHERE set_key = %d ORDER BY id ASC", $key), ARRAY_A));
+
+    }
+
+    // Whether a row of a step was undone, from wherever: someone undoing one by hand writes no mark of the set. A query that fails answers yes, since what depends on this stops.
+    public function has_undone_rows (int $key) : bool {
+
+        global $wpdb;
+
+        $table = $this->get_table();
+        $found = $wpdb->get_var($wpdb->prepare("SELECT 1 FROM {$table} AS undoing JOIN {$table} AS row_undone ON undoing.undoes = row_undone.id WHERE row_undone.set_key = %d AND row_undone.set_step IS NOT NULL AND row_undone.undoes IS NULL LIMIT 1", $key));
+
+        return !is_null($found) || ($wpdb->last_error !== '');
+
+    }
+
+    // The rows undoing these, the undo's own walk.
+    public function undoing (array $ids) : array {
+
+        global $wpdb;
+
+        if (!$ids = array_values(array_filter(array_map('intval', $ids)))) return [];
+
+        return array_map([$this, 'decode'], (array) $wpdb->get_results("SELECT * FROM {$this->get_table()} WHERE undoes IN (" . implode(', ', $ids) . ') ORDER BY id ASC', ARRAY_A));
+
+    }
+
     public function prune () : int {
 
         global $wpdb;
 
         $days = (int) apply_filters('lattice.journal.keep_days', static::KEEP_DAYS);
 
-        return (int) $wpdb->query($wpdb->prepare("DELETE FROM {$this->get_table()} WHERE `at` < %s", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS)));
+        $pruned = (int) $wpdb->query($wpdb->prepare("DELETE FROM {$this->get_table()} WHERE `at` < %s", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS)));
+
+        // After the delete, so a failure here never keeps old rows.
+        try {
+
+            $this->expire_accounts();
+
+        } catch (\Throwable $e) {
+
+            error_log('Lattice journal: expiring account values failed: ' . $e->getMessage());
+
+        }
+
+        return $pruned;
+
+    }
+
+    // The row stays as the record of a change (A12).
+    public function scrub (string $resource, string $record_id, string $mark, ?string $before = null) : int {
+
+        global $wpdb;
+
+        $where = $wpdb->prepare('resource = %s AND record_id = %s', $resource, $record_id) . ($before ? $wpdb->prepare(' AND `at` < %s', $before) : '');
+        $rows  = (array) $wpdb->get_results("SELECT id, `before`, `after`, why FROM {$this->get_table()} WHERE {$where}", ARRAY_A);
+        $done  = 0;
+
+        foreach ($rows as $row) {
+
+            $after = is_null($row['after']) ? [] : (array) json_decode($row['after'], true);
+
+            $done += (int) $wpdb->update($this->get_table(), [
+                'before' => is_null($row['before']) ? null : wp_json_encode(static::erase(json_decode($row['before'], true))),
+                'after'  => wp_json_encode(static::erase($after) + [$mark => true]),
+                'why'    => ($row['why'] === '') ? '' : static::ERASED,
+            ], ['id' => (int) $row['id']]);
+
+        }
+
+        return $done;
+
+    }
+
+    // Underscore keys are the layer's own and are kept.
+    public static function erase (mixed $value) : mixed {
+
+        if (!is_array($value)) return is_null($value) ? null : static::ERASED;
+
+        $erased = [];
+
+        foreach ($value as $key => $each) $erased[$key] = (is_string($key) && str_starts_with($key, '_')) ? $each : static::erase($each);
+
+        return $erased;
+
+    }
+
+    public static function is_scrubbed (array $row) : bool {
+
+        return !empty($row['after']['_scrubbed']) || !empty($row['after']['_expired']);
+
+    }
+
+    public function expire_accounts () : int {
+
+        global $wpdb;
+
+        $days   = (int) apply_filters('lattice.journal.account_values_days', static::ACCOUNT_VALUES_DAYS);
+        $before = gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS);
+        $done   = 0;
+
+        foreach (Resources::inst()->get_resources() as $resource) {
+
+            if (!$resource->is_named_only()) continue;
+
+            foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT DISTINCT record_id FROM {$this->get_table()} WHERE resource = %s AND `at` < %s AND `after` NOT LIKE %s AND `after` NOT LIKE %s", $resource->get_name(), $before, '%' . $wpdb->esc_like('"_scrubbed"') . '%', '%' . $wpdb->esc_like('"_expired"') . '%')) as $record_id) $done += $this->scrub($resource->get_name(), (string) $record_id, '_expired', $before);
+
+        }
+
+        return $done;
 
     }
 

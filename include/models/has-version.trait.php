@@ -16,7 +16,7 @@ trait Has_Version {
 
     public function get_version () : int {
 
-        return (int) $this->get_meta(static::get_version_key());
+        return $this->read_version();
 
     }
 
@@ -52,7 +52,7 @@ trait Has_Version {
 
         if ($this->get_version() !== $seen + 2) return;
 
-        $seen ? $this->update_meta(static::get_version_key(), $seen, $seen + 2) : $this->delete_meta(static::get_version_key());
+        $seen ? $this->swap_version($seen + 2, $seen) : $this->drop_version($seen + 2);
 
     }
 
@@ -62,10 +62,30 @@ trait Has_Version {
 
     }
 
-    // update_meta ignores a previous value of 0, so versions start at 1.
     protected function step_version (int $seen) : bool {
 
-        return $seen ? (bool) $this->update_meta(static::get_version_key(), $seen + 1, $seen) : (bool) $this->add_meta(static::get_version_key(), 1, true);
+        return $this->swap_version($seen, $seen + 1);
+
+    }
+
+    // Storage
+
+    protected function read_version () : int {
+
+        return (int) $this->get_meta(static::get_version_key());
+
+    }
+
+    // update_meta ignores a previous value of 0, so versions start at 1.
+    protected function swap_version (int $seen, int $next) : bool {
+
+        return $seen ? (bool) $this->update_meta(static::get_version_key(), $next, $seen) : (bool) $this->add_meta(static::get_version_key(), $next, true);
+
+    }
+
+    protected function drop_version (int $seen) : bool {
+
+        return (bool) $this->delete_meta(static::get_version_key(), $seen);
 
     }
 

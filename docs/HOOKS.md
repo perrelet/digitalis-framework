@@ -519,12 +519,22 @@ Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are
 | `lattice.resources.forbidden` | Filter | `$data`, `$resource`, `$model`, `$operation` | Add to a `forbidden` refusal's data on a write to a known record |
 | `lattice.resources.describe` | Filter | `$description`, `$resource` | Add to the guide's description of a resource |
 | `lattice.resources.present` | Filter | `$lines`, `$resource`, `$before`, `$after`, `$model` | Add to a change presented for people |
+| `lattice.resources.journal_set` | Filter | `$named`, `$set_id` | The records whose rows a read by `set` shows whatever the reader may list, as `resource:id` |
 | `lattice.journal.keep_days` | Filter | `$days` | How long journal rows are kept (730) |
 | `lattice.iterator.runner` | Filter | `$runner`, `$iterator` | The Iterator's background driver, an `Iterator_Runner`; the `lattice/jobs` feature answers it, and `null` leaves the run foreground only |
 | `lattice.iterator.log_directory` | Filter | `$directory`, `$iterator` | Where an iterator's `$log_file` is written when it declares no `$log_directory`; `null` falls to the `error_log` ini's directory |
 | `lattice.jobs.ended` | Action | `$job`, `$state` | After a job ends (`done`, `failed`, `cancelled`, `expired`); the Jobs feature marks an iterator's run from it |
 | `lattice.jobs.budget` | Filter | `$budget` | Seconds a worker run may spend: 45, or three quarters of `max_execution_time` less what the request has spent |
 | `lattice.jobs.keep_days` | Filter | `$days` | `['done' => 30, 'other' => 90]`: how long ended job rows are kept before the daily prune |
+| `lattice.journal.account_values_days` | Filter | `$days` | How long values in journal rows about an account are kept (365) |
+| `lattice.resources.erased` | Action | `$resource`, `$user_id` | An account's rows were scrubbed; change sets break and scrub the sets naming it |
+| `lattice.change_set.cleanup_days` | Filter | `$days` | How long a draft or `broken` set may sit idle before it is withdrawn (90) |
+| `lattice.change_set.submitted` | Action | `$set` | A set was offered for review (Proposals) |
+| `lattice.change_set.rejected` | Action | `$set` | A set was handed back; `get_note()` is the note (Proposals) |
+| `lattice.change_set.approved` | Action | `$set`, `$result` | Approving landed every step and closed the set (Proposals) |
+| `lattice.change_set.awaiting_review` | Action | `$set` | A walk of a submitted set stopped for a fresh look |
+| `lattice.change_set.applied_in_part` | Action | `$set` | A walk stopped with a step applied |
+| `lattice.change_set.broken` | Action | `$set` | A record the set names was deleted |
 
 The resources hooks are described in [RESOURCES.md](./RESOURCES.md#policy).
 
@@ -784,6 +794,7 @@ class ACF_Customizations extends Feature {
 | `lattice.post_type.{class}.labels` | Filter | Post type labels |
 | `lattice.taxonomy.{class}.args` | Filter | Taxonomy args |
 | `lattice.field_group.field` | Filter | Field_Group fields (`$field, $params, $class`) |
+| `lattice.form.params` | Filter | A `Form`'s params before it reads them (`$params, $form`); the `lattice/forms` feature binds a form to its route here |
 | `lattice.db.wpdb` | Filter | The `wpdb` the framework's DB layer uses |
 | `lattice.feature.paths` | Filter | Directories `App::load_feature()` searches (`$paths`) |
 | `lattice.post.duplicate.exclude_meta` | Filter | Meta keys `Post::duplicate()` never copies (`$keys, $post`) |

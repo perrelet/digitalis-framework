@@ -15,7 +15,7 @@
                 <tr>
                     <td>
                         <?php if ($row['review_url']): ?><a href="<?= esc_url($row['review_url']) ?>"><strong><?= esc_html($row['title']) ?></strong></a><?php else: ?><strong><?= esc_html($row['title']) ?></strong><?php endif; ?>
-                        <?php if ($row['live_url']): ?><a class="lattice-proposal-live" href="<?= esc_url($row['live_url']) ?>">live &#8599;</a><?php else: ?><em class="lattice-proposal-gone">(live version removed)</em><?php endif; ?>
+                        <?php if ($row['live_url']): ?><a class="lattice-proposal-live" href="<?= esc_url($row['live_url']) ?>">live &#8599;</a><?php elseif ($row['gone']): ?><em class="lattice-proposal-gone">(live version removed)</em><?php endif; ?>
                     </td>
                     <td><?= esc_html($row['type']) ?></td>
                     <td><?= esc_html($row['author'] ?? '∅') ?></td>

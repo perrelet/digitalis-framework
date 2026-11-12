@@ -17,7 +17,12 @@ class Proposals_Admin extends Feature {
         'deleted'  => ['info',    'Proposal discarded. The live version can take a new proposal.'],
         'stale'    => ['error',   'The live version changed after this proposal was made, so it can\'t be applied. Discard it, then propose again on the current version.'],
         'refused'  => ['error',   'The proposal was not applied:'],
+        'set_done'    => ['success', ''],
+        'set_stopped' => ['warning', ''],
+        'set_refused' => ['error',   ''],
     ];
+
+    const SET_ACTIONS = ['submit_proposal', 'rebase_proposal', 'approve_proposal', 'reject_proposal', 'withdraw_set', 'undo_set', 'settle_step'];
 
     public function get_hooks () {
 
@@ -30,6 +35,7 @@ class Proposals_Admin extends Feature {
             'admin_post_lattice_proposal_approve' => 'handle_approve',
             'admin_post_lattice_proposal_reject'  => 'handle_reject',
             'admin_post_lattice_proposal_delete'  => 'handle_delete',
+            'admin_post_lattice_set_act'          => 'handle_set_act',
         ];
 
     }
@@ -37,6 +43,12 @@ class Proposals_Admin extends Feature {
     public static function get_action_url (string $action, int $post_id, array $args = []) : string {
 
         return wp_nonce_url(add_query_arg(['action' => "lattice_proposal_{$action}", 'post_id' => $post_id] + $args, admin_url('admin-post.php')), "lattice_proposal_{$action}_{$post_id}");
+
+    }
+
+    public static function get_set_action_url (string $action, Change_Set $set) : string {
+
+        return wp_nonce_url(add_query_arg(['action' => 'lattice_set_act', 'act' => $action, 'set_id' => $set->get_id(), 'version' => $set->get_version()], admin_url('admin-post.php')), "lattice_set_{$action}_{$set->get_id()}");
 
     }
 
@@ -61,6 +73,9 @@ class Proposals_Admin extends Feature {
         if (!in_array($screen?->post_type, Proposal::get_post_types(), true) && !str_ends_with((string) $hook, Proposals::inst('proposals')->get_page_slug())) return;
 
         wp_enqueue_style('lattice-proposals', plugin_dir_url(__FILE__) . 'proposals.css', [], LATTICE_VERSION);
+
+        // wp_text_diff() on a set's review.
+        if (!empty($_GET['set'])) wp_enqueue_style('revisions');
         wp_enqueue_script('lattice-proposals', plugin_dir_url(__FILE__) . 'proposals.js', [], LATTICE_VERSION, true);
         wp_localize_script('lattice-proposals', 'latticeProposals', ['box' => Proposal_Review_Box::ID, 'notePrompt' => 'Why does it need changes? (optional)', 'noteField' => static::NOTE]);
 
@@ -158,6 +173,52 @@ class Proposals_Admin extends Feature {
 
     }
 
+    public function handle_set_act () {
+
+        $set_id = absint($_REQUEST['set_id'] ?? 0);
+        $action = sanitize_key($_REQUEST['act'] ?? '');
+
+        check_admin_referer("lattice_set_{$action}_{$set_id}");
+
+        [$notice, $message] = $this->run_set_act($set_id, $action, wp_unslash($_REQUEST));
+
+        set_transient(static::REFUSED . get_current_user_id(), $message, 60);
+
+        $this->redirect(add_query_arg('set', $set_id, Proposal::get_queue_url()), $notice);
+
+    }
+
+    // The layer asks who may and when: this only carries what the screen sent.
+    public function run_set_act (int $set_id, string $action, array $sent) : array {
+
+        if (!in_array($action, static::SET_ACTIONS, true)) return ['set_refused', 'No such action.'];
+
+        $input = ['version' => (int) ($sent['version'] ?? 0)] + array_filter(['seen' => $sent['seen'] ?? null]);
+
+        if ($action === 'settle_step') $input += ['position' => (int) ($sent['position'] ?? -1), 'outcome' => (string) ($sent['outcome'] ?? '')];
+
+        if ($action === 'reject_proposal') $input['note'] = sanitize_textarea_field($sent[static::NOTE] ?? '');
+
+        $result = Resources::inst()->act('change_set', $set_id, $action, $input, 'admin');
+
+        if (is_wp_error($result)) return ['set_refused', $result->get_error_message()];
+
+        if (!isset($result['outcome'])) return ['set_done', 'Done.'];
+
+        if ($result['outcome'] === 'applied') return ['set_done', 'Done: every change is live.'];
+        if ($result['outcome'] === 'undone')  return ['set_done', 'Done: every change it made is undone.'];
+
+        if ($result['outcome'] === 'awaiting_look') return ['set_stopped', ($action === 'undo_set')
+            ? 'Paused: part of it is undone. What is left could only be checked once that landed: look below, then press Undo what it applied again.'
+            : 'Paused: part of it is live. The next change could only be checked once that landed: look below, then approve again.'];
+
+        // The walk counts steps from 0; the page counts changes from 1.
+        $reason = preg_replace_callback('/\bStep (\d+)/', fn ($match) => 'Change ' . ((int) $match[1] + 1), (string) ($result['reason'] ?: $result['outcome']));
+
+        return ['set_stopped', "It stopped: {$reason}"];
+
+    }
+
     protected function take_proposal (string $action, ?string $capability = null) : Proposal {
 
         $draft_id = (int) ($_REQUEST['post_id'] ?? 0);
@@ -201,7 +262,7 @@ class Proposals_Admin extends Feature {
 
             delete_transient(static::REFUSED . $user);
 
-            echo new Proposal_Notice(['type' => $type, 'dismissible' => true, 'message' => trim($message . (($code === 'refused') ? ' ' . $refusal : ''))]);
+            echo new Proposal_Notice(['type' => $type, 'dismissible' => true, 'message' => trim($message . ((($code === 'refused') || str_starts_with($code, 'set_')) ? ' ' . $refusal : ''))]);
 
         }
 

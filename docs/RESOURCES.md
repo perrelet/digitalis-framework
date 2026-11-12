@@ -13,6 +13,8 @@ Read and change models through one layer, the way wp-admin does: REST (`lattice/
 - [Writing](#writing)
 - [Actions, Views and Consequences](#actions-views-and-consequences)
 - [Option Pages](#option-pages)
+- [Orders](#orders)
+- [Accounts](#accounts)
 - [The Version](#the-version)
 - [The Journal and Undo](#the-journal-and-undo)
 - [Trash](#trash)
@@ -44,8 +46,12 @@ include/_features/lattice/resources/
 ├── options-page-resource.abstract.php
 ├── options-page.model.php
 ├── options-page-record.class.php
+├── order-model-resource.abstract.php   Order_Model_Resource: WooCommerce orders in HPOS
 ├── journal/
 └── routes/
+
+include/features/lattice/resources-orders/
+└── resources-orders.feature.php      Lattice_Resources_Orders: versions and journals orders written outside the layer
 ```
 
 `Has_Version` (`include/wordpress/`) and `Has_Unsaved_Copies` (`include/acf/`) stay in core: they are model traits.
@@ -164,9 +170,17 @@ An update runs in this order:
 
 An update may carry `expected`, each field it sends and the value the caller started from, instead of `version`. Each field is then measured from its own start: applied while the record holds it, skipped where the record already holds what is proposed, and a conflict otherwise, so a change to another field stops nothing. A conflict refuses the whole update as `stale`, with `data.conflicts` (`field`, `start`, `live`, `proposed`, secrets masked). The answer lists `applied` and `skipped`; with nothing applied it is `changed: false`. A secret's start is compared masked, so what a read gave can be sent back. A post column counts as there only on the same text, so a change WordPress filtered at save reads as a conflict. A `version` sent as well is checked too. Terms and groups are measured on what the update names, since a write leaves the rest alone.
 
+For a feature that holds changes for later, the service has three reads that write nothing. `hold_values($name, $id, $values)` (no id for a record not yet made) answers `values`, `removed` and `problems` as the current account would send them now, a held post column filtered with kses as its own save would, since the save that stores it runs as whoever applies it. A mask is a problem: unmask it against what the caller already holds first. `compare_expected($name, $id, $values, $expected)` answers `applied`, `skipped` and `conflicts` to anyone who may read the record, a field the record does not show being a conflict marked `not_shown`, and `withheld` naming the fields holding a secret for an account without the right to write, so it never tests a guess. It says how fields compare, not whether a write would be allowed. `Model_Resource::mask_held($values)` masks held values whoever reads them, with `SECRET` and any name the account's fields do not know masked whole. `Model_Resource::before_operation($model, $operation)` answers a `WP_Error` to refuse a write that will happen, after its refusals and before its claim, and `after_operation()` follows it only when it answered null, whatever the write does; neither runs for a dry run or a write with nothing to change. `Model_Resource::journal_marks($model)` adds a resource's own marks (`set_key`, `set_step`, `proposer_id`) to the rows its writes and actions make.
+
 The service writes ACF fields directly, so `acf/save_post` does not fire: `after_write()` runs what the model's `acf/save_post` handlers would. A write that changes nothing answers `changed: false` and raises nothing.
 
 ---
+
+## Applying a list of calls
+
+`Resources::apply_set(Step_List $list, array $seen, string $via)` replays a held list of this service's calls, each as the current account, with its own checks, preview, `confirm`, version and row. The caller implements `Step_List` and holds its lock; [`lattice/change-sets`](./CHANGE_SETS.md) is the one that does. `preview_set($list)` is the dry run: per step its preview or refusal, flags, fingerprint, version and step hash, the steps that can only be previewed once earlier ones land marked `reached`. `$seen` carries those, by position. Before anything is written, a moved version, a changed fingerprint or step hash or a conflict answers `awaiting_look` and any other refusal answers `refused`; while walking, the walk stops at the first step that no longer matches. It answers `outcome` (`applied`, `awaiting_look`, `refused`, `failed`, `unknown`), `reason`, `markers`, `results` by position and, for a `locked` step that could wait, `wait`; and a `WP_Error` (`locked`) for what is not the list's fault. A step cannot hold a call's control keys. A list's rows being undone stops it for good: `Journal::has_undone_rows($key)` says so.
+
+`Resources::undo_set(Step_List $list, array $seen, string $via)` walks the rows its steps wrote, newest first, each inverse with its own preview and `confirm`, and `preview_undo($list)` is its dry run, by row id: what can be undone, what cannot and why, a secret an inverse cannot restore, and a row passed over because a `changes_record: false` action wrote nothing to its record, or an update's read came back the same. `can_undo` is false for what nothing can reverse, known before anyone starts, and `blocked` marks what sits behind one. There is no refusing it whole: it stops at the first that cannot go on, answering `undone`, `awaiting_look` or `stopped` with the row, `partial` where a failure may have landed and `no_row` naming applied steps it has no row for, and writes no markers. A `WP_Error` (`locked`) answers what is not the list's fault: the journal behind, a walk running, a step of unknown outcome. `undo()`'s fourth argument, a version its strict check also takes, is for this alone and comes from no input. A step of unknown outcome is never run again by itself. Every row written meanwhile names the list and step.
 
 ## Actions, Views and Consequences
 
@@ -200,7 +214,7 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 
 `act_{name}()` returns the model, a new record, or a `WP_Error`. An error that changed nothing keeps its own code.
 
-Views (`get_views()`) are named reads: `'prices' => fn ($offer) => …`. Consequences (`get_consequences(Resource_Change $change)`) compare `$change->before` (the saved record, null on create) with `$change->after` (the unsaved copy) and answer `[['kind', 'label', 'items']]`.
+Views (`get_views()`) are named reads: `'prices' => fn ($offer) => …`. A consequence may name its own top-level keys in `volatile` (`['kind' => 'due', 'label' => '…', 'count' => 12, 'volatile' => ['count']]`): shown, and left out of the fingerprint, so a count or a time changing by itself does not stop whoever looked. Consequences (`get_consequences(Resource_Change $change)`) compare `$change->before` (the saved record, null on create) with `$change->after` (the unsaved copy) and answer `[['kind', 'label', 'items']]`.
 
 ### Presenting a change
 
@@ -225,6 +239,80 @@ Fields come from the groups on that page; the capability is the page's; create i
 
 ---
 
+## Orders
+
+WooCommerce orders (`shop_order`) stored in HPOS with sync off. Elsewhere the resource does not register and the feature does not load: ACF reads an order's meta table only through its placeholder post, and a sync can replay a write nobody made. Refunds and subscriptions are not covered.
+
+The site's order model carries the version and the unsaved copy; the resource sits beside it:
+
+```php
+class Order extends \Digitalis\Order {
+
+    use \Digitalis\Has_Order_Version, \Digitalis\Has_Unsaved_Copies;
+
+}
+
+class Order_Resource extends \Digitalis\Order_Model_Resource {
+
+    protected static $name        = 'order';
+    protected static $model_class = Order::class;
+
+    const CREATE_STATUS  = 'erp-draft';
+    const DRAFT_STATUSES = ['erp-draft'];
+
+}
+```
+
+Load `lattice/resources-orders` after `lattice/resources`; it journals and versions the writes the layer does not make.
+
+**What the resource answers.** `status` is its one field, read by `get_status()` and staged by `set_status()`, its choices WooCommerce's without `wc-` and without `checkout-draft`; sites add theirs. A create is an unsaved order in `CREATE_STATUS` (`pending` unless the resource says). `query()` builds `WC_Order_Query` arguments, so a `lattice.resources.query` filter branches on the resource. Trash is `delete(false)` and `untrash()`, whose save replays the status hooks with only emails suppressed. `read_post`, `edit_post` and `delete_post` map through the placeholder post; listing and creating need `edit_shop_orders`. WooCommerce maps an order's capabilities from its placeholder's author, so an agent that creates an order owns it: an order resource's perimeter rests on `lattice.resources.refuse` or a credential, never on the capability.
+
+**Credentials.** An order's conditions are `draft` (its `DRAFT_STATUSES`) and each status by name, a trashed order judged by the status it had; `own` is the placeholder's author. A key with `writes` on `records: draft` makes, edits, trashes and restores drafts, and cannot move one out of draft.
+
+**Failures.** `WC_Order::save()` catches every exception and answers the id, and each ACF field is a save of its own, so `before_write()` counts the order's before and after saves: a save that started and never ended answers `not_saved`, partial. A subclass that overrides either calls parent.
+
+**Writes outside the layer** (`Lattice_Resources_Orders`):
+
+| Hook | Does |
+|------|------|
+| `load-woocommerce_page_wc-orders` 5 | Claims the edit form's version or refuses it as stale, before `handle_order_update()` writes anything |
+| `woocommerce_order_actions_start` | Prints the version field |
+| order and item before saves, item deletion, trash, untrash | Take "before" once per order |
+| `woocommerce_after_order_object_save`, `woocommerce_trash_order` | Raise the version unless claimed |
+| `woocommerce_before_delete_order` | Writes the `deleted` row (a forced delete only) |
+| `action_scheduler_before_execute` / `after_execute`, `shutdown` | Settle: finish or raise the version, read "after" and write one row per order touched, the action `create`, `trash`, `untrash` or `update` |
+
+An edit-screen save is several order saves, so "before" is taken at the first touch and the row written once at the settle; settling per Action Scheduler action keeps a batch of renewals to a row each. "Before" and "after" read a fresh clone past the order cache. `checkout-draft` and `auto-draft` are journaled from their first real status, and deleting one writes no row. `via` is `cron` under Action Scheduler or WP-Cron, `admin` in wp-admin, `other` elsewhere (WooCommerce's REST API included). The hooks never throw: an error is logged, since a throw inside a save becomes an order note and in a before hook cancels the write. Subscriptions' copies leave the version and set key behind.
+
+---
+
+## Accounts
+
+A site subclasses `User_Resource` and registers it, naming any ACF or meta fields it opens and the conditions it declares:
+
+```php
+class Account_Resource extends \Digitalis\User_Resource {
+
+    protected static $name = 'account';
+
+    public function get_conditions () : array {
+
+        return ['teacher' => fn ($account, array $values) => (bool) get_user_meta($account->get_id(), 'teacher_id', true)];
+
+    }
+
+}
+```
+
+- **Records** are `Account` models (`User` with a version and unsaved copies). Changes are staged and written on `save()`, so a dry run never writes. A bare number is never an account: user ids overlap post ids.
+- **Fields:** `login` (on create only), `email`, `display_name`, `first_name`, `last_name`, `nickname`, `url`, `description`, `roles` and `notify` (create only: WordPress's new-user mail). No password field. No ACF group unless the site names it.
+- **Actions:** `send_password_reset` (the site's own lost-password mail) and `delete` (`reassign` required, `confirm` required, no undo).
+- **Mail in a dry run:** the email-change notice to the old address, the new-user mail on a create with `notify` and the reset mail, each asked of the filter WordPress asks (`send_email_change_email` with what `wp_update_user()` gets, `send_retrieve_password_email`). An address shows only to a reader who may read `email`. The new-user mail's own filter needs the account, so a create names it whenever `notify` is set.
+- **Rights:** listing and reading need `list_users`; updating and a reset need `edit_user` with the id; giving roles needs `promote_user` with the id (`promote_users` on a create) and roles the account may give; creating needs `create_users`; deleting needs `delete_user` with the id.
+- **Outside changes** (a profile screen, a user sync, an erasure) raise the version and write one `changed` row per account per request, naming the fields and holding no values.
+- **Erasure:** `Resources::erase_account($user_id)` replaces the values and why of every row about the account with `[erased]`, keeping the row; WordPress's privacy exporter and eraser list and scrub them, and `lattice.resources.erased` tells others (change sets). Values in rows about an account expire after a year (`lattice.journal.account_values_days`) in the daily prune. Nothing undoes an erased or expired row.
+- `Model_Resource::get_value_needs()`, `get_before_facts()`, `find_made()`, `get_summary_fields()` and `get_search_fields()` are the seams it uses; another resource may use them too.
+
 ## The Version
 
 `Has_Version` keeps a count in meta (`_lattice_version`; override `get_version_key()` to keep an existing one). Every save raises it twice: once as it starts, once as it finishes, so anyone who read mid-write is stale too. A restored revision raises it once more, after its fields come back. `raise_version()` is a single step for raises outside a save. The count is only ever compared, never counted.
@@ -237,7 +325,7 @@ wp-admin's classic editor and options pages carry the version in a hidden field 
 
 ## The Journal and Undo
 
-`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`). A row may also name a change set: `set_key`, `set_step` and `proposer_id`, which `journal()`, its route (`?set=`, `?proposer=`), the CLI and the Changes screen filter by.
+`{prefix}lattice_journal`: one row per change from any side, with who, when, `via` (`rest`, `cli`, `admin`, `other`, `cron`), the why, the values before and after, and the versions. wp-admin's saves of a resource's records are journaled by hooks; the service's own writes stand aside from those hooks. Rows are kept two years (`lattice.journal.keep_days`). A row may also name a change set: `set_key`, `set_step` and `proposer_id`, which `journal()`, its route (`?set=`, `?proposer=`), the CLI and the Changes screen filter by. A row written with an application password names it: `credential` (its UUID) and `credential_name` (its name then, kept through a rename or a revoke), which the Changes screen and a stale refusal show.
 
 A restored revision is one row, `restore`. WordPress saves the post's columns, then its `wp_restore_post_revision` listeners bring the fields back (its own, ACF's, a site's); the feature journals the save as it would any, then completes that row at priority 100, once the fields are in (`Journal::amend()`, used only for a row written earlier in the same request). Rows are otherwise never changed.
 
@@ -290,7 +378,7 @@ A guard that refuses (`pre_trash_post` or `pre_untrash_post` answering `false`, 
 | `not_found` | 404 | No such resource, record, action, view or row |
 | `stale` | 409 | `data.version` is now; or a `confirm` no longer matches; or `data.conflicts` says which expected values no longer hold |
 | `locked` | 409 | `data.reason`; locked fields in `data.fields` |
-| `not_saved` | 500 | Part was written: read it again |
+| `not_saved` | 500 | It was not written. With `data.partial`, part was, or may have been: read it again, and do not simply run it again. A create names what it made in `data.id` where it knows, and its row carries `_partial` in `after` |
 
 ---
 
@@ -305,8 +393,11 @@ Another feature has its say over single records:
 - `lattice.resources.journal` (`$journal, $resource, $model`): `false` keeps a record's changes out of the journal.
 - `lattice.resources.forbidden` (`$data, $resource, $model, $operation`): adds to the `data` of the `forbidden` refusal of a write to a known record, so a refusal can say what the account could do instead.
 - `lattice.resources.describe` (`$description, $resource`): adds to the guide's description of a resource.
+- `lattice.resources.guide` (`$guide`): adds to the guide as a whole, such as a brief for the caller.
 
-A record's actions read as unusable where `lattice.resources.allow` refuses them. `Resources::check_update($name, $id, $values)` says what would stop an update, for an account that may read the record, without its right to make it: `problems`, `locked` (field and reason) and `needs` (the capability the record's lock asks), with neither a diff nor consequences. It predicts as that account, so it can differ for a reviewer where a resource shows fields per account. An empty answer means nothing stands in the way.
+A request made with a scoped application password is also asked of its policy ([CREDENTIALS.md](./CREDENTIALS.md)): reads exactly, writes where the values are known, and a refusal it makes says `data.reason: lattice_credential`, or `lattice_credential_review` with `data.propose` where it may be proposed instead. The journal names the password behind each change.
+
+A record's actions read as unusable where `lattice.resources.allow` or a credential refuses them. `Resources::check_update($name, $id, $values)` says what would stop an update, for an account that may read the record, without its right to make it: `problems`, `locked` (field and reason) and `needs` (the capability the record's lock asks), with neither a diff nor consequences. It predicts as that account, so it can differ for a reviewer where a resource shows fields per account. An empty answer means nothing stands in the way.
 
 ---
 
@@ -323,4 +414,6 @@ A record's actions read as unusable where `lattice.resources.allow` refuses them
 - A dry run shows the post's columns as sent: WordPress filters them at save, trimming the title, converting entities and applying kses as the acting account, and predicting that save is not safe.
 - An account without `unfiltered_html` undoing a row, or a reviewer without it approving a trusted account's new embed in an ACF field, removes what it cannot keep; the dry run shows it.
 - Content is filtered as the acting account. For an account without `unfiltered_html`, WordPress's kses turns `&` into `&amp;` inside ACF block data, as it does in wp-admin: an approval by such an account carries that into the live content. WordPress also re-serialises block attributes (`\"` to `\u0022`), so compare content with what WordPress stored, not the string sent.
+- An order's AJAX item edits carry no version, so only the edit form is refused as stale. An order resource that reads no items raises the version on an item edit but writes no row.
+- An outside write raises an order's version once per order save, so it can climb by several in one request.
 - Long text is presented shortened; an edit beyond what is shown reads "Changed". `lattice.resources.present` (`$lines, $resource, $before, $after, $model`) lets another feature add to a presented change, a preview link say.

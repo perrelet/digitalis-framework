@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lattice;
 
+require_once dirname(__DIR__, 2) . '/wp/stored-markup.feature.php';
 require_once __DIR__ . '/has-proposals.trait.php';
 require_once __DIR__ . '/proposal.class.php';
 require_once __DIR__ . '/proposal-cleanup.cron-scheduler.php';
@@ -11,6 +12,7 @@ require_once __DIR__ . '/views/proposal-notice.view.php';
 require_once __DIR__ . '/views/proposal-status.view.php';
 require_once __DIR__ . '/views/proposal-review.view.php';
 require_once __DIR__ . '/views/proposals-queue.view.php';
+require_once __DIR__ . '/views/proposal-set-review.view.php';
 require_once __DIR__ . '/proposals-admin.feature.php';
 require_once __DIR__ . '/proposals.posts-table.php';
 require_once __DIR__ . '/proposal-review.meta-box.php';
@@ -23,7 +25,7 @@ class Proposals extends Feature {
     protected $post_types     = null;
     protected $admins_approve = true;
 
-    protected static $requires = ['lattice/resources', 'wp/stored-markup'];
+    protected static $requires = ['lattice/resources', 'lattice/change-sets'];
 
     protected array $types = [];
 
@@ -48,12 +50,13 @@ class Proposals extends Feature {
             'lattice.resources.query'             => 'hide_drafts',
             'lattice.resources.refuse'            => 'refuse_drafts',
             'lattice.resources.journal'           => 'journal_drafts',
+            'lattice.change_set.cleanup_days'     => 'answer_cleanup_days',
         ];
 
         foreach (['post', 'page', 'page_type', 'page_parent'] as $param) $hooks["acf/location/match_rule/type={$param}"] = 'match_original';
 
         // Resources register as the app loads, after this.
-        if (is_admin()) $hooks['init'] = 'load_admin';
+        $hooks['init'] = 'load_after_resources';
 
         return $hooks;
 
@@ -62,6 +65,27 @@ class Proposals extends Feature {
     public function run () {
 
         Proposal_Cleanup::get_instance();
+
+        // Here and not above: a feature's file is included before its requirements load. Absent while the feature's tables are not current.
+        if (!Resources::inst()->get_resource('change_set')) return;
+
+        require_once __DIR__ . '/proposal-set-resource.class.php';
+
+        Proposal_Set_Resource::get_instance();
+
+    }
+
+    public function load_after_resources () {
+
+        if ($this->get_post_types()) Stored_Markup::get_instance();
+
+        if (is_admin()) $this->load_admin();
+
+    }
+
+    public function answer_cleanup_days ($days) {
+
+        return apply_filters('lattice.proposal.cleanup_days', $days);
 
     }
 

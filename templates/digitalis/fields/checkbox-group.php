@@ -1,5 +1,5 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<?php if ($name): ?>
+<?php if ($name && !is_null($null_value)): ?>
     <input type='hidden' name='<?= esc_attr($name) ?>' value='<?= esc_attr($null_value) ?>'>
 <?php endif; ?>
 <?php $i = 0; foreach ($options as $option => $option_label): ?>

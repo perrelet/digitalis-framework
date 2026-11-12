@@ -239,6 +239,7 @@ The scripts that predate this document are classic scripts in several shapes. Ea
 | `assets/js/counter.js` | IIFE around an object literal |
 | `assets/js/fields.js`, `woo-clean.js`, `acf-ajax.class.js` | Global class (`acf-ajax` on jQuery) |
 | `assets/js/debugger.js` | Custom elements, global classes |
+| `assets/js/human-check.js`, `human-check-turnstile.js` | Arrow IIFE over a `window.LatticeHumanCheck` global; arrived with the fourth merge of main |
 | `_features/lattice/page-loader`, `scroll-classes` | Arrow IIFE over a localized global |
 | `_features/lattice/proposals` (two files) | Classic scripts in core's style, one on the block editor's `wp` global |
 | `modules/mapbox.js`, `modules/query.js` | Not yet read against this document |

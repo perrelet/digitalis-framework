@@ -38,6 +38,7 @@ class Field extends Component {
         'disabled'          => null,
         'readonly'          => null,
         'form'              => null,
+        'error'             => null,
     ];
 
     protected static $merge = [
@@ -87,6 +88,13 @@ class Field extends Component {
         if ($p['readonly'])    $p['attributes']['readonly']    = 'true';
         if ($p['form'])        $p['attributes']['form']        = $p['form'];
         if ($p['placeholder']) $p['attributes']['placeholder'] = $p['placeholder'];
+
+        if ($p['error']) {
+
+            $p['attributes']['aria-invalid']     = 'true';
+            $p['attributes']['aria-describedby'] = "{$p['id']}-error";
+
+        }
 
         if ($p['width'] != 1) $p['row_styles']['flex'] = $p['width'];
 
@@ -204,15 +212,20 @@ class Field extends Component {
 
     public function after () {
 
-        if ($this->wrap) {
+        if (!$this->wrap) return $this->print_error();
 
-            $this->before_wrap_close();
-            echo $this->wrapper->close(); 
+        $this->before_wrap_close();
+        $this->print_error();
+        echo $this->wrapper->close();
 
-            $this->before_row_close();
-            echo $this->row->close();
+        $this->before_row_close();
+        echo $this->row->close();
 
-        }
+    }
+
+    public function print_error () {
+
+        if ($this->error) echo "<p class='field-error' id='" . esc_attr($this->id . '-error') . "'>" . esc_html($this->error) . '</p>';
 
     }
 

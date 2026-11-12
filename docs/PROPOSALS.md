@@ -6,7 +6,9 @@ Let an account that may not change a published record propose a change to it. A 
 
 ## Overview
 
-A proposal is a draft copy of a published record, linked to it by meta. Its author edits the draft in wp-admin and submits it ("Submit for Review"). A reviewer sees what it changes against the live record, then approves it or sends it back with a note. Approving is `Resources::update()` on the live record, so it gets the resources layer's checks, its journal row and its undo.
+There are two kinds of proposal for now. One is below: a draft copy of a record, edited in wp-admin. The other is a [change set](./CHANGE_SETS.md) offered for review, which can name several records and is made through the API: see [Sets](#sets). They stand side by side in the queue until drafts become a set's workspace.
+
+A draft proposal is a draft copy of a published record, linked to it by meta. Its author edits the draft in wp-admin and submits it ("Submit for Review"). A reviewer sees what it changes against the live record, then approves it or sends it back with a note. Approving is `Resources::update()` on the live record, so it gets the resources layer's checks, its journal row and its undo.
 
 ```
 include/_features/lattice/proposals/
@@ -14,12 +16,13 @@ include/_features/lattice/proposals/
 ├── has-proposals.trait.php              Has_Proposals: the proposal meta, on every moderated model
 ├── takes-proposals.interface.php        Takes_Proposals: what Has_Proposals and Has_Version give a moderated model
 ├── proposal.class.php                   Proposal: one draft; finding, changes, markup, review, approve, reject
+├── proposal-set-resource.class.php      Proposal_Set_Resource: the review workflow on a change set
 ├── proposals-admin.feature.php          Proposals_Admin: handlers, notices, assets, the Publish box
 ├── proposals.posts-table.php            Proposals_Table: row actions and list badges
 ├── proposal-review.meta-box.php         Proposal_Review_Box: the review on the draft's edit screen
 ├── proposals.admin-page.php             Proposals_Page: every open proposal
 ├── proposal-cleanup.cron-scheduler.php  Proposal_Cleanup: deletes abandoned drafts
-├── views/                               Proposal_Review, Proposals_Queue, Proposal_Status, Proposal_Notice
+├── views/                               Proposal_Review, Proposal_Set_Review, Proposals_Queue, Proposal_Status, Proposal_Notice
 ├── templates/
 ├── proposals.css, proposals.js
 └── proposal-status.js                   The block editor's status panel
@@ -29,7 +32,7 @@ include/_features/lattice/proposals/
 
 ## Loading
 
-Every moderated post type is a resource whose model uses `Has_Version`, `Has_Unsaved_Copies` and `Has_Proposals`. Proposals requires `lattice/resources` and `wp/stored-markup` (see [Trusted Markup](#trusted-markup)), which load with it, and ACF.
+Every moderated post type is a resource whose model uses `Has_Version`, `Has_Unsaved_Copies` and `Has_Proposals`. Proposals requires `lattice/resources` and `lattice/change-sets`, which load with it, and ACF. A site with no moderated type takes sets alone. `Stored_Markup` (see [Trusted Markup](#trusted-markup)) loads on `init` only where a model uses `Has_Proposals`, so its hooks exist from then on.
 
 ```php
 public function load () {
@@ -105,6 +108,32 @@ Any other refusal (a locked field, a value that fails its check, a field the rec
 
 ---
 
+## Sets
+
+Proposals registers `Proposal_Set_Resource` under `change_set`, adding the review workflow to the [set's own actions](./CHANGE_SETS.md). A set is made and its steps held as there, then:
+
+```text
+POST change_set/12/submit_proposal    { version, why }
+GET  change_set/12/review
+POST change_set/12/approve_proposal   { seen: { version, steps }, why }
+POST change_set/12/reject_proposal    { note, version, why }
+```
+
+| Action | Who | From | Does |
+|---|---|---|---|
+| `submit_proposal` | Its author, with `propose_changes` | `draft`, or `applied_in_part` when not with a reviewer | Offers it, clearing the note and reason. Needs a purpose and steps. A set partly undone cannot go on, so it refuses one |
+| `approve_proposal` | `approve_proposals` | `submitted`, `awaiting_review` or `applied_in_part`, when offered | Walks it as the reviewer, every step needing the reviewer's own capability. A set a scoped password wrote is approved only while that password may still propose its steps, never by that password, and only by a reviewer who may read every step. It stops as [applying](./CHANGE_SETS.md#applying) does, and approving again walks on |
+| `reject_proposal` | `approve_proposals` | As approving | Hands it back with an optional note: `draft`, or `applied_in_part` when something landed. No longer offered, so its author may rebase, undo, withdraw, submit it again or apply it if they could make every step |
+| `rebase_proposal` | Its author | A draft, offered, `awaiting_review` or `applied_in_part` | `rebase_set`, taking a submitted set too. With nothing applied it returns to draft even with nothing to move, which is how an author takes a set back. With a step applied it stays offered |
+
+**The review** is a read, so it takes no lock and writes nothing. It answers the set's version, `steps` by position and `records`, each record's positions. An account with `approve_proposals` gets each step's preview, fingerprint, version, hash and conflicts; send `version` and `steps` back as `seen`. Anyone else who may read the set, which means its author, gets what can be said without the right to write: for an update, `compare_expected()` and `check_update()`; for anything else, `checked: false`. A step marked `reached` depends on the earlier steps in `after`, so it is not compared against what is live until they land. A conflict marked `masking` is a whole mask against per-cell masks, which reads as a conflict though nobody moved the value.
+
+wp-admin's queue shows a reviewer what was offered and their own, and anyone else all their own, a set handed back reading "Sent back". `get_edit_url()` is its review screen, `?page=lattice-proposals&set=12`, which offers submitting, approving, sending back, rebasing, withdrawing, undoing and settling a step where the account may. Holding steps and an author's own `apply_set` are the API's. Approving is not offered while a step would be refused, since that would hand the set back with nothing to tell its author: send it back instead. A closed set leaves the queue, so a reviewer reaches it from the redirect or Tools → Changes.
+
+`lattice.proposal.cleanup_days` answers `lattice.change_set.cleanup_days` too.
+
+---
+
 ## Hooks
 
 | Hook | Arguments | When |
@@ -112,7 +141,10 @@ Any other refusal (a locked field, a value that fails its check, a field the rec
 | `lattice.proposal.submitted` | `$proposal` | Submitted for review |
 | `lattice.proposal.rejected` | `$proposal` | Sent back; `get_note()` is the reviewer's note |
 | `lattice.proposal.approved` | `$original`, `$proposal`, `$result` | Written, before the draft is deleted |
-| `lattice.proposal.cleanup_days` | `$days` | Filter: idle days before a draft is deleted |
+| `lattice.proposal.cleanup_days` | `$days` | Filter: idle days before a draft is deleted or a set withdrawn |
+| `lattice.change_set.submitted` | `$set` | A set was offered for review |
+| `lattice.change_set.rejected` | `$set` | A set was handed back; `get_note()` is the reviewer's note |
+| `lattice.change_set.approved` | `$set`, `$result` | Approving landed every step and closed the set |
 | `lattice.proposal.markup` | `$policy`, `$original`, `$user_id`, `$markup` | Filter: `warn`, `refuse` or `exclude` when an account would take markup off a record (see [Trusted Markup](#trusted-markup)) |
 
 Mail hangs from these in the site; proposals sends none.
@@ -155,5 +187,5 @@ What kses only re-encodes (`&` to `&amp;` inside block data, block attributes re
 ## Limits
 
 - Approving writes as the reviewer, so a reviewer without `unfiltered_html` has values filtered again. Values already filtered when their author saved them are unchanged by this. A trusted author's new markup, approved by a reviewer without it, loses what the reviewer can't keep: for ACF values the review's dry run lists it under `removed`; for the post's columns the dry run does not show it.
-- Proposals are made in wp-admin only. A write through the API cannot yet be held as a proposal.
+- A draft proposal is made in wp-admin only; through the API, a proposal is a [set](#sets).
 - Long text is presented shortened; the review box links a preview of the draft when its content changed.

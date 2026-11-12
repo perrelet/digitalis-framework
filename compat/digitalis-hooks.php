@@ -17,6 +17,7 @@ class Deprecated_Hooks {
         'lattice.instantiate'        => 'Digitalis/Instantiate/',
         'lattice.db.wpdb'            => 'Digitalis/DB/WPDB',
         'lattice.field_group.field'  => 'Digitalis/Field_Group/Field',
+        'lattice.form.params'        => 'Digitalis/Form/Params',
     ];
 
     public static function resolve ($name) {

@@ -10,10 +10,16 @@ require_once __DIR__ . '/model-resource.abstract.php';
 require_once __DIR__ . '/options-page.model.php';
 require_once __DIR__ . '/options-page-record.class.php';
 require_once __DIR__ . '/options-page-resource.abstract.php';
+require_once __DIR__ . '/order-model-resource.abstract.php';
+require_once __DIR__ . '/account.model.php';
+require_once __DIR__ . '/user-resource.abstract.php';
+require_once __DIR__ . '/step-list.interface.php';
 require_once __DIR__ . '/resources.service.php';
 require_once __DIR__ . '/journal/journal.db-table.php';
 require_once __DIR__ . '/journal/v1-create-journal.migration.php';
 require_once __DIR__ . '/journal/v2-journal-sets.migration.php';
+require_once __DIR__ . '/journal/v3-journal-credential.migration.php';
+require_once __DIR__ . '/journal/v4-journal-credential-name.migration.php';
 require_once __DIR__ . '/journal/journal.schema.php';
 require_once __DIR__ . '/journal/journal.service.php';
 require_once __DIR__ . '/resources.command.php';
@@ -24,6 +30,8 @@ foreach (glob(__DIR__ . '/routes/*.route.php') as $file) require_once $file;
 
 class Lattice_Resources extends Feature {
 
+    protected static $requires = ['lattice/credentials'];
+
     const PRUNE         = 'lattice_journal_prune';
     const VERSION_FIELD = 'lattice_version';
 
@@ -33,9 +41,23 @@ class Lattice_Resources extends Feature {
 
     protected ?array $last_save = null;
 
+    public function add_exporter ($exporters) {
+
+        return $exporters + ['lattice-journal' => ['exporter_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'export_personal_data']]];
+
+    }
+
+    public function add_eraser ($erasers) {
+
+        return $erasers + ['lattice-journal' => ['eraser_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'erase_personal_data']]];
+
+    }
+
     public function get_hooks () {
 
         return [
+            'wp_privacy_personal_data_exporters' => 'add_exporter',
+            'wp_privacy_personal_data_erasers'   => 'add_eraser',
             'save_post'                                       => 'raise_version',
             'pre_post_update'                                 => 'take_before',
             'wp_after_insert_post'                            => ['settle_save', 100],
@@ -134,21 +156,21 @@ class Lattice_Resources extends Feature {
 
     }
 
-    protected function print_version_field ($model) : void {
+    public static function print_version_field ($model) : void {
 
         echo '<input type="hidden" name="' . static::VERSION_FIELD . '" value="' . esc_attr($model->get_version()) . '">';
 
     }
 
-    protected function refuse_stale (Model_Resource $resource, $record_id, int $seen) : void {
+    public static function refuse_stale (Model_Resource $resource, $record_id, int $seen) : void {
 
-        $by = $this->describe_change($resource, $record_id, $seen);
+        $by = static::describe_change($resource, $record_id, $seen);
 
         wp_die(esc_html("This {$resource->get_label()} changed after you opened it" . ($by ? " ({$by})" : '') . ', so your edit was not saved. Open it again to see the change, then make yours.'), 'Changed since you opened it', ['response' => 409, 'back_link' => true]);
 
     }
 
-    protected function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
+    public static function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
 
         $row = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
 
@@ -156,7 +178,9 @@ class Lattice_Resources extends Feature {
 
         $how = ['rest' => 'through the API', 'cli' => 'through WP-CLI', 'admin' => 'in wp-admin'][$row['via']] ?? '';
 
-        return implode(', ', array_filter([(get_userdata($row['user_id']) ?: null)?->display_name ?: 'someone', $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
+        $who = ((get_userdata($row['user_id']) ?: null)?->display_name ?: 'someone') . (($row['credential_name'] ?? null) ? " with the password {$row['credential_name']}" : '');
+
+        return implode(', ', array_filter([$who, $how, wp_date('j M H:i', strtotime("{$row['at']} UTC"))]));
 
     }
 
@@ -176,7 +200,7 @@ class Lattice_Resources extends Feature {
 
     public function exclude_version ($keys, $post) {
 
-        return method_exists($post, 'get_version_key') ? [...$keys, $post::get_version_key()] : $keys;
+        return method_exists($post, 'get_version_key') ? [...$keys, $post::get_version_key(), Resources::SET_KEY] : $keys;
 
     }
 

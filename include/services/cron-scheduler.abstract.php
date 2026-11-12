@@ -121,7 +121,7 @@ abstract class Cron_Scheduler extends Singleton {
 
             }
 
-            wp_schedule_event($date_time->getTimestamp(), $task['schedule'], $action);
+            wp_schedule_event($this->get_first_run($task), $task['schedule'], $action);
 
             $stored[$key] = [
                 'hash' => $hash,
@@ -132,6 +132,19 @@ abstract class Cron_Scheduler extends Singleton {
         }
 
         if ($dirty) update_option($this->get_option_name(), $stored, false);
+
+    }
+
+    // The next occurrence of the task's time, stepped by its interval: WP cron runs a first time in the past at once.
+    protected function get_first_run ($task) {
+
+        $timezone = new DateTimeZone($this->get_timezone());
+        $first    = DateTime::createFromFormat('Y-m-d H:i:s', (new DateTime('now', $timezone))->format('Y-m-d') . ' ' . $task['time'], $timezone)->getTimestamp();
+        $interval = max(1, (int) (wp_get_schedules()[$task['schedule']]['interval'] ?? DAY_IN_SECONDS));
+
+        if ($first < time()) $first += (int) ceil((time() - $first) / $interval) * $interval;
+
+        return $first;
 
     }
 

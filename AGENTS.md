@@ -6,6 +6,22 @@ OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes inst
 
 ---
 
+## Code style: read this first, it is not optional
+
+Every agent working in this codebase follows these rules. They are the house style, and code that breaks them gets sent back.
+
+1. **Code is self-documenting.** Names carry the meaning. Name a method for what it does, starting with a verb: `register_fields()`, `build_query()`, `find_account()`, `is_expired()`. Not a noun: `fields()`, `query()`, `account()`, `expiry()`.
+2. **Comments are reserved only for genuine gotchas and important references** that are not evident from reading the code: a coupling to another file, behaviour a maintainer would otherwise "fix" wrongly, a section of a spec. A comment never restates what the code, or a method's name, already says.
+3. **Less is more.** Where a comment stays, it is one line, as terse and simple as possible. No docblocks, no multi-line explanations, no narrating the design. If it will not fit on one line, cut it.
+4. **Very short labelling comments** may split a large class into sections: `// Records`, `// Policy`.
+
+Before you commit, list every comment you added with `git diff | grep -E '^\+\s*//'` and delete any that is not a gotcha or a reference. Reviews do not check this; you do.
+
+Right: `// User ids overlap post ids: a bare number is never an account.`
+Wrong: `// Finds the account by its id and returns it, or null when there is none.`
+
+---
+
 ## Before you write code
 
 This primer is a map, not the territory. Before adding files or editing framework internals, read these — in order — and treat them as required, not optional reference:
@@ -171,10 +187,15 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin; `$plugin` is a plugin basename or its directory (`Plugins::is_active()`); anything but a string is a strict violation | yes |
 | `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order`. Fires `lattice.relationship.partner_updated` (`$type`, `$id`, `$key`, `$relationship`) after each partner write; `Excerpt_Keywords` listens to rebuild the partner's keywords, since the write is not a save. `lattice.relationship.sync` (`$sync`, `$type`, `$id`, `$relationship`) refuses one record's sync, as proposals does for its drafts; `Bidirectional_Relationship::suppress()` / `restore()` pause every sync (they nest) | yes |
 | `Stored_Markup` | `Feature` | A post column or ACF value a save sends back exactly as stored keeps its markup, so an account without `unfiltered_html` doesn't strip a trusted account's markup from what it left alone. ACF's raw values come from `$_REQUEST['acf']`. `load_feature('wp/stored-markup')` | no |
-| `API_Only_Application_Passwords` | `Feature` | An application password authenticates the API's own requests and never a sign-in form: `wp_signon()` inside a REST request (a plugin's login form, say) treats it as a wrong password. A wrong one that REST refuses is reported to WP Fail2Ban Redux where that plugin runs. `load_feature('wp/api-only-application-passwords')` | no |
+| `API_Only_Application_Passwords` | `Feature` | An application password authenticates the API's own requests and never a sign-in form: `wp_signon()` inside a REST request (a plugin's login form, say) treats it as a wrong password. A wrong one is refused even on a site where nothing asks for the user before core's check (without WooCommerce, REST ran it as nobody), and reported to WP Fail2Ban Redux where that plugin runs. `load_feature('wp/api-only-application-passwords')` | no |
 | `Lattice_Resources` | `Feature` | Models through REST (`lattice/v1`) and `wp lattice`: dry runs, a version, a journal with undo, actions shared with wp-admin. Subclass `Model_Resource` per model (or `Options_Page_Resource` per options page); load with `load_feature('lattice/resources')` before `parent::load()`. See [RESOURCES.md](./docs/RESOURCES.md) | no |
 | `Lattice_Jobs` | `Feature` | Durable background work: a class per kind, a row per piece. `handle()` is one step, `next($cursor)` another; returning commits it. Subclass `Job` in `*.job.php`; load with `load_feature('lattice/jobs')` before `parent::load()`. Runs on WordPress cron alone. Answers `lattice.iterator.runner`, so an `Iterator`'s Run in background is a job. See [JOBS.md](./docs/JOBS.md) | no |
-| `Proposals` | `Feature` | Changes to published records held for review: a draft copy, a review screen, approval through `Resources::update()`. Every moderated type is a resource whose model uses `Has_Proposals` and implements `Takes_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `wp/stored-markup`; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
+| `Lattice_Resources_Orders` | `Feature` | WooCommerce orders as resources, HPOS with sync off only: subclass `Order_Model_Resource` over a model using `Has_Order_Version` and `Has_Unsaved_Copies`; load with `load_feature('lattice/resources-orders')` after `lattice/resources` to version and journal wp-admin, checkout and cron writes. See [RESOURCES.md](./docs/RESOURCES.md#orders) | no |
+| `Lattice_Credentials` | `Feature` | A policy per application password that only narrows its account: allow, review or deny per verb and target, for resources, routes and abilities, with `wp lattice credentials`. Loaded by `lattice/resources`. See [CREDENTIALS.md](./docs/CREDENTIALS.md) | no |
+| `Lattice_Change_Sets` | `Feature` | A held list of the layer's calls, applied by its author: several records and types, conflicts per field, a walk that stops and goes on, undo. Load with `load_feature('lattice/change-sets')`. See [CHANGE_SETS.md](./docs/CHANGE_SETS.md) | no |
+| `Lattice_Human_Check` | `Feature` | A field that proves a person: an argument `'human' => ['human_check' => 'signup', 'costly' => true]` on a `Form_Route` checks the visitor's token with a provider (Turnstile; others are a `Human_Check_Provider` named by `lattice.human_check.provider`), the form drawing its widget through `Field\Human_Check`. Keys through `lattice.human_check.keys`. Load with `load_feature('lattice/human-check')`, which loads `lattice/forms`. See [FORMS.md](./docs/FORMS.md) | no |
+| `Lattice_Forms` | `Feature` | Forms that check themselves: a route extending `Form_Route` checks its `$args` the form's way for every client (every problem at once, empty as missing, `when`, costly rules last), and a `Form` given `route` and `id` posts to its own page and draws the result, htmx an enhancement. Load with `load_feature('lattice/forms')` before `parent::load()`. See [FORMS.md](./docs/FORMS.md) | no |
+| `Proposals` | `Feature` | Changes held for review: a change set offered through the API, or a draft copy of a published record, with a review screen and approval through the layer. A moderated type is a resource whose model uses `Has_Proposals` and implements `Takes_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `lattice/change-sets`, and `Stored_Markup` where a model is moderated; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
 ### REST, Blocks & Shortcodes
@@ -638,7 +659,9 @@ Examples:
 | Copy-paste patterns | [docs/CHEATSHEET.md](./docs/CHEATSHEET.md) |
 | Real-world composite examples | [docs/EXAMPLES.md](./docs/EXAMPLES.md) |
 | Durable background work: jobs, steps, retries, keys | [docs/JOBS.md](./docs/JOBS.md) |
+| Forms checked by their route, drawn again with their result | [docs/FORMS.md](./docs/FORMS.md) |
 | Models through REST and WP-CLI: resources, dry runs, the journal | [docs/RESOURCES.md](./docs/RESOURCES.md) |
+| A held list of the layer's calls: change sets | [docs/CHANGE_SETS.md](./docs/CHANGE_SETS.md) |
 | Changes held for review: proposals | [docs/PROPOSALS.md](./docs/PROPOSALS.md) |
 | Things that look right but aren't | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) |
 | Preferred syntax where multiple forms are valid | [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) |

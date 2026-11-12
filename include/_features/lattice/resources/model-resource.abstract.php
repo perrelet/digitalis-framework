@@ -119,7 +119,7 @@ abstract class Model_Resource extends Singleton {
 
         if (!$model?->get_id() || !function_exists('acf_get_field_groups')) return $this->get_fields();
 
-        $screen = ['post_id' => $model->get_id(), 'post_type' => $this->get_post_type()];
+        $screen = ['post_id' => $model->get_id()] + $this->get_acf_screen();
 
         if ($this->get_field('terms')?->source === 'model') {
 
@@ -157,7 +157,7 @@ abstract class Model_Resource extends Singleton {
 
         if (!function_exists('acf_get_field_groups')) return [];
 
-        $groups = array_column(acf_get_field_groups(['post_type' => $this->get_post_type()]), null, 'key');
+        $groups = array_column(acf_get_field_groups($this->get_acf_screen()), null, 'key');
 
         foreach (acf_get_field_groups() as $group) if (!isset($groups[$group['key']]) && ($when = array_values(array_filter(array_map([$this, 'get_term_rules'], (array) $group['location']))))) $groups[$group['key']] = $group + ['applies_when' => $when];
 
@@ -246,6 +246,25 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Values held for later, whoever reads them: a resource that hides a secret from an account must not let it through raw.
+    public function mask_held (array $values, $model = null) : array {
+
+        // A field only this record shows is still a field, and masking it whole would make every start a conflict.
+        $fields = $this->get_fields_for($model, $values) + $this->get_fields();
+
+        foreach ($values as $name => $value) {
+
+            $field = $fields[$name] ?? null;
+
+            // Rows are masked leaf by leaf, which only reaches what is shaped like rows.
+            $values[$name] = (!$field || in_array($name, static::SECRET, true) || ($field->holds_secret() && !is_array($value))) ? Resource_Field::mask_value($value) : $field->mask($value);
+
+        }
+
+        return $values;
+
+    }
+
     public function to_raw (array $values, ?array $fields = null) : array {
 
         $fields ??= $this->get_fields();
@@ -329,6 +348,111 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Storage
+
+    public function has_trash () : bool {
+
+        return (bool) $this->get_post_type();
+
+    }
+
+    // Answers whether it landed: a site's wp_insert_post_data may keep the status after WordPress has changed the trash meta, which then goes back.
+    public function move ($model, string $target) : bool {
+
+        $id       = $model->get_id();
+        $trashing = $target === 'trash';
+        $meta     = array_map(fn ($key) => get_post_meta($id, $key, true), array_combine(Resources::TRASH_META, Resources::TRASH_META));
+        $keep     = fn ($new_status, $post_id) => ((int) $post_id === (int) $id) ? $target : $new_status;
+
+        if (!$trashing) add_filter('wp_untrash_post_status', $keep, PHP_INT_MAX, 2);
+
+        try {
+
+            $trashing ? wp_trash_post($id) : wp_untrash_post($id);
+
+        } finally {
+
+            if (!$trashing) remove_filter('wp_untrash_post_status', $keep, PHP_INT_MAX);
+
+            $this->clear_record_cache($id);
+
+            if (!$this->has_moved($model, $target)) foreach ($meta as $key => $value) $trashing ? delete_post_meta($id, $key) : (($value !== '') && update_post_meta($id, $key, $value));
+
+        }
+
+        return $this->has_moved($model, $target);
+
+    }
+
+    public function has_moved ($model, string $target) : bool {
+
+        $status = get_post_status($model->get_id());
+
+        return ($target === 'trash') ? ($status === 'trash') : ($status !== 'trash');
+
+    }
+
+    public function get_previous_status ($model) : string {
+
+        return (string) get_post_meta($model->get_id(), Resources::TRASH_META[0], true) ?: 'draft';
+
+    }
+
+    // Where required fields start to apply; null for never.
+    public function get_required_status () : ?string {
+
+        return 'publish';
+
+    }
+
+    public function clear_record_cache ($id) : void {
+
+        if ($this->get_post_type() && is_numeric($id)) clean_post_cache((int) $id);
+
+    }
+
+    public function get_acf_screen () : array {
+
+        return ['post_type' => $this->get_post_type()];
+
+    }
+
+    public function owns_record ($id) : bool {
+
+        return $this->get_post_type() && is_numeric($id) && (get_post_type((int) $id) === $this->get_post_type());
+
+    }
+
+    public function forget_set_key ($model) : void {
+
+        if ($this->get_post_type()) delete_post_meta($model->get_id(), Resources::SET_KEY);
+
+    }
+
+    // The record a set's create step made. Directly, since post_status 'any' leaves out the Trash and exclude_from_search statuses.
+    public function find_by_set_key (string $key) : ?object {
+
+        global $wpdb;
+
+        if (!$this->get_post_type()) return null;
+
+        foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s", Resources::SET_KEY, $key)) as $id) if ($model = $this->find((int) $id)) return $model;
+
+        return null;
+
+    }
+
+    // What another request may have written since this one last looked.
+    public function refresh ($model) : void {
+
+        $this->clear_record_cache($model->get_id());
+
+        if (method_exists($model, 'reload')) $model->reload();
+
+        $this->forget_values($model);
+
+    }
+
     // status, search, page, per_page
     public function query (array $args) : array {
 
@@ -336,7 +460,7 @@ abstract class Model_Resource extends Singleton {
         $status   = (string) ($args['status'] ?? '');
 
         return (static::$model_class)::query(apply_filters('lattice.resources.query', array_filter([
-            'post_status'    => in_array($status, $statuses, true) ? $status : $statuses,
+            'post_status'    => (($status === 'trash') || in_array($status, $statuses, true)) ? $status : $statuses,
             's'              => (string) ($args['search'] ?? ''),
             'posts_per_page' => $args['per_page'],
             'paged'          => $args['page'],
@@ -352,9 +476,10 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    public function insert_model ($model) : object {
+    // $meta goes in with the insert, so its save_post listeners already find it.
+    public function insert_model ($model, array $meta = []) : object {
 
-        $saved = $model->save(['post_author' => get_current_user_id()]);
+        $saved = $model->save(['post_author' => get_current_user_id()] + ($meta ? ['meta_input' => $meta] : []));
 
         return is_wp_error($saved) ? $saved : (static::$model_class)::get_instance($model->get_id());
 
@@ -376,6 +501,40 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Named conditions a credential's rule may hold a record to, each asked of the record and the values it would hold. A trashed record is judged by the status it had before.
+    public function get_conditions () : array {
+
+        if (!$this->get_post_type()) return [];
+
+        $status = function ($model, array $values) : string {
+
+            $status = (string) ($values['status'] ?? ($model ? $this->get_status($model) : 'draft'));
+
+            return (($status === 'trash') && $model) ? (string) get_post_meta($model->get_id(), '_wp_trash_meta_status', true) : $status;
+
+        };
+
+        return [
+            'draft'     => fn ($model, array $values) => in_array($status($model, $values), ['draft', 'pending', 'auto-draft'], true),
+            'published' => fn ($model, array $values) => $status($model, $values) === 'publish',
+            'private'   => fn ($model, array $values) => $status($model, $values) === 'private',
+        ];
+
+    }
+
+    // What a credential's rule asks of a record, as it is or as it would be with $values; a record being made is the account's own. $user_id: whose own it is asked for, the current account by default.
+    public function get_facts ($model, array $values = [], ?int $user_id = null) : array {
+
+        $conditions = $this->get_conditions();
+
+        return [
+            'id'         => $model?->get_id(),
+            'own'        => $model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id()))) : true,
+            'conditions' => fn (string $name) => isset($conditions[$name]) && (bool) $conditions[$name]($model, $values),
+        ];
+
+    }
+
     public function get_edit_url ($model) : string {
 
         return admin_url('post.php?action=edit&post=' . $model->get_id());
@@ -388,9 +547,46 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Reached only by rules naming it (A0).
+    public function is_named_only () : bool {
+
+        return false;
+
+    }
+
+    public function get_summary_fields () : array {
+
+        return ['title' => 'title', 'status' => 'status'];
+
+    }
+
+    public function get_before_facts ($model, array $values, ?int $user_id = null) : array {
+
+        return $this->get_facts($model, [], $user_id);
+
+    }
+
+    public function get_search_fields () : array {
+
+        return ['title', 'content', 'excerpt'];
+
+    }
+
     public function get_proposable () : array {
 
         return ['update' => [], 'create' => []] + static::PROPOSABLE;
+
+    }
+
+    public function find_made ($model) : ?object {
+
+        return null;
+
+    }
+
+    public function get_value_needs ($model, array $values) : ?string {
+
+        return null;
 
     }
 
@@ -456,5 +652,21 @@ abstract class Model_Resource extends Singleton {
 
     // Run what the model's acf/save_post handlers would.
     public function after_write ($model, mixed $before, string $why) : void {}
+
+    // Before a write that will happen, after its refusals: a WP_Error refuses it. Each pairs with after_operation() only when this answered null.
+    public function before_operation ($model, string $operation) : ?\WP_Error {
+
+        return null;
+
+    }
+
+    public function after_operation ($model, string $operation) : void {}
+
+    // What this resource's own rows carry beyond the journal's columns: the journal's marks.
+    public function journal_marks ($model) : array {
+
+        return [];
+
+    }
 
 }
