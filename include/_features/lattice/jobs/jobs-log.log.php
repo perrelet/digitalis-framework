@@ -7,6 +7,7 @@ namespace Lattice;
 class Jobs_Log extends Log {
 
     protected $file = 'jobs.log';
+    protected $name = 'Jobs';
 
     // Exception messages must not land in the web root.
     public function write ($text) {
