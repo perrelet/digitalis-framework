@@ -90,6 +90,7 @@ Measured on the live consumers before release:
 | `validate_id()` re-enters resolution (calls `get_instance()` on its own family) | Cheap checks only in `validate_id()`; resolve models after validation |
 | `static_init()` override never calls `parent::static_init()` (checked at boot) | Call `parent::static_init()` first |
 | `$post->get_type()` (throws at the call) | `get_post_type()` |
+| A model uses `Has_Proposals` without implementing `Takes_Proposals` (thrown when Proposals reads its post types) | Add `implements \Lattice\Takes_Proposals`; `Has_Proposals` and `Has_Version` already supply every method |
 | `save()` on an existing post inside `wp_after_insert_post` (also nested inserts, scheduled publishes, auto-drafts, REST saves) | `wp_update_post()` with the one field, or `update_meta()`; create new posts freely |
 
 Behaviour change behind the first check: resolution is now deterministic at equal specificity (descendant over ancestor, consumer over framework) instead of last-registered; the live consumer pairs measured all keep today's result.

@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Lattice;
 
+require_once __DIR__ . '/takes-proposals.interface.php';
+
+/** @phpstan-require-implements Takes_Proposals */
 trait Has_Proposals {
 
+    /** @param Post&Takes_Proposals $original */
     public static function make_proposal_meta (Post $original, User $author) : array {
 
         return [

@@ -212,7 +212,11 @@ class Proposals extends Feature {
 
     }
 
-    // A record is its resource and its id: another resource's record may share a draft's number.
+    /**
+     * A record is its resource and its id: another resource's record may share a draft's number.
+     *
+     * @return (Post&Takes_Proposals)|null
+     */
     protected function find_draft ($resource, $model) : ?Post {
 
         if (!in_array($resource->get_post_type(), $this->get_post_types(), true)) return null;

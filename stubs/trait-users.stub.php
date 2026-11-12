@@ -4,4 +4,4 @@
 namespace Lattice\Stubs;
 
 final class Has_Keywords_User extends \Lattice\Post { use \Lattice\Has_Keywords; }
-final class Has_Proposals_User extends \Lattice\Post { use \Lattice\Has_Version, \Lattice\Has_Proposals; }
+final class Has_Proposals_User extends \Lattice\Post implements \Lattice\Takes_Proposals { use \Lattice\Has_Version, \Lattice\Has_Proposals; }

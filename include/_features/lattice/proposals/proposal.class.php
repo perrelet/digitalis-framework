@@ -28,6 +28,7 @@ class Proposal {
     protected $held;
     protected $removed = [];
 
+    /** @param Post&Takes_Proposals $draft */
     public function __construct (protected Post $draft) {}
 
     // Finding
@@ -45,7 +46,13 @@ class Proposal {
 
         while ($trait = array_shift($traits)) {
 
-            if ($trait === Has_Proposals::class) return true;
+            if ($trait === Has_Proposals::class) {
+
+                if (!is_a($class, Takes_Proposals::class, true)) Strict::fail($class, 'uses Has_Proposals without implementing Takes_Proposals.', 'Add `implements \\Lattice\\Takes_Proposals` to the class.');
+
+                return true;
+
+            }
 
             array_push($traits, ...array_values(class_uses($trait)));
 
@@ -61,7 +68,11 @@ class Proposal {
 
     }
 
-    // An options page resource's id is its slug.
+    /**
+     * An options page resource's id is its slug.
+     *
+     * @return (Post&Takes_Proposals)|null
+     */
     public static function find_model ($post_id) : ?Post {
 
         return (is_numeric($post_id) && ($post_id > 0)) ? static::get_resource_for((string) get_post_type((int) $post_id))?->find((int) $post_id) : null;
@@ -70,7 +81,7 @@ class Proposal {
 
     public static function find (int $draft_id) : ?static {
 
-        return static::find_model($draft_id)?->get_proposal();
+        return ($draft = static::find_model($draft_id))?->is_proposal() ? new static($draft) : null;
 
     }
 
@@ -145,6 +156,7 @@ class Proposal {
 
     // Reading
 
+    /** @return Post&Takes_Proposals */
     public function get_draft () : Post {
 
         return $this->draft;
@@ -163,6 +175,7 @@ class Proposal {
 
     }
 
+    /** @return (Post&Takes_Proposals)|null */
     public function get_original () : ?Post {
 
         if ($this->original === false) $this->original = $this->get_resource()?->find($this->draft->get_proposed_for_id());

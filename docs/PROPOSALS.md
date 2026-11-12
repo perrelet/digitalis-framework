@@ -12,6 +12,7 @@ A proposal is a draft copy of a published record, linked to it by meta. Its auth
 include/_features/lattice/proposals/
 ├── proposals.feature.php                Proposals: options, guards, the resources policy hooks
 ├── has-proposals.trait.php              Has_Proposals: the proposal meta, on every moderated model
+├── takes-proposals.interface.php        Takes_Proposals: what Has_Proposals and Has_Version give a moderated model
 ├── proposal.class.php                   Proposal: one draft; finding, changes, markup, review, approve, reject
 ├── proposals-admin.feature.php          Proposals_Admin: handlers, notices, assets, the Publish box
 ├── proposals.posts-table.php            Proposals_Table: row actions and list badges
@@ -39,12 +40,14 @@ public function load () {
 
 }
 
-class Offer extends \Digitalis\Post {
+class Offer extends \Digitalis\Post implements \Digitalis\Takes_Proposals {
 
     use \Digitalis\Has_Version, \Digitalis\Has_Unsaved_Copies, \Digitalis\Has_Proposals;
 
 }
 ```
+
+The trait is what makes a type moderated; `Takes_Proposals` names the contract the traits fulfil, and strict mode throws for a model that uses `Has_Proposals` without implementing it.
 
 Load it in `load()`, which runs in every context: the publish guard must see REST saves, and the cleanup cron must exist under cron. The wp-admin parts load on `init` in wp-admin, once resources have registered; `Proposals::inst('proposals')->load_admin()` loads them from the CLI.
 
