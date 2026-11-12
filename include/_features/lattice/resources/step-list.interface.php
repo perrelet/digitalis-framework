@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // What the service needs of a held list of its own calls, so it never names the feature that keeps them. An empty list applies as nothing: refusing one is the keeper's.

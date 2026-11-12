@@ -121,11 +121,11 @@ Run `wp lattice classmap` after deploying: the map is valid only for the exact f
 
 ### WooCommerce
 
-The nine framework WooCommerce classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme` and the `Is_Woo_Customer` trait) are declared when `woocommerce_loaded` fires, or at once if it already has; they used to be required on every site. Without WooCommerce they do not exist.
+The ten framework WooCommerce classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme` and the `Is_Woo_Customer` and `Has_Order_Version` traits) are declared when `woocommerce_loaded` fires, or at once if it already has; they used to be required on every site. Without WooCommerce they do not exist.
 
 | Violation | Mechanical fix |
 |---|---|
-| A reference to one of the nine that PHP resolves at boot outside a `~woocommerce/` directory (the `Digitalis\` alias now covers traits too, so `use \Digitalis\Is_Woo_Customer` resolves once the trait is declared): `extends`, a trait `use`, or a static call in a plain `Integration`'s `run()` (fatal `Class "Digitalis\X" not found` at `plugins_loaded`, on every request type including wp-admin, on a site without WooCommerce) | Move the file under `~woocommerce/`, or make the integration a `Plugin_Integration` with `$plugin = 'woocommerce'` (a directory or a basename; `Plugins::is_active()` matches both) |
+| A reference to one of the ten that PHP resolves at boot outside a `~woocommerce/` directory (the `Digitalis\` alias now covers traits too, so `use \Digitalis\Is_Woo_Customer` resolves once the trait is declared): `extends`, a trait `use`, or a static call in a plain `Integration`'s `run()` (fatal `Class "Digitalis\X" not found` at `plugins_loaded`, on every request type including wp-admin, on a site without WooCommerce) | Move the file under `~woocommerce/`, or make the integration a `Plugin_Integration` with `$plugin = 'woocommerce'` (a directory or a basename; `Plugins::is_active()` matches both) |
 
 Deactivating WooCommerce on a site with such references now takes the site down until they move; `wp plugin activate woocommerce --skip-plugins=<your-plugin>` is the escape. The two gates use different signals: the framework listens for `woocommerce_loaded`, a consumer's `~woocommerce/` checks the active-plugin list for a `woocommerce/` directory, so WooCommerce loaded from `mu-plugins/` or a renamed directory satisfies only the first.
 
@@ -246,6 +246,20 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Commands_Page` ran arbitrary admin commands over GET with the nonce in the URL | Removed, with its `docs/ADMIN.md` section; no consumer extends it. A consumer that still does keeps its own copy or drops the page |
 | `Debug` ran `params()` (a backtrace and a file read) for every visitor before the administrator gate refused output, and a shipped `dd()` halted administrators only | The gate runs in `pre_validate()`, before `params()`: a visitor pays nothing, and `dd()` halts every request |
 | The 19 templates under `templates/digitalis/` executed on a direct request, printing fragments or a fatal | Each opens with the `ABSPATH` guard and prints nothing outside WordPress |
+
+### Forms, orders and cron
+
+What the November merge of main changes under code that already runs:
+
+| Was | Now |
+|---|---|
+| `Order::save()` reached `WC_Order::save()` through `__call` and answered its id either way | `Order` has its own `save()`: the id, or a `WP_Error` (`not_saved`) when WooCommerce's after-save hook never fired. It also gains `reload()`, `clear_cache()`, a `__clone()` that takes its own `WC_Order`, and `Has_Fields` (`get_field_id()` is the order id) |
+| A `Cron_Scheduler` task whose `time` had already passed today was scheduled in the past, so WP cron ran it at once | Its first run is the next occurrence of that time, stepped by the schedule's interval (`get_first_run()`) |
+| `Checkbox` and `Checkbox_Group` always printed the hidden input that carries `null_value` | `'null_value' => null` prints none, so an unticked box posts nothing |
+| `Textarea` printed its value raw | It prints `esc_textarea()` of it: drop your own escaping, or the value shows doubled entities |
+| A field had no place for a problem | `'error' => '...'` prints `<p class='field-error'>` inside the wrap and sets `aria-invalid` and `aria-describedby` |
+| `Migration_Runner` took its lock with `add_option()`, which two requests could both win | One `INSERT IGNORE` wins, a stale lock is taken by a compare-and-set, and the version is read again under the lock; the lock row is read and written by direct SQL, past any object cache |
+| A `Route` answers GET alone and notes a POST served on the base `permission()` | `Form_Route` (the `lattice/forms` feature) answers GET and POST by default and declares its own open `permission()`; code written against main's `Route` defaults keeps working there and nowhere else |
 
 ### Iterators
 

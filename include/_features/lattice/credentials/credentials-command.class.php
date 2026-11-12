@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_CLI;
@@ -45,11 +47,11 @@ class Credentials_Command {
 
         [$user, $uuid] = $this->find_password($args);
 
-        $entry = isset($assoc['input']) ? $this->read_json($assoc['input']) : (Credentials::inst()->get_entry($user->ID, $uuid) ?: ['version' => 1]);
+        $entry = isset($assoc['input']) ? $this->read_json((string) $assoc['input']) : (Credentials::inst()->get_entry($user->ID, $uuid) ?: ['version' => 1]);
 
         if (isset($assoc['policy'])) {
 
-            [$ref, $problem] = Credentials::inst()->find_shared($assoc['policy']);
+            [$ref, $problem] = Credentials::inst()->find_shared((string) $assoc['policy']);
 
             if (!$ref) WP_CLI::error($problem ?? "No shared policy {$assoc['policy']}.");
 
@@ -95,9 +97,9 @@ class Credentials_Command {
             'surface' => $surface,
             'target'  => $target,
             'verb'    => $args[3],
-            'fields'  => isset($assoc['fields']) ? explode(',', $assoc['fields']) : [],
-            'facts'   => isset($assoc['facts']) ? $this->decode($assoc['facts'], 'facts') : [],
-            'after'   => isset($assoc['after']) ? $this->decode($assoc['after'], 'after') : null,
+            'fields'  => isset($assoc['fields']) ? explode(',', (string) $assoc['fields']) : [],
+            'facts'   => isset($assoc['facts']) ? $this->decode((string) $assoc['facts'], 'facts') : [],
+            'after'   => isset($assoc['after']) ? $this->decode((string) $assoc['after'], 'after') : null,
             'dry_run' => !empty($assoc['dry-run']),
         ], fn ($value) => !is_null($value));
 
@@ -139,7 +141,7 @@ class Credentials_Command {
 
         if (array_key_exists($name, $api->get_defined())) WP_CLI::error("{$name} is defined in code.");
 
-        $policy = new Credential_Policy($input = $this->read_json($assoc['input']));
+        $policy = new Credential_Policy($input = $this->read_json((string) $assoc['input']));
 
         if ($problems = [...$policy->get_problems(), ...($policy->get_problems() ? [] : $api->get_unknown($policy))]) WP_CLI::error(implode(' ', $problems));
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 final class Change_Sets_Schema extends DB\Schema {

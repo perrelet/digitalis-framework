@@ -783,7 +783,7 @@ Front-end rendering (theme calls App::render()):
 2. **Compatibility shim** loaded (`compat/digitalis-namespace.php`: legacy constants and a lazy `Digitalis\` alias loader)
 3. **Bootstrap** required explicitly: `Utility`, `Hook`, the `Autoloader` trait and `Classmap`, the four things `autoload()` reaches for before a sweep can run
 4. **One sweep** of `include/` with instantiation off: every declaration is read (or taken from `.classmap.php` when present and current), a lazy loader is registered, and each file is included once. The framework is a library of base classes, so nothing is constructed; singletons come up on first `get_instance()`
-5. **Gated**: the nine WooCommerce files in `integrations/_woocommerce/` are required when `woocommerce_loaded` fires (WooCommerce raises it at `plugins_loaded` priority -1), or at once if it already has. Without WooCommerce they are never declared. The directory carries the `_` prefix so the sweep never reaches it: `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`.
+5. **Gated**: the ten WooCommerce files in `integrations/_woocommerce/` are required when `woocommerce_loaded` fires (WooCommerce raises it at `plugins_loaded` priority -1), or at once if it already has. Without WooCommerce they are never declared. The directory carries the `_` prefix so the sweep never reaches it: `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`.
 
 ### App boot lifecycle (`plugins_loaded` hook)
 

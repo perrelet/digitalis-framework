@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use WP_Error;
@@ -28,6 +30,9 @@ class Form_Route extends Route {
 
         if (!is_null($this->definition_cache)) return $this->definition_cache;
 
+        // A form posts; Route alone answers GET.
+        $this->definition = (array) $this->definition + ['methods' => ['GET', 'POST']];
+
         $definition  = parent::get_definition();
         $this->rules = $definition['args'] ?? [];
 
@@ -50,6 +55,13 @@ class Form_Route extends Route {
         };
 
         return $this->definition_cache = $definition;
+
+    }
+
+    // A form is open by design: its rules, the nonce and a human check are its gates. Declared here so Route's notice for an ungated POST stays for routes that forgot one.
+    public function permission (WP_REST_Request $request) {
+
+        return true;
 
     }
 
@@ -97,7 +109,7 @@ class Form_Route extends Route {
 
         $permission = $this->permission_wrap($request);
 
-        if (is_wp_error($permission)) return $this->refuse_permission($permission->get_error_code(), $permission->get_error_message(), (array) $permission->get_error_data());
+        if (is_wp_error($permission)) return $this->refuse_permission((string) $permission->get_error_code(), $permission->get_error_message(), (array) $permission->get_error_data());
         if (!$permission)             return $this->refuse_permission('rest_forbidden', __('Sorry, you are not allowed to do that.'), ['status' => rest_authorization_required_code()]);
 
         if ($this->find_unavailable_reason($request)) return static::refuse_unavailable();
@@ -132,7 +144,7 @@ class Form_Route extends Route {
         if (!empty($rule['type'])) {
 
             $valid = rest_validate_value_from_schema($value, $rule, $name);
-            if (is_wp_error($valid)) return Form_Rules::get_message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
+            if (is_wp_error($valid)) return Form_Rules::get_message((string) $valid->get_error_code(), $name, $rule, $valid->get_error_message());
 
         }
 
@@ -141,7 +153,7 @@ class Form_Route extends Route {
         $valid = call_user_func($rule['validate_callback'], $value, $request, $name);
 
         if ($valid === false)  return Form_Rules::get_message('invalid', $name, $rule);
-        if (is_wp_error($valid)) return Form_Rules::get_message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
+        if (is_wp_error($valid)) return Form_Rules::get_message((string) $valid->get_error_code(), $name, $rule, $valid->get_error_message());
 
         return null;
 
@@ -187,7 +199,7 @@ class Form_Route extends Route {
             if (is_wp_error($valid) && ((int) ($valid->get_error_data()['status'] ?? 0) >= 500)) return $valid;
 
             if ($valid === false)    $problems[$name] = Form_Rules::get_message('invalid', $name, $rule);
-            if (is_wp_error($valid)) $problems[$name] = Form_Rules::get_message($valid->get_error_code(), $name, $rule, $valid->get_error_message());
+            if (is_wp_error($valid)) $problems[$name] = Form_Rules::get_message((string) $valid->get_error_code(), $name, $rule, $valid->get_error_message());
 
         }
 

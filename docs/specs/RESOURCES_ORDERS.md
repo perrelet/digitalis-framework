@@ -68,8 +68,8 @@ Also in the core:
 
 Following the existing split (ACF on the base, versioning on the site's model, as `Post` and `Project` have it):
 
-- **`Digitalis\Order` uses `Has_ACF_Fields`.** `get_acf_id()` is the order id; ACF does the decoding.
-- **The site's order model uses `Has_Order_Version` and `Has_Unsaved_Copies`.** `Has_ACF_Fields` and `Has_Unsaved_Copies` both define `get_field()`, and the copy's `parent::get_field()` must reach the ACF one. `Has_Order_Version` wraps `Has_Version` and overrides its storage: a trait's methods override inherited ones, so overrides on the base `Order` would lose to a subclass's `use Has_Version`. It is required in `load.php`, which lists the framework's files by hand.
+- **`Digitalis\Order` uses `Has_Fields`.** `get_field_id()` is the order id; ACF does the decoding.
+- **The site's order model uses `Has_Order_Version` and `Has_Unsaved_Copies`.** `Has_Fields` and `Has_Unsaved_Copies` both define `get_field()`, and the copy's `parent::get_field()` must reach the ACF one. `Has_Order_Version` wraps `Has_Version` and overrides its storage: a trait's methods override inherited ones, so overrides on the base `Order` would lose to a subclass's `use Has_Version`. It is required in `load.php`, which lists the framework's files by hand.
 - **`clear_cache()`** removes the order from `OrderCache` and calls `OrdersTableDataStore::clear_cached_data()`. The order cache is what serves `wc_get_order()`; the datastore cache is off on digitalis.ca, where `clear_cached_data()` alone does nothing.
 - **The version gets its own storage seam in `Has_Version`**: `read_version()`, `swap_version($seen, $next)` and `drop_version($seen)`, defaulting to today's meta calls. `Has_Order_Version` overrides them with direct SQL on `OrderUtil::get_table_for_order_meta()`, judged by exactly one row affected, and calls `clear_cache()` after each. Every other meta key keeps going to the `WC_Order` through `__call`, so the existing `$order->get_meta()` calls keep their unsaved values and `$context`.
 - **Both ends are atomic.** The first claim (posts use a unique `add_meta`; the orders meta table has no unique key on order and key) inserts under `GET_LOCK('lattice_version_<id>', 0)` after checking again inside the lock, and fails if the lock is not acquired. `drop_version($seen)` deletes only where the value is still `$seen`, so `restore_version()` cannot wipe a claim that landed after its read.
@@ -87,7 +87,7 @@ Following the existing split (ACF on the base, versioning on the site's model, a
 
 ## Phase 3: `Order_Model_Resource`
 
-`include/features/lattice/resources/order-model-resource.abstract.php`. Depends on phases 1 and 2.
+`include/_features/lattice/resources/order-model-resource.abstract.php`. Depends on phases 1 and 2.
 
 | Method | Answer |
 |--------|--------|

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // Versions and journals orders written outside the layer: wp-admin, checkout, Subscriptions, WooCommerce's REST API. See docs/specs/RESOURCES_ORDERS.md.

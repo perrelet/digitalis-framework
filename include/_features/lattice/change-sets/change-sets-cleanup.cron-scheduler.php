@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // A set nobody is working on: anything submitted or unsettled waits for a person.

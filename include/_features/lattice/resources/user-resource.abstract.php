@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // A site subclasses and registers it, naming its own fields and conditions (SCOPED_CREDENTIALS.md 18).

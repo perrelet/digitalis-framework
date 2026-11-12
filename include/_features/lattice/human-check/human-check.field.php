@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice\Field;
 
 use Lattice\Lattice_Human_Check;

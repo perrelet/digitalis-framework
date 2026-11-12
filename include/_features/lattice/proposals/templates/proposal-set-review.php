@@ -1,3 +1,4 @@
+<?php declare(strict_types=1); ?>
 <?php use Lattice\{Proposal, Proposal_Notice, Proposal_Set_Review}; ?>
 
 <div class="lattice-review">

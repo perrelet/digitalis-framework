@@ -49,6 +49,8 @@ class Signup_Route extends \Digitalis\Form_Route {
 | `messages` | `code => text`, for `missing` or any of WordPress's codes |
 | `costly` | Runs only after every other rule, the permission and the nonce; needs a `validate_callback` (or a feature that supplies one through `lattice.forms.rule`), else the route cannot serve (below), whatever its `when` |
 
+A `Form_Route` answers GET and POST unless `$definition['methods']` says otherwise, and its `permission()` allows everyone: the rules, the nonce and a human check are its gates. Override `permission()` to narrow it.
+
 **What it does with them, for every client:** the permission first (a refusal names no field); then whether it can serve at all (below); then every rule in one pass, so a refusal names every field at fault (`rest_invalid_param`, 400, `data.params` field => message); then the nonce and the costly rules; then the handler. What it advertises (OPTIONS) shows its arguments as not `required`: the check lives in the route.
 
 **The handler answers** one of: `redirect($url)`, to an address `wp_validate_redirect()` allows; markup or a `View`, drawn in place of the form; a `WP_Error`, which comes back under the fields its `data.params` names. A public form sets no `$require_nonce`: a page cached for everyone cannot carry one that works.

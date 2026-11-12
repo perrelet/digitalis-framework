@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Turnstile_Provider extends Human_Check_Provider {
@@ -48,6 +50,7 @@ class Turnstile_Provider extends Human_Check_Provider {
         $codes = (array) ($body['error-codes'] ?? []);
 
         if (!is_array($body))                                return $this->answer(static::UNAVAILABLE, ['unreadable']);
+        if (!is_string($body['action'] ?? '') || !is_string($body['hostname'] ?? '')) return $this->answer(static::UNAVAILABLE, ['unreadable']);
         if (!empty($body['success']))                       return $this->answer(static::PASSED, $codes, $body['action'] ?? null, $body['hostname'] ?? null);
         if (array_intersect($codes, static::UNAVAILABLE_CODES)) return $this->answer(static::UNAVAILABLE, $codes);
 

@@ -13,6 +13,7 @@ define('COOKIE_DOMAIN', '');
 define('EP_ROOT', 64);
 define('EP_PAGES', 4096);
 define('EMPTY_TRASH_DAYS', 30);
+define('DB_NAME', '');
 define('ARRAY_A', 'ARRAY_A');
 define('MINUTE_IN_SECONDS', 60);
 define('HOUR_IN_SECONDS', 3600);

@@ -50,11 +50,11 @@ include/_features/lattice/resources/
 ├── journal/
 └── routes/
 
-include/features/lattice/resources-orders/
+include/_features/lattice/resources-orders/
 └── resources-orders.feature.php      Lattice_Resources_Orders: versions and journals orders written outside the layer
 ```
 
-`Has_Version` (`include/wordpress/`) and `Has_Unsaved_Copies` (`include/acf/`) stay in core: they are model traits.
+`Has_Version` (`include/models/`) and `Has_Unsaved_Copies` (`include/integrations/acf/`) stay in core: they are model traits.
 
 ---
 

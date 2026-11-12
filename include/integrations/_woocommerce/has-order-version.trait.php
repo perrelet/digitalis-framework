@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 use Automattic\WooCommerce\Utilities\OrderUtil;

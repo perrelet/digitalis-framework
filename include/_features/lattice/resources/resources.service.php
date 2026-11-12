@@ -1309,7 +1309,7 @@ class Resources extends Service {
 
             $result = $resource->{"act_{$action}"}($model, $input, $via);
 
-            if (is_wp_error($result)) return isset(((array) $result->get_error_data())['status']) ? $result : $this->error($result->get_error_code(), $result->get_error_message(), static::STATUSES[$result->get_error_code()] ?? 500, $this->get_error_data($result));
+            if (is_wp_error($result)) return isset(((array) $result->get_error_data())['status']) ? $result : $this->error((string) $result->get_error_code(), $result->get_error_message(), static::STATUSES[$result->get_error_code()] ?? 500, $this->get_error_data($result));
 
             return is_array($result) ? $result : $this->error('not_saved', "{$action} answered nothing: read it again before the next change.", 500, ['partial' => true]);
 

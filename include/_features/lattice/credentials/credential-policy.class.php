@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 // Rules that only narrow what an account may do. Anything it cannot read leaves problems, and a policy with problems denies everything.
@@ -82,7 +84,7 @@ class Credential_Policy {
 
         $states = isset($request['after']) ? [$request['facts'] ?? [], $request['after']] : [$request['facts'] ?? []];
 
-        foreach (($request['fields'] ?? []) ?: [''] as $field) $answers[$field] = static::strictest(array_map(fn ($facts) => $this->answer_one(['facts' => $facts] + $request, $field === '' ? null : $field), $states));
+        foreach (($request['fields'] ?? []) ?: [''] as $field) $answers[$field] = static::strictest(array_map(fn ($facts) => $this->answer_one(['facts' => $facts] + $request, $field === '' ? null : (string) $field), $states));
 
         return $answers;
 
@@ -105,7 +107,7 @@ class Credential_Policy {
 
         $answers = $this->answer_fields(['dry_run' => false] + $request);
 
-        foreach ($answers as $field => $answer) if ($answer === 'deny') $answers[$field] = ($this->answer_one(['verb' => "rehearse:{$request['verb']}"] + $request, $field === '' ? null : $field) === 'allow') ? 'allow' : 'deny';
+        foreach ($answers as $field => $answer) if ($answer === 'deny') $answers[$field] = ($this->answer_one(['verb' => "rehearse:{$request['verb']}"] + $request, $field === '' ? null : (string) $field) === 'allow') ? 'allow' : 'deny';
 
         return array_map(fn ($answer) => ($answer === 'deny') ? 'deny' : 'allow', $answers);
 
