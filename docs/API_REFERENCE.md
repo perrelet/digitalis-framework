@@ -791,6 +791,35 @@ abstract class Admin_Sub_Page extends Admin_Page
 
 ---
 
+### `Lattice\Logs_Page`
+
+Abstract admin page that reads log files as entries. See [ADMIN.md](./ADMIN.md#logs-page).
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `filter_logs(&$logs)` | `void` | Declare the logs: `Log` instances or rows |
+| `get_logs()` | `array` | The declared rows, each with `state` and parsed `permissions` |
+| `find_log(?string $slug)` | `?array` | The row for a slug, or the first |
+| `get_syntax_rules()` | `array` | Per theme: `entry`, `levels` and `tokens` patterns |
+| `get_log_syntax_rules($log)` | `array` | The row's themes merged and checked |
+| `get_page_url()` | `string` | The page's own URL |
+| `handle_clear()` | `void` | The Clear request, on `admin_init` |
+| `clear_log(array $log, string $nonce)` | `string` | `cleared`, `permission`, `expired` or `failed` |
+| `resolve_error_log($ini, $debug_log, $content_dir)` | `string` | Static. The path PHP logs to |
+
+### `Lattice\Log_Format`
+
+Groups raw log text into entries and wraps a line's tokens. Plain class, built from a merged theme.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `merge(array $themes, array $names, string $owner)` | `array` | Static. The named themes merged per key; a bad rule is a strict violation against `$owner` and is left out |
+| `find_token_problem($pattern)` | `?string` | Static. Why a token rule cannot join the alternation, or `null` |
+| `__construct(array $theme)` | | A merged theme |
+| `holds_entry_start(string $text)` | `bool` | Whether any line of the text starts an entry |
+| `parse(string $chunk, int $offset = 0, string $head = '')` | `array` | Entries: `offset`, `end`, `stamp`, `last`, `level`, `head` (`null` when the chunk opens mid-entry), `body`, `count` |
+| `tokenize(string $line)` | `string` | The line escaped, each token in `<span class='x-{name}'>` |
+
 ### `Lattice\Admin_Table`
 
 WP_List_Table wrapper.

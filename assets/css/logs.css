@@ -62,10 +62,13 @@
     --log-static:    #49dcf9;
     --log-method:    #56ffd8;
     --log-square:    #c6a6ff;
-    --log-brackets:  #b9eff6;
     --log-hash:      #dcd8ac;
+    --log-body:      #c9cdd1;
     --log-error:     #fb7c7c;
     --log-warning:   #daba54;
+    --log-notice:    #7fb8e6;
+    --log-deprecated: #b59ad6;
+    --log-strict:    #56ffd8;
 
     background: var(--log-bg);
     border-radius: var(--radius);
@@ -103,19 +106,53 @@
     border-bottom: 1px solid var(--log-border);
 }
 
-:where(.lattice) .digitalis-log .line {
+:where(.lattice) .digitalis-log .entry {
     margin: 0 0 0.25em;
-    font-family: inherit;
+    padding-left: 8px;
+    border-left: 3px solid transparent;
     font-size: 12px;
     line-height: 1.4;
+}
+
+:where(.lattice) .digitalis-log .entry pre {
+    margin: 0;
+    font: inherit;
     text-wrap: wrap;
+    overflow-wrap: anywhere;
 }
 
-:where(.lattice) .digitalis-log .line span:before {
-    padding-right: 0.2em;
-    font-size: 0.9em;
+:where(.lattice) .digitalis-log .entry[data-level='error']      { border-left-color: var(--log-error); }
+:where(.lattice) .digitalis-log .entry[data-level='warning']    { border-left-color: var(--log-warning); }
+:where(.lattice) .digitalis-log .entry[data-level='notice']     { border-left-color: var(--log-notice); }
+:where(.lattice) .digitalis-log .entry[data-level='deprecated'] { border-left-color: var(--log-deprecated); }
+:where(.lattice) .digitalis-log .entry[data-level='strict']     { border-left-color: var(--log-strict); }
+
+:where(.lattice) .digitalis-log .entry.continued { border-left-color: var(--log-border); }
+
+:where(.lattice) .digitalis-log .entry .note,
+:where(.lattice) .digitalis-log .entry .fold,
+:where(.lattice) .digitalis-log .entry summary {
+    margin: 0;
+    font-size: 11px;
+    color: var(--log-muted);
 }
 
+:where(.lattice) .digitalis-log .entry .fold b { color: var(--log-text); }
+
+:where(.lattice) .digitalis-log .entry summary {
+    width: fit-content;
+    cursor: pointer;
+}
+
+:where(.lattice) .digitalis-log .entry summary:hover { color: var(--log-text); }
+
+:where(.lattice) .digitalis-log .entry .body {
+    padding-left: 12px;
+    color: var(--log-body);
+}
+
+:where(.lattice) .digitalis-log .x-timestamp       { color: var(--log-muted); }
+:where(.lattice) .digitalis-log .x-url             { color: var(--log-function); text-decoration: underline; }
 :where(.lattice) .digitalis-log .x-single-quote    { color: var(--log-string); }
 :where(.lattice) .digitalis-log .x-double-quote    { color: var(--log-string-2); }
 :where(.lattice) .digitalis-log .x-path            { color: var(--log-path); font-style: italic; }
@@ -123,12 +160,7 @@
 :where(.lattice) .digitalis-log .x-static-method   { color: var(--log-static); }
 :where(.lattice) .digitalis-log .x-method          { color: var(--log-method); }
 :where(.lattice) .digitalis-log .x-square-brackets { color: var(--log-square); }
-:where(.lattice) .digitalis-log .x-brackets        { color: var(--log-brackets); }
 :where(.lattice) .digitalis-log .x-hash-integer    { color: var(--log-hash); }
-:where(.lattice) .digitalis-log .x-error           { background: var(--log-error);   color: var(--log-bg); font-weight: bold; border-radius: 2px; padding: 0 0.2em; }
-:where(.lattice) .digitalis-log .x-error:before    { content: '❌'; }
-:where(.lattice) .digitalis-log .x-warning         { background: var(--log-warning); color: var(--log-bg); font-weight: bold; border-radius: 2px; padding: 0 0.2em; }
-:where(.lattice) .digitalis-log .x-warning:before  { content: '⚠️'; }
 
 /* Actions: core buttons; Clear is outlined in the error colour like the iterator's Stop. */
 

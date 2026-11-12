@@ -160,24 +160,16 @@ abstract class Logs_Page extends Admin_Sub_Page {
                     'path' => $log
                 ];
 
-                $allowed_themes = array_keys($this->get_syntax_rules());
-                $theme_input = sanitize_text_field(wp_unslash($_GET['theme'] ?? 'basic'));
-                $theme_values = array_filter(
-                    explode(',', $theme_input),
-                    function($t) use ($allowed_themes) { return in_array($t, $allowed_themes, true); }
-                );
-                if (empty($theme_values)) $theme_values = ['basic'];
-
                 $log = wp_parse_args($log, [
                     'name'        => 'Log',
                     'slug'        => 'log',
                     'path'        => '',
-                    'theme'       => $theme_values,
+                    'theme'       => ['basic'],
                     'permissions' => [],
                     'instance'    => null,
                 ]);
 
-                if (!is_array($log['theme'])) $log['theme'] = [$log['theme']];
+                $log['theme'] = (array) ($log['theme'] ?: ['basic']);
 
                 $log['permissions'] = wp_parse_args($log['permissions'], $this->permissions);
 
@@ -201,44 +193,54 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     }
 
+    // Per theme: the patterns that start an entry, the patterns that give its head a level and the token rules. All are written
+    // for the raw line and delimited by `/`; a token rule holds non-capturing groups only, and the earlier of two rules wins.
     public function get_syntax_rules () {
-    
+
         return [
             'basic' => [
-                'single-quote'      => "(?<!\w)&#039;.*?&#039;(?!\w)", // '...' (the line is escaped before the rules run; an apostrophe in prose opens nothing)
-                'double-quote'      => "&quot;.*?&quot;",           // "..."
-                'path'              => "\s\/[^ ]*",                 // /some/path
-                'square-brackets'   => "\[.*?\]",                   // [...]
-                //'brackets'        => "\(.*?\)",                   // (...)
-                'hash-integer'      => "(?<!&)#\d+",                 // #n, not the #039 inside an entity
+                'entry'  => [
+                    "^\[[^\]]*\d\d:\d\d[^\]]*\]",                 // [... hh:mm ...]: a slow-log frame or a [debug] word starts nothing
+                    "^\d{4}\/\d\d\/\d\d \d\d:\d\d:\d\d",          // nginx
+                ],
+                'levels' => [
+                    'error'   => ["\[(?:error|crit|alert|emerg)\]"],
+                    'warning' => ["\[warn\]"],
+                    'notice'  => ["\[notice\]"],
+                ],
+                'tokens' => [
+                    'timestamp'       => "^\[[^\]]*\d\d:\d\d[^\]]*\]|^\d{4}\/\d\d\/\d\d \d\d:\d\d:\d\d", // before square-brackets, or it never fires
+                    'url'             => "\bhttps?:\/\/[^\s\"'<>)\]]+",
+                    'single-quote'    => "(?<!\w)'.*?'(?!\w)",    // an apostrophe in prose opens nothing
+                    'double-quote'    => "\".*?\"",
+                    'path'            => "(?<![\w.\/])\/(?:[\w.@~+-]+\/[^\s:\"',()\]]*|[\w@~+-][\w.@~+-]*\.\w+)", // a second slash or an extension
+                    'square-brackets' => "\[.*?\]",
+                    'hash-integer'    => "#\d+",
+                ],
             ],
             'php' => [
-                'function'          => "\s[^ \/.]+\(.*?\)",         // function(...)
-                'static-method'     => "\b[^ ]*::[^ ]*\(.*?\)",     // class::method(...)
-                'method'            => "\b[^ ]*-&gt;[^ ]*\(.*?\)",  // class->method(...)
-                'error'             => [
-                    "PHP Parse error:",
-                    "PHP Fatal error:"
+                'entry'  => ["^\\\$log\b(?:\[[^\]]*\])?"],        // an exported log; cleared, it begins `$log = [];`
+                'levels' => [
+                    'error'      => ["PHP (?:Parse|Fatal) error:", "WordPress database error"],
+                    'warning'    => ["PHP Warning:"],
+                    'notice'     => ["PHP Notice:"],
+                    'deprecated' => ["PHP Deprecated:"],
+                    'strict'     => ["PHP Strict Standards:", "\] Lattice: "],
                 ],
-                'warning'           => ["PHP Warning:"],
+                'tokens' => [
+                    'static-method' => "\b[\w\\\\]+::\w+\(.*?\)",
+                    'method'        => "[\w\\\\\$]+->\w+\(.*?\)",
+                    'function'      => "(?<![\w.\$>:\\\\])[A-Za-z_][\w\\\\]*(?=\()",
+                ],
             ],
         ];
-    
+
     }
 
     public function get_log_syntax_rules ($log) {
 
-        $all_rules    = $this->get_syntax_rules();
-        $syntax_rules = [];
+        return Log_Format::merge($this->get_syntax_rules(), (array) ($log['theme'] ?? ['basic']), static::class);
 
-        if ($log['theme']) foreach ($log['theme'] as $key) if (isset($all_rules[$key])) {
-
-            $syntax_rules = array_merge($syntax_rules, $all_rules[$key]);
-
-        }
-
-        return $syntax_rules;
-    
     }
 
     public function callback () {
@@ -281,11 +283,14 @@ abstract class Logs_Page extends Admin_Sub_Page {
         clearstatcache(true, $current['path']); // a write earlier in the request leaves the stat cache at the old size
         $filesize     = (int) filesize($current['path']);
         $total        = max(1, (int) ceil($filesize / $bytes_per_page));
-        $page         = min($page, $total); // get_lines() clamps too; the pagination must mark the page it shows
+        $page         = min($page, $total); // read_page() clamps too; the pagination must mark the page it shows
         $bytes        = 0;
-        $lines        = $this->get_lines($current['path'], $bytes_per_page, $page, $bytes);
+        $start        = 0;
+        $chunk        = Log::read_page($current['path'], $page, ['bpp' => $bytes_per_page, 'overflow' => 500, 'size' => $filesize], $bytes, $start);
         $more         = ($filesize > $bytes);
-        $syntax_rules = $this->get_log_syntax_rules($current);
+        $plain        = !empty($_GET['plain']);
+        $format       = new Log_Format($this->get_log_syntax_rules($current));
+        $head         = $start ? (string) file_get_contents($current['path'], false, null, 0, Log_Format::HEAD_BYTES) : '';
 
         $pagination = $more ? paginate_links([
             'base'      => add_query_arg('paged', '%#%', remove_query_arg(['cleared', 'refused'])),
@@ -326,14 +331,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
                 echo "<div class='lines'>";
 
-                    if ($lines) foreach ($lines as &$line) {
+                    foreach ($format->parse($chunk, $start, $head) as $entry) echo $this->render_entry($entry, $format, $plain);
 
-                        $this->format_line($line, $syntax_rules);
-                    
-                        echo "<pre class='line'>{$line}</pre>";
-                    
-                    }
-                    
                 echo "</div>";
 
                 echo "<div class='log-info'>";
@@ -439,49 +438,34 @@ abstract class Logs_Page extends Admin_Sub_Page {
     
     }
 
-    protected function get_lines ($path, $bytes_per_page, $page = 1, &$bytes = 0, $overflow = 500) {
+    private function render_entry (array $entry, Log_Format $format, bool $plain) : string {
 
-        return explode("\n", Log::read_page($path, $page, ['bpp' => $bytes_per_page, 'overflow' => $overflow], $bytes));
+        $paint = fn ($line) => $plain ? htmlspecialchars($line, Log_Format::ESCAPE) : $format->tokenize($line);
+        $body  = implode("\n", array_map($paint, $entry['body']));
+        $more  = count($entry['body']);
 
-    }
+        if (is_null($entry['head'])) {
 
-    protected function format_line (&$line, $syntax_rules) {
-
-        $line = htmlspecialchars($line);
-
-        if ($syntax_rules) foreach ($syntax_rules as $class => $patterns) {
-
-            $this->match_pattern($patterns, $class, $line);
+            return "<div class='entry continued' id='b{$entry['offset']}'><p class='note'>continued from the previous page</p><pre class='body'>{$body}</pre></div>";
 
         }
-    
-    }
 
-    protected function match_pattern ($patterns, $class, &$line) {
-    
-        $pattern = is_array($patterns) ? implode("|", $patterns) : $patterns;
+        $level = $entry['level'] ? " data-level='" . esc_attr($entry['level']) . "'" : '';
+        $fold  = '';
 
-        $matches = null;
-        preg_match_all("/{$pattern}/", $line, $matches, PREG_OFFSET_CAPTURE);
+        if ($entry['count'] > 1) {
 
-        $offset = 0;
-
-        if ($matches[0] ?? 0) foreach ($matches[0] as $match) {
-
-            $open  = "<span class='x-{$class}'>";
-            $close = "</span>";
-
-            $line = 
-                substr($line, 0, $match[1] + $offset) .
-                "{$open}{$match[0]}{$close}" .
-                substr($line, $match[1] + strlen($match[0]) + $offset)
-            ;
-
-            $offset += strlen($open) + strlen($close);
+            $level .= " data-end='{$entry['end']}'";
+            $fold   = "<span class='fold'><b>&times;{$entry['count']}</b> last " . htmlspecialchars($entry['last'], Log_Format::ESCAPE) . "</span>";
 
         }
-    
-    }
 
+        $html = "<div class='entry' id='b{$entry['offset']}'{$level}><pre class='head'>" . $paint($entry['head']) . "</pre>{$fold}";
+
+        if ($more) $html .= "<details><summary>{$more} more " . ($more > 1 ? 'lines' : 'line') . "</summary><pre class='body'>{$body}</pre></details>";
+
+        return "{$html}</div>";
+
+    }
 
 }

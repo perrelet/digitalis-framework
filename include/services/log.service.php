@@ -149,17 +149,18 @@ class Log extends Service {
     }
 
     // One paging reader for any file: get_page() reads this log through it, Logs_Page its chosen file.
-    public static function read_page (string $path, int $page = 1, array $args = [], &$bytes = 0) : string {
+    public static function read_page (string $path, int $page = 1, array $args = [], &$bytes = 0, &$start = 0) : string {
 
         $bytes    = 0;
-        $defaults = ['bpp' => 200000, 'overflow' => 500];
+        $start    = 0;
+        $defaults = ['bpp' => 200000, 'overflow' => 500, 'size' => null];
         $args     = wp_parse_args($args, $defaults);
 
         $path = realpath($path);
         if (!is_string($path) || !is_readable($path)) return '';
 
         clearstatcache(true, $path); // a write earlier in the request leaves PHP's stat cache at the old size
-        $filesize = filesize($path);
+        $filesize = is_null($args['size']) ? filesize($path) : (int) $args['size']; // a caller's snapshot: the page, its ids and the tail then agree on one size
         if ($filesize === false || $filesize <= 0) return '';
 
         $min_offset = -1 * $filesize;
@@ -186,7 +187,8 @@ class Log extends Service {
         }
         if ($look_fwd) $maxlen += $over_fwd;
 
-        $lines = file_get_contents($path, false, null, $offset, $maxlen);
+        $start = $filesize + $offset; // absolute, so a file that grew past the snapshot reads the same bytes
+        $lines = file_get_contents($path, false, null, $start, $maxlen);
         if ($lines === false) return '';
 
         if ($look_bwd || $look_fwd) {
@@ -226,7 +228,8 @@ class Log extends Service {
 
             if ($next_nl < $prev_nl) $next_nl = $prev_nl;
 
-            $lines = substr($lines, $prev_nl, $next_nl - $prev_nl);
+            $lines  = substr($lines, $prev_nl, $next_nl - $prev_nl);
+            $start += $prev_nl;
 
         }
 

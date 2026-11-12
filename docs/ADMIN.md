@@ -257,7 +257,33 @@ Clear posts to the page's own URL (`get_page_url()`), is handled on `admin_init`
 ]
 ```
 
-The page renders the log tail with pagination, inside a `<div class='lattice'>` scope: the log switcher is core's tab strip (`nav-tab-wrapper`, `nav-tab`, `nav-tab-active`), the actions are core buttons, and the styles come from `assets/css/logs.css` (handle `lattice-logs`, depending on `lattice-tokens`, enqueued on `admin_enqueue_scripts` for the page's own request and from `callback()` elsewhere). The dark reading surface declares a `--log-*` token group on `.digitalis-log` for retuning. The `theme` values are validated against the page's `get_syntax_rules()` allowlist — unrecognised values are ignored.
+The page renders the log tail with pagination, inside a `<div class='lattice'>` scope: the log switcher is core's tab strip (`nav-tab-wrapper`, `nav-tab`, `nav-tab-active`), the actions are core buttons, and the styles come from `assets/css/logs.css` (handle `lattice-logs`, depending on `lattice-tokens`, enqueued on `admin_enqueue_scripts` for the page's own request and from `callback()` elsewhere). The dark reading surface declares a `--log-*` token group on `.digitalis-log` for retuning.
+
+### Entries and Themes
+
+The page reads a log as entries. A line that opens with a time starts an entry, and the lines after it (a stack trace, the SQL of a database error, `print_r` output) belong to it: the head shows, the rest sits in a native `<details>` ("14 more lines"). A log with no stamped line renders one entry per line. Consecutive entries that differ only in their stamp fold to one with `×n` and the last stamp. An entry whose head matches a level pattern carries `data-level` (`error`, `warning`, `notice`, `deprecated`, `strict`), which colours its edge. Each entry's `id` is `b{byte offset}`. A page that opens partway through an entry shows the remainder as "continued from the previous page"; pages are cut on lines.
+
+A row's `theme` names the rule sets to merge, in order; a row without one takes `['basic']`, and a `Log` instance that exports variables takes `['basic', 'php']`. `get_syntax_rules()` answers, per theme:
+
+```php
+public function get_syntax_rules () {
+
+    $rules = parent::get_syntax_rules();
+
+    $rules['queue'] = [
+        'entry'  => ["^job \d+ at \d\d:\d\d"],            // patterns that start an entry
+        'levels' => ['error' => ["\bFAILED\b"]],            // level => patterns, tested on the head
+        'tokens' => ['job-id' => "\bjob \d+\b"],           // name => pattern, wrapped in class x-{name}
+    ];
+
+    return $rules;
+
+}
+```
+
+Themes merge per key: `entry` and each level's patterns add up, and a token rule replaces an earlier one of the same name. Patterns are written for the raw line (`->`, not `-&gt;`) and delimited by `/`, so escape a slash. Tokens are matched in one pass: the leftmost match wins, then the earlier rule, and a token never sits inside another (a path inside a quoted string is part of the string). A token rule holds non-capturing groups only and must match at least one character; a rule that breaks this, or does not compile, is a strict violation naming the theme and the rule, and is skipped in production. Lines over 8 KB print without tokens. `?plain=1` prints any page without tokens, keeping entries and levels.
+
+The parsing lives in `Log_Format` (`parse()` for entries, `tokenize()` for one line), which a tail, an export or a test can use without the page.
 
 ---
 
