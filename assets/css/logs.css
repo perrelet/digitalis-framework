@@ -73,6 +73,7 @@
     --log-notice:    #7fb8e6;
     --log-deprecated: #b59ad6;
     --log-strict:    #56ffd8;
+    --log-match:     #ffd866;
 
     background: var(--log-bg);
     border-radius: var(--radius);
@@ -230,3 +231,65 @@
 }
 
 :where(.lattice) .digitalis-log .partial:empty { display: none; }
+
+/* Search: a GET form, level chips and the results that replace the page. */
+
+:where(.lattice) .digitalis-logs form.search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+:where(.lattice) .digitalis-logs form.search input[type='search'] {
+    flex: 0 1 320px;
+    min-width: 160px;
+}
+
+:where(.lattice) .digitalis-logs .chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+:where(.lattice) .digitalis-logs .chip {
+    padding: 2px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-2);
+    font-size: 12px;
+    line-height: 20px;
+    text-decoration: none;
+}
+
+:where(.lattice) .digitalis-logs .chip:hover { background: var(--surface-2); color: var(--text-1); }
+
+:where(.lattice) .digitalis-logs .chip.is-active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--surface);
+}
+
+:where(.lattice) .digitalis-logs .results-info {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-2);
+}
+
+:where(.lattice) .digitalis-log .x-match {
+    border-radius: 2px;
+    background: var(--log-match);
+    color: var(--log-bg);
+}
+
+:where(.lattice) .digitalis-log .entry .locate {
+    float: right;
+    margin-left: 12px;
+    font-size: 11px;
+    color: var(--log-muted);
+}
+
+:where(.lattice) .digitalis-log .entry .locate:hover { color: var(--log-text); }
+
+:where(.lattice) .digitalis-log .entry.is-target { background: var(--log-bar); }

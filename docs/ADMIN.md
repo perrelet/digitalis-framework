@@ -296,6 +296,14 @@ One task, `tail`, POSTed with `log`, `size`, `key`, `bpp` and `plain`. Guards an
 
 Lines that arrive later for an entry already on the page (a trace written in a second write) render as a "continued" entry, and a repeat of the page's last entry starts a new fold, until the next reload. `filter_logs()` runs on every poll of every open tab, so it only declares.
 
+### Search
+
+Search is rendered by the server and needs no script. The form writes `?q=`: a case-insensitive substring, or a pattern when the term is written `/between slashes/` (`/…/i` for case-insensitive; an invalid pattern is a notice; both forms match whole UTF-8 characters, and a line that is not UTF-8 is matched by the byte). The level chips write `?level=` (`error`, `warning`, `notice`, `deprecated`), alone or with a term. A results view replaces the page: the file is scanned from its head, grouped and folded as the page is, and each matching entry prints with the term in `<mark class='x-match'>` and a "Show in the log" link.
+
+The scan stops at `protected $search_max = 500` matches or `protected $search_budget = 2` seconds and says how far it got. A results view carries no pagination, no Live and no script root.
+
+"Show in the log" links to `?at={byte offset}#at`. The page that holds the offset is resolved when the link is followed, so it stays right as the log grows; the entry is marked `is-target` and opened.
+
 ### Entries and Themes
 
 The page reads a log as entries. A line that opens with a time starts an entry, and the lines after it (a stack trace, the SQL of a database error, `print_r` output) belong to it: the head shows, the rest sits in a native `<details>` ("14 more lines"). A log with no stamped line renders one entry per line. Consecutive entries that differ only in their stamp fold to one with `×n` and the last stamp. An entry whose head matches a level pattern carries `data-level` (`error`, `warning`, `notice`, `deprecated`, `strict`), which colours its edge. Each entry's `id` is `b{byte offset}`. A page that opens partway through an entry shows the remainder as "continued from the previous page"; pages are cut on lines.

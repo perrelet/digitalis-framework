@@ -195,8 +195,8 @@ class Log extends Service {
 
             if ($look_fwd) {
 
-                $start   = max(0, strlen($lines) - $over_fwd - 1); // from the page's last byte: a page ending on a newline ends there, or the next page's first line would print on both
-                $pos     = strpos($lines, "\n", $start);
+                $from    = max(0, strlen($lines) - $over_fwd - 1); // from the page's last byte: a page ending on a newline ends there, or the next page's first line would print on both
+                $pos     = strpos($lines, "\n", $from);
                 $next_nl = ($pos === false) ? strlen($lines) : $pos;
 
             } else {

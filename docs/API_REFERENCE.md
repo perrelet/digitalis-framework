@@ -807,6 +807,8 @@ Abstract admin page that reads log files as entries. See [ADMIN.md](./ADMIN.md#l
 | `handle_clear()` | `void` | The Clear request, on `admin_init` |
 | `clear_log(array $log, string $nonce)` | `string` | `cleared`, `permission`, `expired` or `failed` |
 | `get_labels()` | `array` | Protected. Every string the script prints |
+| `render_search(array $log, array $search)` | `void` | Protected. The search form and the level chips |
+| `render_results(array $log, array $search, int $filesize, bool $plain)` | `void` | Protected. The results view |
 | `ajax()` | `void` | `wp_ajax_lattice_logs_{slug}`: sends `answer_task()` |
 | `answer_task(array $request)` | `array` | `['status', 'body']` for a task request, guards included |
 | `tail(array $log, int $size, string $key, int $bpp = 0, bool $plain = false)` | `array` | What was appended after `$size`, or a reset. See ADMIN.md, The Script Contract |
@@ -822,8 +824,9 @@ Groups raw log text into entries and wraps a line's tokens. Plain class, built f
 | `find_token_problem($pattern)` | `?string` | Static. Why a token rule cannot join the alternation, or `null` |
 | `__construct(array $theme)` | | A merged theme |
 | `holds_entry_start(string $text)` | `bool` | Whether any line of the text starts an entry |
+| `scan($handle)` | `Generator` | The entries of an open file, read line by line from its head: a caller may stop early |
 | `parse(string $chunk, int $offset = 0, string $head = '')` | `array` | Entries: `offset`, `end`, `stamp`, `last`, `level`, `head` (`null` when the chunk opens mid-entry), `body`, `count` |
-| `tokenize(string $line)` | `string` | The line escaped, each token in `<span class='x-{name}'>` |
+| `tokenize(string $line, ?callable $paint = null)` | `string` | The line escaped, each token in `<span class='x-{name}'>`. `$paint` replaces the escaping of each run of text (a search marks its term there) |
 
 ### `Lattice\Admin_Table`
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lattice;
 
 class Log_Format {
@@ -117,25 +119,69 @@ class Log_Format {
         if ($chunk === '') return [];
 
         $grouped = $this->holds_entry_start($head) || $this->holds_entry_start($chunk);
-        $entries = [];
 
-        foreach (explode("\n", $chunk) as $line) {
+        return iterator_to_array($this->read_entries(explode("\n", $chunk), $offset, $grouped), false);
+
+    }
+
+    // Entries from a file read line by line, for a scan that may stop early. Lines arrive without their newline.
+    public function scan ($handle) : \Generator {
+
+        $grouped = $this->holds_entry_start((string) fread($handle, static::HEAD_BYTES));
+        rewind($handle);
+
+        $lines = (function () use ($handle) { while (($line = fgets($handle)) !== false) yield rtrim($line, "\n"); })();
+
+        yield from $this->read_entries($lines, 0, $grouped);
+
+    }
+
+    // One warning under a thousand stamps is one entry: consecutive entries fold when the text after the stamp, the body included, is the same.
+    protected function read_entries (iterable $lines, int $offset, bool $grouped) : \Generator {
+
+        $open = $held = $held_key = null;
+
+        $close = function (array $open) use (&$held, &$held_key) : ?array {
+
+            while ($open['body'] && (end($open['body']) === '') && !is_null($open['head'])) array_pop($open['body']);
+
+            $key  = ($open['stamp'] === '') ? null : substr($open['head'], strlen($open['stamp'])) . "\n" . implode("\n", $open['body']);
+            $done = null;
+
+            if (!is_null($key) && ($key === $held_key)) {
+
+                $held['count']++;
+                $held['end']  = $open['end'];
+                $held['last'] = $open['stamp'];
+
+            } else {
+
+                [$done, $held, $held_key] = [$held, $open, $key];
+
+            }
+
+            return $done;
+
+        };
+
+        foreach ($lines as $line) {
 
             $at      = $offset;
             $offset += strlen($line) + 1;
             $line    = rtrim($line, "\r");
             $stamp   = $grouped ? $this->read_stamp($line) : '';
-            $last    = array_key_last($entries);
 
-            if (is_null($stamp) && !is_null($last)) {
+            if (is_null($stamp) && $open) {
 
-                $entries[$last]['body'][] = $line;
-                $entries[$last]['end']    = $offset;
+                $open['body'][] = $line;
+                $open['end']    = $offset;
                 continue;
 
             }
 
-            $entries[] = [
+            if ($open && ($done = $close($open))) yield $done;
+
+            $open = [
                 'offset' => $at,
                 'end'    => $offset,
                 'stamp'  => (string) $stamp,
@@ -148,15 +194,19 @@ class Log_Format {
 
         }
 
-        return $this->fold($entries);
+        if ($open && ($done = $close($open))) yield $done;
+        if ($held) yield $held;
 
     }
 
-    public function tokenize (string $line) : string {
+    // $paint escapes a run of text (a token's or the text between two); a search marks its term there.
+    public function tokenize (string $line, ?callable $paint = null) : string {
 
-        if (!$this->token_pattern || (strlen($line) > static::MAX_LINE)) return htmlspecialchars($line, static::ESCAPE);
+        $paint ??= fn ($text) => htmlspecialchars($text, static::ESCAPE);
 
-        if (!@preg_match_all($this->token_pattern, $line, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) return htmlspecialchars($line, static::ESCAPE);
+        if (!$this->token_pattern || (strlen($line) > static::MAX_LINE)) return $paint($line);
+
+        if (!@preg_match_all($this->token_pattern, $line, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) return $paint($line);
 
         $html = '';
         $pos  = 0;
@@ -168,13 +218,13 @@ class Log_Format {
             if ($text === '') continue;
 
             $name  = $this->token_names[array_key_last($match) - 1]; // trailing unmatched groups are dropped, so the last key is the group that matched
-            $html .= htmlspecialchars(substr($line, $pos, $at - $pos), static::ESCAPE);
-            $html .= "<span class='x-{$name}'>" . htmlspecialchars($text, static::ESCAPE) . "</span>";
+            $html .= $paint(substr($line, $pos, $at - $pos));
+            $html .= "<span class='x-{$name}'>" . $paint($text) . "</span>";
             $pos   = $at + strlen($text);
 
         }
 
-        return $html . htmlspecialchars(substr($line, $pos), static::ESCAPE);
+        return $html . $paint(substr($line, $pos));
 
     }
 
@@ -197,39 +247,6 @@ class Log_Format {
         }
 
         return '';
-
-    }
-
-    // One warning under a thousand stamps is one entry: the text after the stamp decides, the body included.
-    protected function fold (array $entries) : array {
-
-        $folded = [];
-        $key    = null;
-
-        foreach ($entries as $entry) {
-
-            while ($entry['body'] && (end($entry['body']) === '') && !is_null($entry['head'])) array_pop($entry['body']);
-
-            $last     = array_key_last($folded);
-            $this_key = ($entry['stamp'] === '') ? null : substr($entry['head'], strlen($entry['stamp'])) . "\n" . implode("\n", $entry['body']);
-
-            if (!is_null($this_key) && ($this_key === $key)) {
-
-                $folded[$last]['count']++;
-                $folded[$last]['end']  = $entry['end'];
-                $folded[$last]['last'] = $entry['stamp'];
-
-            } else {
-
-                $folded[] = $entry;
-
-            }
-
-            $key = $this_key;
-
-        }
-
-        return $folded;
 
     }
 

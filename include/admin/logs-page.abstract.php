@@ -21,6 +21,8 @@ abstract class Logs_Page extends Admin_Sub_Page {
     const DEFAULT_BYTES_PER_PAGE = 200000;
     protected $bytes_per_page = self::DEFAULT_BYTES_PER_PAGE;
     protected $tail_interval  = 3; // seconds between two reads while the page is live
+    protected $search_max     = 500; // matches a search prints before it stops
+    protected $search_budget  = 2;   // seconds a search may scan
 
     protected $logs = [];
     protected $_logs;
@@ -294,12 +296,17 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $total        = max(1, (int) ceil($filesize / $bytes_per_page));
         $page         = min($page, $total); // read_page() clamps too; the pagination must mark the page it shows
         $plain        = !empty($_GET['plain']);
-        $view         = $this->render_page($current, $page, $bytes_per_page, $filesize, $plain);
+        $search       = $this->read_search();
+        $at           = is_numeric($_GET['at'] ?? null) ? min(max(0, (int) $_GET['at']), $filesize) : null;
+
+        if (!is_null($at)) $page = min($total, (int) floor(max(0, $filesize - 1 - $at) / $bytes_per_page) + 1); // resolved now: a page number in the link would go stale as the log grows
+
+        $view         = $search['active'] ? ['bytes' => 0, 'size' => 0, 'key' => '', 'html' => '', 'partial' => ''] : $this->render_page($current, $page, $bytes_per_page, $filesize, $plain, $at);
         $bytes        = $view['bytes'];
-        $more         = ($filesize > $bytes);
+        $more         = !$search['active'] && ($filesize > $bytes);
 
         $pagination = $more ? paginate_links([
-            'base'      => add_query_arg('paged', '%#%', remove_query_arg(['cleared', 'refused'])),
+            'base'      => add_query_arg('paged', '%#%', remove_query_arg(['cleared', 'refused', 'at'])),
             'current'   => $page,
             'total'     => $total,
             'prev_text' => "&laquo;",
@@ -312,7 +319,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $action   = "lattice_logs_{$this->slug}";
         $root     = '';
 
-        if ($can_view) foreach ([
+        if ($can_view && !$search['active']) foreach ([
             'lattice' => 'logs',
             'url'     => admin_url('admin-ajax.php'),
             'action'  => $action,
@@ -338,6 +345,16 @@ abstract class Logs_Page extends Admin_Sub_Page {
                 echo "</div></div>";
                 return;
     
+            }
+
+            $this->render_search($current, $search);
+
+            if ($search['active']) {
+
+                $this->render_results($current, $search, $filesize, $plain);
+                echo "</div></div>";
+                return;
+
             }
 
             if ($pagination && ($bytes >= 5000)) echo $pagination;
@@ -393,6 +410,157 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         echo "</div></div>";
     
+    }
+
+    const LEVEL_CHIPS = ['error' => 'Errors', 'warning' => 'Warnings', 'notice' => 'Notices', 'deprecated' => 'Deprecated'];
+
+    // A term is a case-insensitive substring, or a pattern when written /between slashes/ (the i flag alone is allowed).
+    // The pattern ends in u, and a line that is not UTF-8 is searched again without it.
+    private function read_search () : array {
+
+        $q       = is_scalar($_GET['q'] ?? null) ? trim((string) wp_unslash($_GET['q'])) : '';
+        $level   = is_scalar($_GET['level'] ?? null) ? (string) $_GET['level'] : '';
+        $level   = isset(self::LEVEL_CHIPS[$level]) ? $level : '';
+        $pattern = ($q === '') ? '' : '/' . preg_quote($q, '/') . '/iu';
+        $error   = '';
+
+        if (preg_match('~^/(.+)/(i?)$~s', $q, $parts)) {
+
+            $pattern = '/' . preg_replace('~\\\\.(*SKIP)(*F)|/~s', '\\/', $parts[1]) . '/' . $parts[2] . 'u';
+
+            if (@preg_match($pattern, '') === false) [$pattern, $error] = ['', 'That is not a valid pattern.'];
+
+        }
+
+        return ['q' => $q, 'level' => $level, 'pattern' => $pattern, 'error' => $error, 'active' => ($q !== '') || ($level !== '')];
+
+    }
+
+    protected function render_search (array $log, array $search) {
+
+        $base = remove_query_arg(['cleared', 'refused', 'at', 'paged']);
+
+        echo "<form method='get' class='search' role='search'>";
+
+            $bpp = is_scalar($_GET['bpp'] ?? null) ? (int) $_GET['bpp'] : 0;
+
+            foreach (['page' => $this->slug, 'log' => $log['slug'], 'bpp' => ($bpp > 0) ? $bpp : '', 'plain' => empty($_GET['plain']) ? '' : 1, 'level' => $search['level']] as $name => $value) {
+
+                if ((string) $value !== '') echo "<input type='hidden' name='" . esc_attr($name) . "' value='" . esc_attr((string) $value) . "'>";
+
+            }
+
+            echo "<input type='search' name='q' value='" . esc_attr($search['q']) . "' placeholder='Search this log, or /pattern/' aria-label='Search this log'>";
+            echo "<button class='button'>Search</button>";
+
+            echo "<span class='chips'>";
+
+                foreach (self::LEVEL_CHIPS as $level => $label) {
+
+                    $active = ($search['level'] === $level);
+                    $url    = $active ? remove_query_arg('level', $base) : add_query_arg('level', $level, $base);
+
+                    echo "<a class='chip" . ($active ? ' is-active' : '') . "' href='" . esc_url($url) . "'" . ($active ? " aria-current='true'" : '') . ">" . esc_html($label) . "</a>";
+
+                }
+
+            echo "</span>";
+
+            if ($search['active']) echo "<a class='back' href='" . esc_url(remove_query_arg(['q', 'level'], $base)) . "'>Back to the log</a>";
+
+        echo "</form>";
+
+    }
+
+    protected function render_results (array $log, array $search, int $filesize, bool $plain) {
+
+        if ($search['error']) {
+
+            echo "<div class='notice notice-error inline'><p>" . esc_html($search['error']) . "</p></div>";
+            return;
+
+        }
+
+        $format  = new Log_Format($this->get_log_syntax_rules($log));
+        $base    = remove_query_arg(['cleared', 'refused', 'q', 'level', 'paged', 'at']);
+        $handle  = fopen($log['path'], 'rb');
+        $started = microtime(true);
+        $found   = 0;
+        $stopped = null;
+        $html    = '';
+
+        if ($handle) foreach ($format->scan($handle) as $entry) {
+
+            if ($entry['offset'] >= $filesize) break;
+
+            if ($this->matches_search($entry, $search)) {
+
+                $found++;
+                $entry['href'] = add_query_arg('at', $entry['offset'], $base) . '#at';
+                $html         .= $this->render_entry($entry, $format, $plain, 'unstamped lines', $search['pattern']);
+
+            }
+
+            if (($found >= $this->search_max) || ((microtime(true) - $started) >= $this->search_budget)) {
+
+                if ($entry['end'] < $filesize) $stopped = $entry['end'];
+                break;
+
+            }
+
+        }
+
+        if ($handle) fclose($handle);
+
+        $info = $found ? sprintf(_n('%s entry matches', '%s entries match', $found), number_format_i18n($found)) : 'Nothing matches';
+
+        if (!is_null($stopped)) $info .= '. The search stopped at ' . size_format($stopped) . ' of ' . size_format($filesize) . ': narrow the term to reach the rest';
+
+        echo "<p class='results-info' role='status'>" . esc_html($info) . ".</p>";
+
+        if ($found) echo "<div class='digitalis-log'><div class='lines'><div class='entries'>{$html}</div></div></div>";
+
+    }
+
+    private function matches_search (array $entry, array $search) : bool {
+
+        if ($search['level'] && ($entry['level'] !== $search['level'])) return false;
+        if ($search['pattern'] === '') return true;
+
+        foreach (array_merge([(string) $entry['head']], $entry['body']) as $line) {
+
+            $hit = @preg_match($search['pattern'], $line);
+
+            if ($hit === false) $hit = @preg_match(substr($search['pattern'], 0, -1), $line);
+            if ($hit) return true;
+
+        }
+
+        return false;
+
+    }
+
+    private function mark_term (string $text, string $pattern) : string {
+
+        $found = @preg_match_all($pattern, $text, $hits, PREG_OFFSET_CAPTURE);
+
+        if ($found === false) $found = @preg_match_all(substr($pattern, 0, -1), $text, $hits, PREG_OFFSET_CAPTURE);
+        if (!$found) return htmlspecialchars($text, Log_Format::ESCAPE);
+
+        $html = '';
+        $pos  = 0;
+
+        foreach ($hits[0] as [$hit, $at]) {
+
+            if ($hit === '') continue;
+
+            $html .= htmlspecialchars(substr($text, $pos, $at - $pos), Log_Format::ESCAPE) . "<mark class='x-match'>" . htmlspecialchars($hit, Log_Format::ESCAPE) . "</mark>";
+            $pos   = $at + strlen($hit);
+
+        }
+
+        return $html . htmlspecialchars(substr($text, $pos), Log_Format::ESCAPE);
+
     }
 
     protected function get_labels () : array {
@@ -469,7 +637,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
     }
 
     // Page 1 ends where the file does, so an unterminated last line is held apart for the tail to complete in place.
-    private function render_page (array $log, int $page, int $bpp, int $filesize, bool $plain) : array {
+    private function render_page (array $log, int $page, int $bpp, int $filesize, bool $plain, ?int $at = null) : array {
 
         $bytes = $start = 0;
         $chunk = Log::read_page($log['path'], $page, ['bpp' => $bpp, 'overflow' => 500, 'size' => $filesize], $bytes, $start);
@@ -479,19 +647,24 @@ abstract class Logs_Page extends Admin_Sub_Page {
             'bytes'   => $bytes,
             'size'    => $start + $cut,
             'key'     => $this->read_key($log['path'], $start + $cut),
-            'html'    => $this->render_entries($log, substr($chunk, 0, $cut), $start, $plain, 'continued from the previous page'),
+            'html'    => $this->render_entries($log, substr($chunk, 0, $cut), $start, $plain, 'continued from the previous page', $at),
             'partial' => $this->render_partial($log, substr($chunk, $cut), $plain),
         ];
 
     }
 
-    private function render_entries (array $log, string $text, int $offset, bool $plain, string $note) : string {
+    private function render_entries (array $log, string $text, int $offset, bool $plain, string $note, ?int $at = null) : string {
 
-        $format = new Log_Format($this->get_log_syntax_rules($log));
-        $head   = $offset ? (string) file_get_contents($log['path'], false, null, 0, Log_Format::HEAD_BYTES) : '';
-        $html   = '';
+        $format  = new Log_Format($this->get_log_syntax_rules($log));
+        $head    = $offset ? (string) file_get_contents($log['path'], false, null, 0, Log_Format::HEAD_BYTES) : '';
+        $entries = $format->parse($text, $offset, $head);
+        $target  = null;
+        $html    = '';
 
-        foreach ($format->parse($text, $offset, $head) as $entry) $html .= $this->render_entry($entry, $format, $plain, $note);
+        if (!is_null($at)) foreach ($entries as $i => $entry) if ($entry['offset'] <= $at) $target = $i;
+        if (!is_null($target)) $entries[$target]['target'] = true;
+
+        foreach ($entries as $entry) $html .= $this->render_entry($entry, $format, $plain, $note);
 
         return $html;
 
@@ -583,7 +756,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             foreach ($logs as $log) {
         
-                $url = add_query_arg('log', $log['slug'], remove_query_arg(['paged', 'clear-log', 'cleared', 'refused']));
+                $url = add_query_arg('log', $log['slug'], remove_query_arg(['paged', 'clear-log', 'cleared', 'refused', 'at']));
 
                 $class = ($current['slug'] == $log['slug']) ? 'nav-tab nav-tab-active' : 'nav-tab';
 
@@ -595,15 +768,19 @@ abstract class Logs_Page extends Admin_Sub_Page {
     
     }
 
-    private function render_entry (array $entry, Log_Format $format, bool $plain, string $note) : string {
+    private function render_entry (array $entry, Log_Format $format, bool $plain, string $note, string $pattern = '') : string {
 
-        $paint = fn ($line) => $plain ? htmlspecialchars($line, Log_Format::ESCAPE) : $format->tokenize($line);
-        $body  = implode("\n", array_map($paint, $entry['body']));
-        $more  = count($entry['body']);
+        $mark   = ($pattern === '') ? null : fn ($text) => $this->mark_term($text, $pattern);
+        $paint  = fn ($line) => $plain ? ($mark ? $mark($line) : htmlspecialchars($line, Log_Format::ESCAPE)) : $format->tokenize($line, $mark);
+        $body   = implode("\n", array_map($paint, $entry['body']));
+        $more   = count($entry['body']);
+        $target = !empty($entry['target']);
+        $class  = 'entry' . (is_null($entry['head']) ? ' continued' : '') . ($target ? ' is-target' : '');
+        $extra  = ($target ? "<span id='at'></span>" : '') . (isset($entry['href']) ? "<a class='locate' href='" . esc_url($entry['href']) . "'>Show in the log</a>" : '');
 
         if (is_null($entry['head'])) {
 
-            return "<div class='entry continued' id='b{$entry['offset']}'><p class='note'>{$note}</p><pre class='body'>{$body}</pre></div>";
+            return "<div class='{$class}' id='b{$entry['offset']}'>{$extra}<p class='note'>" . esc_html($note) . "</p><pre class='body'>{$body}</pre></div>";
 
         }
 
@@ -617,9 +794,10 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
         }
 
-        $html = "<div class='entry' id='b{$entry['offset']}'{$level}><pre class='head'>" . $paint($entry['head']) . "</pre>{$fold}";
+        $html = "<div class='{$class}' id='b{$entry['offset']}'{$level}>{$extra}<pre class='head'>" . $paint($entry['head']) . "</pre>{$fold}";
+        $open = ($target || ($mark && str_contains($body, "<mark class='x-match'>"))) ? ' open' : '';
 
-        if ($more) $html .= "<details><summary>{$more} more " . ($more > 1 ? 'lines' : 'line') . "</summary><pre class='body'>{$body}</pre></details>";
+        if ($more) $html .= "<details{$open}><summary>{$more} more " . ($more > 1 ? 'lines' : 'line') . "</summary><pre class='body'>{$body}</pre></details>";
 
         return "{$html}</div>";
 
