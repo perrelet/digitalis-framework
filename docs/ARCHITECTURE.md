@@ -116,7 +116,7 @@ abstract class Singleton extends Design_Pattern {
 
 ### 2. Factory Pattern
 
-Creates and caches instances with optional property-based caching. Instances are stored in a shared registry keyed by `$cache_group` and the value of `$cache_property` on the instance. Features scope that registry per class and name configs by `id`: see [CONVENTIONS: Features](./CONVENTIONS.md#features).
+Creates and caches instances with optional property-based caching. Instances are stored in a shared registry keyed by `$cache_group` and the value of `$cache_property` on the instance (`Log` keys on its path instead, through `get_cache_key()`). Features scope that registry per class and name configs by `id`: see [CONVENTIONS: Features](./CONVENTIONS.md#features).
 
 ```php
 namespace Lattice;

@@ -209,6 +209,8 @@ Log::w('message');
 Log::w('message', 'my-plugin.log');  // Specific file
 ```
 
+A name is that file in the class's declared `$directory`, the `error_log` directory when it declares none. For a log elsewhere, declare `$directory` on a subclass or pass `['file' => 'my-plugin.log', 'directory' => $directory]`.
+
 ### Reading
 
 ```php

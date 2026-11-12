@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Lattice;
 
 use DateTime;
+use ReflectionClass;
 
 class Log extends Service {
 
-    protected static $cache_group    = self::class;  
-    protected static $cache_property = 'file';  
+    protected static $cache_group = self::class;
 
     protected $file        = 'log.log';
     protected $directory   = null;
@@ -20,6 +20,24 @@ class Log extends Service {
     public static function create ($data = []) {
 
         return parent::create(is_string($data) ? ['file' => $data] : $data);
+
+    }
+
+    // A bare name is that file in the called class's declared directory: the path get_path() answers for it.
+    protected static function get_data_key ($data) {
+
+        if (!is_string($data)) return parent::get_data_key($data);
+
+        $error_log = (string) ini_get('error_log');
+        $directory = (new ReflectionClass(static::class))->getDefaultProperties()['directory'] ?? null;
+
+        return trailingslashit((is_string($directory) && $directory) ? $directory : dirname($error_log)) . ($data ?: basename($error_log));
+
+    }
+
+    protected function get_cache_key () {
+
+        return $this->get_path();
 
     }
 
