@@ -34,12 +34,6 @@ class Jobs_Page extends Admin_Sub_Page {
 
     }
 
-    public function get_url ($blog_id = null) {
-
-        return get_admin_url($blog_id, "tools.php?page={$this->slug}");
-
-    }
-
     public function callback () {
 
         $state  = sanitize_key($_GET['state'] ?? '');

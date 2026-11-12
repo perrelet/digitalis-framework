@@ -242,7 +242,7 @@ Declare logs in `filter_logs()`: a `Log` instance under its slug, or a row. Over
 
 Every declared log gets a tab. A file that does not exist yet reads "Nothing logged yet", an unreadable one says so and a row with no path reads "No file is configured". The Error Log entry the parent adds resolves PHP's `error_log` setting, then `WP_DEBUG_LOG`.
 
-Clear posts to the page's own URL (`get_page_url()`), is handled on `admin_init` by `handle_clear()` and redirects back with `cleared` or `refused`, so a reload never clears twice.
+Clear posts to the page's own URL (`get_url()`), is handled on `admin_init` by `handle_clear()` and redirects back with `cleared` or `refused`, so a reload never clears twice.
 
 ### Log Definition
 

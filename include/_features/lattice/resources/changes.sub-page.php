@@ -12,12 +12,6 @@ class Changes_Page extends Admin_Sub_Page {
     protected $menu_title = 'Changes';
     protected $capability = 'manage_options';
 
-    public function get_url ($blog_id = null) {
-
-        return get_admin_url($blog_id, "tools.php?page={$this->slug}");
-
-    }
-
     public function callback () {
 
         $filters = array_filter(['resource' => sanitize_key($_GET['resource'] ?? ''), 'record_id' => sanitize_text_field(wp_unslash($_GET['record'] ?? '')), 'set' => (int) ($_GET['set'] ?? 0), 'proposer' => (int) ($_GET['proposer'] ?? 0)]);

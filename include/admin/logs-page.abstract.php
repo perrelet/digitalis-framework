@@ -85,17 +85,6 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     }
 
-    public function get_page_url () : string {
-
-        $url = function_exists('menu_page_url') ? menu_page_url($this->slug, false) : '';
-        if ($url) return $url;
-
-        $parent = str_contains((string) $this->parent, '.php') ? $this->parent : 'admin.php';
-
-        return admin_url(add_query_arg('page', $this->slug, $parent));
-
-    }
-
     public function find_log (?string $slug, bool $exact = false) : ?array {
 
         if (!$logs = $this->get_logs()) return null;
@@ -119,7 +108,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         $outcome = $log ? $this->clear_log($log, sanitize_text_field(wp_unslash($_POST['nonce'] ?? ''))) : 'failed';
         $flag    = ($outcome == 'cleared') ? ['cleared' => $log['slug']] : ['refused' => $outcome];
 
-        wp_safe_redirect(add_query_arg(($log ? ['log' => $log['slug']] : []) + $flag, $this->get_page_url()));
+        wp_safe_redirect(add_query_arg(($log ? ['log' => $log['slug']] : []) + $flag, $this->get_url()));
         exit;
 
     }
@@ -388,7 +377,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             if ($pagination) echo $pagination;
 
-            echo "<form method='post' class='actions' data-el='clear' action='" . esc_url($this->get_page_url()) . "'>";
+            echo "<form method='post' class='actions' data-el='clear' action='" . esc_url($this->get_url()) . "'>";
 
                 echo "<input type='hidden' name='nonce' value='" . wp_create_nonce('clear-log') . "'>";
                 echo "<input type='hidden' name='log' value='" . esc_attr($current['slug']) . "'>";

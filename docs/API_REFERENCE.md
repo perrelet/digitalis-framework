@@ -802,7 +802,6 @@ Abstract admin page that reads log files as entries. See [ADMIN.md](./ADMIN.md#l
 | `find_log(?string $slug, bool $exact = false)` | `?array` | The row for a slug, or the first; with `$exact`, null for a slug no row has |
 | `get_syntax_rules()` | `array` | Per theme: `entry`, `levels` and `tokens` patterns |
 | `get_log_syntax_rules($log)` | `array` | The row's themes merged and checked |
-| `get_page_url()` | `string` | The page's own URL |
 | `enqueue_style()`, `enqueue_script()` | `void` | The stylesheet and the `@lattice/logs` module; `callback()` calls both |
 | `handle_clear()` | `void` | The Clear request, on `admin_init` |
 | `clear_log(array $log, string $nonce)` | `string` | `cleared`, `permission`, `expired` or `failed` |
