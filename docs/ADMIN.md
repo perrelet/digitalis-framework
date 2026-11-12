@@ -220,22 +220,29 @@ class Plugin_Logs_Page extends Logs_Page {
     protected $menu_title = 'Logs';
     protected $capability = 'manage_options';
 
-    public function get_logs() {
-        return [
-            [
-                'name'     => 'Application Log',
-                'slug'     => 'app',
-                'instance' => Log::get_instance('app.log'),
-            ],
-            [
-                'name'     => 'Error Log',
-                'slug'     => 'error',
-                'path'     => ini_get('error_log'),
-            ],
+    protected function filter_logs (&$logs) {
+
+        parent::filter_logs($logs); // the PHP error log
+
+        $logs['app'] = Log::create('app.log');
+
+        $logs[] = [
+            'name'  => 'Imports',
+            'slug'  => 'imports',
+            'path'  => WP_CONTENT_DIR . '/uploads/imports.log',
+            'theme' => ['basic'],
         ];
+
     }
+
 }
 ```
+
+Declare logs in `filter_logs()`: a `Log` instance under its slug, or a row. Overriding `get_logs()` skips the permission parsing. `filter_logs()` runs on a clear request before the page renders as well as on each view, so it only declares: it writes nothing.
+
+Every declared log gets a tab. A file that does not exist yet reads "Nothing logged yet", an unreadable one says so and a row with no path reads "No file is configured". The Error Log entry the parent adds resolves PHP's `error_log` setting, then `WP_DEBUG_LOG`.
+
+Clear posts to the page's own URL (`get_page_url()`), is handled on `admin_init` by `handle_clear()` and redirects back with `cleared` or `refused`, so a reload never clears twice.
 
 ### Log Definition
 
@@ -244,7 +251,7 @@ class Plugin_Logs_Page extends Logs_Page {
     'name'        => 'Display Name',
     'slug'        => 'unique-slug',     // Used in query string
     'path'        => '/abs/path.log',   // Direct path (or use instance)
-    'instance'    => Log::get_instance(), // Log instance (preferred)
+    'instance'    => Log::create('app.log'), // set for you when the row is a Log instance
     'theme'       => ['basic'],          // Syntax highlighting theme(s)
     'permissions' => [],                 // Additional cap checks
 ]

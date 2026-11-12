@@ -5,6 +5,7 @@
 // LATTICE_* pair as bare calls, which PHPStan reads but does not resolve (LATTICE_VERSION and LATTICE_LIBRARY_PATH it resolves from load.php).
 define('ABSPATH', '/srv/www/');
 define('WP_DEBUG', false);
+define('WP_CONTENT_DIR', '/srv/www/wp-content');
 define('WP_PLUGIN_DIR', '/srv/www/wp-content/plugins');
 define('WPMU_PLUGIN_DIR', '/srv/www/wp-content/mu-plugins');
 define('COOKIEPATH', '/');
