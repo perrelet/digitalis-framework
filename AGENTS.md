@@ -570,6 +570,9 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
+**A print leaves the view as configured.**
+`params()` derives for one render and the params are restored when it ends: read derived values, `get_index()` and `is_first()` inside the render, and capture by value into any closure that runs later. A `Field_Group` draws copies of the field views it is given. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+
 **Quick reference for the five view-system traps** — `$merge` doesn't accumulate, `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`App::$path` is the App-subclass file's directory, not the plugin root.**
