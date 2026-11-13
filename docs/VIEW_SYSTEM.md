@@ -192,7 +192,7 @@ PHP's `__toString()` is invoked automatically when a view is echoed; the explici
 
 ### A print leaves the view as configured
 
-`params()` derives into the view's params for the length of one render; when the render ends the view holds what was configured or set, and nothing else. Print, set, print: the second print reflects the set.
+`params()` derives into the view's params for the length of one render; when the render ends the view holds what was configured or set before the render began, and nothing else. Print, set, print: the second print reflects the set.
 
 ```php
 $view = new My_View(['title' => 'One']);
