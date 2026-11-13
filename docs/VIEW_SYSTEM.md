@@ -190,6 +190,20 @@ $html = (string) new My_View(['param' => 'value']);
 
 PHP's `__toString()` is invoked automatically when a view is echoed; the explicit `(string)` cast is only needed when the value is being assigned or passed where the type matters. See [CONVENTIONS — Instantiate views with `new`](./CONVENTIONS.md#instantiate-views-with-new--dont-call-viewrender-statically).
 
+### A print leaves the view as configured
+
+`params()` derives into the view's params for the length of one render; when the render ends the view holds what was configured or set, and nothing else. Print, set, print: the second print reflects the set.
+
+```php
+$view = new My_View(['title' => 'One']);
+echo $view;              // params() derives, the template draws
+$view['slug'];           // null: derived values are read during the render, not after
+$view['title'] = 'Two';
+echo $view;              // derived again from the configured params
+```
+
+Four limits. An object you put in a param (a model, an `Attributes`, a child view outside a group's `fields`) is the same object in every render, so a render that changes it changes it for the next. A reference you hold to a param (`$x = &$view['key']`) is written through. A closure made during the render and run after it (a `wp_footer` callback) reads the configured params: capture what it needs by value. `Menu` sets placement params on the `Menu_Item` objects it is given.
+
 ### Strict mode
 
 Under `LATTICE_STRICT` (default `WP_DEBUG`) the View lifecycle is audited. Boot checks run once per view during the autoload walk and list every problem in one `Strict_Violation`; render checks throw at the offending `print()`. Messages read `Class (dir/file.php): problem. Fix.` In production (`LATTICE_STRICT` off) the render-time sites fall back and log once per class and problem through `Strict::log_once()`.
@@ -483,11 +497,11 @@ echo new My_View(['param' => 'value']);
 
 ### View Index
 
-Each view class tracks render count:
+Each view class tracks render count. The index belongs to a render: read it inside one, from `params()`, `view()`, a template or a lifecycle hook.
 
 ```php
-$view->get_index();    // Current render index (0-based)
-$view->is_first();     // True if first render of this class
+$this->get_index();    // This render's index (0-based); null outside a render
+$this->is_first();     // True during the first render of this class; false outside a render
 
 // Automatic param
 $this['view_index'];   // 0, 1, 2, ... for each render
@@ -1556,6 +1570,6 @@ $view['key'] = 'value';      // Set
 $view->set_param('key', 'v'); // Set
 $view->has_param('key');     // Check
 $view->merge_param('k', $v); // Merge into array
-$view->get_index();          // Render index
-$view->is_first();           // First render?
+$this->get_index();          // Render index (inside a render)
+$this->is_first();           // First render? (inside a render)
 ```

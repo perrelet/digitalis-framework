@@ -572,6 +572,9 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
+**A print leaves the view as configured.**
+`params()` derives for one render and the params are restored when it ends: read derived values, `get_index()` and `is_first()` inside the render, and capture by value into any closure that runs later. A `Field_Group` draws copies of the field views it is given. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+
 **Content and label params are HTML by contract; attribute values, names and tags are escaped by the framework.**
 Escape user data before it becomes a `content`, `label` or cell param (`esc_html($term->name)`); `Attributes` escapes values and rejects unrenderable names, `Element` rejects non-element tags (strict throws for both). See [VIEW_SYSTEM.md#what-the-framework-escapes](./docs/VIEW_SYSTEM.md#what-the-framework-escapes).
 

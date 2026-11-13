@@ -351,6 +351,17 @@ Measured on the live consumers before release:
 |---|---|---|
 | courses, d-pace, eventropy, mycelium, somm, study-hub | 0 | No non-element tags, no unrenderable attribute names, no `path` / `template` / `return` params on template views |
 
+Since 0.9.0 a print leaves the view as configured ([VIEW_SYSTEM.md](./VIEW_SYSTEM.md#a-print-leaves-the-view-as-configured)); no violation is thrown for any of these:
+
+| Was | Now |
+|---|---|
+| After a print the view's params held what `params()` derived, `view_index` included, so `$view['derived']`, `get_params()`, `get_index()` and `is_first()` answered for the last render | They answer for the configured view: derived keys are absent, `get_index()` is null, `is_first()` false. Read them during the render |
+| A closure registered during a render and run later (`wp_footer`) read derived params through `$this` or a captured `&$p` | It reads the configured params; capture the values by value |
+| A second print of one instance started from the first print's output: classes merged twice, a `Component` kept its first element, an `Archive` reused its items, a `Field` threw a `TypeError` | Each print derives from the configured params; an `Archive` not given `items` queries again |
+| A `Field_Group` or `Form` wrote ids, values, errors and `disabled` into the field views it was given | It draws copies; the objects given read the same afterwards and can be given to any number of groups |
+
+Measured on the live consumers before release: no view is printed twice and none is read after its print, except digitalis-co's `Teapot` footer closure, whose script reads a configured key.
+
 ### Editors
 
 The page-builder integration is gone, `Editor_Manager` with it. The one thing consumers asked of it was whether the request is inside a builder's editing screen; that question belongs to the plugin that runs the builder. Paste this into your own namespace and call it instead:

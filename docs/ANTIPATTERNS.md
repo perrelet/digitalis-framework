@@ -253,6 +253,23 @@ public function view () {
 Strict mode throws when the prepare phase (`pre_validate()`, `params()`, `validate()`) emits output or leaves a buffer open. The balanced `ob_start()` … `ob_get_clean()` above is invisible to it, which is why this entry stays.
 ---
 
+### Read derived params during the render, not after
+
+A print leaves the view as configured, so what `params()` derived is gone once it ends.
+
+```php
+// ❌
+$view->print();
+$id = $view['id'];
+add_action('wp_footer', fn () => print(json_encode($this->get_params())));   // inside view(): runs after the render
+
+// ✅
+public function view () {
+    $id = $this['id'];
+    add_action('wp_footer', fn () => print(json_encode($id)));
+}
+```
+
 ## Query_Manager / Digitalis_Query
 
 ### `Digitalis_Query` is removed — use `Query_Vars` + `Query_Manager`

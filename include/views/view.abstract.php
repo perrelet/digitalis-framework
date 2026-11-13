@@ -119,7 +119,8 @@ abstract class View implements \ArrayAccess {
 
         if (Strict::enabled() && !$this->constructed) $this->strict_constructor();
 
-        $level = ob_get_level();
+        $level      = ob_get_level();
+        $configured = $this->params; // A render derives into the params; the view reads as configured again once it ends.
 
         self::$render_stack[] = $this;
 
@@ -135,6 +136,7 @@ abstract class View implements \ArrayAccess {
 
         } finally {
 
+            $this->params = $configured;
             array_pop(self::$render_stack);
 
         }
