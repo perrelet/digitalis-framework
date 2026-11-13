@@ -566,7 +566,7 @@ class Card extends Component {
 **Namespace:** `Lattice\Component\Field_Group`
 **File:** `include/views/components/field-group.component.php`
 
-Renders a group of form fields together.
+Renders a group of form fields together. A field given as a view object is drawn as a copy, so the same object can be given to any number of groups and reads the same afterwards.
 
 #### Parameters
 

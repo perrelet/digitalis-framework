@@ -30,7 +30,8 @@ class Field_Group extends \Lattice\Component {
 
     public function params (array &$p) {
 
-        $p['fields'] = $this->get_fields();
+        $fields      = $this->get_fields();
+        $p['fields'] = is_array($fields) ? array_map(fn ($field) => ($field instanceof View) ? clone $field : $field, $fields) : $fields;
 
         foreach ($p['defaults'] as $key => $default) foreach ($p['fields'] as &$field) {
         

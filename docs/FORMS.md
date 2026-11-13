@@ -76,7 +76,7 @@ A `Form_Route` answers GET and POST unless `$definition['methods']` says otherwi
 
 `route` and a stable `id` are all a form needs. It then posts to its own page, carries its target, prints a nonce for a signed-in viewer, takes its fields' browser attributes (`required`, `type="email"`, `maxlength`, `min`, `max`, never `pattern`) and display conditions (from `when`) from the route and draws its result: the values as sent, each message beneath its field (`aria-invalid`, `aria-describedby`), an announced summary, focus on the first field at fault. Where htmx is enqueued it also posts through htmx to the same page and swaps itself in place. A second copy on a page takes its own `id`. A route with a pattern takes its values as `route_params`. To judge several forms, a route overrides `get_rules()`, starting from the parent's, and reads its URL params there: drawn or posted, they are the pattern's captures from the encoded path, as strings. A posted value outranks a URL param of the same name, in `get_param()` and in the rules: read a param with `get_url_params()`, and give it no rule, or a visitor's post can change it.
 
-`Field_Group` takes `field_params` (name => params) for any field by name; `Field` takes `error`.
+`Field_Group` takes `field_params` (name => params) for any field by name; `Field` takes `error`. A form draws copies of the field views it is given, so one set of field objects can serve many forms.
 
 ## The post
 

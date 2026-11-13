@@ -51,7 +51,13 @@ class Form extends Field_Group {
             $class = ($field instanceof View) ? get_class($field) : ($field['field'] ?? '');
 
             if (is_a($class, \Lattice\Field\Human_Check::class, true)) continue;
-            if (is_a($class, \Lattice\Field\Submit::class, true))      $field['disabled'] = true;
+
+            if (is_a($class, \Lattice\Field\Submit::class, true)) {
+
+                if ($field instanceof View) $field = clone $field;
+                $field['disabled'] = true;
+
+            }
 
             $kept[] = $field;
 
