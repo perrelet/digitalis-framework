@@ -39,6 +39,13 @@ class Change_Set extends Model implements Step_List {
 
     }
 
+    // A change set has no fields: Has_Unsaved_Copies falls back to a parent accessor Model lacks.
+    public function get_field (string $selector, bool $format_value = true, bool $escape_html = false) {
+
+        return $this->unsaved_values[$selector] ?? null;
+
+    }
+
     // Ids are per site, and the model cache is not.
     public static function get_instance ($data = null, $auto_resolve = null) {
 
