@@ -92,9 +92,24 @@ abstract class Factory extends Creational {
 
         if (!is_null($key) && ((self::$instances[$group][$key] ?? null) instanceof static)) return self::$instances[$group][$key]; // a name another class holds is theirs
 
+        // An array config that names a held name: a name is taken once. Where the refusal does not throw, the holder answers its own class and stays in place for another.
+        $name = (is_array($data) && static::$cache_property && is_scalar($data[static::$cache_property] ?? null)) ? (string) $data[static::$cache_property] : null;
+        $held = is_null($name) ? null : (self::$instances[$group][$name] ?? null);
+
+        if ($held) {
+
+            $problem = "builds '{$name}' from a config, which " . $held::class . ' already holds';
+
+            Strict::violation(static::class, $problem, "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
+            Strict::log_once(static::class, $problem);
+
+            if ($held instanceof static) return $held;
+
+        }
+
         if ($instance = static::create($data)) {
 
-            if ($cache_key = $instance->get_cache_key()) self::$instances[$group][$cache_key] = $instance;
+            if (($cache_key = $instance->get_cache_key()) && (!$held || ($cache_key !== $name))) self::$instances[$group][$cache_key] = $instance;
             if (!is_null($key) && ($key !== $cache_key) && !isset(self::$instances[$group][$key])) self::$instances[$group][$key] = $instance;
 
         }

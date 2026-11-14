@@ -68,7 +68,14 @@ abstract class Feature extends Factory {
 
         if ($held && !($held instanceof static)) {
 
-            if (!isset(self::$instances[static::get_cache_group()][static::class])) _doing_it_wrong(static::class . '::get_instance', esc_html(static::class . " shares the name '{$name}' with " . get_class($held) . ', so each is found by its class instead.'), '');
+            if (!isset(self::$instances[static::get_cache_group()][static::class])) {
+
+                $problem = "shares the name '{$name}' with " . get_class($held);
+
+                Strict::violation(static::class, $problem, 'give one of them its own id; outside strict each is found by its class');
+                Strict::log_once(static::class, $problem);
+
+            }
 
             return null;
 
