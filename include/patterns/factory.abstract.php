@@ -88,12 +88,12 @@ abstract class Factory extends Creational {
 
         self::$instances[$group] ??= [];
 
-        if (!is_null($key) && isset(self::$instances[$group][$key])) return self::$instances[$group][$key];
+        if (!is_null($key) && ((self::$instances[$group][$key] ?? null) instanceof static)) return self::$instances[$group][$key]; // a name another class holds is theirs
 
         if ($instance = static::create($data)) {
 
             if ($cache_key = $instance->get_cache_key()) self::$instances[$group][$cache_key] = $instance;
-            if (!is_null($key) && ($key !== $cache_key)) self::$instances[$group][$key]       = $instance;
+            if (!is_null($key) && ($key !== $cache_key) && !isset(self::$instances[$group][$key])) self::$instances[$group][$key] = $instance;
 
         }
 
@@ -159,7 +159,7 @@ abstract class Factory extends Creational {
 
     protected static function get_data_key ($data) {
 
-        return is_null($data) ? static::class : (is_scalar($data) ? (string) $data : null);
+        return (is_null($data) || ($data === [])) ? static::class : (is_scalar($data) ? (string) $data : null);
 
     }
 
