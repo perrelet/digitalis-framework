@@ -9,6 +9,7 @@ Reference for admin pages, tables, meta boxes, and ACF integration.
 - [Admin Pages](#admin-pages)
 - [Admin Sub Pages](#admin-sub-pages)
 - [Logs Page](#logs-page)
+- [Iterator Screen](#iterator-screen)
 - [Posts Table](#posts-table)
 - [Users Table](#users-table)
 - [Terms Table](#terms-table)
@@ -259,7 +260,7 @@ Clear posts to the page's own URL (`get_url()`), is handled on `admin_init` by `
 
 The page renders the log tail with pagination, inside a `<div class='lattice'>` scope: the log switcher is core's tab strip (`nav-tab-wrapper`, `nav-tab`, `nav-tab-active`), the actions are core buttons, and the styles come from `assets/css/logs.css` (handle `lattice-logs`, depending on `lattice-tokens`, enqueued on `admin_enqueue_scripts` for the page's own request and from `callback()` elsewhere). The dark reading surface declares a `--log-*` token group on `.digitalis-log` for retuning.
 
-The page's script is the module `@lattice/logs` (`assets/js/logs.js`, enqueued by `enqueue_script()` beside the stylesheet, on WordPress 6.5 and later). It follows [SCRIPTS.md](./SCRIPTS.md). Without it the page reads the same: Refresh is a link and Clear posts without asking, guarded by its nonce and capability.
+The page's script is the module `@lattice/logs` (`assets/js/logs.js`, enqueued by `enqueue_script()` beside the stylesheet; wp-admin prints script modules from WordPress 6.6). It follows [SCRIPTS.md](./SCRIPTS.md). Without it the page reads the same: Refresh is a link and Clear posts without asking, guarded by its nonce and capability.
 
 ### The Script Contract
 
@@ -336,6 +337,76 @@ public function get_syntax_rules () {
 Themes merge per key: `entry` and each level's patterns add up, and a token rule replaces an earlier one of the same name. Patterns are written for the raw line (`->`, not `-&gt;`) and delimited by `/`, so escape a slash. Tokens are matched in one pass: the leftmost match wins, then the earlier rule, and a token never sits inside another (a path inside a quoted string is part of the string). A token rule holds non-capturing groups only and must match at least one character; a rule that breaks this, or does not compile, is a strict violation naming the theme and the rule, and is skipped in production. Lines over 8 KB print without tokens. `?plain=1` prints any page without tokens, keeping entries and levels.
 
 The parsing lives in `Log_Format` (`parse()` for entries, `tokenize()` for one line), which a tail, an export or a test can use without the page.
+
+---
+
+## Iterator Screen
+
+An `Iterator` adds its own page under Tools (`$parent_menu_slug`) and prints one controller there through `render_controller()`, which a host may also call on a page of its own; several controllers share a page. The controller is the `Iterator_UI` view inside a `<div class='lattice'>` scope, styled by `assets/css/iterator.css` (handle `lattice-iterator`). [API_REFERENCE.md](./API_REFERENCE.md) lists the class; this section is the contract between the markup, the script and `Iterator::ajax()`.
+
+The script is the module `@lattice/iterator` (`assets/js/iterator.js`), enqueued by `enqueue_script()` from `render_controller()`. It follows [SCRIPTS.md](./SCRIPTS.md). A foreground run is a chain of requests, so every control needs it: each `button[data-task]` is printed `disabled` and the script enables them. Without JavaScript a `<noscript>` line beside the buttons says so; on WordPress before 6.6, where wp-admin prints no script modules, `enqueue_script()` answers false and the same line names the version. The page then reads as a report of the run.
+
+### The Script Contract
+
+The root is `.digitalis-iterator[data-lattice='iterator']`:
+
+| Attribute | Holds |
+|---|---|
+| `data-url`, `data-action`, `data-nonce` | `admin-ajax.php`, and `iterator_{key}` as both the action and the nonce action |
+| `data-state` | The state the page was rendered in (`Iterator::get_run_state()`) |
+| `data-busy` | `Iterator::BUSY_STATES`, space separated: the states that have a driver |
+| `data-index`, `data-total` | The run's position and its total; `data-total` is empty for an unknown total |
+| `data-labels` | JSON from `get_ui_labels()`: one label per state, then `stalled`, `alreadyComplete`, `noItems`, `unknownTotal`, `unknownProgress`, `confirmReset`, `confirmDismiss`, `confirmStopBackground`, `faultMessage`, `needsScript`, `needsWordPress` |
+
+| Element | Is |
+|---|---|
+| `button[data-task]` | `start`, `once`, `background`, `stop`, `reset`, `retry`, `dismiss` |
+| `data-el='options'` | The run options' fieldset, disabled in a busy state; `batch_size` and `dry_run` are its inputs |
+| `data-el='status'` | `role='status'`: the state's label, or Stalled |
+| `data-el='message'` | `role='alert'`: a refusal's or a fault's message; empty otherwise, and then it takes no space |
+| `data-el='index'`, `total`, `percent`, `track`, `bar` | The progress figures; `track` is the `role='progressbar'` |
+| `data-el='time'`, `eta` | The elapsed clock and the estimate, as text from the server |
+| `data-el='count-processed'`, `count-skipped`, `count-failed` | The three counts |
+| `data-el='failed'`, `failed-count`, `failed-list` | The Failed panel (`is-empty` with none), its count and its list |
+| `data-el='log'` | The batch log; the script prepends rows |
+
+The root carries `is-{state}` for exactly one state, `is-busy` and `aria-busy` beside a busy one, and two facts beside the state: `is-stalled` (the label reads Stalled) and `is-indeterminate` (the total is unknown).
+
+| State | Named by | When | Busy |
+|---|---|---|---|
+| `queued`, `background`, `stopping` | the server | A background run is open: not started, running, asked to stop | yes |
+| `running` | the server | A page holds the run's lock | yes |
+| `halted`, `complete` | the server | The record's status, with no driver | no |
+| `stopped` | the server | A running record nobody drives | no |
+| `ready` | the server | An idle record | no |
+| `starting`, `retrying`, `working` | the script | A chain's first request, a retry chain, and a Reset, Dismiss, Run in background or background Stop in flight | yes |
+| `stopping` | the script | Stop pressed on a chain this page drives; the batch in flight still lands | yes |
+| `locked` | the server, in a refusal | A 409 that names another page as the driver | no |
+| `fault` | the script | A request failed | no |
+
+Tasks are POSTed with `action`, `nonce`, `task` and, while the page holds the lock, `token`. `iterate` also carries `batch_size` (omitted when empty) and `dry_run` (`1` or `0`). The guards answer through `wp_send_json_error()`: 403 for the nonce and for the capability, 422 for a missing or unknown task. A refusal is a 409 whose body carries `message`, `run_by` and the fields below.
+
+`ajax()` adds to every answer, 200 and 409, what the script paints, read after the task has run:
+
+| Field | On | Holds |
+|---|---|---|
+| `state`, `stalled` | every answer | `get_run_state()` and `is_stalled()`; a refusal that names another page answers `locked`, one that names a background run answers the job's state |
+| `index`, `nothing` | `total` | The position, and `empty` (a total of zero), `complete` (the index has reached the total) or null |
+| `time`, `eta` | `iterate` | `format_elapsed()` of the run's server time, and `format_eta()` of `get_eta()`; `eta` is `''` on a retry tick, on a stalled answer and when the state is not `running` |
+| `log_html` | `iterate` | The batch's rows, top to bottom: the per-id lines under `$print_results`, the batch's errors and log lines newest first (`Iterator_Log_Lines`). The per-id rows are shown, never stored |
+| `failed_html` | `iterate`, `retry`, `dismiss` | The Failed panel's list items (`Iterator_Failed_List`) |
+
+The tasks' own fields are those `total`, `iterate()`, `stop()`, `background()`, `reset()`, `stop_cron()`, `retry()` and `dismiss()` return, unchanged: a job, the CLI and a direct caller get them without the fields above.
+
+| Task | The script |
+|---|---|
+| `start`, `once` | `total` takes the lock and answers the `token`; then one `iterate` per batch until the answer's `state` is not `running`, the run stalls, Stop is pressed or, for `once`, one batch has run. A chain the server did not end (it releases a complete or halted run itself) ends with `stop`, whose answer names where the run rests |
+| `retry` | `retry` takes the lock; `iterate` while `retry_remaining`; then `stop` |
+| `stop` | On a chain this page drives: the state becomes `stopping` and the chain ends after its batch. On a background run: `stop_cron` after a confirm, then the page loads again. On another page's run: the page loads again |
+| `reset`, `background` | The request, then the page loads again with a GET (never a reload: a CSV controller is the response to its upload) |
+| `dismiss` | The request; the Failed panel, the counts and the state are painted from the answer |
+
+A 409 ends the task: the script drops its token without a `stop` (the lock is another driver's), paints the answer's `state` and shows its `message`. Any other failure hands the lock back with `stop`, sets `fault` and shows the server's message or `faultMessage`.
 
 ---
 

@@ -19,6 +19,8 @@ Complete documentation of all views, components, and fields shipped with Lattice
   - [Debug](#debug)
   - [Archive](#archive)
   - [Iterator_UI](#iterator_ui)
+  - [Iterator_Failed_List](#iterator_failed_list)
+  - [Iterator_Log_Lines](#iterator_log_lines)
   - [Query_Filters](#query_filters)
 - [Components](#components)
   - [Component (Base)](#component-base)
@@ -368,8 +370,9 @@ Renders progress UI for batch processing iterators.
 |-----------|------|---------|-------------|
 | `iterator` | `Iterator\|null` | `null` | Iterator instance |
 | `log_url` | `string` | `''` | A link to the full log; kept only when the iterator declares `$log_file` and the file exists |
+| `scripted` | `bool` | `true` | Whether the controller's script will print (`Iterator::enqueue_script()`, set by `render_controller()`); false prints the reason beside the disabled buttons |
 
-`params()` derives the template's state from the iterator's run record, its lock and the open job (`open_job()`): `classes`, `label` (Ready, Running, Stopped, Stalled, Halted, Complete; Queued, Running or Stopping for a background run), `time` (the elapsed clock, or `Background · started hh:mm`), `job` (a link to the job row while one is open), `eta` (a background run paces from the job's steps), `failed`, `cron`, `store`, `index`, `total` and the resolved `log_url`; the template calls the iterator's accessors for everything else. The stylesheets (`lattice-tokens`, the admin token layer, and `lattice-iterator`) and the script are enqueued by the iterator (`Iterator::enqueue_style()` and `render_controller()`), not by the view; the total is read from the record and computed only when it never was.
+`params()` derives the template's state from `Iterator::get_run_state()`, `is_stalled()` and the open job (`open_job()`): `state`, `busy`, `labels` (`get_ui_labels()`), `note`, `classes` (`is-{state}`, `is-busy`, `is-stalled`, `is-indeterminate`), `label` (Ready, Running, Stopped, Stalled, Halted, Complete; Queued, Running or Stopping for a background run), `time` (the elapsed clock, or `Background · started hh:mm`), `job` (a link to the job row while one is open), `eta` (a background run paces from the job's steps), `failed`, `cron`, `store`, `index`, `total` and the resolved `log_url`; the template calls the iterator's accessors for everything else. The stylesheets (`lattice-tokens`, the admin token layer, and `lattice-iterator`) and the script are enqueued by the iterator (`Iterator::enqueue_style()` and `render_controller()`), not by the view; the total is read from the record and computed only when it never was.
 
 #### Usage
 
@@ -387,6 +390,35 @@ Iterator_UI::render(['iterator' => $iterator]);
 - Batch post updates
 - Data migration scripts
 - Long-running admin operations
+
+---
+
+### Iterator_Failed_List
+
+**Namespace:** `Lattice\Iterator_Failed_List`
+**File:** `include/views/iterator-failed-list.view.php`
+
+The Failed panel's list items: the iterator screen prints it, and `Iterator::ajax()` answers it as `failed_html`.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `failed` | `array` | `['count' => 0, 'items' => []]` | `Iterator::get_failed_items()`: each item an `id` and a `url` or null; a count past the items adds an "and n more" row |
+
+---
+
+### Iterator_Log_Lines
+
+**Namespace:** `Lattice\Iterator_Log_Lines`
+**File:** `include/views/iterator-log-lines.view.php`
+
+Rows of the iterator screen's log, top to bottom: `batch`, `failed`, then `errors` and `log` newest first. The screen prints the stored lines with it, and `Iterator::ajax()` answers a batch's rows as `log_html`.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch` | `array` | `[]` | Plain-text rows (`log-batch`): a batch's per-id lines |
+| `failed` | `array` | `[]` | Plain-text rows (`log-error`): a batch's failed ids under `$print_results` |
+| `errors`, `log` | `array` | `[]` | Stored lines (`log-error`, `log-item`), filtered through `tags` |
+| `tags` | `array` | `Iterator::LOG_TAGS` | The `wp_kses()` allowance for stored lines |
 
 ---
 

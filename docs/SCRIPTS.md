@@ -106,6 +106,8 @@ wp_enqueue_script_module('@lattice/example', LATTICE_URI . 'assets/js/example.js
 
 A module is deferred, strict and scoped by the browser, so the file needs no IIFE, no `'use strict'` and no `DOMContentLoaded` listener: the document is parsed when the module runs. Core prints enqueued modules in the footer of wp-admin and of a classic theme, so a screen may enqueue from its render callback, beside its stylesheet.
 
+In wp-admin that is true from WordPress 6.6: 6.5 has `wp_enqueue_script_module()` and no admin hook that prints. A screen that works without its script may enqueue behind `function_exists()` alone. A screen whose controls need the script asks whether the module will print, `has_action('admin_print_footer_scripts', [wp_script_modules(), 'print_enqueued_script_modules'])`, and says so in its markup when it will not (`Iterator::enqueue_script()`).
+
 The module id is `@lattice/{name}`, which is also the name another module would import it by.
 
 ## Configuration
@@ -184,6 +186,8 @@ async #request (task, data = {}) {
 | 409 | The server refused for a reason the user can act on | paints the refusal the body describes |
 | 403 | The nonce expired or the capability is missing | shows the message and stops polling |
 | anything else | A fault | shows it once, stops polling, leaves the page as it was |
+
+A screen on which every refusal ends the task may throw the 409 with the rest, carrying the parsed answer on the error, so no call site tests `refused` (`assets/js/iterator.js`).
 
 A thrown request is caught in one place per screen, which reads the error's `status` and shows its message, or a label from `data-labels` when the message is empty (HTTP/2 carries no status text, and a logged-out `admin-ajax.php` answers 400 with a bare `0`). An `AbortError` is the script's own doing and is ignored there. A shared request module is written when a second script needs the same helper, not before.
 

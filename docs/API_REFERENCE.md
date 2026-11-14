@@ -908,6 +908,7 @@ abstract class Iterator extends Singleton
 | `LOG_TAIL` | `int` | `200` | Lines of `log` and of `errors` the record keeps; the rest lives in `$log_file` |
 | `MAX_BATCH_SIZE` | `int` | `1000` | Ceiling of the page's Batch size field (`read_request()`) |
 | `FAILED_LIST` | `int` | `50` | Failed ids the page lists (`get_failed_items()`); the rest is a count |
+| `BUSY_STATES`, `JOB_STATES` | `array` | | The states with a driver (the script's `starting`, `retrying` and `working` included), printed as the root's `data-busy`; and the three an open job names |
 | `LOCK_STALE` | `int` | `120` | The least seconds a lock outlives its last tick (`get_lock_window()`) |
 | `LOCK_STALE_UNLIMITED` | `int` | `600` | The lock window when `max_execution_time` is 0 |
 
@@ -947,6 +948,10 @@ The run:
 | `get_eta()` | `public get_eta(bool $wall = false): ?int` | Seconds remaining at the run's pace: server time per item, or with `$wall` (a background run) the wall time from the job's dispatch over the items since its `from`, to the last tick; `null` until a batch has run against a known total, and without an open job |
 | `format_time()` | `public format_time(int $timestamp, string $format = 'H:i'): string` | The timestamp in `$timezone` |
 | `get_failed_items()` | `public get_failed_items(): array` | `count` and `items` (`id`, `url` from `get_item_url()`) for the first `FAILED_LIST` failed ids |
+| `get_run_state()`, `is_stalled()` | `public get_run_state(): string` | Who drives the run, or how it rests: `queued`, `background` or `stopping` for an open job, `running` under a live lock, else `halted`, `complete`, `stopped` (a running record nobody drives) or `ready`. The stall is a second fact, `is_stalled(): bool` |
+| `get_ui_labels()` | `public get_ui_labels(): array` | The screen's copy, read by `Iterator_UI` and printed as `data-labels` for the script: one label per state, then the texts that are not states. Override to reword |
+| `format_elapsed()`, `format_eta()` | `public format_elapsed(float $seconds): string` | The clock (`01:02:05`) and the estimate (`about 3m left`, from `get_eta()`'s seconds) as the screen and the answers print them |
+| `enqueue_script()` | `public enqueue_script(): bool` | Enqueues the module `@lattice/iterator` and answers whether it will print (false in wp-admin before WordPress 6.6) |
 | `supports_retry()` | `public supports_retry(): bool` | Whether the subclass declares both `get_items_by_id()` and `get_item_id()`; the page shows Retry failed when it does |
 | `retry()`, `dismiss()` | `public retry(): array` | The `retry` task queues the failed ids in `retry` (`retry_remaining`, `failed`, `counts`); `dismiss` empties `failed` and `retry`. A queued id `get_items_by_id()` does not return (a deleted post, or any id the subclass leaves out) leaves `failed` for `skipped` with a log line |
 | `is_retry()` | `public is_retry(): bool` | Inside a retry tick: the queued ids are served by id, the index and the status stay, a success moves the id from `failed` to `processed` |
