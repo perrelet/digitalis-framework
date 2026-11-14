@@ -28,28 +28,25 @@ class Iterator_UI extends View {
 
         $iterator = $p['iterator'];
         $store    = $iterator->get_store();
-        $lock     = $iterator->get_lock();
-        $job      = $iterator->open_job();                      // the background run, from the runner: null without a runner or an open run
-        $cron     = (bool) $job;
-        $running  = $cron || ((bool) $lock && !$lock['stale']); // a live driver: the job, this page's lock or another tab's; a stale lock is nobody's
-        $status   = $iterator->get_status();
-        $stalled  = (bool) ($store['stalled'] ?? false);
+        $state    = $iterator->get_run_state();
+        $cron     = in_array($state, $iterator::JOB_STATES, true);
+        $job      = $cron ? $iterator->open_job() : null;      // the background run, for its start time and its row's link
+        $running  = in_array($state, $iterator::BUSY_STATES, true); // a live driver: the job, this page's lock or another tab's
+        $stalled  = $iterator->is_stalled();
         $total    = $iterator->has_total() ? $iterator->get_total() : ($running ? null : $iterator->refresh_total()); // computed once per run, never under a driver: refresh_total() writes the whole record, and a job's first step may be counting it
-        $elapsed  = (int) floor($iterator->get_elapsed());
-        $started  = $iterator->get_started_at();
-        $eta      = ($cron && $status === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
+        $eta      = ($cron && $iterator->get_status() === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
         $log      = $iterator->get_log();
 
-        $labels = ['halted' => 'Halted', 'complete' => 'Complete', 'running' => 'Stopped'];
-        $states = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'running' => ['is-stopped']];
+        $labels = ['queued' => 'Queued', 'background' => 'Running', 'stopping' => 'Stopping', 'running' => 'Running', 'halted' => 'Halted', 'complete' => 'Complete', 'stopped' => 'Stopped', 'ready' => 'Ready'];
+        $states = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'stopped' => ['is-stopped']];
 
-        // A live lock outranks the record (a running record with no driver is a stopped run); a stall outranks the lock.
+        // A stall outranks the state in the label and stands beside it in the classes.
         $classes = ['digitalis-iterator', 'iterator', 'iterator-' . $iterator->get_key()];
 
         if ($cron)           $classes[] = 'doing_cron';
         if ($running)        $classes[] = 'running';
         if ($stalled)        $classes[] = 'is-stalled';
-        elseif (!$running)   $classes = array_merge($classes, $states[$status] ?? []);
+        elseif (!$running)   $classes = array_merge($classes, $states[$state] ?? []);
         if (is_null($total)) $classes[] = 'is-indeterminate';
 
         $p['total']   = $total;
@@ -58,20 +55,11 @@ class Iterator_UI extends View {
         $p['cron']    = $cron;
         $p['failed']  = $iterator->get_failed_items(); // built once: it resolves an edit link per item
         $p['classes'] = implode(' ', $classes);
-        $p['label']   = $stalled ? 'Stalled' : ($job ? ($job['stopping'] ? 'Stopping' : ($job['running'] ? 'Running' : 'Queued')) : ($running ? 'Running' : ($labels[$status] ?? 'Ready')));
-        $p['time']    = $job ? 'Background' . (is_int($job['since']) ? ' · started ' . $iterator->format_time($job['since']) : '') : sprintf('%02d:%02d:%02d', intdiv($elapsed, 3600), intdiv($elapsed, 60) % 60, $elapsed % 60);
+        $p['label']   = $stalled ? 'Stalled' : $labels[$state];
+        $p['time']    = $job ? 'Background' . (is_int($job['since']) ? ' · started ' . $iterator->format_time($job['since']) : '') : $iterator->format_elapsed($iterator->get_elapsed());
         $p['job']     = $job ? ' · ' . (empty($job['url']) ? "job #{$job['id']}" : "<a href='" . esc_url((string) $job['url']) . "'>job #{$job['id']}</a>") : ''; // the row on Tools -> Jobs, one click away while it is open
-        $p['eta']     = is_null($eta) ? '' : 'about ' . static::about($eta) . ' left';
+        $p['eta']     = is_null($eta) ? '' : $iterator->format_eta($eta);
         $p['log_url'] = ($p['log_url'] && $log && is_file((string) $log->get_path())) ? $p['log_url'] : ''; // the full log, when there is one to link
-
-    }
-
-    protected static function about (int $seconds) : string {
-
-        if ($seconds < 60)   return "{$seconds}s";
-        if ($seconds < 3600) return intdiv($seconds, 60) . 'm';
-
-        return intdiv($seconds, 3600) . 'h ' . (intdiv($seconds, 60) % 60) . 'm';
 
     }
 

@@ -76,6 +76,10 @@ abstract class Iterator extends Singleton {
 
     const FAILED_LIST = 50; // ids the page lists; the rest is a count
 
+    // Who drives the run or how it rests: get_run_state() names the server's, the script adds its own. The busy ones have a driver.
+    const JOB_STATES  = ['queued', 'background', 'stopping'];
+    const BUSY_STATES = ['starting', 'running', 'stopping', 'retrying', 'working', 'queued', 'background'];
+
     const NO_RUNNER = "Background runs need the lattice/jobs feature; load it with load_feature('lattice/jobs').";
 
     protected $items = [];
@@ -213,53 +217,115 @@ abstract class Iterator extends Singleton {
 
     public function ajax () {
 
-        if (!wp_verify_nonce($_REQUEST['nonce'] ?? '', "iterator_{$this->key}")) wp_send_json_error('Iterator Expired.', 401);
-        if (!current_user_can($this->capability))                          wp_send_json_error('Unauthorized Access.', 401);
+        if (!wp_verify_nonce($_REQUEST['nonce'] ?? '', "iterator_{$this->key}")) wp_send_json_error('Iterator Expired.', 403);
+        if (!current_user_can($this->capability))                          wp_send_json_error('Unauthorized Access.', 403);
         if (!isset($_REQUEST['task']))                                     wp_send_json_error('Task parameter is required.', 422);
 
         $this->token = is_string($_REQUEST['token'] ?? null) ? sanitize_key($_REQUEST['token']) : null;
 
+        $task = is_string($_REQUEST['task']) ? $_REQUEST['task'] : '';
+
         // A run opens by taking the lock (total, retry) and the token comes back; every iterate carries it, and a mismatch is 409.
-        switch ($_REQUEST['task']) {
+        switch ($task) {
 
             case "total":
-                if ($job = $this->open_job())                wp_send_json($this->job_refusal($job), 409);
-                if (($token = $this->take_lock()) === false) wp_send_json($this->lock_refusal(), 409);
-                wp_send_json(['total' => $this->get_total_items_wrap(), 'token' => $token]);
+                if ($job = $this->open_job())                wp_send_json($this->answer($task, $this->job_refusal($job)), 409);
+                if (($token = $this->take_lock()) === false) wp_send_json($this->answer($task, $this->lock_refusal()), 409);
+                wp_send_json($this->answer($task, ['total' => $this->get_total_items_wrap(), 'token' => $token]));
 
             case "iterate":
-                if ($job = $this->open_job()) wp_send_json($this->job_refusal($job), 409); // a chain woken after its lock went stale, while a job took the run
-                if (!$this->holds_lock())     wp_send_json($this->lock_refusal(), 409);
+                if ($job = $this->open_job()) wp_send_json($this->answer($task, $this->job_refusal($job)), 409); // a chain woken after its lock went stale, while a job took the run
+                if (!$this->holds_lock())     wp_send_json($this->answer($task, $this->lock_refusal()), 409);
                 $this->read_request($_REQUEST);
-                wp_send_json($this->iterate());
+                $batch = $this->iterate();
+                wp_send_json($this->answer($task, $batch), empty($batch['refused']) ? 200 : 409);
 
             case "stop":
-                wp_send_json($this->stop());
+                wp_send_json($this->answer($task, $this->stop()));
 
             case "background":
                 $handover = $this->background();
-                wp_send_json($handover, empty($handover['refused']) ? 200 : 409);
+                wp_send_json($this->answer($task, $handover), empty($handover['refused']) ? 200 : 409);
 
             case "reset":
                 $reset = $this->reset();
-                wp_send_json($reset, empty($reset['refused']) ? 200 : 409);
+                wp_send_json($this->answer($task, $reset), empty($reset['refused']) ? 200 : 409);
 
             case "stop_cron":
-                wp_send_json($this->stop_cron());
+                wp_send_json($this->answer($task, $this->stop_cron()));
             case "retry":
                 if (!$this->supports_retry())                wp_send_json_error('This iterator cannot serve items by id.', 422);
-                if ($job = $this->open_job())                wp_send_json($this->job_refusal($job), 409);
-                if (($token = $this->take_lock()) === false) wp_send_json($this->lock_refusal(), 409);
-                wp_send_json(['token' => $token] + $this->retry());
+                if ($job = $this->open_job())                wp_send_json($this->answer($task, $this->job_refusal($job)), 409);
+                if (($token = $this->take_lock()) === false) wp_send_json($this->answer($task, $this->lock_refusal()), 409);
+                wp_send_json($this->answer($task, ['token' => $token] + $this->retry()));
             case "dismiss":
-                if ($job = $this->open_job()) wp_send_json($this->job_refusal($job), 409);
-                if (!$this->check_lock())     wp_send_json($this->lock_refusal(), 409);
-                wp_send_json($this->dismiss());
+                if ($job = $this->open_job()) wp_send_json($this->answer($task, $this->job_refusal($job)), 409);
+                if (!$this->check_lock())     wp_send_json($this->answer($task, $this->lock_refusal()), 409);
+                wp_send_json($this->answer($task, $this->dismiss()));
 
             default:
                 wp_send_json_error('Unknown task.', 422);
 
         }
+
+    }
+
+    // What the screen's script needs beside a task's own answer, added here so jobs, the shell and direct callers pay for none
+    // of it. The state is read after the task: a task takes, releases or hands over the run.
+    private function answer (string $task, array $answer) : array {
+
+        $answer['state']   = (($answer['run_by'] ?? null) === 'ui') ? 'locked' : $this->get_run_state(); // a refusal naming another page
+        $answer['stalled'] = $this->is_stalled();
+
+        if ($task === 'total' && array_key_exists('total', $answer)) {
+
+            $total = is_null($answer['total']) ? null : (int) $answer['total'];
+
+            // Whether there is anything to run: the page ends the chain here on an empty or a complete iterator.
+            $answer['index']   = (int) $this->get_store()['index'];
+            $answer['nothing'] = match (true) {
+                $total === 0                                  => 'empty',
+                !is_null($total) && $answer['index'] >= $total => 'complete',
+                default                                       => null,
+            };
+
+        }
+
+        if ($task === 'iterate' && isset($answer['results'])) {
+
+            $paced = empty($answer['retrying']) && !$answer['stalled'] && $answer['state'] === 'running'; // a retry tick's clock runs while its index stands still
+            $eta   = $paced ? $this->get_eta() : null;
+
+            $answer['time']     = $this->format_elapsed($this->get_elapsed());
+            $answer['eta']      = is_null($eta) ? '' : $this->format_eta($eta);
+            $answer['log_html'] = (string) new Iterator_Log_Lines([
+                'batch'  => $this->get_batch_lines($answer),
+                'failed' => $this->print_results ? array_map(fn ($id) => " - Failed: #{$id}", $answer['results']['failed']) : [],
+                'errors' => $answer['errors'],
+                'log'    => $answer['log'],
+            ]);
+
+        }
+
+        if (in_array($task, ['iterate', 'retry', 'dismiss'], true) && isset($answer['failed']['items'])) $answer['failed_html'] = (string) new Iterator_Failed_List(['failed' => $answer['failed']]);
+
+        return $answer;
+
+    }
+
+    // The per-id rows of $print_results: shown on the page that ran the batch, never stored.
+    protected function get_batch_lines (array $batch) : array {
+
+        $lines = [];
+
+        if ($this->print_results) {
+
+            foreach ($batch['results']['processed'] as $id) $lines[] = " - OK: #{$id}";
+            foreach ($batch['results']['skipped'] as $id)   $lines[] = " - Skipped: #{$id}";
+
+        }
+
+        return $lines;
 
     }
 
@@ -901,6 +967,43 @@ abstract class Iterator extends Singleton {
     public function format_time (int $timestamp, string $format = 'H:i') {
 
         return (new DateTime('@' . $timestamp))->setTimezone(new DateTimeZone((string) $this->get_timezone()))->format($format);
+
+    }
+
+    // The driver, else how the run rests: an open job (queued, background, stopping), a live lock (running), else the record
+    // (halted, complete, stopped for a running record nobody drives, ready). A stall is a second fact: is_stalled().
+    public function get_run_state () : string {
+
+        if ($job = $this->open_job()) return !empty($job['stopping']) ? 'stopping' : (!empty($job['running']) ? 'background' : 'queued');
+        if ($this->live_lock())       return 'running';
+
+        return ['halted' => 'halted', 'complete' => 'complete', 'running' => 'stopped'][$this->get_status()] ?? 'ready';
+
+    }
+
+    public function is_stalled () : bool {
+
+        return !empty($this->get_store()['stalled']);
+
+    }
+
+    public function format_elapsed (float $seconds) : string {
+
+        $seconds = (int) floor($seconds);
+
+        return sprintf('%02d:%02d:%02d', intdiv($seconds, 3600), intdiv($seconds, 60) % 60, $seconds % 60);
+
+    }
+
+    public function format_eta (int $seconds) : string {
+
+        $about = match (true) {
+            $seconds < 60   => "{$seconds}s",
+            $seconds < 3600 => intdiv($seconds, 60) . 'm',
+            default         => intdiv($seconds, 3600) . 'h ' . (intdiv($seconds, 60) % 60) . 'm',
+        };
+
+        return "about {$about} left";
 
     }
 

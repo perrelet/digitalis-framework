@@ -54,8 +54,7 @@
             </div>
         </div>
         <ul class='failed-list'>
-            <?php foreach ($failed['items'] as $item) echo "<li>" . ($item['url'] ? "<a href='" . esc_url($item['url']) . "'>#" . esc_html((string) $item['id']) . "</a>" : '#' . esc_html((string) $item['id'])) . "</li>"; ?>
-            <?php if ($failed['count'] > count($failed['items'])) echo "<li class='failed-more'>and " . ($failed['count'] - count($failed['items'])) . " more</li>"; ?>
+            <?= new Lattice\Iterator_Failed_List(['failed' => $failed]) ?>
         </ul>
     </div>
 
@@ -63,7 +62,7 @@
     <div class='iterator-panel log-wrap'>
         <label>Batch log<?php if ($log_url) echo " <span class='log-note'>Last " . $iterator::LOG_TAIL . " lines · <a href='" . esc_url($log_url) . "'>Full log</a></span>"; ?></label>
         <div class='iterator-log' role='log' aria-label='Batch log'>
-            <?php foreach (['error' => $store['errors'], 'item' => $store['log']] as $type => $lines) foreach (array_reverse($lines) as $line) echo "<div class='log-{$type}'>" . wp_kses((string) $line, $iterator::LOG_TAGS) . "</div>"; ?>
+            <?= new Lattice\Iterator_Log_Lines(['errors' => $store['errors'], 'log' => $store['log'], 'tags' => $iterator::LOG_TAGS]) ?>
         </div>
     </div>
     <?= $after_log ?>
