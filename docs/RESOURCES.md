@@ -153,7 +153,7 @@ A model field's setter must only stage: a dry run calls it on the unsaved copy.
 - **Flexible rows** are `layout` and the layout's fields by name, plus `disabled: true` and `label` (ACF's renamed row) where set, read in any request. A row sent without them is enabled and unnamed, since rows have no identity to keep a flag by. A layout's own sub-fields named `layout`, `disabled` or `label` are not reachable.
 - **Checks.** ACF validates each value (`acf_validate_value()`: lengths, min and max, rows, a site's filters). The layer adds what ACF does not check on the server: choices, that a referenced post, term, user or file exists, a date's stored format, a repeater's computed row keys. A field its conditions hide is never required.
 - **Action-only** (`ACTION_ONLY`, dotted paths): changed only by an action.
-- **Locked** (`get_locked_fields($model)`, `name => why`): refused in the record's present state; other fields in the same write go through. `get_lock($model)` is the record-wide form: a capability updating needs.
+- **Locked** (`get_locked_fields($model)`, `name => why`): refused in the record's present state; other fields in the same write go through. `get_lock($model)` is the record-wide form: a capability updating needs. An action declaring `'lock' => false` runs without it.
 - **Secrets** (`SECRET`, dotted paths, and every ACF `password` field): written, never read back. Reads, diffs and journal rows carry `[set 1a2b3c4d]`, a hash keyed with the site's salt, so a change still shows; a mask sent back is the value it stands for. Undo refuses them.
 
 ---
@@ -210,6 +210,7 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 | `confirm` | Requires the dry run's fingerprint |
 | `changes_record` | `false` for one that makes a new record (`copy`) and needs no version |
 | `undo` | The action that reverses it |
+| `lock` | `false` runs the action whatever `get_lock()` asks, for the one thing a record still takes in a state that otherwise holds it. Everything else stands: the right to update, `lattice.resources.refuse`, `capability`, `when`, `validate`, the version, the why and `confirm`. Its `when` is then the only guard on the record's state, so write one. A `writes_through` action's inner write still meets the lock |
 | `writes_through` | The action writes through this service, which checks, previews, claims and journals that write. `act_{name}($model, $input, $via)` gets the whole input (`why`, `confirm`, `dry_run` included) after the record's and the action's refusals, the declared input and the why, and answers that write's result, a `WP_Error` keeping its data. It handles its own dry run and needs no version of its own, and answers an array or a `WP_Error`. It declares no `undo`: the journal row is the inner write's |
 
 `act_{name}()` returns the model, a new record, or a `WP_Error`. An error that changed nothing keeps its own code.

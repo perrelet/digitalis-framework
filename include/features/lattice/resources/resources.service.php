@@ -364,7 +364,7 @@ class Resources extends Service {
         $through        = !empty($definition['writes_through']);
         $changes_record = $definition['changes_record'] ?? true;
 
-        if ($refusal = ($changes_record || $through) ? $this->refuse_update($resource, $model, $action) : $this->refuse_read($resource, $model)) return $refusal;
+        if ($refusal = ($changes_record || $through) ? $this->refuse_update($resource, $model, $action, locks: ($definition['lock'] ?? true) !== false) : $this->refuse_read($resource, $model)) return $refusal;
 
         if (!$this->may($resource, $action, $model)) return $this->forbidden($action);
 
@@ -2112,13 +2112,13 @@ class Resources extends Service {
 
     }
 
-    protected function refuse_update (Model_Resource $resource, $model, string $operation = 'update', string $right = 'update') : ?WP_Error {
+    protected function refuse_update (Model_Resource $resource, $model, string $operation = 'update', string $right = 'update', bool $locks = true) : ?WP_Error {
 
         $data = fn (string $needs) => (array) apply_filters('lattice.resources.forbidden', ['needs' => $needs], $resource, $model, $operation);
 
         if (!$this->may($resource, $right, $model, true, $operation)) return $this->forbidden($needs = $resource->get_capability($right, $model), data: $data($needs));
 
-        if (($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.', $data($lock));
+        if ($locks && ($lock = $resource->get_lock($model)) && !current_user_can($lock)) return $this->forbidden($lock, 'In this state it changes only for an account with ' . $lock . '.', $data($lock));
 
         return $this->refuse_record($resource, $model, $right);
 
