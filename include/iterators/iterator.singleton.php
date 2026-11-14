@@ -825,6 +825,36 @@ abstract class Iterator extends Singleton {
 
     }
 
+    // The screen's copy, read by the view and printed for the script: one label per state, then the texts that are not states.
+    public function get_ui_labels () : array {
+
+        return [
+            'ready'                 => 'Ready',
+            'starting'              => 'Starting',
+            'running'               => 'Running',
+            'stopping'              => 'Stopping',
+            'stopped'               => 'Stopped',
+            'retrying'              => 'Retrying',
+            'working'               => 'Working',
+            'queued'                => 'Queued',
+            'background'            => 'Running',
+            'halted'                => 'Halted',
+            'complete'              => 'Complete',
+            'locked'                => 'Locked',
+            'fault'                 => 'Error',
+            'stalled'               => 'Stalled',
+            'alreadyComplete'       => 'Already complete',
+            'noItems'               => "No {$this->labels['plural']}",
+            'unknownTotal'          => '?',
+            'unknownProgress'       => '%d of unknown',
+            'confirmReset'          => 'Reset this run?',
+            'confirmDismiss'        => "Dismiss the failed {$this->labels['plural']}? They stay out of the run.",
+            'confirmStopBackground' => 'Stop the background run?',
+            'faultMessage'          => 'The request failed. Reload the page and try again.',
+        ];
+
+    }
+
     // The iterator's own screen (the CSV intake state included) gets the stylesheet in the head; a host rendering the controller
     // elsewhere gets it from the footer. The script stays with the controller: it prints in the footer either way and must not
     // load without the params the controller localizes.

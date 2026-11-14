@@ -37,7 +37,7 @@ class Iterator_UI extends View {
         $eta      = ($cron && $iterator->get_status() === 'running' && !$stalled) ? $iterator->get_eta(true) : null; // a paused page has no pace; the script estimates a live run
         $log      = $iterator->get_log();
 
-        $labels = ['queued' => 'Queued', 'background' => 'Running', 'stopping' => 'Stopping', 'running' => 'Running', 'halted' => 'Halted', 'complete' => 'Complete', 'stopped' => 'Stopped', 'ready' => 'Ready'];
+        $labels = $iterator->get_ui_labels();
         $states = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'stopped' => ['is-stopped']];
 
         // A stall outranks the state in the label and stands beside it in the classes.
@@ -55,7 +55,10 @@ class Iterator_UI extends View {
         $p['cron']    = $cron;
         $p['failed']  = $iterator->get_failed_items(); // built once: it resolves an edit link per item
         $p['classes'] = implode(' ', $classes);
-        $p['label']   = $stalled ? 'Stalled' : $labels[$state];
+        $p['state']   = $state;
+        $p['busy']    = $running;
+        $p['labels']  = $labels;
+        $p['label']   = $labels[$stalled ? 'stalled' : $state];
         $p['time']    = $job ? 'Background' . (is_int($job['since']) ? ' · started ' . $iterator->format_time($job['since']) : '') : $iterator->format_elapsed($iterator->get_elapsed());
         $p['job']     = $job ? ' · ' . (empty($job['url']) ? "job #{$job['id']}" : "<a href='" . esc_url((string) $job['url']) . "'>job #{$job['id']}</a>") : ''; // the row on Tools -> Jobs, one click away while it is open
         $p['eta']     = is_null($eta) ? '' : $iterator->format_eta($eta);

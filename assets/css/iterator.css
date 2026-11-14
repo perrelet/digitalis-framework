@@ -74,6 +74,9 @@
 :where(.lattice) .status-bar .counts .is-nonzero b       { color: var(--err); }
 :where(.lattice) .status-bar .eta                        { white-space: nowrap; }
 
+:where(.lattice) .iterator-message       { margin: 0; color: var(--err); }
+:where(.lattice) .iterator-message:empty { display: none; }
+
 :where(.lattice) .status {
     display: inline-flex;
     align-items: center;
