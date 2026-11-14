@@ -23,10 +23,21 @@ class Log extends Service {
 
     }
 
-    // A bare name is that file in the called class's declared directory: the path get_path() answers for it.
+    // The name is the file.
+    public static function declare (string $name, array $config = []) {
+
+        if (isset($config['file']) && ($config['file'] !== $name)) return static::refuse_declare("declares '{$name}' and gives another file", 'leave file out: the name fills it');
+
+        return parent::declare($name, ['file' => $name] + $config);
+
+    }
+
+    // A bare name is a log this class declared under it, else that file in the called class's declared directory: the path get_path() answers for it.
     protected static function get_data_key ($data) {
 
         if (!is_string($data)) return parent::get_data_key($data);
+
+        if (($data !== '') && ((self::$instances[static::get_cache_group()][$data] ?? null) instanceof static)) return $data;
 
         $error_log = (string) ini_get('error_log');
         $directory = (new ReflectionClass(static::class))->getDefaultProperties()['directory'] ?? null;

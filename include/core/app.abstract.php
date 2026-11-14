@@ -50,6 +50,13 @@ abstract class App extends Factory {
 
     }
 
+    // An app is found by its class.
+    public static function declare (string $name, array $config = []) {
+
+        return static::refuse_declare("declares '{$name}'", 'an app is one per class: use inst()');
+
+    }
+
     // One App per class: stored and looked up by class whatever get_instance() was given (Factory only looks up a scalar key), so a late get_instance([...]) boots it once.
     protected function get_cache_key () {
 
