@@ -12,6 +12,8 @@ abstract class Factory extends Creational {
     protected static $cache_group = '__global__';
     protected static $cache_property = null;
 
+    private static $refused = [];
+
     public static function get_group_instances ($group = null) {
 
         $group ??= static::get_cache_group();
@@ -96,7 +98,7 @@ abstract class Factory extends Creational {
 
         if ($held) {
 
-            _doing_it_wrong(static::class . '::get_instance', esc_html(static::class . " builds '{$name}' from a config, which " . $held::class . " already holds: find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()."), '');
+            static::refuse('get_instance', "builds '{$name}' from a config, which " . $held::class . ' already holds', "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
 
             if ($held instanceof static) return $held;
 
@@ -154,10 +156,23 @@ abstract class Factory extends Creational {
 
     }
 
-    // A notice and null.
     protected static function refuse_declare (string $problem, string $fix) : ?static {
 
-        _doing_it_wrong(static::class . '::declare', esc_html(static::class . " {$problem}: {$fix}."), '');
+        return static::refuse('declare', $problem, $fix);
+
+    }
+
+    // One notice per class and problem in a request, and null.
+    protected static function refuse (string $call, string $problem, string $fix) : ?static {
+
+        $refusal = static::class . " {$problem}";
+
+        if (!isset(self::$refused[$refusal])) {
+
+            self::$refused[$refusal] = true;
+            _doing_it_wrong(static::class . "::{$call}", esc_html("{$refusal}: {$fix}."), '');
+
+        }
 
         return null;
 
