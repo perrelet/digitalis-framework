@@ -40,27 +40,39 @@ abstract class Factory extends Creational {
     }
 
     protected static function construct_instance ($instance, $data = []) {
-    
+
         parent::construct_instance($instance);
+
+    }
+
+    protected static function apply_config ($instance, $data = []) {
 
         if ($data && is_array($data)) foreach ($data as $prop => $value) {
 
             if (property_exists($instance, $prop)) $instance->$prop = $value;
 
         }
-    
+
     }
 
+    // The config is on the instance before its constructor runs, so the constructor reads it and what it sets stands.
     public static function create ($data = []) {
 
         if (is_scalar($data)) return;
-        if (!$instance = static::constructor_inject(static::class, array_slice(func_get_args(), 2))) return;
 
         static::prepare_data($data);
+
+        $reflection = new ReflectionClass(static::class);
+        $instance   = $reflection->newInstanceWithoutConstructor();
+
+        static::apply_config($instance, $data);
+
+        if ($constructor = $reflection->getConstructor()) $constructor->invokeArgs($instance, static::method_inject($constructor, array_slice(func_get_args(), 2)));
+
         static::construct_instance($instance, $data);
 
         return $instance;
-    
+
     }
 
     public static function get_instance ($data = null) {
