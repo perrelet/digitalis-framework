@@ -73,7 +73,8 @@ abstract class Factory extends Creational
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `create()` | `static create(mixed $data = []): ?static` | Creates new instance; returns nothing for scalar data |
-| `get_instance()` | `static get_instance(mixed $data = null): ?static` | Gets cached or creates new instance |
+| `get_instance()` | `static get_instance(mixed $data = null): ?static` | Bare (`null` or `[]`): the class's own instance. Scalar: the instance holding that name, if it is one of the asking class. Array: legacy, builds on every call |
+| `declare()` | `static declare(string $name, array $config = []): ?static` | Builds once and keeps the instance under `$name`; a taken name is a strict violation and answers the holder outside strict |
 | `get_instance_map()` | `static get_instance_map(): array` | Returns `['group' => ['key' => ClassName]]` map of all cached instances |
 
 ---

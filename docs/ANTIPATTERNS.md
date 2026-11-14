@@ -413,6 +413,10 @@ A total built as `count()` of every id loads the whole table on every Start. Cou
 
 ## General PHP / Framework
 
+### `get_instance([...])` where a name is wanted
+
+An array `get_instance()` builds on every call, so in a loop, a render or a hook that fires twice it adds its hooks again. Name it once and find it after: `Thing::declare('name', $config)` at load, `Thing::inst('name')` wherever it is needed. For a one-off nothing needs to find, `Thing::create($config)`.
+
 ### Prefix vendor model variables — reserve short names for framework models
 
 Short names for framework models; vendor prefixes for WP/WC objects.

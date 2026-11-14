@@ -133,6 +133,10 @@ abstract class Factory extends Creational {
         // Returns cached instance or creates new one
     }
 
+    public static function declare(string $name, array $config = []) {
+        // Builds once and keeps the instance under $name
+    }
+
     public static function get_instance_map() {
         // Returns ['group' => ['key' => ClassName]] map of all cached instances
     }
@@ -142,6 +146,19 @@ abstract class Factory extends Creational {
     }
 }
 ```
+
+Four calls cover every case:
+
+| Call | Answers |
+|---|---|
+| `Thing::inst()` | The class's own instance, built on first use |
+| `Thing::declare('name', $config)` | A new instance kept under `name`. A name is taken once: declaring it again is a strict violation, and outside strict the holder answers |
+| `Thing::inst('name')` | The instance holding `name`, or `null`. Only an instance of the asking class or a subclass is answered |
+| `Thing::create($config)` | A new instance nothing finds again |
+
+A config is on the instance before its constructor runs, so a constructor reads what it was configured with. In a family named by a property (`id`, `slug`) the declared name fills that property. A route's name is only a name: its path comes in the config, since plugins share paths and a GET and a POST route share one. `App` and `Model` refuse `declare()`: an app is found by its class, a model by its id.
+
+`get_instance([...])` with a config is the legacy form: it builds on every call. Where the config names a name the family already holds, the call is a strict violation; outside strict the holder answers.
 
 `$cache_group` allows subclass families to share or isolate their instance caches. Override it to prevent cross-class cache collisions. `get_group_instances()` retrieves all instances registered under a group — used by `App` to discover all active plugin Apps.
 

@@ -336,6 +336,20 @@ Measured on the live consumers before release: 0 across the six. d-pace's `Site_
 
 A throw mid-render now also unwinds any output buffer the render opened, so a `Strict_Violation` inside a nested `(string)` cast no longer leaks the parent's buffer.
 
+### Instances and names (0.10.0)
+
+| Change | What to do |
+|---|---|
+| A config is written onto the instance before its constructor runs, so a constructor reads it and what the constructor sets is no longer written over | Check any constructor that reads a property a caller configures: it now sees the configured value |
+| A private constructor on a `Factory` class builds (it threw a `ReflectionException`) | Nothing |
+| `inst('name')` answers only an instance of the asking class or a subclass; a sibling asking gets `null` | Ask from the base class or the class that holds the name |
+| `get_instance([])` is the bare instance; it built a new one per call | Use `create()` for a new one |
+| A route is no longer kept under its path, so `Route::inst('path')` finds nothing | Find a bare route by its class; give a configured one a name with `Route::declare('name', ['route' => 'path'])` |
+| `get_instance([...])` naming a name the family holds is a strict violation; outside strict the holder answers its own class, and a sibling's newcomer is kept under nothing | `inst('name')` to find, `declare('name', $config)` to name a new one, `create($config)` for one nothing finds |
+| Two feature classes in one family (`Meta_Box`, `Profile_Section`) sharing an id are a strict violation; they were a notice | Give each its own id. A meta box that declares none inherits `digitalis-metabox` |
+
+`Woo_Account_Page` and `Shortcode` register their slug or tag in the constructor, so an instance built over a held name still takes the endpoint or tag over, as before.
+
 ### Rendering
 
 | Violation | Mechanical fix |
