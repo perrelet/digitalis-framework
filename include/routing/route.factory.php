@@ -20,7 +20,7 @@ class Route extends Factory {
     use Dependency_Injection;
 
     protected static $cache_group    = self::class;
-    protected static $cache_property = 'route';
+    protected static $cache_property = null;
 
     /**
      * @link /{$format}/{$namespace}/{$route}       JSON Response.
@@ -43,6 +43,13 @@ class Route extends Factory {
     protected $require_nonce = false;
     protected $definition    = [];
     protected $args          = [];
+
+    // A path names nothing: plugins share paths and a GET and a POST route share one. Every route stays in the group; a bare one is found by its class, a declared one by its name.
+    protected function get_cache_key () {
+
+        return static::class . '#' . $this->instance_index;
+
+    }
 
     public function __construct () {
 
