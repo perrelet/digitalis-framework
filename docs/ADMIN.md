@@ -68,7 +68,7 @@ class Settings_Page extends Admin_Page {
 | `callback()` | Override to render page content |
 | `get_url($blog_id)` | Get admin page URL |
 
-`Admin_Page` is a Factory cached by `$slug`, so `Admin_Page::get_instance('my-settings')` returns the registered instance.
+`Admin_Page` is a Factory cached by `$slug`, so `Admin_Page::get_instance('my-settings')` returns the registered instance. To build a page from a config, declare it: `Admin_Page::declare('my-settings', ['title' => 'Settings'])` fills the slug from the name and is found the same way.
 
 ### With View
 
