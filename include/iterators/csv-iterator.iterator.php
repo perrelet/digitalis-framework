@@ -356,10 +356,14 @@ abstract class CSV_Iterator extends Iterator {
 
     public function reset () {
 
-        // Uploads can hold personal data, so they don't outlive the import.
-        if (($path = $this->get_store()['file']['path'] ?? '') && is_file($path)) unlink($path);
-
+        $path     = $this->get_store()['file']['path'] ?? '';
         $response = parent::reset();
+
+        if (!empty($response['refused'])) return $response;
+
+        // Uploads can hold personal data, so they don't outlive the import.
+        if ($path && is_file($path)) unlink($path);
+
         $response['reload'] = true;
         return $response;
 
