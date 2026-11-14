@@ -9,11 +9,12 @@
 
     <?= $before_controls ?>
     <div class='iterator-panel controls'>
-        <button type='button' class='button button-primary' data-task='start'>Start</button>
-        <button type='button' class='button' data-task='once'>Run one batch</button>
-        <button type='button' class='button' data-task='background'>Run in background</button>
-        <button type='button' class='button' data-task='stop'>Stop</button>
-        <button type='button' class='button' data-task='reset'>Reset</button>
+        <button type='button' class='button button-primary' data-task='start' disabled>Start</button>
+        <button type='button' class='button' data-task='once' disabled>Run one batch</button>
+        <button type='button' class='button' data-task='background' disabled>Run in background</button>
+        <button type='button' class='button' data-task='stop' disabled>Stop</button>
+        <button type='button' class='button' data-task='reset' disabled>Reset</button>
+        <?php if ($note): ?><span class='controls-note'><?= esc_html($note) ?></span><?php else: ?><noscript><span class='controls-note'><?= esc_html($labels['needsScript']) ?></span></noscript><?php endif; ?>
         <fieldset class='run-options' data-el='options'<?= $busy ? ' disabled' : '' ?>>
             <label>Batch size <input type='number' data-el='batch_size' data-param='batch_size' min='1' max='<?= $iterator::MAX_BATCH_SIZE ?>' step='1' value='<?= (int) $iterator->get_batch_size() ?>'></label>
             <label><input type='checkbox' data-el='dry_run' data-param='dry_run' value='1'<?= !empty($store['dry_run']) ? ' checked' : '' ?>> Dry run</label>
@@ -50,8 +51,8 @@
         <div class='failed-head'>
             <label>Failed <span class='failed-count' data-el='failed-count'><?= $failed['count'] ?></span></label>
             <div class='failed-actions'>
-                <?php if ($iterator->supports_retry()): ?><button type='button' class='button' data-task='retry'>Retry failed</button><?php endif; ?>
-                <button type='button' class='button' data-task='dismiss'>Dismiss</button>
+                <?php if ($iterator->supports_retry()): ?><button type='button' class='button' data-task='retry' disabled>Retry failed</button><?php endif; ?>
+                <button type='button' class='button' data-task='dismiss' disabled>Dismiss</button>
             </div>
         </div>
         <ul class='failed-list' data-el='failed-list'>

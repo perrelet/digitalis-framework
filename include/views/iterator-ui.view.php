@@ -20,6 +20,7 @@ class Iterator_UI extends View {
         'before_log'         => '',
         'after_log'          => '',
         'log_url'            => '',
+        'scripted'           => true,
     ];
 
     public function params (array &$p) {
@@ -38,15 +39,11 @@ class Iterator_UI extends View {
         $log      = $iterator->get_log();
 
         $labels = $iterator->get_ui_labels();
-        $states = ['halted' => ['is-halted', 'err'], 'complete' => ['is-complete'], 'stopped' => ['is-stopped']];
-
         // A stall outranks the state in the label and stands beside it in the classes.
-        $classes = ['digitalis-iterator', 'iterator', 'iterator-' . $iterator->get_key()];
+        $classes = ['digitalis-iterator', 'iterator', 'iterator-' . $iterator->get_key(), "is-{$state}"];
 
-        if ($cron)           $classes[] = 'doing_cron';
-        if ($running)        $classes[] = 'running';
+        if ($running)        $classes[] = 'is-busy';
         if ($stalled)        $classes[] = 'is-stalled';
-        elseif (!$running)   $classes = array_merge($classes, $states[$state] ?? []);
         if (is_null($total)) $classes[] = 'is-indeterminate';
 
         $p['total']   = $total;
@@ -58,6 +55,7 @@ class Iterator_UI extends View {
         $p['state']   = $state;
         $p['busy']    = $running;
         $p['labels']  = $labels;
+        $p['note']    = $p['scripted'] ? '' : $labels['needsWordPress']; // with the script on its way the reason sits in a noscript
         $p['label']   = $labels[$stalled ? 'stalled' : $state];
         $p['time']    = $job ? 'Background' . (is_int($job['since']) ? ' · started ' . $iterator->format_time($job['since']) : '') : $iterator->format_elapsed($iterator->get_elapsed());
         $p['job']     = $job ? ' · ' . (empty($job['url']) ? "job #{$job['id']}" : "<a href='" . esc_url((string) $job['url']) . "'>job #{$job['id']}</a>") : ''; // the row on Tools -> Jobs, one click away while it is open

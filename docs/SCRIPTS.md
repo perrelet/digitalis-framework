@@ -234,7 +234,6 @@ The scripts that predate this document are classic scripts in several shapes. Ea
 
 | Script | Shape today |
 |---|---|
-| `assets/js/iterator.js` | IIFE around an object literal, `XMLHttpRequest`, `iterator_params` global, CRLF. Rewrite recorded as its own stream; its tasks, response shapes and template names are kept. |
 | `assets/js/menu.js`, `menu-drawer.js` | IIFE, `var`; contract in `docs/specs/menu/SPEC.md` |
 | `assets/js/counter.js` | IIFE around an object literal |
 | `assets/js/fields.js`, `woo-clean.js`, `acf-ajax.class.js` | Global class (`acf-ajax` on jQuery) |

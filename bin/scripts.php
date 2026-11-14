@@ -13,7 +13,6 @@ $legacy = [
     'assets/js/fields.js',
     'assets/js/human-check-turnstile.js',
     'assets/js/human-check.js',
-    'assets/js/iterator.js',
     'assets/js/menu-drawer.js',
     'assets/js/menu.js',
     'assets/js/woo-clean.js',

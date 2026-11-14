@@ -5,10 +5,10 @@
     --state: var(--text-3);
 }
 
-:where(.lattice) .digitalis-iterator.running     { --state: var(--running); }
+:where(.lattice) .digitalis-iterator.is-busy     { --state: var(--running); }
 :where(.lattice) .digitalis-iterator.is-complete { --state: var(--ok); }
 :where(.lattice) .digitalis-iterator.is-halted,
-:where(.lattice) .digitalis-iterator.err         { --state: var(--err); }
+:where(.lattice) .digitalis-iterator.is-fault    { --state: var(--err); }
 :where(.lattice) .digitalis-iterator.is-stalled  { --state: var(--warn); }
 
 /* Surfaces: standalone panels are cards; the panels inside the iterator join into one surface with hairlines between. */
@@ -32,17 +32,18 @@
 
 :where(.lattice) .controls { display: flex; flex-wrap: wrap; gap: 8px; }
 
-:where(.lattice) .digitalis-iterator:not(.running) button[data-task='stop'] { display: none; }
-:where(.lattice) .digitalis-iterator.running button[data-task='start'],
-:where(.lattice) .digitalis-iterator.running button[data-task='reset'],
-:where(.lattice) .digitalis-iterator.running button[data-task='once'],
-:where(.lattice) .digitalis-iterator.running button[data-task='background'],
+:where(.lattice) .digitalis-iterator:not(.is-busy) button[data-task='stop'] { display: none; }
+:where(.lattice) .digitalis-iterator.is-busy button[data-task='start'],
+:where(.lattice) .digitalis-iterator.is-busy button[data-task='reset'],
+:where(.lattice) .digitalis-iterator.is-busy button[data-task='once'],
+:where(.lattice) .digitalis-iterator.is-busy button[data-task='background'],
 :where(.lattice) .digitalis-iterator.is-complete button[data-task='background'] { display: none; }
 
 :where(.lattice) .run-options { display: flex; flex-basis: 100%; flex-wrap: wrap; align-items: center; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
 :where(.lattice) .run-options label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
 :where(.lattice) .run-options input[type='number'] { width: 5.5em; }
 :where(.lattice) .run-options:disabled { opacity: .6; }
+:where(.lattice) .controls-note { flex-basis: 100%; font-size: 12px; color: var(--text-3); }
 
 :where(.lattice) .controls button[data-task='stop'] { color: var(--err); border-color: var(--err); }
 :where(.lattice) .controls button[data-task='stop']:hover,
@@ -114,12 +115,12 @@
     background-size: 22.63px 100%; /* one 16px period along a 45° stripe */
 }
 
-:where(.lattice) .running.is-indeterminate .progress-bar { animation: iterator-stripe .6s linear infinite; }
+:where(.lattice) .is-busy.is-indeterminate .progress-bar { animation: iterator-stripe .6s linear infinite; }
 
 @keyframes iterator-stripe { to { background-position: 22.63px 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-    :where(.lattice) .running.is-indeterminate .progress-bar { animation: none; }
+    :where(.lattice) .is-busy.is-indeterminate .progress-bar { animation: none; }
 }
 
 /* Failed: the ids a run could not process, each a link when the subclass knows one; the actions wait for the run to stop. */
@@ -143,7 +144,7 @@
 }
 
 :where(.lattice) .failed-actions                           { display: flex; gap: 8px; }
-:where(.lattice) .digitalis-iterator.running .failed-actions { display: none; }
+:where(.lattice) .digitalis-iterator.is-busy .failed-actions { display: none; }
 
 :where(.lattice) .failed-list {
     display: flex;

@@ -851,13 +851,14 @@ abstract class Iterator extends Singleton {
             'confirmDismiss'        => "Dismiss the failed {$this->labels['plural']}? They stay out of the run.",
             'confirmStopBackground' => 'Stop the background run?',
             'faultMessage'          => 'The request failed. Reload the page and try again.',
+            'needsScript'           => 'These controls need JavaScript.',
+            'needsWordPress'        => 'These controls need WordPress 6.6.',
         ];
 
     }
 
     // The iterator's own screen (the CSV intake state included) gets the stylesheet in the head; a host rendering the controller
-    // elsewhere gets it from the footer. The script stays with the controller: it prints in the footer either way and must not
-    // load without the params the controller localizes.
+    // elsewhere gets it from the footer. The script stays with the controller, whose root it boots on.
     public function maybe_enqueue_assets () {
 
         if (($_GET['page'] ?? 0) == $this->get_menu_slug()) $this->enqueue_style();
@@ -872,23 +873,26 @@ abstract class Iterator extends Singleton {
 
     }
 
+    // Whether the controller's script will print. Script modules print in wp-admin from WordPress 6.6 (6.5 has the function and
+    // no admin hook); where they do not, the controls stay disabled and say why.
+    public function enqueue_script () : bool {
+
+        if (!function_exists('wp_script_modules')) return false;
+        if (is_admin() && !has_action('admin_print_footer_scripts', [wp_script_modules(), 'print_enqueued_script_modules'])) return false;
+
+        wp_enqueue_script_module('@lattice/iterator', LATTICE_URI . 'assets/js/iterator.js', [], LATTICE_VERSION);
+
+        return true;
+
+    }
+
     public function render_controller () {
 
         $this->enqueue_style();
-        wp_enqueue_script('lattice-iterator', LATTICE_URI . 'assets/js/iterator.js', [], LATTICE_VERSION, true);
-        wp_localize_script('lattice-iterator', 'iterator_params', [
-            'ajax_url'      => admin_url('admin-ajax.php'),
-            'nonce'         => wp_create_nonce("iterator_{$this->key}"),
-            'key'           => $this->key,
-            'index'         => $this->index,
-            'print_results' => $this->print_results,
-            'doing_cron'    => $this->is_doing_cron(),
-            'elapsed'       => $this->get_elapsed(),
-            'labels'        => $this->labels,
-        ]);
 
         $ui_options = $this->get_ui_options();
         $ui_options['iterator'] = $this;
+        $ui_options['scripted'] = $this->enqueue_script();
 
         echo "<div class='lattice'>"; // the token scope: admin-tokens.css styles nothing outside it
 
