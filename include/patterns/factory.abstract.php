@@ -101,6 +101,56 @@ abstract class Factory extends Creational {
 
     }
 
+    /**
+     * Builds once and keeps the instance under $name: a name is taken once, and inst($name) finds it.
+     *
+     * @return ?static
+     */
+    public static function declare (string $name, array $config = []) {
+
+        $class_name = Call::get_class_name(static::class, $config);
+        if ($class_name != static::class) return $class_name::declare($name, $config);
+
+        if ($name === '') return static::refuse_declare('declares an empty name', 'give it a name');
+
+        $group = static::get_cache_group();
+
+        if ($held = self::$instances[$group][$name] ?? null) {
+
+            static::refuse_declare("declares '{$name}', which " . $held::class . ' already holds', "find it with inst('{$name}') or declare another name");
+
+            return ($held instanceof static) ? $held : null;
+
+        }
+
+        if ($property = static::$cache_property) {
+
+            if (isset($config[$property]) && (!is_scalar($config[$property]) || ((string) $config[$property] !== $name))) return static::refuse_declare("declares '{$name}' and gives another {$property}", "leave {$property} out: the name fills it");
+
+            $config[$property] = $name;
+
+        }
+
+        if (!static::instance_condition($config)) return null;
+        if (!$instance = static::create($config))  return null;
+
+        self::$instances[$group][$name] = $instance;
+
+        if (($key = $instance->get_cache_key()) && !isset(self::$instances[$group][$key])) self::$instances[$group][$key] = $instance;
+
+        return $instance;
+
+    }
+
+    // A notice and null.
+    protected static function refuse_declare (string $problem, string $fix) : ?static {
+
+        _doing_it_wrong(static::class . '::declare', esc_html(static::class . " {$problem}: {$fix}."), '');
+
+        return null;
+
+    }
+
     protected static function get_cache_group () {
 
         return static::$cache_group;
