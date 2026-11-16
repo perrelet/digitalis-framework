@@ -3,7 +3,7 @@
 namespace Digitalis;
 
 // A site subclasses and registers it, naming its own fields and conditions (SCOPED_CREDENTIALS.md 18).
-abstract class User_Resource extends Model_Resource {
+abstract class User_Resource extends Model_Resource implements Holds_People {
 
     protected static $model_class = Account::class;
 
@@ -82,6 +82,12 @@ abstract class User_Resource extends Model_Resource {
     public function is_named_only () : bool {
 
         return true;
+
+    }
+
+    public function find_ids_by_email (string $email) : array {
+
+        return ($email !== '') && ($wp_user = get_user_by('email', $email)) ? [(int) $wp_user->ID] : [];
 
     }
 

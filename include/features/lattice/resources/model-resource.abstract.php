@@ -285,6 +285,18 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    public function prepare_export (array $lines, $model = null) : array {
+
+        return $lines;
+
+    }
+
+    public function get_values_days () : int {
+
+        return (int) apply_filters('lattice.journal.people_values_days', Journal::VALUES_DAYS, $this);
+
+    }
+
     public function stage_model_values ($model, array $values) : void {
 
         foreach ($values as $name => $value) {

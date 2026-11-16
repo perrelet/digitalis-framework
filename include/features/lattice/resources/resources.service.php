@@ -23,6 +23,7 @@ class Resources extends Service {
     protected int $checking = 0;
     protected int $checking_accounts = 0;
     protected array $writing   = [];
+    protected array $erased    = [];
     protected ?Model_Resource $creating = null;
     protected ?array $walk     = null;
 
@@ -41,9 +42,9 @@ class Resources extends Service {
         }
 
         // find_missing_on_resource() refuses roles under resource:* as never reaching an account.
-        if ($resource->holds_accounts() && !$resource->is_named_only()) {
+        if ($resource->holds_accounts() && (!$resource->is_named_only() || !($resource instanceof Holds_People))) {
 
-            _doing_it_wrong(static::class . '::register', esc_html("{$name} holds accounts, so it is reached only by name: it was not registered."), '');
+            _doing_it_wrong(static::class . '::register', esc_html("{$name} holds accounts, so it is reached only by name and holds people: it was not registered."), '');
             return;
 
         }
@@ -1789,11 +1790,26 @@ class Resources extends Service {
 
         $done = 0;
 
-        foreach ($this->get_resources() as $resource) if ($resource->holds_accounts()) {
+        foreach ($this->get_resources() as $resource) if ($resource->holds_accounts()) $done += $this->erase_records($resource, [$user_id]);
 
-            $done += Journal::inst()->scrub($resource->get_name(), (string) $user_id, '_scrubbed');
+        return $done;
 
-            do_action('lattice.resources.erased', $resource, $user_id);
+    }
+
+    // At once, even from shutdown, where somm's GDPR hook calls erase_account(); Journal::write() scrubs later rows about the record.
+    public function erase_records (Model_Resource $resource, array $ids) : int {
+
+        $done = 0;
+
+        foreach (array_unique(array_map('strval', $ids)) as $id) {
+
+            if ($id === '') continue;
+
+            $this->erased["{$resource->get_name()}:{$id}"] = true;
+
+            $done += Journal::inst()->scrub($resource->get_name(), $id, '_scrubbed');
+
+            do_action('lattice.resources.erased', $resource, $id);
 
         }
 
@@ -1801,38 +1817,91 @@ class Resources extends Service {
 
     }
 
+    public function was_erased (string $resource, string $record_id) : bool {
+
+        return isset($this->erased["{$resource}:{$record_id}"]);
+
+    }
+
+    // done: rows scrubbed; failed: resources whose lookup threw, whose rows are kept.
+    public function erase_person (string $email) : array {
+
+        $answer = ['done' => 0, 'failed' => []];
+
+        if (!$email = strtolower(trim($email))) return $answer;
+
+        foreach ($this->find_person_records($email, $answer['failed']) as $name => $ids) $answer['done'] += $this->erase_records($this->get_resource($name), $ids);
+
+        do_action('lattice.resources.erasing_person', $email);
+
+        return $answer;
+
+    }
+
+    // resource name => record ids.
+    protected function find_person_records (string $email, array &$failed = []) : array {
+
+        $records = [];
+
+        foreach ($this->get_resources() as $name => $resource) {
+
+            if (!$resource instanceof Holds_People) continue;
+
+            try {
+
+                if ($ids = array_values(array_unique(array_map('strval', $resource->find_ids_by_email($email))))) $records[$name] = $ids;
+
+            } catch (\Throwable $e) {
+
+                $failed[] = $resource->get_label();
+                error_log("Lattice resources: finding {$name}'s records for an erasure or export failed: " . $e->getMessage());
+
+            }
+
+        }
+
+        return $records;
+
+    }
+
     public function export_personal_data (string $email, int $page = 1) : array {
 
-        $user  = get_user_by('email', $email);
-        $items = [];
+        $records = $this->find_person_records(strtolower(trim($email)));
+        $rows    = Journal::inst()->query_records($records, $page);
+        $items   = [];
 
-        $rows = [];
+        foreach ($rows as $row) {
 
-        foreach ($user ? $this->get_resources() : [] as $resource) if ($resource->is_named_only()) for ($at = 1; $found = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $user->ID, 'page' => $at]); $at++) array_push($rows, ...$found);
+            $resource = $this->get_resource($row['resource']);
+            $lines    = $resource->prepare_export($resource->present_changes((array) ($row['before'] ?? []), (array) ($row['after'] ?? [])), $resource->find($row['record_id']));
 
-        foreach ($rows as $row) $items[] = [
-            'group_id'    => 'lattice-journal',
-            'group_label' => 'Changes to your account',
-            'item_id'     => "lattice-journal-{$row['id']}",
-            'data'        => [
-                ['name' => 'When',    'value' => $row['at']],
-                ['name' => 'Through', 'value' => $row['via']],
-                ['name' => 'Change',  'value' => $row['action']],
-                ['name' => 'Fields',  'value' => implode(', ', array_keys(array_diff_key((array) ($row['after'] ?? []), array_flip(['_partial', '_scrubbed', '_expired', '_fields'])))) ?: implode(', ', (array) ($row['after']['_fields'] ?? []))],
-                ['name' => 'Values',  'value' => wp_json_encode(['before' => $row['before'], 'after' => $row['after']])],
-            ],
-        ];
+            $items[] = [
+                'group_id'    => 'lattice-journal',
+                'group_label' => 'Changes to records about you',
+                'item_id'     => "lattice-journal-{$row['id']}",
+                'data'        => [
+                    ['name' => 'Record',  'value' => "{$resource->get_label()} {$row['record_id']}"],
+                    ['name' => 'When',    'value' => $row['at']],
+                    ['name' => 'Through', 'value' => $row['via']],
+                    ['name' => 'Change',  'value' => Journal::is_scrubbed($row) ? Journal::ERASED : $row['action']],
+                    ...array_map(fn ($line) => ['name' => (string) $line['label'], 'value' => trim(((string) ($line['before'] ?? '')) . ' → ' . ((string) ($line['after'] ?? '')))], $lines),
+                ],
+            ];
 
-        return ['data' => $items, 'done' => true];
+        }
+
+        return ['data' => $items, 'done' => count($rows) < Journal::PER_PAGE];
 
     }
 
     public function erase_personal_data (string $email, int $page = 1) : array {
 
-        $user = get_user_by('email', $email);
-        $done = $user ? $this->erase_account((int) $user->ID) : 0;
+        $answer   = $this->erase_person($email);
+        $messages = $answer['done'] ? ["{$answer['done']} journal rows kept as a record that changes happened, their values erased."] : [];
 
-        return ['items_removed' => $done > 0, 'items_retained' => $done > 0, 'messages' => $done ? ["{$done} journal rows kept as a record that changes happened, their values erased."] : [], 'done' => true];
+        if ($answer['failed']) $messages[] = 'Changes to ' . implode(', ', $answer['failed']) . ' could not be looked up and keep their values.';
+
+        return ['items_removed' => $answer['done'] > 0, 'items_retained' => ($answer['done'] > 0) || (bool) $answer['failed'], 'messages' => $messages, 'done' => true];
 
     }
 

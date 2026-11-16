@@ -33,17 +33,45 @@ class Lattice_Change_Sets extends Feature {
             'lattice.resources.journal_set'   => 'answer_journal_read',
             Lattice_Resources::PRUNE          => ['prune_sets', 20],
             'lattice.resources.erased'        => 'erase_account',
+            'lattice.resources.erasing_person' => 'erase_person',
         ]);
 
     }
 
-    public function erase_account ($resource, $user_id) {
+    public function erase_account ($resource, $record_id) {
 
         global $wpdb;
 
-        $ids = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT set_id FROM ' . Change_Set::steps_table() . ' WHERE resource = %s AND record_id = %s', $resource->get_name(), (string) $user_id)));
+        $ids = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT set_id FROM ' . Change_Set::steps_table() . ' WHERE resource = %s AND record_id = %s', $resource->get_name(), (string) $record_id)));
 
-        $this->scrub_sets($this->break_open($ids, "{$resource->get_label()} {$user_id} was erased."), '_scrubbed');
+        $this->scrub_sets($this->break_open($ids, "{$resource->get_label()} {$record_id} was erased."), '_scrubbed');
+
+    }
+
+    // A create holds no record id, so the person is found by the email fields it holds.
+    public function erase_person ($email) {
+
+        global $wpdb;
+
+        $fields = [];
+
+        foreach (Resources::inst()->get_resources() as $name => $resource) if (($resource instanceof Holds_People) && ($emails = array_keys(array_filter($resource->get_fields(), fn ($field) => $field->type === 'email')))) $fields[$name] = $emails;
+
+        if (!$fields) return;
+
+        $like = '%' . $wpdb->esc_like($email) . '%';
+        $rows = (array) $wpdb->get_results($wpdb->prepare('SELECT set_id, resource, input, proposed, expected FROM ' . Change_Set::steps_table() . " WHERE resource IN ('" . implode("', '", array_map('esc_sql', array_keys($fields))) . "') AND (LOWER(input) LIKE %s OR LOWER(proposed) LIKE %s OR LOWER(expected) LIKE %s)", $like, $like, $like), ARRAY_A);
+        $ids  = [];
+
+        foreach ($rows as $row) foreach (['input', 'proposed', 'expected'] as $column) {
+
+            $values = is_null($row[$column]) ? null : json_decode($row[$column], true);
+
+            foreach (is_array($values) ? $fields[$row['resource']] : [] as $field) if (is_string($values[$field] ?? null) && (strtolower(trim($values[$field])) === $email)) $ids[] = (int) $row['set_id'];
+
+        }
+
+        $this->scrub_sets($this->break_open(array_values(array_unique($ids)), 'A person it holds was erased.'), '_scrubbed');
 
     }
 
@@ -102,18 +130,22 @@ class Lattice_Change_Sets extends Feature {
 
     }
 
+    // A set spanning resources expires at the shortest of their periods.
     public function expire_sets () {
 
         global $wpdb;
 
-        $names = array_map(fn ($resource) => $resource->get_name(), array_filter(Resources::inst()->get_resources(), fn ($resource) => $resource->is_named_only()));
+        $ids = [];
 
-        if (!$names) return;
+        foreach (Resources::inst()->get_resources() as $name => $resource) {
 
-        $days = (int) apply_filters('lattice.journal.account_values_days', Journal::ACCOUNT_VALUES_DAYS);
-        $ids  = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT sets.set_id FROM ' . Change_Set::table() . ' AS sets JOIN ' . Change_Set::steps_table() . " AS steps ON steps.set_id = sets.set_id WHERE sets.updated_at < %s AND sets.purpose <> %s AND steps.resource IN ('" . implode("', '", array_map('esc_sql', $names)) . "')", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS), Journal::ERASED)));
+            if (!$resource instanceof Holds_People) continue;
 
-        $this->scrub_sets($this->break_open($ids, 'Its values expired.'), '_expired');
+            array_push($ids, ...array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT sets.set_id FROM ' . Change_Set::table() . ' AS sets JOIN ' . Change_Set::steps_table() . ' AS steps ON steps.set_id = sets.set_id WHERE sets.updated_at < %s AND sets.purpose <> %s AND steps.resource = %s', gmdate('Y-m-d H:i:s', time() - $resource->get_values_days() * DAY_IN_SECONDS), Journal::ERASED, $name))));
+
+        }
+
+        if ($ids) $this->scrub_sets($this->break_open(array_values(array_unique($ids)), 'Its values expired.'), '_expired');
 
     }
 

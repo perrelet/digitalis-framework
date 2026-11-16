@@ -4,6 +4,7 @@ namespace Digitalis;
 
 require_once __DIR__ . '/resource-field.class.php';
 require_once __DIR__ . '/resource-change.class.php';
+require_once __DIR__ . '/holds-people.interface.php';
 require_once __DIR__ . '/model-resource.abstract.php';
 require_once __DIR__ . '/options-page.model.php';
 require_once __DIR__ . '/options-page-record.class.php';
