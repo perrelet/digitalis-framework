@@ -32,46 +32,57 @@ class Lattice_Change_Sets extends Feature {
             'woocommerce_before_delete_order' => 'mark_broken',
             'lattice.resources.journal_set'   => 'answer_journal_read',
             Lattice_Resources::PRUNE          => ['prune_sets', 20],
-            'lattice.resources.erased'        => 'erase_account',
+            'lattice.resources.erased'        => 'erase_record',
             'lattice.resources.erasing_person' => 'erase_person',
         ]);
 
     }
 
-    public function erase_account ($resource, $record_id) {
+    public function erase_record ($resource, $record_id) {
 
         global $wpdb;
 
         $ids = array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT set_id FROM ' . Change_Set::steps_table() . ' WHERE resource = %s AND record_id = %s', $resource->get_name(), (string) $record_id)));
 
-        $this->scrub_sets($this->break_open($ids, "{$resource->get_label()} {$record_id} was erased."), '_scrubbed');
+        $this->scrub_sets($this->break_open($this->leave_walking($ids), "{$resource->get_label()} {$record_id} was erased."), '_scrubbed');
 
     }
 
-    // A create holds no record id, so the person is found by the email fields it holds.
+    // A create holds no record id, so the person is found by the email fields it holds; nested fields are not looked in.
     public function erase_person ($email) {
 
         global $wpdb;
 
-        $fields = [];
+        $email_fields = [];
 
-        foreach (Resources::inst()->get_resources() as $name => $resource) if (($resource instanceof Holds_People) && ($emails = array_keys(array_filter($resource->get_fields(), fn ($field) => $field->type === 'email')))) $fields[$name] = $emails;
+        foreach (Resources::inst()->get_people_resources() as $name => $resource) if ($fields = array_keys(array_filter($resource->get_fields(), fn ($field) => $field->type === 'email'))) $email_fields[$name] = $fields;
 
-        if (!$fields) return;
+        if (!$email_fields || !($email = mb_strtolower(trim((string) $email)))) return;
 
-        $like = '%' . $wpdb->esc_like($email) . '%';
-        $rows = (array) $wpdb->get_results($wpdb->prepare('SELECT set_id, resource, input, proposed, expected FROM ' . Change_Set::steps_table() . " WHERE resource IN ('" . implode("', '", array_map('esc_sql', array_keys($fields))) . "') AND (LOWER(input) LIKE %s OR LOWER(proposed) LIKE %s OR LOWER(expected) LIKE %s)", $like, $like, $like), ARRAY_A);
+        // JSON keeps a non-ASCII address escaped.
+        $match = [];
+
+        foreach (array_unique([$email, substr(wp_json_encode($email), 1, -1)]) as $form) foreach (['input', 'proposed', 'expected'] as $column) $match[] = $wpdb->prepare("LOWER({$column}) LIKE %s", '%' . $wpdb->esc_like($form) . '%');
+
+        $rows = (array) $wpdb->get_results('SELECT set_id, resource, input, proposed, expected FROM ' . Change_Set::steps_table() . " WHERE resource IN ('" . implode("', '", array_map('esc_sql', array_keys($email_fields))) . "') AND (" . implode(' OR ', $match) . ')', ARRAY_A);
         $ids  = [];
 
         foreach ($rows as $row) foreach (['input', 'proposed', 'expected'] as $column) {
 
             $values = is_null($row[$column]) ? null : json_decode($row[$column], true);
 
-            foreach (is_array($values) ? $fields[$row['resource']] : [] as $field) if (is_string($values[$field] ?? null) && (strtolower(trim($values[$field])) === $email)) $ids[] = (int) $row['set_id'];
+            foreach (is_array($values) ? $email_fields[$row['resource']] : [] as $field) if (is_string($values[$field] ?? null) && (mb_strtolower(trim($values[$field])) === $email)) $ids[] = (int) $row['set_id'];
 
         }
 
-        $this->scrub_sets($this->break_open(array_values(array_unique($ids)), 'A person it holds was erased.'), '_scrubbed');
+        $this->scrub_sets($this->break_open($this->leave_walking(array_values(array_unique($ids))), 'A person it holds was erased.'), '_scrubbed');
+
+    }
+
+    // The set applying the erasure finishes its walk.
+    protected function leave_walking (array $ids) : array {
+
+        return array_values(array_diff($ids, [(int) Resources::inst()->get_walking_key()]));
 
     }
 
@@ -130,20 +141,14 @@ class Lattice_Change_Sets extends Feature {
 
     }
 
-    // A set spanning resources expires at the shortest of their periods.
+    // The shortest period wins.
     public function expire_sets () {
 
         global $wpdb;
 
         $ids = [];
 
-        foreach (Resources::inst()->get_resources() as $name => $resource) {
-
-            if (!$resource instanceof Holds_People) continue;
-
-            array_push($ids, ...array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT sets.set_id FROM ' . Change_Set::table() . ' AS sets JOIN ' . Change_Set::steps_table() . ' AS steps ON steps.set_id = sets.set_id WHERE sets.updated_at < %s AND sets.purpose <> %s AND steps.resource = %s', gmdate('Y-m-d H:i:s', time() - $resource->get_values_days() * DAY_IN_SECONDS), Journal::ERASED, $name))));
-
-        }
+        foreach (Resources::inst()->get_people_resources() as $name => $resource) array_push($ids, ...array_map('intval', (array) $wpdb->get_col($wpdb->prepare('SELECT DISTINCT sets.set_id FROM ' . Change_Set::table() . ' AS sets JOIN ' . Change_Set::steps_table() . ' AS steps ON steps.set_id = sets.set_id WHERE sets.updated_at < %s AND sets.purpose <> %s AND steps.resource = %s', gmdate('Y-m-d H:i:s', time() - $resource->get_people_values_days() * DAY_IN_SECONDS), Journal::ERASED, $name))));
 
         if ($ids) $this->scrub_sets($this->break_open(array_values(array_unique($ids)), 'Its values expired.'), '_expired');
 

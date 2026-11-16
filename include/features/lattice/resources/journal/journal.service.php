@@ -11,7 +11,7 @@ class Journal extends Service {
     const MARKS = ['set_key', 'set_step', 'proposer_id'];
     const ERASED = '[erased]';
     // One renewal cycle (E9).
-    const VALUES_DAYS = 365;
+    const PEOPLE_VALUES_DAYS = 365;
 
     protected function get_table () : string {
 
@@ -60,7 +60,11 @@ class Journal extends Service {
 
         foreach (array_intersect_key($changes, ['before' => 0, 'after' => 0]) as $column => $value) $changes[$column] = is_null($value) ? null : wp_json_encode($value);
 
-        return (bool) $wpdb->update($this->get_table(), $changes, ['id' => $id]);
+        $done = (bool) $wpdb->update($this->get_table(), $changes, ['id' => $id]);
+
+        if (($row = $this->find($id)) && Resources::inst()->was_erased($row['resource'], (string) $row['record_id'])) $this->scrub($row['resource'], (string) $row['record_id'], '_scrubbed');
+
+        return $done;
 
     }
 
@@ -222,11 +226,9 @@ class Journal extends Service {
 
         $done = 0;
 
-        foreach (Resources::inst()->get_resources() as $resource) {
+        foreach (Resources::inst()->get_people_resources() as $resource) {
 
-            if (!$resource instanceof Holds_People) continue;
-
-            $before = gmdate('Y-m-d H:i:s', time() - $resource->get_values_days() * DAY_IN_SECONDS);
+            $before = gmdate('Y-m-d H:i:s', time() - $resource->get_people_values_days() * DAY_IN_SECONDS);
 
             foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT DISTINCT record_id FROM {$this->get_table()} WHERE resource = %s AND `at` < %s AND `after` NOT LIKE %s AND `after` NOT LIKE %s", $resource->get_name(), $before, '%' . $wpdb->esc_like('"_scrubbed"') . '%', '%' . $wpdb->esc_like('"_expired"') . '%')) as $record_id) $done += $this->scrub($resource->get_name(), (string) $record_id, '_expired', $before);
 
@@ -236,8 +238,8 @@ class Journal extends Service {
 
     }
 
-    // Oldest first by id, so rows written meanwhile join the end and pages never shift.
-    public function query_records (array $records, int $page, int $per_page = self::PER_PAGE) : array {
+    // Rows written meanwhile join the end, so pages never shift.
+    public function query_records (array $records, int $page) : array {
 
         global $wpdb;
 
@@ -247,7 +249,8 @@ class Journal extends Service {
 
         if (!$where) return [];
 
-        $offset = (max(1, $page) - 1) * $per_page;
+        $per_page = static::PER_PAGE;
+        $offset   = (max(1, $page) - 1) * $per_page;
 
         return array_map([$this, 'decode'], (array) $wpdb->get_results("SELECT * FROM {$this->get_table()} WHERE " . implode(' OR ', $where) . " ORDER BY id ASC LIMIT {$per_page} OFFSET {$offset}", ARRAY_A));
 

@@ -409,7 +409,7 @@ class Credentials extends Service {
 
             if (!$resource->holds_accounts()) continue;
 
-            $email =($this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => 'update', 'fields' => ['email'], 'facts' => ['any_record' => true]] + $resource->get_request_flags('update'))['email'] ?? 'deny') !== 'deny';
+            $email = ($this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => 'update', 'fields' => ['email'], 'facts' => ['any_record' => true]] + $resource->get_request_flags('update'))['email'] ?? 'deny') !== 'deny';
 
             array_push($flags, ...$this->flag_accounts($name, $resources[$name]['verbs'] ?? [], $email, $named));
 

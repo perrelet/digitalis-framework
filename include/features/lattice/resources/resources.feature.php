@@ -42,13 +42,13 @@ class Lattice_Resources extends Feature {
 
     public function add_exporter ($exporters) {
 
-        return $exporters + ['lattice-journal' => ['exporter_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'export_personal_data']]];
+        return $exporters + ['lattice-journal' => ['exporter_friendly_name' => 'Changes to records about you', 'callback' => [Resources::inst(), 'export_personal_data']]];
 
     }
 
     public function add_eraser ($erasers) {
 
-        return $erasers + ['lattice-journal' => ['eraser_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'erase_personal_data']]];
+        return $erasers + ['lattice-journal' => ['eraser_friendly_name' => 'Changes to records about you', 'callback' => [Resources::inst(), 'erase_personal_data']]];
 
     }
 

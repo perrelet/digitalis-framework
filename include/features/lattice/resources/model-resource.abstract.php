@@ -285,15 +285,16 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    public function prepare_export (array $lines, $model = null) : array {
+    // Values by side; a resource takes out another person's.
+    public function prepare_export (array $values, $model = null) : array {
 
-        return $lines;
+        return $values;
 
     }
 
-    public function get_values_days () : int {
+    public function get_people_values_days () : int {
 
-        return (int) apply_filters('lattice.journal.people_values_days', Journal::VALUES_DAYS, $this);
+        return (int) apply_filters('lattice.journal.people_values_days', Journal::PEOPLE_VALUES_DAYS, $this);
 
     }
 
@@ -539,7 +540,7 @@ abstract class Model_Resource extends Singleton {
 
         return [
             'id'         => $model?->get_id(),
-            'own'        => $model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id()))) : true,
+            'own'        => $this->has_owner() && ($model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id()))) : true),
             'conditions' => fn (string $name) => isset($conditions[$name]) && (bool) $conditions[$name]($model, $values),
         ];
 
@@ -576,8 +577,8 @@ abstract class Model_Resource extends Singleton {
 
     }
 
-    // A by_name action is reached by an allow or review only by naming it, never by writes or act:* (A0).
-    public function is_by_name (string $verb) : bool {
+    // CREDENTIALS.md, Accounts (A0).
+    public function is_reached_by_name (string $verb) : bool {
 
         return (bool) preg_match('/^(rehearse:)?act:([a-z0-9_]+)$/', $verb, $match) && !empty($this->get_actions()[$match[2]]['by_name']);
 
@@ -585,7 +586,7 @@ abstract class Model_Resource extends Singleton {
 
     public function get_request_flags (string $verb) : array {
 
-        return array_filter(['named_only' => $this->is_named_only(), 'accounts' => $this->holds_accounts(), 'by_name' => $this->is_by_name($verb)]);
+        return array_filter(['named_only' => $this->is_named_only(), 'accounts' => $this->holds_accounts(), 'by_name' => $this->is_reached_by_name($verb)]);
 
     }
 

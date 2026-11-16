@@ -41,7 +41,7 @@ class Resources extends Service {
 
         }
 
-        // find_missing_on_resource() refuses roles under resource:* as never reaching an account.
+        // Accounts are named only (find_missing_on_resource() relies on it) and erasable.
         if ($resource->holds_accounts() && (!$resource->is_named_only() || !($resource instanceof Holds_People))) {
 
             _doing_it_wrong(static::class . '::register', esc_html("{$name} holds accounts, so it is reached only by name and holds people: it was not registered."), '');
@@ -1796,7 +1796,7 @@ class Resources extends Service {
 
     }
 
-    // At once, even from shutdown, where somm's GDPR hook calls erase_account(); Journal::write() scrubs later rows about the record.
+    // Acts at once, even at shutdown; Journal::write() scrubs later rows about the record, for the rest of the process.
     public function erase_records (Model_Resource $resource, array $ids) : int {
 
         $done = 0;
@@ -1817,6 +1817,18 @@ class Resources extends Service {
 
     }
 
+    public function get_people_resources () : array {
+
+        return array_filter($this->get_resources(), fn ($resource) => $resource instanceof Holds_People);
+
+    }
+
+    public function get_walking_key () : ?int {
+
+        return $this->walk['key'] ?? null;
+
+    }
+
     public function was_erased (string $resource, string $record_id) : bool {
 
         return isset($this->erased["{$resource}:{$record_id}"]);
@@ -1828,7 +1840,7 @@ class Resources extends Service {
 
         $answer = ['done' => 0, 'failed' => []];
 
-        if (!$email = strtolower(trim($email))) return $answer;
+        if (!$email = mb_strtolower(trim($email))) return $answer;
 
         foreach ($this->find_person_records($email, $answer['failed']) as $name => $ids) $answer['done'] += $this->erase_records($this->get_resource($name), $ids);
 
@@ -1843,9 +1855,7 @@ class Resources extends Service {
 
         $records = [];
 
-        foreach ($this->get_resources() as $name => $resource) {
-
-            if (!$resource instanceof Holds_People) continue;
+        foreach ($this->get_people_resources() as $name => $resource) {
 
             try {
 
@@ -1864,16 +1874,38 @@ class Resources extends Service {
 
     }
 
-    public function export_personal_data (string $email, int $page = 1) : array {
+    // Values whole: present_changes() shortens them.
+    public function export_personal_data (string $email, int $page = 1) : array|WP_Error {
 
-        $records = $this->find_person_records(strtolower(trim($email)));
-        $rows    = Journal::inst()->query_records($records, $page);
-        $items   = [];
+        $failed  = [];
+        $records = $this->find_person_records(mb_strtolower(trim($email)), $failed);
+
+        if ($failed) return new WP_Error('lattice_export', 'Changes to ' . implode(', ', $failed) . ' could not be looked up, so this export would be incomplete: see the error log.');
+
+        $rows  = Journal::inst()->query_records($records, $page);
+        $text  = fn ($value) => (is_scalar($value) || is_null($value)) ? (string) $value : wp_json_encode($value);
+        $items = [];
 
         foreach ($rows as $row) {
 
             $resource = $this->get_resource($row['resource']);
-            $lines    = $resource->prepare_export($resource->present_changes((array) ($row['before'] ?? []), (array) ($row['after'] ?? [])), $resource->find($row['record_id']));
+            $values   = ['before' => (array) ($row['before'] ?? []), 'after' => (array) ($row['after'] ?? [])];
+
+            try {
+
+                $values = $resource->prepare_export($values, $resource->find($row['record_id']));
+
+            } catch (\Throwable $e) {
+
+                error_log("Lattice resources: preparing journal row {$row['id']} for an export failed, so it is exported as kept: " . $e->getMessage());
+
+            }
+
+            $lines = [];
+
+            foreach (array_unique([...array_keys($values['before']), ...array_keys($values['after'])]) as $key) if (!str_starts_with((string) $key, '_')) $lines[] = ['name' => (string) $key, 'value' => trim($text($values['before'][$key] ?? null) . ' → ' . $text($values['after'][$key] ?? null))];
+
+            if (!empty($values['after']['_fields'])) $lines[] = ['name' => 'Fields', 'value' => implode(', ', (array) $values['after']['_fields'])];
 
             $items[] = [
                 'group_id'    => 'lattice-journal',
@@ -1884,7 +1916,7 @@ class Resources extends Service {
                     ['name' => 'When',    'value' => $row['at']],
                     ['name' => 'Through', 'value' => $row['via']],
                     ['name' => 'Change',  'value' => Journal::is_scrubbed($row) ? Journal::ERASED : $row['action']],
-                    ...array_map(fn ($line) => ['name' => (string) $line['label'], 'value' => trim(((string) ($line['before'] ?? '')) . ' → ' . ((string) ($line['after'] ?? '')))], $lines),
+                    ...$lines,
                 ],
             ];
 
