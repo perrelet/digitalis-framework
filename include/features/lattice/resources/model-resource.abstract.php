@@ -552,6 +552,31 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    final public function holds_accounts () : bool {
+
+        return is_a(static::$model_class, User::class, true);
+
+    }
+
+    public function has_owner () : bool {
+
+        return true;
+
+    }
+
+    // A by_name action is reached by an allow or review only by naming it, never by writes or act:* (A0).
+    public function is_by_name (string $verb) : bool {
+
+        return (bool) preg_match('/^(rehearse:)?act:([a-z0-9_]+)$/', $verb, $match) && !empty($this->get_actions()[$match[2]]['by_name']);
+
+    }
+
+    public function get_request_flags (string $verb) : array {
+
+        return array_filter(['named_only' => $this->is_named_only(), 'accounts' => $this->holds_accounts(), 'by_name' => $this->is_by_name($verb)]);
+
+    }
+
     public function get_summary_fields () : array {
 
         return ['title' => 'title', 'status' => 'status'];

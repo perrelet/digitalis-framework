@@ -40,6 +40,14 @@ class Resources extends Service {
 
         }
 
+        // find_missing_on_resource() refuses roles under resource:* as never reaching an account.
+        if ($resource->holds_accounts() && !$resource->is_named_only()) {
+
+            _doing_it_wrong(static::class . '::register', esc_html("{$name} holds accounts, so it is reached only by name: it was not registered."), '');
+            return;
+
+        }
+
         $this->resources[$name] = $resource;
 
     }
@@ -1746,7 +1754,7 @@ class Resources extends Service {
     protected function can (Model_Resource $resource, string $operation, $model) : bool {
 
         $this->checking++;
-        $this->checking_accounts += (int) $resource->is_named_only();
+        $this->checking_accounts += (int) $resource->holds_accounts();
 
         try {
 
@@ -1755,7 +1763,7 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
-            $this->checking_accounts -= (int) $resource->is_named_only();
+            $this->checking_accounts -= (int) $resource->holds_accounts();
 
         }
 
@@ -1764,11 +1772,11 @@ class Resources extends Service {
     // For the storage stage (A4): an update by id, a create by its staged login.
     public function get_account_write (int $user_id, ?string $login = null) : ?object {
 
-        foreach ($this->get_resources() as $resource) if ($resource->is_named_only() && is_object($model = $this->writing["{$resource->get_name()}:{$user_id}"] ?? null)) return $model;
+        foreach ($this->get_resources() as $resource) if ($resource->holds_accounts() && is_object($model = $this->writing["{$resource->get_name()}:{$user_id}"] ?? null)) return $model;
 
         $made = $this->writing['new'] ?? null;
 
-        if (!is_object($made) || !$this->creating?->is_named_only()) return null;
+        if (!is_object($made) || !$this->creating?->holds_accounts()) return null;
 
         $given = $user_id ? get_userdata($user_id)?->user_login : $login;
 
@@ -1781,7 +1789,7 @@ class Resources extends Service {
 
         $done = 0;
 
-        foreach ($this->get_resources() as $resource) if ($resource->is_named_only()) {
+        foreach ($this->get_resources() as $resource) if ($resource->holds_accounts()) {
 
             $done += Journal::inst()->scrub($resource->get_name(), (string) $user_id, '_scrubbed');
 
@@ -1831,7 +1839,7 @@ class Resources extends Service {
     protected function refuse_value_needs (Model_Resource $resource, $model, array $values) : ?WP_Error {
 
         $this->checking++;
-        $this->checking_accounts += (int) $resource->is_named_only();
+        $this->checking_accounts += (int) $resource->holds_accounts();
 
         try {
 
@@ -1840,7 +1848,7 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
-            $this->checking_accounts -= (int) $resource->is_named_only();
+            $this->checking_accounts -= (int) $resource->holds_accounts();
 
         }
 
@@ -1852,7 +1860,7 @@ class Resources extends Service {
     protected function can_capability (Model_Resource $resource, string $capability, $model) : bool {
 
         $this->checking++;
-        $this->checking_accounts += (int) $resource->is_named_only();
+        $this->checking_accounts += (int) $resource->holds_accounts();
 
         try {
 
@@ -1861,7 +1869,7 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
-            $this->checking_accounts -= (int) $resource->is_named_only();
+            $this->checking_accounts -= (int) $resource->holds_accounts();
 
         }
 
@@ -1952,14 +1960,13 @@ class Resources extends Service {
 
         }
 
-        return Credentials::inst()->answer_fields($entry, array_filter([
+        return Credentials::inst()->answer_fields($entry, $resource->get_request_flags($verb) + array_filter([
             'surface'    => 'resource',
             'target'     => $resource->get_name(),
-            'named_only' => $resource->is_named_only() ?: null,
             'verb'       => $verb,
             'fields'     => $fields,
             // Asked before any record is known (a list, the guide), a rule on some records counts, whether it opens or bars.
-            'facts'      => $walking + ($facts ?? ((!$model && (in_array($verb, ['list', 'read'], true) || (($verb === 'create') && $resource->is_named_only()))) ? ['any_record' => true] : $resource->get_facts($model))),
+            'facts'      => $walking + ($facts ?? ((!$model && (in_array($verb, ['list', 'read'], true) || (($verb === 'create') && $resource->holds_accounts()))) ? ['any_record' => true] : $resource->get_facts($model))),
             // How the call arrives holds after the change as before it.
             'after'      => is_null($after) ? null : $walking + $after,
             'dry_run'    => $dry_run,

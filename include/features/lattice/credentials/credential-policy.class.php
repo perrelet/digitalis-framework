@@ -171,7 +171,7 @@ class Credential_Policy {
 
             if (($token === $verb) || (($verb === 'HEAD') && ($token === 'GET'))) return 1;
 
-            if (!empty($request['named_only']) && in_array($verb, ['act:delete', 'rehearse:act:delete'], true) && ($rule['answer'] !== 'deny')) continue;
+            if (!empty($request['by_name']) && ($rule['answer'] !== 'deny')) continue;
 
             if ($this->in_group($token, $verb, $request['surface'])) return 0;
 
@@ -221,7 +221,7 @@ class Credential_Policy {
     // Allow and review: A1. Deny: any listed role (A0).
     protected function match_roles (array $rule, array $request, array $facts) : bool {
 
-        if (!isset($rule['roles'])) return empty($request['named_only']) || ($rule['answer'] === 'deny');
+        if (!isset($rule['roles'])) return empty($request['accounts']) || ($rule['answer'] === 'deny');
 
         // A deny on roles leaves rows out one by one rather than closing the list.
         if (!empty($facts['any_record'])) return $rule['answer'] !== 'deny';

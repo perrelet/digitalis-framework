@@ -101,6 +101,8 @@ class Credentials_Command {
             'dry_run' => !empty($assoc['dry-run']),
         ], fn ($value) => !is_null($value));
 
+        if (($surface === 'resource') && class_exists(Resources::class) && ($resource = Resources::inst()->get_resource($target))) $request += $resource->get_request_flags($args[3]);
+
         $this->answer(['answer' => Credentials::inst()->answer($entry, $request), 'fields' => Credentials::inst()->answer_fields($entry, $request)]);
 
     }

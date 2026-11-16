@@ -85,6 +85,13 @@ abstract class User_Resource extends Model_Resource {
 
     }
 
+    // A rule never covers the password's own account (A1), so own would cover nothing.
+    public function has_owner () : bool {
+
+        return false;
+
+    }
+
     public function get_model_fields () : array {
 
         $column = fn (string $column) => ['get' => fn ($user) => $user->get_column($column), 'set' => fn ($user, $value) => $user->stage($column, (string) $value)];
@@ -205,7 +212,7 @@ abstract class User_Resource extends Model_Resource {
         return [
             // No field changes: declared, so a roles rule can judge them (section 4).
             'send_password_reset' => ['label' => 'Send a password reset', 'capability' => 'edit_user', 'changes_record' => false, 'sets' => []],
-            'delete'              => ['label' => 'Delete', 'capability' => 'delete_user', 'input' => ['reassign' => 'int'], 'changes_record' => false, 'sets' => [], 'confirm' => true, 'validate' => fn ($model, array $input) => $this->check_reassign($model, (int) $input['reassign'])],
+            'delete'              => ['label' => 'Delete', 'capability' => 'delete_user', 'input' => ['reassign' => 'int'], 'changes_record' => false, 'sets' => [], 'confirm' => true, 'by_name' => true, 'validate' => fn ($model, array $input) => $this->check_reassign($model, (int) $input['reassign'])],
         ];
 
     }
