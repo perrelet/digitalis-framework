@@ -12,9 +12,18 @@
 	var el     = wp.element.createElement;
 	var Button = wp.components && wp.components.Button;
 
+	// The editor can collapse its meta-box pane to a bar, leaving the box nothing to scroll to.
+	function openPane () {
+		var prefs = wp.data && wp.data.select( 'core/preferences' );
+		if ( prefs && ! prefs.get( 'core/edit-post', 'metaBoxesMainIsOpen' ) ) wp.data.dispatch( 'core/preferences' ).set( 'core/edit-post', 'metaBoxesMainIsOpen', true );
+	}
+
 	function scrollToBox () {
-		var box = document.getElementById( data.box );
-		if ( box ) box.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+		openPane();
+		requestAnimationFrame( function () {
+			var box = document.getElementById( data.box );
+			if ( box ) box.scrollIntoView( { behavior: 'smooth', block: 'start' } );
+		} );
 	}
 
 	function Panel () {
@@ -43,6 +52,7 @@
 
 			if ( box ) {
 				clearInterval( timer );
+				openPane();
 				[ 0, 400, 900 ].forEach( function ( t ) { setTimeout( function () { box.scrollIntoView( { block: 'start' } ); }, t ); } );
 			} else if ( ++tries > 40 ) {
 				clearInterval( timer );
