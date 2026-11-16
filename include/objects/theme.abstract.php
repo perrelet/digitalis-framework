@@ -71,6 +71,17 @@ abstract class Theme {
     
             }, PHP_INT_MAX);
 
+            // Sassy 3.0 reads only the queues it is given, so a handle registered here is
+            // invisible to it (and never compiled) unless this registry is one of them.
+            add_filter('sassy-style-queues', function ($queues) {
+
+                global $digitalis_styles;
+                if ($digitalis_styles) $queues[] = $digitalis_styles;
+
+                return $queues;
+
+            });
+
         }
 
         $digitalis_styles->add($handle, $src, $deps, $version);
