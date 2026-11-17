@@ -7,7 +7,7 @@ use DateTime;
 class Log extends Service {
 
     protected static $cache_group    = self::class;  
-    protected static $cache_property = 'file';  
+    protected static $cache_property = null; // named by get_cache_key(), so the held name guard leaves array calls alone
 
     protected $file        = 'log.log';
     protected $directory   = null;
@@ -18,6 +18,21 @@ class Log extends Service {
     public static function create ($data = []) {
 
         return parent::create(is_string($data) ? ['file' => $data] : $data);
+
+    }
+
+    // The name is the file.
+    public static function declare (string $name, array $config = []) {
+
+        if (isset($config['file']) && ($config['file'] !== $name)) return static::refuse_declare("declares '{$name}' and gives another file", 'leave file out: the name fills it');
+
+        return parent::declare($name, ['file' => $name] + $config);
+
+    }
+
+    protected function get_cache_key () {
+
+        return $this->file;
 
     }
 

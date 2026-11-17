@@ -167,13 +167,15 @@ Four calls cover every case:
 | Call | Answers |
 |---|---|
 | `Thing::inst()` | The class's own instance, built on first use |
-| `Thing::declare('name', $config)` | A new instance kept under `name`. A name is taken once: declaring it again gets one `_doing_it_wrong` notice and answers the holder when it is one of the asking class, `null` otherwise |
+| `Thing::declare('name', $config)` | A new instance kept under `name`. A name is taken once: declaring it again gets one `_doing_it_wrong` notice per request and answers the holder when it is one of the asking class, `null` otherwise |
 | `Thing::inst('name')` | The instance holding `name`, or `null` (a `Log` builds that file). Only an instance of the asking class or a subclass is answered |
 | `Thing::create($config)` | A new instance nothing finds again |
 
-A config is on the instance before its constructor runs, so a constructor reads what it was configured with. In a family named by a property (`id`, `slug`, a log's `file`) the declared name fills that property. A route's name is only a name: its path comes in the config, since plugins share paths and a GET and a POST route share one, and a `Route` is kept under `Class#index`, never under its path (`Deprecated_Route` is still keyed by path). `App` and `Model` refuse `declare()`: an app is found by its class, a model by its id.
+A config is on the instance before its constructor runs, so a constructor reads what it was configured with. In a family named by a property (`id`, `slug`) the declared name fills that property, and a declared log's name is its `file`. A route's name is only a name: its path comes in the config, since plugins share paths and a GET and a POST route share one, and a `Route` is kept under `Class#index`, never under its path (`Deprecated_Route` is still keyed by path). `App` and `Model` refuse `declare()`: an app is found by its class, a model by its id.
 
-`get_instance([...])` with a config is the legacy form: it builds on every call. Where the config names a name the family already holds, the call gets one notice per request and the holder answers, its new config ignored; when another class holds the name the newcomer is built on every call and kept under nothing (a feature: under its class). A log's name is its file, so a second config of a held file answers the first log whatever `directory` it gives.
+`get_instance([...])` with a config is the legacy form: it builds on every call. Where the config names a name the family already holds, the call gets one notice per request and the holder answers, its new config ignored; when another class holds the name the newcomer is built on every call and kept under nothing (a feature: under its class). The guard leaves `Log` alone: an array call for a log builds as it always did and takes over that file's name in the registry.
+
+Three things changed for code written before `declare()`: a property the constructor sets is no longer overwritten by the config (the constructor now runs after it); a scalar lookup of a name another class holds answers `null` where it answered that class's instance; and a `Route` is no longer found by its path.
 
 `$cache_group` allows subclass families to share or isolate their instance caches. Override it to prevent cross-class cache collisions. `get_group_instances()` retrieves all instances registered under a group — used by `App` to discover all active plugin Apps.
 

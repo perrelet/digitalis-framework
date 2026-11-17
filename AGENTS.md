@@ -69,7 +69,7 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 **DO NOT** `new ClassName()` for an auto-loaded class — it's already a singleton; `new` bypasses `get_instance()`, creating a second instance with duplicate hook registration. Use `ClassName::get_instance()` (idempotent — returns the cached singleton).
 
-**A name is given, not derived.** `Thing::declare('name', $config)` builds once under a name, `Thing::inst('name')` finds it, `Thing::create($config)` builds one nothing finds, and a bare `Thing::inst()` is the class's own instance. A taken name gets one notice: the holder answers its own class, another class gets `null`. `get_instance([...])` with a config is legacy: it builds on every call unless the config names a held name. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md#2-factory-pattern).
+**A name is given, not derived.** `Thing::declare('name', $config)` builds once under a name, `Thing::inst('name')` finds it, `Thing::create($config)` builds one nothing finds, and a bare `Thing::inst()` is the class's own instance. Declaring a taken name gets one notice per request: the holder answers its own class, another class gets `null`. `get_instance([...])` with a config is legacy: it builds on every call, unless the config names a name its own class holds. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md#2-factory-pattern).
 
 **DO NOT** use `include/` for WIP / scratch classes — they'll auto-instantiate and run on every request. Use `_dirname/` (skipped entirely) for scratch, or `.abstract.` in the filename if you want the parent loaded but not instantiated.
 
