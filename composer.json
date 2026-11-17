@@ -2,6 +2,7 @@
     "name": "digitalis/lattice",
     "description": "Lattice: a WordPress plugin framework",
     "type": "library",
+    "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=8.0"
     },
