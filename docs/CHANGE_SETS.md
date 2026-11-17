@@ -62,7 +62,7 @@ Each day the feature withdraws `draft` and `broken` sets idle past `lattice.chan
 
 ## Erasure
 
-When an account is erased (`lattice.resources.erased`), an open set touching it is broken, then every set naming it loses its steps' values, its purpose, note and reason, its own rows' values and the why it gave other rows. A set that cannot be broken keeps its values and is logged. Sets naming an account are broken, if open, and lose their values the same way after a year.
+When a record about a person is erased (`lattice.resources.erased`), an open set touching it is broken, then every set naming it loses its steps' values, its purpose, note and reason, its own rows' values and the why it gave other rows. A set holding the person's address in a step's email field (a create has no record yet) is found by `lattice.resources.erasing_person` and goes the same way, in any state. A set that cannot be broken keeps its values and is logged. Sets with a step on a resource holding people are broken, if open, and lose their values the same way after the shortest of their resources' periods ([RESOURCES.md](./RESOURCES.md#people)).
 
 ## Extending
 

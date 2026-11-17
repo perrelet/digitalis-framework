@@ -433,6 +433,23 @@ public function view () {
 ```
 ---
 
+### Read derived params during the render, not after
+
+A print leaves the view as configured, so what `params()` derived is gone once it ends.
+
+```php
+// ❌
+$view->print();
+$id = $view['id'];
+add_action('wp_footer', fn () => print(json_encode($this->get_params())));   // inside view(): runs after the render
+
+// ✅
+public function view () {
+    $id = $this['id'];
+    add_action('wp_footer', fn () => print(json_encode($id)));
+}
+```
+
 ## Query_Manager / Digitalis_Query
 
 ### `Digitalis_Query` is removed — use `Query_Vars` + `Query_Manager`
@@ -576,6 +593,14 @@ class Product_Page extends Page_View {
 ---
 
 ## General PHP / Framework
+
+### A generic method name on a base class
+
+`Factory` is the base of nearly every class in every consumer, so a `protected` or `public` method added there is a name taken from all of them. PHP refuses a subclass whose method differs in kind ("Cannot make static method `Factory::refuse()` non static"), and the site fatals at load. Keep a base class's internals `private` and call them with `self::`: a private method is invisible to inheritance, so a subclass may have its own. Check any new `protected` or `public` name on a base against the consumers before it lands.
+
+### `get_instance([...])` where a name is wanted
+
+An array `get_instance()` builds on every call unless its config names a held name (a feature is found by its `id` or its default name), so in a loop, a render or a hook that fires twice it adds its hooks again. Name it once and find it after: `Thing::declare('name', $config)` at load, `Thing::inst('name')` wherever it is needed. For a one-off nothing needs to find, `Thing::create($config)`.
 
 ### Prefix vendor model variables — reserve short names for framework models
 

@@ -11,7 +11,7 @@ class Journal extends Service {
     const MARKS = ['set_key', 'set_step', 'proposer_id'];
     const ERASED = '[erased]';
     // One renewal cycle (E9).
-    const ACCOUNT_VALUES_DAYS = 365;
+    const PEOPLE_VALUES_DAYS = 365;
 
     protected function get_table () : string {
 
@@ -42,9 +42,14 @@ class Journal extends Service {
             'undoes'         => $row['undoes'] ?? null,
         ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) + ['credential' => Credentials::inst()->get_uuid(), 'credential_name' => is_null($name = Credentials::inst()->get_name()) ? null : mb_substr($name, 0, 255)] : []));
 
-        Resources::inst()->note_row((int) $wpdb->insert_id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
+        $id = (int) $wpdb->insert_id;
 
-        return (int) $wpdb->insert_id;
+        Resources::inst()->note_row($id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
+
+        // An erase action writes its own row after erasing.
+        if (Resources::inst()->was_erased((string) $row['resource'], (string) $row['record_id'])) $this->scrub((string) $row['resource'], (string) $row['record_id'], '_scrubbed');
+
+        return $id;
 
     }
 
@@ -55,7 +60,11 @@ class Journal extends Service {
 
         foreach (array_intersect_key($changes, ['before' => 0, 'after' => 0]) as $column => $value) $changes[$column] = is_null($value) ? null : wp_json_encode($value);
 
-        return (bool) $wpdb->update($this->get_table(), $changes, ['id' => $id]);
+        $done = (bool) $wpdb->update($this->get_table(), $changes, ['id' => $id]);
+
+        if (($row = $this->find($id)) && Resources::inst()->was_erased($row['resource'], (string) $row['record_id'])) $this->scrub($row['resource'], (string) $row['record_id'], '_scrubbed');
+
+        return $done;
 
     }
 
@@ -155,11 +164,11 @@ class Journal extends Service {
         // After the delete, so a failure here never keeps old rows.
         try {
 
-            $this->expire_accounts();
+            $this->expire_people();
 
         } catch (\Throwable $e) {
 
-            error_log('Lattice journal: expiring account values failed: ' . $e->getMessage());
+            error_log('Lattice journal: expiring values about people failed: ' . $e->getMessage());
 
         }
 
@@ -211,23 +220,39 @@ class Journal extends Service {
 
     }
 
-    public function expire_accounts () : int {
+    public function expire_people () : int {
 
         global $wpdb;
 
-        $days   = (int) apply_filters('lattice.journal.account_values_days', static::ACCOUNT_VALUES_DAYS);
-        $before = gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS);
-        $done   = 0;
+        $done = 0;
 
-        foreach (Resources::inst()->get_resources() as $resource) {
+        foreach (Resources::inst()->get_people_resources() as $resource) {
 
-            if (!$resource->is_named_only()) continue;
+            $before = gmdate('Y-m-d H:i:s', time() - $resource->get_people_values_days() * DAY_IN_SECONDS);
 
             foreach ((array) $wpdb->get_col($wpdb->prepare("SELECT DISTINCT record_id FROM {$this->get_table()} WHERE resource = %s AND `at` < %s AND `after` NOT LIKE %s AND `after` NOT LIKE %s", $resource->get_name(), $before, '%' . $wpdb->esc_like('"_scrubbed"') . '%', '%' . $wpdb->esc_like('"_expired"') . '%')) as $record_id) $done += $this->scrub($resource->get_name(), (string) $record_id, '_expired', $before);
 
         }
 
         return $done;
+
+    }
+
+    // Rows written meanwhile join the end, so pages never shift.
+    public function query_records (array $records, int $page) : array {
+
+        global $wpdb;
+
+        $where = [];
+
+        foreach ($records as $resource => $ids) if ($ids) $where[] = $wpdb->prepare('(resource = %s AND record_id IN (' . implode(', ', array_fill(0, count($ids), '%s')) . '))', $resource, ...array_map('strval', $ids));
+
+        if (!$where) return [];
+
+        $per_page = static::PER_PAGE;
+        $offset   = (max(1, $page) - 1) * $per_page;
+
+        return array_map([$this, 'decode'], (array) $wpdb->get_results("SELECT * FROM {$this->get_table()} WHERE " . implode(' OR ', $where) . " ORDER BY id ASC LIMIT {$per_page} OFFSET {$offset}", ARRAY_A));
 
     }
 

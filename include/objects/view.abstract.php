@@ -119,50 +119,60 @@ abstract class View implements \ArrayAccess {
 
         if (!isset(self::$indexes[static::class])) self::$indexes[static::class] = 0;
 
-        $this->set_param('view_index', self::$indexes[static::class]);
-        $this->inject_dependencies($this->params, static::get_defaults());
+        $configured = $this->params;
 
-        if (!$this->pre_validate()) return '';
+        try {
 
-        $this->params($this->params);
+            $this->set_param('view_index', self::$indexes[static::class]);
+            $this->inject_dependencies($this->params, static::get_defaults());
 
-        if (!$this->validate()) return '';
+            if (!$this->pre_validate()) return '';
 
-        self::$indexes[static::class]++;
+            $this->params($this->params);
 
-        if ($return) ob_start();
+            if (!$this->validate()) return '';
 
-        if ($this->is_first()) $this->before_first();
-        $this->before();
+            self::$indexes[static::class]++;
 
-        if ($template = $this->get_template()) {
+            if ($return) ob_start();
 
-            $path = realpath(trailingslashit($this->get_template_path()) . $template . '.php');
+            if ($this->is_first()) $this->before_first();
+            $this->before();
 
-            if (file_exists($path)) {
+            if ($template = $this->get_template()) {
 
-                extract($this->params, EXTR_OVERWRITE);
-                require $path;
+                $path = realpath(trailingslashit($this->get_template_path()) . $template . '.php');
+
+                if (file_exists($path)) {
+
+                    extract($this->params, EXTR_OVERWRITE);
+                    require $path;
+
+                }
+
+            } else {
+
+                $this->view();
 
             }
 
-        } else {
+            if ($this->is_first()) $this->after_first();
+            $this->after();
 
-            $this->view();
+            if ($return) {
+
+                $html = ob_get_contents();
+                ob_end_clean();
+                return $html;
+
+            }
+
+        } finally {
+
+            $this->params = $configured;
 
         }
 
-        if ($this->is_first()) $this->after_first();
-        $this->after();
-
-        if ($return) {
-
-            $html = ob_get_contents();
-            ob_end_clean();
-            return $html;
-
-        }
-    
     }
 
     protected function inject_dependencies (&$params, $defaults) {

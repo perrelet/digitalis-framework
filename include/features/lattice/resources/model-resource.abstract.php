@@ -285,6 +285,19 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // Values by side; a resource takes out another person's.
+    public function prepare_export (array $values, $model = null) : array {
+
+        return $values;
+
+    }
+
+    public function get_people_values_days () : int {
+
+        return (int) apply_filters('lattice.journal.people_values_days', Journal::PEOPLE_VALUES_DAYS, $this);
+
+    }
+
     public function stage_model_values ($model, array $values) : void {
 
         foreach ($values as $name => $value) {
@@ -527,7 +540,7 @@ abstract class Model_Resource extends Singleton {
 
         return [
             'id'         => $model?->get_id(),
-            'own'        => $model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id()))) : true,
+            'own'        => $this->has_owner() && ($model ? ($this->get_post_type() && ((int) get_post_field('post_author', $model->get_id()) === ($user_id ?? get_current_user_id()))) : true),
             'conditions' => fn (string $name) => isset($conditions[$name]) && (bool) $conditions[$name]($model, $values),
         ];
 
@@ -549,6 +562,31 @@ abstract class Model_Resource extends Singleton {
     public function is_named_only () : bool {
 
         return false;
+
+    }
+
+    final public function holds_accounts () : bool {
+
+        return is_a(static::$model_class, User::class, true);
+
+    }
+
+    public function has_owner () : bool {
+
+        return true;
+
+    }
+
+    // CREDENTIALS.md, Accounts (A0).
+    public function is_reached_by_name (string $verb) : bool {
+
+        return (bool) preg_match('/^(rehearse:)?act:([a-z0-9_]+)$/', $verb, $match) && !empty($this->get_actions()[$match[2]]['by_name']);
+
+    }
+
+    public function get_request_flags (string $verb) : array {
+
+        return array_filter(['named_only' => $this->is_named_only(), 'accounts' => $this->holds_accounts(), 'by_name' => $this->is_reached_by_name($verb)]);
 
     }
 

@@ -69,6 +69,8 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 **DO NOT** `new ClassName()` for an auto-loaded class — it's already a singleton; `new` bypasses `get_instance()`, creating a second instance with duplicate hook registration. Use `ClassName::get_instance()` (idempotent — returns the cached singleton).
 
+**A name is given, not derived.** `Thing::declare('name', $config)` builds once under a name, `Thing::inst('name')` finds it, `Thing::create($config)` builds one nothing finds, and a bare `Thing::inst()` is the class's own instance. Declaring a taken name gets one notice per request: the holder answers its own class, another class gets `null`. `get_instance([...])` with a config is legacy: it builds on every call, unless the config names a name its own class holds. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md#2-factory-pattern).
+
 **DO NOT** use `include/` for WIP / scratch classes — they'll auto-instantiate and run on every request. Use `_dirname/` (skipped entirely) for scratch, or `.abstract.` in the filename if you want the parent loaded but not instantiated.
 
 For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
@@ -569,6 +571,9 @@ A post with `post_type='project'` returns a `Project` instance, not a base `Post
 The cached instance state may still hold pre-change values, and a full `save()` will silently overwrite the field the caller just changed. Write the targeted field only (`update_meta`, `update_field`, or `wp_update_post` with one specific field). See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
 
 **Quick reference for the four core model-method traps** — `query()` returns array not builder, `$model->save()` not `wp_update_*`, wrapped accessors not raw keys, vendor-prefixed variable naming — at [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+
+**A print leaves the view as configured.**
+`params()` derives for one render and the params are restored when it ends: read derived values, `get_index()` and `is_first()` inside the render, and capture by value into any closure that runs later. A `Field_Group` draws copies of the field views it is given. See [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **Quick reference for the five view-system traps** — `$merge` doesn't accumulate, `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 

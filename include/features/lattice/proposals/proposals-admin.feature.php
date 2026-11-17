@@ -83,7 +83,7 @@ class Proposals_Admin extends Feature {
 
         if (!($wp_post = get_post()) || !($proposal = Proposal::find($wp_post->ID))) return;
 
-        wp_enqueue_script('lattice-proposal-status', plugin_dir_url(__FILE__) . 'proposal-status.js', ['wp-plugins', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-components'], DIGITALIS_FRAMEWORK_VERSION, true);
+        wp_enqueue_script('lattice-proposal-status', plugin_dir_url(__FILE__) . 'proposal-status.js', ['wp-plugins', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-components', 'wp-data', 'wp-preferences'], DIGITALIS_FRAMEWORK_VERSION, true);
         wp_localize_script('lattice-proposal-status', 'latticeProposalStatus', Proposal_Status::describe($proposal) + ['box' => Proposal_Review_Box::ID, 'reviewLabel' => 'Review and approve ↓']);
 
     }

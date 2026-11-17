@@ -15,6 +15,7 @@ Read and change models through one layer, the way wp-admin does: REST (`lattice/
 - [Option Pages](#option-pages)
 - [Orders](#orders)
 - [Accounts](#accounts)
+- [People](#people)
 - [The Version](#the-version)
 - [The Journal and Undo](#the-journal-and-undo)
 - [Trash](#trash)
@@ -211,6 +212,7 @@ public function act_activate ($offer, array $input, Resource_Change $change) { $
 | `changes_record` | `false` for one that makes a new record (`copy`) and needs no version |
 | `undo` | The action that reverses it |
 | `lock` | `false` runs the action whatever `get_lock()` asks, for the one thing a record still takes in a state that otherwise holds it. Everything else stands: the right to update, `lattice.resources.refuse`, `capability`, `when`, `validate`, the version, the why and `confirm`. Its `when` is then the only guard on the record's state, so write one. A `writes_through` action's inner write still meets the lock |
+| `by_name` | A credential's allow or review reaches it only by naming it (`act:<name>`), never by `writes` or `act:*`; a deny reaches it either way. For what nothing undoes: an account's `delete` |
 | `writes_through` | The action writes through this service, which checks, previews, claims and journals that write. `act_{name}($model, $input, $via)` gets the whole input (`why`, `confirm`, `dry_run` included) after the record's and the action's refusals, the declared input and the why, and answers that write's result, a `WP_Error` keeping its data. It handles its own dry run and needs no version of its own, and answers an array or a `WP_Error`. It declares no `undo`: the journal row is the inner write's |
 
 `act_{name}()` returns the model, a new record, or a `WP_Error`. An error that changed nothing keeps its own code.
@@ -311,8 +313,29 @@ class Account_Resource extends \Digitalis\User_Resource {
 - **Mail in a dry run:** the email-change notice to the old address, the new-user mail on a create with `notify` and the reset mail, each asked of the filter WordPress asks (`send_email_change_email` with what `wp_update_user()` gets, `send_retrieve_password_email`). An address shows only to a reader who may read `email`. The new-user mail's own filter needs the account, so a create names it whenever `notify` is set.
 - **Rights:** listing and reading need `list_users`; updating and a reset need `edit_user` with the id; giving roles needs `promote_user` with the id (`promote_users` on a create) and roles the account may give; creating needs `create_users`; deleting needs `delete_user` with the id.
 - **Outside changes** (a profile screen, a user sync, an erasure) raise the version and write one `changed` row per account per request, naming the fields and holding no values.
-- **Erasure:** `Resources::erase_account($user_id)` replaces the values and why of every row about the account with `[erased]`, keeping the row; WordPress's privacy exporter and eraser list and scrub them, and `lattice.resources.erased` tells others (change sets). Values in rows about an account expire after a year (`lattice.journal.account_values_days`) in the daily prune. Nothing undoes an erased or expired row.
+- **Erasure:** accounts hold people (below). `Resources::erase_account($user_id)` erases an account's rows by its id, for code that erases other than through WordPress's privacy tools.
+- **What makes a resource an account resource:** its model is a `Digitalis\User` (`holds_accounts()`, final). Such a resource must be named only and hold people, or it is not registered.
 - `Model_Resource::get_value_needs()`, `get_before_facts()`, `find_made()`, `get_summary_fields()` and `get_search_fields()` are the seams it uses; another resource may use them too.
+
+## People
+
+A resource whose records are about people implements `Holds_People`, and erasure, export and the journal's value expiry reach its records. Accounts do by construction; a contact store, a teacher profile or orders may opt in; a resource whose records are about several people (a group booking) should not.
+
+```php
+class Contact_Resource extends \Digitalis\Model_Resource implements \Digitalis\Holds_People {
+
+    public function find_ids_by_email (string $email) : array { return Contacts::inst()->find_ids($email); }
+
+}
+```
+
+- **Records reached by an address:** `find_ids_by_email()` answers the record ids an address reaches; an empty address reaches none.
+- **Erasure:** `Resources::erase_records($resource, $ids)` replaces the values and why of every row about those records with `[erased]`, keeping the rows, and fires `lattice.resources.erased` (the resource, each record id). It acts at once, wherever it is called, and a row written or amended later in the same process about an erased record is scrubbed as it is written, so an erase action's own row keeps nothing. A change set applying the erasure is left to finish its walk. `erase_person($email)` runs it for every record an address reaches, and fires `lattice.resources.erasing_person` for what holds the address without a record (change sets' pending steps); WordPress's privacy eraser calls it, reporting rows scrubbed and any resource whose lookup failed. A resource that deletes what a lookup will no longer find (a store deleting a contact) calls `erase_records()` itself.
+- **Export:** WordPress's privacy exporter lists the rows about every record an address reaches, oldest first by id a page at a time, every value whole, after the resource's `prepare_export(['before' => …, 'after' => …], $model)` has taken out another person's details. A resource whose lookup fails makes the export refuse rather than come back incomplete; a row whose `prepare_export()` throws is exported as kept.
+- **Expiry:** values in rows about people expire in the daily prune after the resource's `get_people_values_days()` (`lattice.journal.people_values_days`, given the resource, 365). Nothing undoes an erased or expired row.
+- **Owners:** `has_owner()` answers whether `records: own` can mean anything, true by default. A resource whose records have no author overrides it with false, so `own` is refused in its rules and false on a create; accounts answer false (A1).
+- **Kept:** a person's name on the changes they made (`user_id`, `credential_name`), for accountability.
+- **Limits:** rows holding an address a person no longer has, an account deleted without its erasure and an address inside longer text in a pending step are reached only by expiry.
 
 ## The Version
 

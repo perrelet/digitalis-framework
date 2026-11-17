@@ -23,6 +23,7 @@ class Resources extends Service {
     protected int $checking = 0;
     protected int $checking_accounts = 0;
     protected array $writing   = [];
+    protected array $erased    = [];
     protected ?Model_Resource $creating = null;
     protected ?array $walk     = null;
 
@@ -36,6 +37,14 @@ class Resources extends Service {
         if (!method_exists($class, 'get_unsaved_copy') || !method_exists($class, 'claim_version')) {
 
             _doing_it_wrong(static::class . '::register', esc_html("{$class} needs Has_Unsaved_Copies and Has_Version to be a resource."), '');
+            return;
+
+        }
+
+        // Accounts are named only (find_missing_on_resource() relies on it) and erasable.
+        if ($resource->holds_accounts() && (!$resource->is_named_only() || !($resource instanceof Holds_People))) {
+
+            _doing_it_wrong(static::class . '::register', esc_html("{$name} holds accounts, so it is reached only by name and holds people: it was not registered."), '');
             return;
 
         }
@@ -1746,7 +1755,7 @@ class Resources extends Service {
     protected function can (Model_Resource $resource, string $operation, $model) : bool {
 
         $this->checking++;
-        $this->checking_accounts += (int) $resource->is_named_only();
+        $this->checking_accounts += (int) $resource->holds_accounts();
 
         try {
 
@@ -1755,7 +1764,7 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
-            $this->checking_accounts -= (int) $resource->is_named_only();
+            $this->checking_accounts -= (int) $resource->holds_accounts();
 
         }
 
@@ -1764,11 +1773,11 @@ class Resources extends Service {
     // For the storage stage (A4): an update by id, a create by its staged login.
     public function get_account_write (int $user_id, ?string $login = null) : ?object {
 
-        foreach ($this->get_resources() as $resource) if ($resource->is_named_only() && is_object($model = $this->writing["{$resource->get_name()}:{$user_id}"] ?? null)) return $model;
+        foreach ($this->get_resources() as $resource) if ($resource->holds_accounts() && is_object($model = $this->writing["{$resource->get_name()}:{$user_id}"] ?? null)) return $model;
 
         $made = $this->writing['new'] ?? null;
 
-        if (!is_object($made) || !$this->creating?->is_named_only()) return null;
+        if (!is_object($made) || !$this->creating?->holds_accounts()) return null;
 
         $given = $user_id ? get_userdata($user_id)?->user_login : $login;
 
@@ -1781,11 +1790,26 @@ class Resources extends Service {
 
         $done = 0;
 
-        foreach ($this->get_resources() as $resource) if ($resource->is_named_only()) {
+        foreach ($this->get_resources() as $resource) if ($resource->holds_accounts()) $done += $this->erase_records($resource, [$user_id]);
 
-            $done += Journal::inst()->scrub($resource->get_name(), (string) $user_id, '_scrubbed');
+        return $done;
 
-            do_action('lattice.resources.erased', $resource, $user_id);
+    }
+
+    // Acts at once, even at shutdown; Journal::write() scrubs later rows about the record, for the rest of the process.
+    public function erase_records (Model_Resource $resource, array $ids) : int {
+
+        $done = 0;
+
+        foreach (array_unique(array_map('strval', $ids)) as $id) {
+
+            if ($id === '') continue;
+
+            $this->erased["{$resource->get_name()}:{$id}"] = true;
+
+            $done += Journal::inst()->scrub($resource->get_name(), $id, '_scrubbed');
+
+            do_action('lattice.resources.erased', $resource, $id);
 
         }
 
@@ -1793,45 +1817,130 @@ class Resources extends Service {
 
     }
 
-    public function export_personal_data (string $email, int $page = 1) : array {
+    public function get_people_resources () : array {
 
-        $user  = get_user_by('email', $email);
+        return array_filter($this->get_resources(), fn ($resource) => $resource instanceof Holds_People);
+
+    }
+
+    public function get_walking_key () : ?int {
+
+        return $this->walk['key'] ?? null;
+
+    }
+
+    public function was_erased (string $resource, string $record_id) : bool {
+
+        return isset($this->erased["{$resource}:{$record_id}"]);
+
+    }
+
+    // done: rows scrubbed; failed: resources whose lookup threw, whose rows are kept.
+    public function erase_person (string $email) : array {
+
+        $answer = ['done' => 0, 'failed' => []];
+
+        if (!$email = mb_strtolower(trim($email))) return $answer;
+
+        foreach ($this->find_person_records($email, $answer['failed']) as $name => $ids) $answer['done'] += $this->erase_records($this->get_resource($name), $ids);
+
+        do_action('lattice.resources.erasing_person', $email);
+
+        return $answer;
+
+    }
+
+    // resource name => record ids.
+    protected function find_person_records (string $email, array &$failed = []) : array {
+
+        $records = [];
+
+        foreach ($this->get_people_resources() as $name => $resource) {
+
+            try {
+
+                if ($ids = array_values(array_unique(array_map('strval', $resource->find_ids_by_email($email))))) $records[$name] = $ids;
+
+            } catch (\Throwable $e) {
+
+                $failed[] = $resource->get_label();
+                error_log("Lattice resources: finding {$name}'s records for an erasure or export failed: " . $e->getMessage());
+
+            }
+
+        }
+
+        return $records;
+
+    }
+
+    // Values whole: present_changes() shortens them.
+    public function export_personal_data (string $email, int $page = 1) : array|WP_Error {
+
+        $failed  = [];
+        $records = $this->find_person_records(mb_strtolower(trim($email)), $failed);
+
+        if ($failed) return new WP_Error('lattice_export', 'Changes to ' . implode(', ', $failed) . ' could not be looked up, so this export would be incomplete: see the error log.');
+
+        $rows  = Journal::inst()->query_records($records, $page);
+        $text  = fn ($value) => (is_scalar($value) || is_null($value)) ? (string) $value : wp_json_encode($value);
         $items = [];
 
-        $rows = [];
+        foreach ($rows as $row) {
 
-        foreach ($user ? $this->get_resources() : [] as $resource) if ($resource->is_named_only()) for ($at = 1; $found = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $user->ID, 'page' => $at]); $at++) array_push($rows, ...$found);
+            $resource = $this->get_resource($row['resource']);
+            $values   = ['before' => (array) ($row['before'] ?? []), 'after' => (array) ($row['after'] ?? [])];
 
-        foreach ($rows as $row) $items[] = [
-            'group_id'    => 'lattice-journal',
-            'group_label' => 'Changes to your account',
-            'item_id'     => "lattice-journal-{$row['id']}",
-            'data'        => [
-                ['name' => 'When',    'value' => $row['at']],
-                ['name' => 'Through', 'value' => $row['via']],
-                ['name' => 'Change',  'value' => $row['action']],
-                ['name' => 'Fields',  'value' => implode(', ', array_keys(array_diff_key((array) ($row['after'] ?? []), array_flip(['_partial', '_scrubbed', '_expired', '_fields'])))) ?: implode(', ', (array) ($row['after']['_fields'] ?? []))],
-                ['name' => 'Values',  'value' => wp_json_encode(['before' => $row['before'], 'after' => $row['after']])],
-            ],
-        ];
+            try {
 
-        return ['data' => $items, 'done' => true];
+                $values = $resource->prepare_export($values, $resource->find($row['record_id']));
+
+            } catch (\Throwable $e) {
+
+                error_log("Lattice resources: preparing journal row {$row['id']} for an export failed, so it is exported as kept: " . $e->getMessage());
+
+            }
+
+            $lines = [];
+
+            foreach (array_unique([...array_keys($values['before']), ...array_keys($values['after'])]) as $key) if (!str_starts_with((string) $key, '_')) $lines[] = ['name' => (string) $key, 'value' => trim($text($values['before'][$key] ?? null) . ' → ' . $text($values['after'][$key] ?? null))];
+
+            if (!empty($values['after']['_fields'])) $lines[] = ['name' => 'Fields', 'value' => implode(', ', (array) $values['after']['_fields'])];
+
+            $items[] = [
+                'group_id'    => 'lattice-journal',
+                'group_label' => 'Changes to records about you',
+                'item_id'     => "lattice-journal-{$row['id']}",
+                'data'        => [
+                    ['name' => 'Record',  'value' => "{$resource->get_label()} {$row['record_id']}"],
+                    ['name' => 'When',    'value' => $row['at']],
+                    ['name' => 'Through', 'value' => $row['via']],
+                    ['name' => 'Change',  'value' => Journal::is_scrubbed($row) ? Journal::ERASED : $row['action']],
+                    ...$lines,
+                ],
+            ];
+
+        }
+
+        return ['data' => $items, 'done' => count($rows) < Journal::PER_PAGE];
 
     }
 
     public function erase_personal_data (string $email, int $page = 1) : array {
 
-        $user = get_user_by('email', $email);
-        $done = $user ? $this->erase_account((int) $user->ID) : 0;
+        $answer   = $this->erase_person($email);
+        $messages = $answer['done'] ? ["{$answer['done']} journal rows kept as a record that changes happened, their values erased."] : [];
 
-        return ['items_removed' => $done > 0, 'items_retained' => $done > 0, 'messages' => $done ? ["{$done} journal rows kept as a record that changes happened, their values erased."] : [], 'done' => true];
+        if ($answer['failed']) $messages[] = 'Changes to ' . implode(', ', $answer['failed']) . ' could not be looked up and keep their values.';
+
+        return ['items_removed' => $answer['done'] > 0, 'items_retained' => ($answer['done'] > 0) || (bool) $answer['failed'], 'messages' => $messages, 'done' => true];
 
     }
 
     protected function refuse_value_needs (Model_Resource $resource, $model, array $values) : ?WP_Error {
 
         $this->checking++;
-        $this->checking_accounts += (int) $resource->is_named_only();
+        $this->checking_accounts += (int) $resource->holds_accounts();
 
         try {
 
@@ -1840,7 +1949,7 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
-            $this->checking_accounts -= (int) $resource->is_named_only();
+            $this->checking_accounts -= (int) $resource->holds_accounts();
 
         }
 
@@ -1852,7 +1961,7 @@ class Resources extends Service {
     protected function can_capability (Model_Resource $resource, string $capability, $model) : bool {
 
         $this->checking++;
-        $this->checking_accounts += (int) $resource->is_named_only();
+        $this->checking_accounts += (int) $resource->holds_accounts();
 
         try {
 
@@ -1861,7 +1970,7 @@ class Resources extends Service {
         } finally {
 
             $this->checking--;
-            $this->checking_accounts -= (int) $resource->is_named_only();
+            $this->checking_accounts -= (int) $resource->holds_accounts();
 
         }
 
@@ -1952,14 +2061,13 @@ class Resources extends Service {
 
         }
 
-        return Credentials::inst()->answer_fields($entry, array_filter([
+        return Credentials::inst()->answer_fields($entry, $resource->get_request_flags($verb) + array_filter([
             'surface'    => 'resource',
             'target'     => $resource->get_name(),
-            'named_only' => $resource->is_named_only() ?: null,
             'verb'       => $verb,
             'fields'     => $fields,
             // Asked before any record is known (a list, the guide), a rule on some records counts, whether it opens or bars.
-            'facts'      => $walking + ($facts ?? ((!$model && (in_array($verb, ['list', 'read'], true) || (($verb === 'create') && $resource->is_named_only()))) ? ['any_record' => true] : $resource->get_facts($model))),
+            'facts'      => $walking + ($facts ?? ((!$model && (in_array($verb, ['list', 'read'], true) || (($verb === 'create') && $resource->holds_accounts()))) ? ['any_record' => true] : $resource->get_facts($model))),
             // How the call arrives holds after the change as before it.
             'after'      => is_null($after) ? null : $walking + $after,
             'dry_run'    => $dry_run,

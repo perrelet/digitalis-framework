@@ -24,6 +24,13 @@ abstract class App extends Factory {
 
     }
 
+    // An app is found by its class.
+    public static function declare (string $name, array $config = []) {
+
+        return static::refuse_declare("declares '{$name}'", 'an app is one per class: use inst()');
+
+    }
+
     // Boots after construction, once get_instance() has cached the app.
     protected function get_boot_priority () : int {
 

@@ -56,7 +56,7 @@ wp lattice credentials shared [<name>] [--input=<file>] [--delete]
 
 ## Accounts
 
-A resource over the user model (a site's `User_Resource`, see [RESOURCES.md](./RESOURCES.md#accounts)) is reached only by rules naming it, never by `resource:*`, and every allow or review rule on it lists `roles`:
+A resource answering `is_named_only()` is reached only by rules naming it, never by `resource:*`, and on it any matching deny decides. A resource over the user model (a site's `User_Resource`, see [RESOURCES.md](./RESOURCES.md#accounts)) is always named only, and every allow or review rule on it lists `roles`:
 
 ```json
 { "verbs": ["create", "update", "act:send_password_reset"], "on": "resource:account", "roles": ["subscriber", "customer"], "answer": "review" }
@@ -64,8 +64,8 @@ A resource over the user model (a site's `User_Resource`, see [RESOURCES.md](./R
 
 - An allow or review covers an account only while every role it holds or is given is listed, it holds at least one unless the list names `none`, it holds no stored capability beyond them and it is not the password's own account.
 - A deny is never narrowed: without `roles` it holds on every account, with them on any account holding one; on these resources any matching deny decides.
-- `act:delete` is reached by an allow or review only by that name, never by `writes` or `act:*`.
-- `records` may be `made_by_credential`, or a condition the site declares (`teacher`).
+- An action declaring `by_name` (an account's `delete`) is reached by an allow or review only by its name, never by `writes` or `act:*`, on any resource.
+- `records` may be `made_by_credential`, or a condition the site declares (`teacher`); `own` is refused wherever records have no owner (`has_owner()`), accounts included.
 - Roles are judged on this site only; a user sync carries a change to others, where the account may be staff. `explain` says so, and from the CLI counts the covered accounts holding each declared condition, as they are now.
 
 ## Where it holds

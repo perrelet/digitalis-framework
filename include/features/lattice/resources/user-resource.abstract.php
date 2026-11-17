@@ -3,7 +3,7 @@
 namespace Digitalis;
 
 // A site subclasses and registers it, naming its own fields and conditions (SCOPED_CREDENTIALS.md 18).
-abstract class User_Resource extends Model_Resource {
+abstract class User_Resource extends Model_Resource implements Holds_People {
 
     protected static $model_class = Account::class;
 
@@ -82,6 +82,19 @@ abstract class User_Resource extends Model_Resource {
     public function is_named_only () : bool {
 
         return true;
+
+    }
+
+    public function find_ids_by_email (string $email) : array {
+
+        return ($email !== '') && ($wp_user = get_user_by('email', $email)) ? [(int) $wp_user->ID] : [];
+
+    }
+
+    // A rule never covers the password's own account (A1), so own would cover nothing.
+    public function has_owner () : bool {
+
+        return false;
 
     }
 
@@ -205,7 +218,7 @@ abstract class User_Resource extends Model_Resource {
         return [
             // No field changes: declared, so a roles rule can judge them (section 4).
             'send_password_reset' => ['label' => 'Send a password reset', 'capability' => 'edit_user', 'changes_record' => false, 'sets' => []],
-            'delete'              => ['label' => 'Delete', 'capability' => 'delete_user', 'input' => ['reassign' => 'int'], 'changes_record' => false, 'sets' => [], 'confirm' => true, 'validate' => fn ($model, array $input) => $this->check_reassign($model, (int) $input['reassign'])],
+            'delete'              => ['label' => 'Delete', 'capability' => 'delete_user', 'input' => ['reassign' => 'int'], 'changes_record' => false, 'sets' => [], 'confirm' => true, 'by_name' => true, 'validate' => fn ($model, array $input) => $this->check_reassign($model, (int) $input['reassign'])],
         ];
 
     }

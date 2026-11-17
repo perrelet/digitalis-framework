@@ -371,7 +371,7 @@ class Credentials extends Service {
 
         foreach (class_exists(Resources::class) ? Resources::inst()->get_resources() : [] as $name => $resource) {
 
-            $ask = fn (string $verb, array $fields = []) => $this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => $verb, 'fields' => $fields, 'facts' => ['any_record' => true]] + ($resource->is_named_only() ? ['named_only' => true] : []));
+            $ask = fn (string $verb, array $fields = []) => $this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => $verb, 'fields' => $fields, 'facts' => ['any_record' => true]] + $resource->get_request_flags($verb));
 
             $fields = array_keys($resource->get_fields());
             $reads  = $ask('read', $fields);
@@ -405,7 +405,11 @@ class Credentials extends Service {
 
             if (!$resource->is_named_only() || !$named) continue;
 
-            $email = ($this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => 'update', 'fields' => ['email'], 'facts' => ['any_record' => true], 'named_only' => true])['email'] ?? 'deny') !== 'deny';
+            array_push($flags, ...$this->flag_deny_decides($named));
+
+            if (!$resource->holds_accounts()) continue;
+
+            $email = ($this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => 'update', 'fields' => ['email'], 'facts' => ['any_record' => true]] + $resource->get_request_flags('update'))['email'] ?? 'deny') !== 'deny';
 
             array_push($flags, ...$this->flag_accounts($name, $resources[$name]['verbs'] ?? [], $email, $named));
 
@@ -441,15 +445,26 @@ class Credentials extends Service {
 
         foreach ($rules as $rule) {
 
-            if ($rule['answer'] !== 'deny') {
+            if ($rule['answer'] === 'deny') continue;
 
-                if (!isset($rule['roles'])) $flags[] = ucfirst($rule['label']) . ' names no roles, so it matches nothing (A0).';
-                if (in_array(Credential_Policy::NO_ROLE, $rule['roles'] ?? [], true)) $flags[] = ucfirst($rule['label']) . ' names none: an account with no role here is often a copy of one that lives elsewhere (E8).';
-                if (($rule['records'] ?? null) === 'made_by_credential') $flags[] = ucfirst($rule['label']) . ' covers what this password made, for as long as the password lasts (A10).';
+            if (!isset($rule['roles'])) $flags[] = ucfirst($rule['label']) . ' names no roles, so it matches nothing (A0).';
+            if (in_array(Credential_Policy::NO_ROLE, $rule['roles'] ?? [], true)) $flags[] = ucfirst($rule['label']) . ' names none: an account with no role here is often a copy of one that lives elsewhere (E8).';
+            if (($rule['records'] ?? null) === 'made_by_credential') $flags[] = ucfirst($rule['label']) . ' covers what this password made, for as long as the password lasts (A10).';
 
-                continue;
+        }
 
-            }
+        return $flags;
+
+    }
+
+    // A0: on a named-only resource any matching deny decides.
+    protected function flag_deny_decides (array $rules) : array {
+
+        $flags = [];
+
+        foreach ($rules as $rule) {
+
+            if ($rule['answer'] !== 'deny') continue;
 
             foreach ($rules as $allow) if (($allow['answer'] !== 'deny') && $this->is_same_origin($rule, $allow) && $this->do_rules_meet($rule, $allow) && $this->would_outrank($allow, $rule)) $flags[] = ucfirst($rule['label']) . "'s deny overrides the narrower " . $allow['label'] . ' here (A0).';
 
@@ -533,9 +548,9 @@ class Credentials extends Service {
 
         $missing = array_map(fn ($role) => "role {$role}", array_diff($rule['roles'] ?? [], [...array_keys(wp_roles()->roles), Credential_Policy::NO_ROLE]));
 
-        if ((($rule['records'] ?? null) === 'own') && $resource->is_named_only()) $missing[] = "own on resource {$rule['target']}, whose rules never cover their own account";
+        if ((($rule['records'] ?? null) === 'own') && !$resource->has_owner()) $missing[] = $resource->holds_accounts() ? "own on resource {$rule['target']}, whose rules never cover their own account" : "own on resource {$rule['target']}, whose records have no owner";
 
-        if ((isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential')) && !$resource->is_named_only()) $missing[] = "accounts on resource {$rule['target']}, which holds none";
+        if ((isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential')) && !$resource->holds_accounts()) $missing[] = "accounts on resource {$rule['target']}, which holds none";
         $fields  = array_keys($resource->get_fields());
 
         foreach ([...($rule['fields'] ?? []), ...($rule['except'] ?? [])] as $field) if (!in_array($field, $fields, true)) $missing[] = "field {$field}";
@@ -551,7 +566,7 @@ class Credentials extends Service {
 
         $records = $rule['records'] ?? null;
 
-        if (is_string($records) && ($records !== 'own') && !(($records === 'made_by_credential') && $resource->is_named_only()) && !isset((method_exists($resource, 'get_conditions') ? $resource->get_conditions() : [])[$records])) $missing[] = "condition {$records}";
+        if (is_string($records) && ($records !== 'own') && !(($records === 'made_by_credential') && $resource->holds_accounts()) && !isset((method_exists($resource, 'get_conditions') ? $resource->get_conditions() : [])[$records])) $missing[] = "condition {$records}";
 
         return $missing;
 
