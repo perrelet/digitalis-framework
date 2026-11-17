@@ -594,6 +594,10 @@ class Product_Page extends Page_View {
 
 ## General PHP / Framework
 
+### A generic method name on a base class
+
+`Factory` is the base of nearly every class in every consumer, so a `protected` or `public` method added there is a name taken from all of them. PHP refuses a subclass whose method differs in kind ("Cannot make static method `Factory::refuse()` non static"), and the site fatals at load. Keep a base class's internals `private` and call them with `self::`: a private method is invisible to inheritance, so a subclass may have its own. Check any new `protected` or `public` name on a base against the consumers before it lands.
+
 ### `get_instance([...])` where a name is wanted
 
 An array `get_instance()` builds on every call unless its config names a held name (a feature is found by its `id` or its default name), so in a loop, a render or a hook that fires twice it adds its hooks again. Name it once and find it after: `Thing::declare('name', $config)` at load, `Thing::inst('name')` wherever it is needed. For a one-off nothing needs to find, `Thing::create($config)`.

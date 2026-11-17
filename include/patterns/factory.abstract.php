@@ -98,7 +98,7 @@ abstract class Factory extends Creational {
 
         if ($held) {
 
-            static::refuse('get_instance', "builds '{$name}' from a config, which " . $held::class . ' already holds', "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
+            self::refuse('get_instance', "builds '{$name}' from a config, which " . $held::class . ' already holds', "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
 
             if ($held instanceof static) return $held;
 
@@ -158,12 +158,12 @@ abstract class Factory extends Creational {
 
     protected static function refuse_declare (string $problem, string $fix) : ?static {
 
-        return static::refuse('declare', $problem, $fix);
+        return self::refuse('declare', $problem, $fix);
 
     }
 
-    // One notice per class and problem in a request, and null.
-    protected static function refuse (string $call, string $problem, string $fix) : ?static {
+    // One notice per class and problem in a request, and null. Private, so a subclass may have a refuse() of its own.
+    private static function refuse (string $call, string $problem, string $fix) : ?static {
 
         $refusal = static::class . " {$problem}";
 
