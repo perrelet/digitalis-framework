@@ -59,13 +59,15 @@ class Order_Item extends Model {
 
         $this->item = new \WC_Order_Item_Product($data);
 
+        $this->hold_wc_data();
+
     }
 
     protected function hydrate_instance () {
 
         $this->item = new \WC_Order_Item_Product($this->id);
 
-        $this->isolate_wc_data();
+        $this->hold_wc_data();
 
     }
 

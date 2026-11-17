@@ -58,13 +58,15 @@ class Order extends Model {
 
         $this->wc_order = new \WC_Order($data);
 
+        $this->hold_wc_data();
+
     }
 
     protected function hydrate_instance () {
 
         $this->wc_order = wc_get_order($this->id);
 
-        $this->isolate_wc_data();
+        $this->hold_wc_data();
 
     }
 
