@@ -43,6 +43,7 @@ $lattice_woocommerce = function () {
 
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/is-woo-customer.trait.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/customer.user.php';
+    require_once LATTICE_PATH . 'include/integrations/_woocommerce/has-wc-data.trait.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/order-item.model.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/order-status.post-status.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/has-order-version.trait.php';
