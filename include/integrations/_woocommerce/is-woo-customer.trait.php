@@ -33,6 +33,14 @@ trait Is_Woo_Customer {
 
     }
 
+    public function reload () {
+
+        $this->customer = null;
+
+        return parent::reload();
+
+    }
+
     public function get_orders ($args = []) {
 
         $args = wp_parse_args($args, [
