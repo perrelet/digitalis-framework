@@ -112,6 +112,9 @@ class Order extends Model {
 
             $this->cache_instance();
 
+            // Status transition callbacks save copies of the new id before save() returns, while no model is cached under it.
+            if (!$this->is_dirty()) $this->reload();
+
         }
 
         return $id;
@@ -122,7 +125,8 @@ class Order extends Model {
 
         wc_get_container()->get(OrderCache::class)->remove($this->get_id());
 
-        if (OrderUtil::custom_orders_table_usage_is_enabled()) wc_get_container()->get(OrdersTableDataStore::class)->clear_cached_data([$this->get_id()]);
+        // Woo 8.6 has no clear_cached_data().
+        if (OrderUtil::custom_orders_table_usage_is_enabled() && method_exists($store = wc_get_container()->get(OrdersTableDataStore::class), 'clear_cached_data')) $store->clear_cached_data([$this->get_id()]);
 
     }
 

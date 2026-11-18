@@ -65,7 +65,8 @@ class Order_Item extends Model {
 
     protected function hydrate_instance () {
 
-        $this->item = new \WC_Order_Item_Product($this->id);
+        $this->siblings = null;
+        $this->item     = new \WC_Order_Item_Product($this->id);
 
         $this->hold_wc_data();
 
