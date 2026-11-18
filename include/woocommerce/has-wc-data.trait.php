@@ -70,6 +70,7 @@ trait Has_WC_Data {
     private static $wc_data_watched       = [];
     private static $wc_data_trashing      = [];
     private static $wc_data_trash_watched = false;
+    private static $wc_data_noticed       = [];
 
     // Once per object type, the first time a model wraps one; a request that builds no Woo model adds no callback.
     private static function watch_wc_data (WC_Data $object) : void {
@@ -116,7 +117,7 @@ trait Has_WC_Data {
 
                 if (!($object instanceof WC_Data) || ($object === $exclude) || ((int) $object->get_id() !== $id) || !in_array(self::get_wc_data_type($object), $types, true)) continue;
 
-                if (!$model->is_dirty()) $model->reload();
+                if ($model->is_dirty()) self::notice_held_wc_data($class); else $model->reload();
 
             } catch (\Throwable $e) {
 
@@ -125,6 +126,17 @@ trait Has_WC_Data {
             }
 
         }
+
+    }
+
+    // A notice, never a throw: Woo catches an exception inside a save and skips every later callback on the hook.
+    private static function notice_held_wc_data (string $class) : void {
+
+        if (isset(self::$wc_data_noticed[$class])) return;
+
+        self::$wc_data_noticed[$class] = true;
+
+        _doing_it_wrong(esc_html($class), esc_html("{$class} kept unsaved edits across a save of its id by another object, and its own save would write over that one: reload() before editing across such a save."), '');
 
     }
 
