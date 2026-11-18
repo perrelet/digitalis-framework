@@ -752,20 +752,24 @@ $order->get_payment_method();
 |--------|---------|-------------|
 | `get_wc_order()` | `WC_Order` | Underlying WC_Order |
 | `is_dirty()` | `bool` | The wrapped object holds unsaved edits: props, meta adds, updates and deletions, item deletion queues and new or edited loaded items |
-| `reload()` | | Clears WooCommerce's caches for the id and loads the order again; keeps the old object when the read fails |
+| `reload()` | | Clears WooCommerce's caches for the id and loads the order again; keeps the old object when the read fails, and an unsaved model keeps its object |
 
 ### Copies and saves
 
 `wc_get_order()` hands every caller its own copy, so a model's copy and the object a hook or another plugin saves are different objects. Two rules keep a cached model current:
 
-1. After another object saves the model's id, a clean model reloads (on `woocommerce_after_{type}_object_save` at `PHP_INT_MIN`, for orders, subscriptions, refunds and items, so status callbacks and every later after-save callback see the saved state). A trash or forced delete by another object reloads it too. The model's own save, trash and forced delete do not.
+1. After another object saves the model's id, a clean model reloads (on `woocommerce_after_{type}_object_save` at `PHP_INT_MIN`, for orders, subscriptions, refunds and items, so status callbacks and every later after-save callback see the saved state). A trash or forced delete by another object reloads it too, last on its hook, so the trash status Subscriptions corrects there is read. The model's own save, trash and forced delete do not, except that a new model reloads once after its first save: status transition callbacks save copies of the new id before `save()` returns.
 2. A dirty model is never touched: it keeps its copy and its edits, and one `_doing_it_wrong` per class in a request says to `reload()` before editing across another object's save. Its own later save then writes its edits over the other save, as it always did. Nothing throws: WooCommerce catches an exception inside a save and skips every later callback on that hook.
 
 A handed object only identifies the id: `Order::get_instance($wc_order)` answers the model for that id, kept current by rule 1. A caller that wants its own unsaved edits saved saves its own object.
 
+A reload replaces the model's object, so what `get_wc_order()`, `get_item()` or `get_items()` answered belongs to the model only until the next save of its id by another object (a callback inside the model's own `update_status()` that saves a copy counts, and so does a new model's first save). An edit made through such a reference after that is lost: `$model->save()` saves the model's current object, and no notice fires. Edit through the model, or take the object again from the model after any save by another object.
+
+On HPOS, a `woocommerce_update_order` callback that saves a copy runs before the model's own save has written its items, so a model saving new or edited items reads as dirty there and the notice fires although the caller did nothing wrong. The model's save then completes over the copy's.
+
 Each model's copy holds its own meta objects (copies served from WooCommerce's cache share them, so another copy's edit would show as this model's).
 
-Rule 1 sees saves, not every write. These leave a clean model stale until `reload()`: `save_meta_data()` alone (the `_wp_trash_meta_*` cleanup after an untrash), writes through `data_store->update_meta()` (Subscriptions' related-order cache), `wc_add_order_item()` and item-only saves for an `Order` whose items are loaded (an item save reloads `Order_Item` models only), bulk item removal (`delete_items_by_ids()`), the journal's `_lattice_version` raise (read from the meta table anyway), a deleted item (its model keeps its object) and a deleted HPOS refund. A filter that edits the copy it is handed (relabelling items for display, say) makes a model read through it dirty, so later saves by others raise the notice; edit clones instead.
+Rule 1 sees saves, not every write. These leave a clean model stale until `reload()`: meta writes that run no save, which on the post store means `save_meta_data()` alone and every `data_store->update_meta()` (Subscriptions' related-order cache), and on HPOS only those that `after_meta_change()` does not follow with a save (an ephemeral key such as the `_wp_trash_meta_*` cleanup after an untrash, an order with pending changes or a write within the same second as the last save); `wc_add_order_item()` and item-only saves for an `Order` whose items are loaded (an item save reloads `Order_Item` models only), bulk item removal (`delete_items_by_ids()`), the journal's `_lattice_version` raise (read from the meta table anyway), a deleted item (its model keeps its object) and a deleted refund, on either store. A filter that edits the copy it is handed (relabelling items for display, say) makes a model read through it dirty, so later saves by others raise the notice; edit clones instead.
 
 A subscription id answers an `Order` wrapping a `WC_Subscription`, and a clone keeps the wrapped class. `Order::get_instance($refund)` is `null` (a `WC_Order_Refund` is not a `WC_Order`); a refund model built by id follows rule 1. Trash and forced delete are followed on the HPOS and post stores alike. `Customer` is not covered: its `WC_Customer` copies are fresh reads sharing nothing, and `reload()` drops the held `WC_Customer`, so `get_customer()` reads afresh.
 
@@ -785,10 +789,10 @@ $item->get_name();                           // WC_Order_Item_Product methods vi
 |--------|---------|-------------|
 | `get_item()` | `WC_Order_Item_Product` | Underlying item |
 | `is_dirty()` | `bool` | The item holds unsaved edits (props or meta) |
-| `reload()` | | Clears the item's caches and reads it again; keeps the old item when it is gone |
+| `reload()` | | Clears the item's caches, drops the cached `get_siblings()` list and reads the item again; keeps the old item when it is gone, and an unsaved model keeps its item |
 | `clear_cache()` | `void` | Deletes WooCommerce's caches for the item and its order's item list |
 
-The rules of [Copies and saves](#copies-and-saves) apply: another object's save of the item reloads a clean model. Order and item ids overlap; an order's save never reloads an item model or the reverse. Cloning a model reads its item again.
+The rules of [Copies and saves](#copies-and-saves) apply: another object's save of the item reloads a clean model. Order and item ids overlap; an order's save never reloads an item model or the reverse. Cloning a model reads its item again; a clone of a deleted item's model shares the old item.
 
 ---
 
