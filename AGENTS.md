@@ -552,6 +552,9 @@ Defining the class is not enough — call `My_Profile::get_instance()` during pl
 **Use `$model->save()` — not `wp_update_post()`, `wp_update_user()`, or `wp_update_term()`.**
 The model's `save()` wraps the WP function; calling WP update functions directly bypasses the model layer and requires manually passing the ID.
 
+**A cached `Order` or `Order_Item` follows other objects' saves of its id.**
+A clean model reloads after another object saves its id; a dirty one keeps its copy with a notice, so `reload()` before editing across another save. A handed `WC_Order` only identifies the id. See [MODELS.md#copies-and-saves](./docs/MODELS.md#copies-and-saves).
+
 **Use framework `query()` methods, not bare WordPress query functions.**
 `get_posts()`, `get_users()`, `get_terms()`, `WP_Query`, etc. return raw WP objects — use `Post::query()`, `User::query()`, `Term::query()` instead to get typed model instances. Only use WP functions directly when raw IDs or WP objects are explicitly required.
 
