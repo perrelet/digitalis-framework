@@ -83,7 +83,9 @@ class Order extends Model {
     // WC_Abstract_Order::__clone() is empty, so a cloned WC_Order shares its meta and items with the original.
     public function __clone () {
 
-        $this->wc_order = $this->wc_order->get_id() ? new WC_Order($this->wc_order->get_id()) : clone $this->wc_order;
+        $class = $this->wc_order::class;
+
+        $this->wc_order = $this->wc_order->get_id() ? new $class($this->wc_order->get_id()) : clone $this->wc_order;
 
     }
 
