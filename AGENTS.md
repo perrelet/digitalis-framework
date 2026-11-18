@@ -46,7 +46,7 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ### What gets auto-included
 
-Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed. The framework's own `include/integrations/_woocommerce/` is outside the sweep: its nine classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme`, `Is_Woo_Customer`) are declared only once `woocommerce_loaded` fires, so a site without WooCommerce never has them.
+Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed. The framework's own `include/integrations/_woocommerce/` is outside the sweep: its eleven classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme` and the traits `Is_Woo_Customer`, `Has_Order_Version` and `Has_WC_Data`) are declared only once `woocommerce_loaded` fires, so a site without WooCommerce never has them.
 
 ### What fires on include
 
@@ -568,6 +568,9 @@ One `get_post_type()` call is fine. Multiple queries or model instantiation are 
 
 **`Post::get_instance($id)` auto-resolves to the most specific registered subclass.**
 A post with `post_type='project'` returns a `Project` instance, not a base `Post`. Pass `false` as the second arg to force the base class when you specifically need it. See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).
+
+**A cached `Order` or `Order_Item` follows other objects' saves of its id.**
+A clean model reloads after another object saves its id; a dirty one keeps its copy with a notice, so `reload()` before editing across another save. A handed `WC_Order` only identifies the id. See [MODELS.md#copies-and-saves](./docs/MODELS.md#copies-and-saves).
 
 **Inside a `wp_after_insert_post` callback, never call `save()` on an existing post.**
 The cached instance state may still hold pre-change values, and a full `save()` will silently overwrite the field the caller just changed; strict throws there. Write the targeted field only (`update_meta`, `update_field`, or `wp_update_post` with one specific field). See [MODELS.md#common-confusions](./docs/MODELS.md#common-confusions).

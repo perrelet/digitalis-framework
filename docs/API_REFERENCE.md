@@ -1010,7 +1010,8 @@ class Customer extends User
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_wc_customer()` | `public get_wc_customer(): ?WC_Customer` | Returns WC_Customer object |
+| `get_customer()` | `public get_customer(): WC_Customer` | Returns the WC_Customer, built on first use |
+| `reload()` | `public reload()` | Reloads the user and drops the held WC_Customer |
 | `get_orders()` | `public get_orders(array $args = []): array` | Gets customer orders |
 
 ---
@@ -1026,6 +1027,8 @@ class Order extends Model
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `get_wc_order()` | `public get_wc_order(): ?WC_Order` | Returns WC_Order object |
+| `is_dirty()` | `public is_dirty(): bool` | The wrapped order holds unsaved edits ([MODELS.md](./MODELS.md#copies-and-saves)) |
+| `reload()` | `public reload()` | Reads the order again; keeps the old object when the read fails |
 | `query()` | `static query(array $args = []): array` | Queries orders |
 | `get_items()` | `public get_items(): array` | Returns order items |
 | `get_total()` | `public get_total(): float` | Returns order total |
@@ -1043,7 +1046,10 @@ class Order_Item extends Model
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_wc_item()` | `public get_wc_item(): ?WC_Order_Item` | Returns WC_Order_Item object |
+| `get_item()` | `public get_item(): WC_Order_Item_Product` | Returns the wrapped item |
+| `is_dirty()` | `public is_dirty(): bool` | The item holds unsaved edits |
+| `reload()` | `public reload()` | Reads the item again; keeps the old item when it is gone |
+| `clear_cache()` | `public clear_cache(): void` | Deletes WooCommerce's caches for the item |
 | `get_product()` | `public get_product(): ?WC_Product` | Returns associated product |
 
 ---
