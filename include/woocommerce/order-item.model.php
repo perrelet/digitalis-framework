@@ -7,6 +7,10 @@ use \WC_Order_Item_Product;
 
 class Order_Item extends Model {
 
+    use Has_WC_Data;
+
+    const WC_DATA = 'item';
+
     protected static $product_type = null;
 
     public static function extract_id ($data = null) {
@@ -61,12 +65,18 @@ class Order_Item extends Model {
 
         $this->item = new \WC_Order_Item_Product($this->id);
 
+        $this->isolate_wc_data();
+
     }
 
-    public function __call ($name, $args) {
-    
-        return call_user_func_array([$this->get_item(), $name], $args);
-    
+    public function clear_cache () : void {
+
+        wp_cache_delete('item-' . $this->get_id(), 'order-items');
+        wp_cache_delete($this->get_id(), 'order_item_meta');
+        \WC_Cache_Helper::invalidate_cache_group('object_' . $this->get_id());
+
+        if ($order_id = $this->item->get_order_id()) wp_cache_delete('order-items-' . $order_id, 'orders');
+
     }
 
     public function get_item () {

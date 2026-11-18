@@ -11,7 +11,9 @@ use WP_Error;
 
 class Order extends Model {
 
-    use Has_ACF_Fields;
+    use Has_ACF_Fields, Has_WC_Data;
+
+    const WC_DATA = 'wc_order';
 
     protected $wc_order;
 
@@ -60,12 +62,8 @@ class Order extends Model {
 
         $this->wc_order = wc_get_order($this->id);
 
-    }
+        $this->isolate_wc_data();
 
-    public function __call ($name, $args) {
-    
-        return call_user_func_array([$this->get_wc_order(), $name], $args);
-    
     }
 
     public function get_wc_order () {
@@ -77,15 +75,6 @@ class Order extends Model {
     public function get_acf_id () {
 
         return $this->get_id();
-
-    }
-
-    // WC_Abstract_Order::__clone() is empty, so a cloned WC_Order shares its meta and items with the original.
-    public function __clone () {
-
-        $class = $this->wc_order::class;
-
-        $this->wc_order = $this->wc_order->get_id() ? new $class($this->wc_order->get_id()) : clone $this->wc_order;
 
     }
 
@@ -122,15 +111,6 @@ class Order extends Model {
         }
 
         return $id;
-
-    }
-
-    // WC_Data::delete() zeroes the order's id even when it only trashes.
-    public function reload () {
-
-        $this->clear_cache();
-
-        $this->wc_order = wc_get_order($this->get_id()) ?: $this->wc_order;
 
     }
 
