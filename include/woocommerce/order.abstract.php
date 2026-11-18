@@ -56,13 +56,15 @@ class Order extends Model {
 
         $this->wc_order = new \WC_Order($data);
 
+        $this->hold_wc_data();
+
     }
 
     protected function hydrate_instance () {
 
         $this->wc_order = wc_get_order($this->id);
 
-        $this->isolate_wc_data();
+        $this->hold_wc_data();
 
     }
 
@@ -116,9 +118,9 @@ class Order extends Model {
 
     public function clear_cache () : void {
 
-        wc_get_container()->get(OrderCache::class)->remove($this->get_id());
+        if (class_exists(OrderCache::class)) wc_get_container()->get(OrderCache::class)->remove($this->get_id());
 
-        if (OrderUtil::custom_orders_table_usage_is_enabled()) wc_get_container()->get(OrdersTableDataStore::class)->clear_cached_data([$this->get_id()]);
+        if (class_exists(OrderUtil::class) && OrderUtil::custom_orders_table_usage_is_enabled()) wc_get_container()->get(OrdersTableDataStore::class)->clear_cached_data([$this->get_id()]);
 
     }
 
