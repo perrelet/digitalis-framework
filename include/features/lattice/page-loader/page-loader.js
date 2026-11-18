@@ -1,53 +1,89 @@
-((params) => {
+(() => {
 
     const loader = document.getElementById('page-loader');
     if (!loader) return;
 
-    const entryMs    = (params.entrySpeed || 1) * 1000;
-    const failsafeMs = params.failsafeMs || 5000;
+    const body    = document.body;
+    const setting = (key, fallback) => (loader.dataset[key] ?? '') === '' ? fallback : Number(loader.dataset[key]);
 
-    let fired         = false;
-    let failsafeTimer = null;
+    const entry    = setting('entry', 1);
+    const exit     = setting('exit', 0);
+    const failsafe = setting('failsafe', 5);
+    const backstop = setting('backstop', 10);
+
+    let leaving       = false;
+    let backstopTimer = null;
+
+    // Entry
+
+    let ready = false;
 
     const onReady = () => {
-        if (fired) return;
-        fired = true;
-        if (failsafeTimer) clearTimeout(failsafeTimer);
-        document.body.classList.add('loaded');
-        setTimeout(() => document.body.classList.add('loader-done'), entryMs);
+        if (ready || leaving || !entry) return;
+        ready = true;
+        body.classList.add('loaded');
+        setTimeout(() => { if (!leaving) body.classList.add('loader-done'); }, entry * 1000);
     };
 
-    // Primary trigger — DOM parsed and interactive (fires well before
-    // window.load, which waits for every sub-resource).
-    if (document.readyState !== 'loading') {
-        onReady();
-    } else {
-        document.addEventListener('DOMContentLoaded', onReady, { once: true });
-    }
+    if (document.readyState !== 'loading') onReady();
+    else document.addEventListener('DOMContentLoaded', onReady, { once: true });
 
-    // JS-side safety net — hard cap if DOMContentLoaded never fires (rare but
-    // possible with hung sync scripts). Matches the CSS @keyframes failsafe
-    // timing in page-loader.feature.php so both safety nets agree.
-    failsafeTimer = setTimeout(onReady, failsafeMs);
+    setTimeout(onReady, failsafe * 1000);
 
-    // bfcache (back/forward) restore. Safari and Firefox restore the entire
-    // page DOM including current classes. If the user navigated away with
-    // exit_speed > 0, body has "unloading" and the loader's inline display is
-    // "flex"; without this reset, the restored page reappears with the loader
-    // still showing.
-    window.addEventListener('pageshow', (e) => {
-        if (!e.persisted) return;
-        document.body.classList.remove('unloading');
-        document.body.classList.add('loaded', 'loader-done');
-        loader.style.display = '';
+    // Vetoes: navigations that fire beforeunload without leaving the page.
+
+    const FILES = /\.(pdf|zip|csv|ics|mp3|mp4)$/i;
+
+    let veto = null;
+
+    const noteVeto = (kind) => {
+        const noted = veto = { kind, at: Date.now() };
+        // A link's beforeunload fires inside its click, so a link veto ends with the click.
+        if (kind === 'link') setTimeout(() => { if (veto === noted) veto = null; }, 0);
+    };
+
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest?.('a[href]');
+        if (!link) return;
+        if (link.closest('[data-page-loader="off"]')) return noteVeto('link');
+        let url;
+        try { url = new URL(link.href, location.href); } catch { return; }
+        if (!/^https?:$/.test(url.protocol) || FILES.test(url.pathname)) noteVeto('link');
+    }, true);
+
+    document.addEventListener('submit', (e) => {
+        if (e.target.closest?.('[data-page-loader="off"]')) noteVeto('form');
+    }, true);
+
+    const takeVeto = () => {
+        const taken = veto && (veto.kind === 'link' || Date.now() - veto.at < 1000);
+        veto = null;
+        return taken;
+    };
+
+    // Leaving and returning
+
+    const giveBack = () => {
+        if (!leaving) return;
+        leaving = false;
+        clearTimeout(backstopTimer);
+        body.classList.remove('unloading');
+        if (entry) body.classList.add('loaded', 'loader-done');
+        document.dispatchEvent(new CustomEvent('Digitalis/Page_Loader/Return'));
+    };
+
+    window.addEventListener('beforeunload', (e) => {
+        if (takeVeto()) return;
+        leaving = true;
+        // body.loaded.loader-done hides the loader with more specificity than body.unloading shows it.
+        if (exit) { body.classList.remove('loaded', 'loader-done'); body.classList.add('unloading'); }
+        document.dispatchEvent(new CustomEvent('Digitalis/Page_Loader/Leave'));
+        clearTimeout(backstopTimer);
+        backstopTimer = setTimeout(giveBack, backstop * 1000);
+        // Runs once every listener has had the event, and after any prompt closes, whatever the answer.
+        setTimeout(() => { if (e.defaultPrevented || e.returnValue) giveBack(); }, 0);
     });
 
-    if (params.exit) {
-        window.addEventListener('beforeunload', () => {
-            document.body.classList.remove('loaded', 'loader-done');
-            document.body.classList.add('unloading');
-            loader.style.display = 'flex';
-        });
-    }
+    window.addEventListener('pageshow', (e) => { if (e.persisted) giveBack(); });
 
-})(typeof digitalis_page_loader !== 'undefined' ? digitalis_page_loader : {});
+})();
