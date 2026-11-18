@@ -21,7 +21,15 @@ trait Has_WC_Data {
         $object = $this->{static::WC_DATA};
         $class  = $object::class;
 
-        $this->{static::WC_DATA} = $object->get_id() ? new $class($object->get_id()) : clone $object;
+        try {
+
+            $this->{static::WC_DATA} = $object->get_id() ? new $class($object->get_id()) : clone $object;
+
+        } catch (Exception $e) {
+
+            // A deleted object's read throws; the clone keeps the old object, as reload() does.
+
+        }
 
     }
 
@@ -90,12 +98,12 @@ trait Has_WC_Data {
         // CPT storage trashes and deletes a subscription through the order hooks.
         foreach (['order', 'subscription'] as $hook_type) {
 
-            // The trash hook passes only the id, and the trashing object still holds it with a pending status.
+            // The trash hook passes only the id, and the trashing object still holds it with a pending status. Last, so Subscriptions' fix_trash_meta_status() has run.
             add_action("woocommerce_before_trash_{$hook_type}", function ($id, $trashing = null) { self::$wc_data_trashing[(int) $id] = $trashing; }, PHP_INT_MIN, 2);
-            add_action("woocommerce_trash_{$hook_type}", function ($id) { $trashing = self::$wc_data_trashing[(int) $id] ?? null; unset(self::$wc_data_trashing[(int) $id]); self::follow_wc_data(['order', 'subscription'], (int) $id, $trashing); }, PHP_INT_MIN);
+            add_action("woocommerce_trash_{$hook_type}", function ($id) { $trashing = self::$wc_data_trashing[(int) $id] ?? null; unset(self::$wc_data_trashing[(int) $id]); self::follow_wc_data(['order', 'subscription'], (int) $id, $trashing); }, PHP_INT_MAX);
 
             // A forced delete zeroes the deleting object's id first, so the walk passes over the model that deleted.
-            add_action("woocommerce_delete_{$hook_type}", function ($id) { unset(self::$wc_data_trashing[(int) $id]); self::follow_wc_data(['order', 'subscription'], (int) $id, null); }, PHP_INT_MIN);
+            add_action("woocommerce_delete_{$hook_type}", function ($id) { unset(self::$wc_data_trashing[(int) $id]); self::follow_wc_data(['order', 'subscription'], (int) $id, null); }, PHP_INT_MAX);
 
         }
 
