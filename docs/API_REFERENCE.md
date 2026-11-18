@@ -860,7 +860,7 @@ class Order extends Model
 |--------|-----------|-------------|
 | `get_wc_order()` | `public get_wc_order(): ?WC_Order` | Returns WC_Order object |
 | `is_dirty()` | `public is_dirty(): bool` | The wrapped order holds unsaved edits ([MODELS.md](./MODELS.md#copies-and-saves)) |
-| `reload()` | `public reload()` | Reads the order again; keeps the old object when the read fails |
+| `reload()` | `public reload()` | Reads the order again; keeps the old object when the read fails, and an unsaved model keeps its object |
 | `query()` | `static query(array $args = []): array` | Queries orders |
 | `get_items()` | `public get_items(): array` | Returns order items |
 | `get_total()` | `public get_total(): float` | Returns order total |
@@ -880,7 +880,7 @@ class Order_Item extends Model
 |--------|-----------|-------------|
 | `get_item()` | `public get_item(): WC_Order_Item_Product` | Returns the wrapped item |
 | `is_dirty()` | `public is_dirty(): bool` | The item holds unsaved edits |
-| `reload()` | `public reload()` | Reads the item again; keeps the old item when it is gone |
+| `reload()` | `public reload()` | Reads the item again and drops the cached siblings; keeps the old item when it is gone, and an unsaved model keeps its item |
 | `clear_cache()` | `public clear_cache(): void` | Deletes WooCommerce's caches for the item |
 | `get_product()` | `public get_product(): ?WC_Product` | Returns associated product |
 
