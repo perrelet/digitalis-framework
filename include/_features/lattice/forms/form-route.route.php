@@ -110,7 +110,7 @@ class Form_Route extends Route {
         $permission = $this->permission_wrap($request);
 
         if (is_wp_error($permission)) return $this->refuse_permission((string) $permission->get_error_code(), $permission->get_error_message(), (array) $permission->get_error_data());
-        if (!$permission)             return $this->refuse_permission('rest_forbidden', __('Sorry, you are not allowed to do that.'), ['status' => rest_authorization_required_code()]);
+        if (!$permission)             return $this->refuse_permission('rest_forbidden', __('Sorry, you are not allowed to do that.', 'default'), ['status' => rest_authorization_required_code()]);
 
         if ($this->find_unavailable_reason($request)) return static::refuse_unavailable();
 

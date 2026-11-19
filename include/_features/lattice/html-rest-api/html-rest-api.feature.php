@@ -64,7 +64,7 @@ class HTML_REST_API extends Feature {
         wp_set_current_user($user_id);
 
         if (!Route::find_valid_nonce($candidates)) {
-            return new \WP_Error('rest_cookie_invalid_nonce', __('Cookie check failed'), ['status' => 403]);
+            return new \WP_Error('rest_cookie_invalid_nonce', __('Cookie check failed', 'default'), ['status' => 403]);
         }
 
         return true;

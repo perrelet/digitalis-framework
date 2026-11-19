@@ -556,7 +556,7 @@ $singular = __($this->singular, $this->text_domain);
 'add_new_item' => sprintf(__('Add New %s', 'lattice'), $singular),
 ```
 
-So one `.mo` for `lattice` translates the scaffolding of every post type and taxonomy, and the consumer translates only its nouns. Where a language needs the whole phrase (gender, case), override `get_labels()` on that registrar. Rules for new code: a `'lattice'` string must not be translated before `after_setup_theme` (WordPress raises `_doing_it_wrong` for just-in-time loads earlier than that; this is why `Post_Status::$args['label']` stays raw). `load.php` registers `languages/` at file load; the first vendored copy of the framework to load owns the registration.
+So one `.mo` for `lattice` translates the scaffolding of every post type and taxonomy, and the consumer translates only its nouns. Where a language needs the whole phrase (gender, case), override `get_labels()` on that registrar. Rules for new code: a `'lattice'` string must not be translated before `after_setup_theme` (WordPress raises `_doing_it_wrong` for just-in-time loads earlier than that; this is why `Post_Status::$args['label']` stays raw). `load.php` registers `languages/` at file load; the first vendored copy of the framework to load owns the registration. A message the framework repeats verbatim from core (a REST error core also raises) passes `'default'`, so it keeps core's translation.
 
 ### Hook Priority
 
