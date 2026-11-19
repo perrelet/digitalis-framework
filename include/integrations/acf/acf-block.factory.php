@@ -33,8 +33,8 @@ class ACF_Block extends Registrant {
 
     protected function switch_on () : void {
         
-        add_action('acf/init', [$this, 'register']);
-        add_action('acf/include_fields', [$this, 'include_fields']);
+        $this->add_action('acf/init', [$this, 'register'], 10, 1);
+        $this->add_action('acf/include_fields', [$this, 'include_fields'], 10, 1);
 
         parent::switch_on();
 

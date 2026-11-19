@@ -53,9 +53,9 @@ class Route extends Registrant {
 
     protected function switch_on () : void {
 
-        add_action('rest_api_init', [$this, 'register_route']);
+        $this->add_action('rest_api_init', [$this, 'register_route'], 10, 1);
 
-        if ($this->wp_query) add_filter('rest_request_before_callbacks', [$this, 'maybe_set_wp_query_vars'], 10, 3);
+        if ($this->wp_query) $this->add_filter('rest_request_before_callbacks', [$this, 'maybe_set_wp_query_vars'], 10, 3);
 
         parent::switch_on();
 

@@ -18,10 +18,10 @@ class User_Taxonomy extends Taxonomy {
 
         parent::switch_on();
 
-        add_action('admin_menu',                            [$this, 'taxonomy_page']);
-        add_filter("manage_edit-{$this->slug}_columns",     [$this, 'taxonomy_columns']);
-        add_filter("manage_{$this->slug}_custom_column",    [$this, 'taxonomy_column'], 10, 3);
-        add_filter('parent_file',                           [$this, 'highlight_menu_item']);
+        $this->add_action('admin_menu', [$this, 'taxonomy_page'], 10, 1);
+        $this->add_filter("manage_edit-{$this->slug}_columns", [$this, 'taxonomy_columns'], 10, 1);
+        $this->add_filter("manage_{$this->slug}_custom_column", [$this, 'taxonomy_column'], 10, 3);
+        $this->add_filter('parent_file', [$this, 'highlight_menu_item'], 10, 1);
 
     }
 

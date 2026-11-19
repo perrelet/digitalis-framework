@@ -26,9 +26,9 @@ class Query_Manager extends Singleton {
 
     protected function switch_on () : void {
 
-        add_action('pre_get_posts', [$this, 'pre_get_posts'], 10);
-        add_filter('posts_clauses', [$this, 'posts_clauses'], 10, 2);
-        add_filter('posts_results', [$this, 'posts_results'], 10, 2);
+        $this->add_action('pre_get_posts', [$this, 'pre_get_posts'], 10, 1);
+        $this->add_filter('posts_clauses', [$this, 'posts_clauses'], 10, 2);
+        $this->add_filter('posts_results', [$this, 'posts_results'], 10, 2);
 
         parent::switch_on();
 

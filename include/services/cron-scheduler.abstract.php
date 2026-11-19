@@ -29,7 +29,7 @@ abstract class Cron_Scheduler extends Singleton {
 
     protected function switch_on () : void {
 
-        add_filter('cron_schedules', [$this, 'schedules']);
+        $this->add_filter('cron_schedules', [$this, 'schedules'], 10, 1);
 
         $this->schedule_tasks();
 
@@ -93,7 +93,7 @@ abstract class Cron_Scheduler extends Singleton {
             ]);
             $hash = $this->get_task_hash($task);
 
-            add_action($action, [$this, $key]);
+            $this->add_action($action, [$this, $key], 10, 1);
 
             // Migrate old backslash-format action names
 

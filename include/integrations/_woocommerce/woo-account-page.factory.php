@@ -123,10 +123,10 @@ class Woo_Account_Page extends Registrant {
 
         self::$page_positions[$this->slug] = $position;
 
-        add_action('init',                        [$this, 'add_endpoints']);
-        add_action('parse_request',               [$this, 'maybe_add_permission_notice']);
-        add_filter('woocommerce_get_query_vars',  [$this, 'get_query_vars']);
-        if ($this->render) add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
+        $this->add_action('init', [$this, 'add_endpoints'], 10, 1);
+        $this->add_action('parse_request', [$this, 'maybe_add_permission_notice'], 10, 1);
+        $this->add_filter('woocommerce_get_query_vars', [$this, 'get_query_vars'], 10, 1);
+        if ($this->render) $this->add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9, 1);
 
         parent::switch_on();
 

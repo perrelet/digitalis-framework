@@ -22,4 +22,13 @@ trait Is_Registrant {
 
     }
 
+    // Removes every hook added through this instance; what run() did otherwise stays.
+    public function switch_off () : void {
+
+        foreach ($this->added_hooks as [$hook_name, $callback, $priority]) remove_filter($hook_name, $callback, $priority);
+
+        $this->added_hooks = [];
+
+    }
+
 }

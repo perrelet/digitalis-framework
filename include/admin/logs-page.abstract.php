@@ -30,10 +30,10 @@ abstract class Logs_Page extends Admin_Sub_Page {
     protected function switch_on () : void {
 
         parent::switch_on();
-        add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_style']);
-        add_action('admin_init', [$this, 'handle_clear']);
-        add_action("wp_ajax_lattice_logs_{$this->slug}", [$this, 'ajax']);
-        add_filter('removable_query_args', [$this, 'filter_removable_query_args']);
+        $this->add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_style'], 10, 1);
+        $this->add_action('admin_init', [$this, 'handle_clear'], 10, 1);
+        $this->add_action("wp_ajax_lattice_logs_{$this->slug}", [$this, 'ajax'], 10, 1);
+        $this->add_filter('removable_query_args', [$this, 'filter_removable_query_args'], 10, 1);
 
     }
 

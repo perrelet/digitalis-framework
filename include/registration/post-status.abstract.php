@@ -68,7 +68,7 @@ abstract class Post_Status extends Singleton {
 
     protected function switch_on () : void {
 
-        if ($this->get_register())  add_action('init', [$this, 'register']);
+        if ($this->get_register())  $this->add_action('init', [$this, 'register'], 10, 1);
         if ($this->get_add_to_ui()) $this->add_to_ui();
 
         parent::switch_on();

@@ -23,9 +23,9 @@ class HTML_REST_API extends Feature {
             return $this->url_builder->get_url($route->get_rest_path());
         });
     
-        add_action('init',                       [$this, 'add_rewrite_rules']);
-        add_filter('rest_authentication_errors', [$this, 'rest_authentication_errors'], 5);
-        add_filter('rest_pre_serve_request',     [$this, 'rest_pre_serve_request'], 10, 4);
+        $this->add_action('init', [$this, 'add_rewrite_rules'], 10, 1);
+        $this->add_filter('rest_authentication_errors', [$this, 'rest_authentication_errors'], 5, 1);
+        $this->add_filter('rest_pre_serve_request', [$this, 'rest_pre_serve_request'], 10, 4);
 
     }
 

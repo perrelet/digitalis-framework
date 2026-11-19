@@ -8,12 +8,12 @@ class Turn_Off_Emojicons extends \Lattice\Feature {
 
     public function run () {
 
-        add_action('init', [$this, 'disable_emojis'], 0);
+        $this->add_action('init', [$this, 'disable_emojis'], 0, 1);
 
         // Dequeue late, safely
-        add_action('wp_enqueue_scripts',    [$this, 'dequeue_emoji_assets'], PHP_INT_MAX);
-        add_action('admin_enqueue_scripts', [$this, 'dequeue_emoji_assets'], PHP_INT_MAX);
-        add_action('login_enqueue_scripts', [$this, 'dequeue_emoji_assets'], PHP_INT_MAX);
+        $this->add_action('wp_enqueue_scripts', [$this, 'dequeue_emoji_assets'], PHP_INT_MAX, 1);
+        $this->add_action('admin_enqueue_scripts', [$this, 'dequeue_emoji_assets'], PHP_INT_MAX, 1);
+        $this->add_action('login_enqueue_scripts', [$this, 'dequeue_emoji_assets'], PHP_INT_MAX, 1);
 
     }
 

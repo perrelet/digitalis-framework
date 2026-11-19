@@ -18,7 +18,7 @@ class Admin_Page extends Registrant {
 
     protected function switch_on () : void {
     
-        add_action('admin_menu', [$this, 'admin_menu'], 1000);
+        $this->add_action('admin_menu', [$this, 'admin_menu'], 1000, 1);
 
         parent::switch_on();
 

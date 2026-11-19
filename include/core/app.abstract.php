@@ -33,7 +33,7 @@ abstract class App extends Registrant {
         if (static::plugins_loaded_done()) {
             $this->boot();
         } else {
-            add_action('plugins_loaded', [$this, 'boot'], $this->get_boot_priority());
+            $this->add_action('plugins_loaded', [$this, 'boot'], $this->get_boot_priority(), 1);
         }
 
         parent::switch_on();

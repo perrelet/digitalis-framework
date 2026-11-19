@@ -20,7 +20,7 @@ class Jobs_Page extends Admin_Sub_Page {
 
         parent::switch_on();
 
-        add_action("load-tools_page_{$this->slug}", [$this, 'act']);
+        $this->add_action("load-tools_page_{$this->slug}", [$this, 'act'], 10, 1);
 
     }
 

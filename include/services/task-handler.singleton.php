@@ -12,7 +12,7 @@ class Task_Handler extends Singleton {
 
     protected function switch_on () : void {
 
-        add_action('admin_init', [$this, 'process_tasks']);
+        $this->add_action('admin_init', [$this, 'process_tasks'], 10, 1);
 
         parent::switch_on();
 

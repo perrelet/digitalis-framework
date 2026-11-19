@@ -11,6 +11,9 @@ use ReflectionException;
 
 trait Has_WP_Hooks {
 
+    private array $added_hooks = [];
+
+
     use Dependency_Injection;
 
     public function get_default_priority () {
@@ -38,9 +41,10 @@ trait Has_WP_Hooks {
 
     }
 
+    // A string is WordPress's own name ('acf/init', 'load-tools_page_x'); only parts are joined into a framework name.
     public function build_hook_name (&$hook_name) {
 
-        if (!is_null($hook_name)) $hook_name = Hook::name($hook_name);
+        if (is_array($hook_name)) $hook_name = Hook::name($hook_name);
 
     }
 
@@ -121,6 +125,7 @@ trait Has_WP_Hooks {
         if (is_null($accepted_args)) $accepted_args = (!$reflection || $reflection->isVariadic()) ? PHP_INT_MAX : $reflection->getNumberOfParameters(); // WordPress hands over every argument when the count exceeds what the hook passes
 
         call_user_func('add_' . $type, $hook_name, $callback, $priority, $accepted_args);
+        $this->added_hooks[] = [$hook_name, $callback, $priority];
 
         if ($uncounted) { // strict only, raised after the registration so strict and production hold the same $wp_filter: a legitimate __call proxy must not log on every request
 

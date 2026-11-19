@@ -132,9 +132,9 @@ abstract class Iterator extends Singleton {
 
         self::$registry[$this->key] = static::class;
 
-        add_action('admin_menu', [$this, 'add_admin_page'], 99);
-        add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_assets']);
-        add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax']);
+        $this->add_action('admin_menu', [$this, 'add_admin_page'], 99, 1);
+        $this->add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_assets'], 10, 1);
+        $this->add_action("wp_ajax_iterator_{$this->key}", [$this, 'ajax'], 10, 1);
 
         // The 0.6 loop event: a background run is a job now, and a leftover event would fire a hook nobody answers every minute.
         if (wp_next_scheduled($this->get_option_key() . '_loop')) wp_unschedule_hook($this->get_option_key() . '_loop');
@@ -153,7 +153,7 @@ abstract class Iterator extends Singleton {
 
             $cron_action_start = $this->get_start_action();
 
-            add_action($cron_action_start, [$this, 'cron_start']);
+            $this->add_action($cron_action_start, [$this, 'cron_start'], 10, 1);
 
             if (!wp_next_scheduled($cron_action_start)) {
 
