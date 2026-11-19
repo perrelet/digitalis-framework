@@ -94,7 +94,7 @@ class Woo_Account_Page extends Factory {
 
         $capability = $reflection->getDefaultProperties()['capability'] ?? null;
 
-        if (is_string($capability) || is_null($capability) || ($capability === false)) return;
+        if ((is_string($capability) && ($capability !== '0')) || is_null($capability) || ($capability === false)) return;
 
         Strict::violation($class, 'declares $capability ' . var_export($capability, true) . ', which is not a capability name.', "Declare \$capability as a capability name such as 'read', or false for an open page.");
 
