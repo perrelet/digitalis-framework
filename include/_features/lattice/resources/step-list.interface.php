@@ -21,6 +21,7 @@ interface Step_List {
     public function mark (int $position, string $marker, array $detail = []) : bool;
 
     // False whenever it cannot say: a query that failed is no lock held.
+    /** @phpstan-impure */
     public function holds_lock () : bool;
 
 }

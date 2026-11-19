@@ -35,7 +35,7 @@ class Account extends User {
 
     public function get_column (string $column) : string {
 
-        return (string) $this->get_staged($column, $this->get_wp_user()?->$column ?? '');
+        return (string) $this->get_staged($column, $this->get_wp_user()->$column ?? '');
 
     }
 
@@ -47,7 +47,7 @@ class Account extends User {
 
     public function get_account_roles () : array {
 
-        return array_values((array) $this->get_staged('roles', $this->get_wp_user()?->roles ?? []));
+        return array_values((array) $this->get_staged('roles', $this->get_wp_user()->roles ?? []));
 
     }
 

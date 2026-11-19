@@ -472,29 +472,29 @@ class Change_Set extends Model implements Step_List {
     // Null when a value has no JSON (PHP reads 1e999 as INF), which would otherwise be stored as nothing.
     protected function to_row (array $step, int $position) : ?array {
 
-        $json = function ($value) use (&$bad) { if (is_null($value)) return null; $encoded = wp_json_encode($value); $bad = $bad || ($encoded === false); return $encoded; };
-        $bad  = false;
+        $encoded = array_map(fn ($value) => is_null($value) ? null : wp_json_encode($value), [
+            'input'    => ($step['input'] ?? []) ?: null,
+            'proposed' => ($step['values'] ?? []) ?: null,
+            'expected' => $step['expected'] ?? null,
+            'removed'  => ($step['removed'] ?? []) ?: null,
+        ]);
 
-        $row = [
+        if (in_array(false, $encoded, true)) return null;
+
+        return [
             'set_id'       => $this->get_id(),
             'position'     => $position,
             'op'           => $step['op'],
             'resource'     => $step['resource'],
             'record_id'    => isset($step['id']) ? (string) $step['id'] : null,
             'action'       => $step['action'] ?? null,
-            'input'        => $json(($step['input'] ?? []) ?: null),
-            'proposed'     => $json(($step['values'] ?? []) ?: null),
-            'expected'     => $json($step['expected'] ?? null),
-            'removed'      => $json(($step['removed'] ?? []) ?: null),
             'workspace_id' => $step['workspace_id'] ?? null,
             'wait'         => empty($step['wait']) ? 0 : 1,
             'marker'       => $step['marker'] ?? '',
             'marked_at'    => $step['marked_at'] ?? null,
             'journal_id'   => $step['journal_id'] ?? null,
             'error'        => isset($step['error']) ? static::fit_text((string) $step['error']) : null,
-        ];
-
-        return $bad ? null : $row;
+        ] + $encoded;
 
     }
 
@@ -554,6 +554,7 @@ class Change_Set extends Model implements Step_List {
 
     }
 
+    /** @phpstan-impure */
     public function holds_lock () : bool {
 
         global $wpdb;
