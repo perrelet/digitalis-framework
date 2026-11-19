@@ -80,24 +80,6 @@ abstract class Attachment_Table extends Screen_Table {
 
     }
 
-    public function sort_columns ($query) {
-
-        if (!is_string($order_by = $query->get('orderby'))) return;
-
-        $call = [$this, "sort_column_" . $order_by];
-        if (is_callable($call)) {
-
-            $qv = new Query_Vars();
-            $qv->merge($query->query_vars);
-
-            call_user_func($call, $qv);
-
-            $query->query_vars = $qv->to_array();
-
-        }
-
-    }
-
     //
 
     protected function is_main_admin_query ($query) {
