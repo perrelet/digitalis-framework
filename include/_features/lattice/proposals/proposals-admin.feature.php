@@ -124,8 +124,7 @@ class Proposals_Admin extends Feature {
 
         if (is_wp_error($proposal)) wp_die(esc_html('The proposal could not be made: ' . $proposal->get_error_message()), '', ['response' => 500]);
 
-        wp_safe_redirect($proposal->get_draft()->get_edit_url());
-        exit;
+        $this->redirect($proposal->get_draft()->get_edit_url());
 
     }
 
@@ -231,7 +230,9 @@ class Proposals_Admin extends Feature {
 
     }
 
-    protected function redirect (string $url, string $notice = '') : never {
+    protected function redirect (?string $url, string $notice = '') : never {
+
+        $url = $url ?: Proposal::get_queue_url();
 
         wp_safe_redirect($notice ? add_query_arg(static::NOTICE, $notice, $url) : $url);
         exit;

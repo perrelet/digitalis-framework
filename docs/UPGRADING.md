@@ -16,7 +16,7 @@ Framework hooks fire under lowercase dot-delimited names (`lattice.post_type.{cl
 |---|---|
 | PHP 8.0 or later | PHP 8.2 or later; `load.php` throws on an older PHP, and the `array_is_list` polyfill is gone |
 | No stated WordPress version | WordPress 6.6 or later |
-| `App::refuse_feature()`, `Lattice_Credentials::stop()` and `Proposals_Admin::redirect()` carried their return types as comments | They declare `: null`, `: never` and `: never`; an override must declare the same |
+| `App::refuse_feature()`, `Lattice_Credentials::stop()` and `Proposals_Admin::redirect()` carried their return types as comments | They declare `: null`, `: never` and `: never`; an override must declare the same. `Proposals_Admin::redirect()` also takes `?string $url` (a null or empty URL, such as the edit link of a draft the user cannot edit, goes to the proposals queue), so an override's first parameter accepts null |
 
 ### View lifecycle
 
