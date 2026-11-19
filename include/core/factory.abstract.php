@@ -111,7 +111,7 @@ abstract class Factory extends Creational {
             if (($cache_key = $instance->get_cache_key()) && (!$held || ($cache_key !== $name))) Registry::set($kind, $group, $cache_key, $instance);
             if (!is_null($key) && ($key !== $cache_key) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
 
-            $instance->switch_on();
+            Batch::defer(fn () => $instance->switch_on());
 
         }
 
@@ -156,7 +156,7 @@ abstract class Factory extends Creational {
         Registry::set($kind, $group, $name, $instance);
 
         if (($key = $instance->get_cache_key()) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
-        $instance->switch_on();
+        Batch::defer(fn () => $instance->switch_on());
 
         return $instance;
 

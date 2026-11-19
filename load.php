@@ -37,6 +37,8 @@ require LATTICE_PATH . 'compat/digitalis-hooks.php';
     ->use_classmap(LATTICE_PATH . '.classmap.php')
     ->autoload(LATTICE_PATH . 'include', true, 'php', instantiation: false);
 
+Lattice\Framework::get_instance();
+
 if (Lattice\Strict::enabled()) Lattice\Query_Manager::strict_hooks();
 
 // WooCommerce fires woocommerce_loaded at plugins_loaded:-1; the did_action branch covers a framework included after that.

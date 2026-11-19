@@ -17,7 +17,6 @@ abstract class App extends Registrant {
     protected $reflection;
     protected $path;
     protected $url;
-    protected $boots_late = false; // built after plugins_loaded (a theme's functions.php, activate_plugin()'s include): Factory caches after create(), so get_instance() boots it
 
     public function __construct () {
 
@@ -32,7 +31,7 @@ abstract class App extends Registrant {
     protected function switch_on () : void {
 
         if (static::plugins_loaded_done()) {
-            $this->boots_late = true;
+            $this->boot();
         } else {
             add_action('plugins_loaded', [$this, 'boot'], $this->get_boot_priority());
         }
@@ -41,20 +40,10 @@ abstract class App extends Registrant {
 
     }
 
-    // Boots after construction, once get_instance() has cached the app.
+    // An app built during plugins_loaded boots later in the same pass: WordPress skips a callback added at a priority already run.
     protected function get_boot_priority () : int {
 
         return doing_action('plugins_loaded') ? $GLOBALS['wp_filter']['plugins_loaded']->current_priority() + 1 : 10;
-
-    }
-
-    public static function get_instance (mixed $data = null) {
-
-        $instance = Registry::get(static::INSTANCE_KIND, static::$cache_group, static::class) ?? parent::get_instance($data);
-
-        if ($instance instanceof self && $instance->boots_late) { $instance->boots_late = false; $instance->boot(); }
-
-        return $instance;
 
     }
 
@@ -65,7 +54,7 @@ abstract class App extends Registrant {
 
     }
 
-    // One App per class: stored and looked up by class whatever get_instance() was given (Factory only looks up a scalar key), so a late get_instance([...]) boots it once.
+    // One App per class: stored and looked up by class whatever get_instance() was given (Factory only looks up a scalar key).
     protected function get_cache_key () {
 
         return static::class;
@@ -91,45 +80,35 @@ abstract class App extends Registrant {
 
     }
 
+    // Everything the contexts load is built, then switched on together, before any boot_*() runs.
     public function boot () {
-    
-        $this->load();
-        $this->ensure_schema();
 
+        $contexts = $this->get_boot_contexts();
+
+        Batch::run(function () use ($contexts) {
+            $this->load();
+            foreach ($contexts as $context) if ($context !== 'front') $this->{"load_{$context}"}();
+        });
+
+        $this->ensure_schema();
         $this->boot_shared();
 
-        if (defined('WP_CLI') && WP_CLI) {
-            $this->load_cli();
-            $this->boot_cli();
-            return;
-        }
+        foreach ($contexts as $context) $this->{"boot_{$context}"}();
 
-        if (wp_doing_cron()) {
-            $this->load_cron();
-            $this->boot_cron();
-            return;
-        }
+    }
 
-        if (wp_doing_ajax()) {
-            $this->load_ajax();
-            $this->boot_ajax();
-            // Do not return (ajax may need REST-ish scripts)
-        }
+    protected function get_boot_contexts () : array {
 
-        if (defined('REST_REQUEST') && REST_REQUEST) {
-            $this->load_rest();
-            $this->boot_rest();
-            return;
-        }
+        if (defined('WP_CLI') && WP_CLI) return ['cli'];
+        if (wp_doing_cron())             return ['cron'];
 
-        if (is_admin()) {
-            $this->load_admin();
-            $this->boot_admin();
-            return;
-        }
+        $contexts = wp_doing_ajax() ? ['ajax'] : [];
 
-        $this->boot_front();
-    
+        if (defined('REST_REQUEST') && REST_REQUEST) return [...$contexts, 'rest'];
+        if (is_admin())                              return [...$contexts, 'admin'];
+
+        return [...$contexts, 'front'];
+
     }
 
     public function load () {
