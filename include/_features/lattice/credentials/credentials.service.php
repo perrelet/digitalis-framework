@@ -517,7 +517,8 @@ class Credentials extends Service {
         return match ($rule['surface']) {
             'route'    => $this->route_exists($rule['target']) ? [] : ["route {$rule['target']}"],
             'ability'  => $this->ability_exists($rule['target']) ? [] : ["ability {$rule['target']}"],
-            default    => $this->find_missing_on_resource($rule),
+            'resource' => $this->find_missing_on_resource($rule),
+            default    => ["surface {$rule['surface']}"],
         };
 
     }
