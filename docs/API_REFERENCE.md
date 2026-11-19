@@ -1151,7 +1151,7 @@ Strict mode (`LATTICE_STRICT`, default `WP_DEBUG`) for a check a consumer class 
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `report()` | `static report(string $class, string $problem, string $fix): void` | Under strict, a `Strict_Violation` reading `Class (dir/file.php): problem. Fix.`, listed with the rest of an autoload walk's findings or thrown at once outside one; otherwise one `error_log()` line, `Lattice: {class}: {problem}`, per class and problem per request. Word `$problem` to say what the code does instead (`..., so it is not scheduled.`); the caller still takes its fallback |
+| `report()` | `static report(string $class, string $problem, string $fix): void` | Under strict, a `Strict_Violation` reading `Class (dir/file.php): {problem} {fix}` (the caller punctuates both), listed with the rest of an autoload walk's findings, or thrown at once as a one-item list outside one; otherwise one `error_log()` line, `Lattice: {class}: {problem}`, per class and problem per request. Word `$problem` to say what the code does instead (`..., so it is not scheduled.`); the caller still takes its fallback |
 
 ---
 

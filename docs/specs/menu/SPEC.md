@@ -99,7 +99,7 @@ Not a `Menu` subclass — composition over inheritance. The drawer toggle is alw
 
 ## 4. PHP API
 
-**PHP target: 8.2.** Unlocks `readonly` properties (8.1) and `readonly` classes (8.2), enums, intersection / union / DNF types, `never` return type, and `new` in initialisers. The `/* readonly */` placeholders in lattice's existing source can be converted alongside this work. `array_is_list` is native (8.1); the polyfill in `lattice/include/functions.php` becomes a no-op fallback.
+**PHP target: 8.2.** Unlocks `readonly` properties (8.1) and `readonly` classes (8.2), enums, intersection / union / DNF types, `never` return type, and `new` in initialisers. The `/* readonly */` placeholders in lattice's existing source can be converted alongside this work. `array_is_list` is native (8.1); the polyfill in `lattice/include/functions.php` was removed at the 8.2 floor (0.13.0).
 
 ### 4.1 Menu params
 
