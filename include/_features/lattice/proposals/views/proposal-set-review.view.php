@@ -233,7 +233,7 @@ class Proposal_Set_Review extends View {
         // Computed by the record's own save, not proposed; withheld, not for this reader.
         $fields   = $resource->get_fields();
         $withheld = array_flip((array) ($step['withheld'] ?? []));
-        $kept     = fn (array $values) => array_filter($values, fn ($name) => empty($fields[$name]?->computed) && !isset($withheld[$name]), ARRAY_FILTER_USE_KEY);
+        $kept     = fn (array $values) => array_filter($values, fn ($name) => empty($fields[$name]->computed) && !isset($withheld[$name]), ARRAY_FILTER_USE_KEY);
         [$before, $after] = [$kept($before), $kept($after)];
 
         // present_change() shortens long text, which a word diff needs whole.
@@ -274,7 +274,7 @@ class Proposal_Set_Review extends View {
         $items  = array_map(fn ($item) => is_scalar($item) ? (string) $item : (string) ($item['title'] ?? $item['label'] ?? ''), (array) ($consequence['items'] ?? []));
         $extras = array_map(fn ($key) => is_scalar($consequence[$key] ?? null) ? (string) $consequence[$key] : '', (array) ($consequence['volatile'] ?? []));
 
-        return ['label' => (string) ($consequence['label'] ?? ''), 'items' => array_values(array_filter($items, 'strlen')), 'extras' => array_values(array_filter($extras, 'strlen'))];
+        return ['label' => (string) ($consequence['label'] ?? ''), 'items' => array_values(array_filter($items, fn (string $each) => $each !== '')), 'extras' => array_values(array_filter($extras, fn (string $each) => $each !== ''))];
 
     }
 
