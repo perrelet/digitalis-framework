@@ -17,7 +17,8 @@ class Log extends Service {
     protected $date_format = null;
     protected $export_vars = false;
 
-    public static function create ($data = []) {
+    /** @param array|string $data */
+    public static function create (mixed $data = []) {
 
         return parent::create(is_string($data) ? ['file' => $data] : $data);
 
