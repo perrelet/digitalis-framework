@@ -316,7 +316,7 @@ class Lattice_Credentials extends Feature {
 
     }
 
-    protected function stop (string $message) /* : never */ {
+    protected function stop (string $message) : never {
 
         $this->stopped = true;
 
