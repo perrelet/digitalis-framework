@@ -86,6 +86,20 @@ class Woo_Account_Page extends Factory {
 
     }
 
+    public static function strict_audit (string $class) {
+
+        $reflection = new \ReflectionClass($class);
+
+        if ($reflection->isAbstract()) return;
+
+        $capability = $reflection->getDefaultProperties()['capability'] ?? null;
+
+        if (is_string($capability) || is_null($capability) || ($capability === false)) return;
+
+        Strict::violation($class, 'declares $capability ' . var_export($capability, true) . ', which is not a capability name.', "Declare \$capability as a capability name such as 'read', or false for an open page.");
+
+    }
+
     public function __construct () {
 
         if (!self::get_instance_count(self::class)) self::run_once();

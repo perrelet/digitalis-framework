@@ -134,6 +134,7 @@ The eleven framework WooCommerce classes (`Customer`, `Order`, `Order_Item`, `Or
 | Violation | Mechanical fix |
 |---|---|
 | A reference to one of the eleven that PHP resolves at boot outside a `~woocommerce/` directory (the `Digitalis\` alias now covers traits too, so `use \Digitalis\Is_Woo_Customer` resolves once the trait is declared): `extends`, a trait `use` or a static call in a plain `Integration`'s `run()` (fatal `Class "Digitalis\X" not found` at `plugins_loaded`, on every request type including wp-admin, on a site without WooCommerce) | Move the file under `~woocommerce/`, or make the integration a `Plugin_Integration` with `$plugin = 'woocommerce'` (a directory or a basename; `Plugins::is_active()` matches both) |
+| A `Woo_Account_Page` subclass declares `$capability` as something other than a capability name or false (checked at boot) | Declare a capability name such as `'read'`, or false for an open page |
 
 Deactivating WooCommerce on a site with such references now takes the site down until they move; `wp plugin activate woocommerce --skip-plugins=<your-plugin>` is the escape. The two gates use different signals: the framework listens for `woocommerce_loaded`, a consumer's `~woocommerce/` checks the active-plugin list for a `woocommerce/` directory, so WooCommerce loaded from `mu-plugins/` or a renamed directory satisfies only the first.
 
