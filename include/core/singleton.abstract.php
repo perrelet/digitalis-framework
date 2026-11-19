@@ -10,7 +10,7 @@ abstract class Singleton extends Creational {
 
     use Auto_Instantiate;
 
-    private static $instances = [];
+    const INSTANCE_KIND = 'registrant';
 
     protected function __construct() {}
     public function __clone()        { throw new Exception("One for all and all for one."); }
@@ -30,10 +30,10 @@ abstract class Singleton extends Creational {
         
         if ($class_name != static::class)         return $class_name::get_instance();
         if (!$class_name::instance_condition())   return null;
-        if (isset(self::$instances[$class_name])) return self::$instances[$class_name];
+        if ($held = Registry::get(self::INSTANCE_KIND, self::class, $class_name)) return $held;
 
         $instance = new $class_name();
-        self::$instances[$class_name] = $instance;
+        Registry::set(self::INSTANCE_KIND, self::class, $class_name, $instance);
         static::construct_instance($instance);
 
         return $instance;

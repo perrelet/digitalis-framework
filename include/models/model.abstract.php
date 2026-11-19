@@ -15,7 +15,7 @@ class Model extends Factory {
     
     }
 
-    protected static $instances = [];
+    const INSTANCE_KIND = 'entity';
 
     public static function prepare_data (mixed &$data) {}
 
@@ -199,7 +199,7 @@ class Model extends Factory {
         if (is_null($id))                 return null;
         if ($class_name != static::class) return $class_name::get_instance($data, false);
 
-        if (isset(self::$instances[$class_name][$id])) return self::$instances[$class_name][$id];
+        if ($held = Registry::get(self::INSTANCE_KIND, $class_name, $id)) return $held;
         if (!static::validate_data($data))              return null;
 
         self::strict_enter('validate', $id);
@@ -232,7 +232,7 @@ class Model extends Factory {
 
     public static function get_all_instances () {
 
-        return self::$instances[static::class] ?? [];
+        return Registry::get_group(self::INSTANCE_KIND, static::class);
 
     }
 
@@ -368,8 +368,7 @@ class Model extends Factory {
 
     public function cache_instance () {
     
-        if (!isset(self::$instances[static::class])) self::$instances[static::class] = [];
-        self::$instances[static::class][$this->id] = $this;
+        Registry::set(self::INSTANCE_KIND, static::class, $this->id, $this);
         return $this;
     
     }
@@ -384,7 +383,7 @@ class Model extends Factory {
 
     public function is_first_instance () {
 
-        return $this->id == array_key_first(self::$instances[static::get_class_name($this->id)]);
+        return $this->id == array_key_first(Registry::get_group(self::INSTANCE_KIND, static::get_class_name($this->id)));
 
     }
 

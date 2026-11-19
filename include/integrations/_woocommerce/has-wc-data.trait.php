@@ -116,7 +116,7 @@ trait Has_WC_Data {
 
         if (!$id) return;
 
-        foreach (self::$instances as $class => $models) {
+        foreach (Registry::get_kind(self::INSTANCE_KIND) as $class => $models) {
 
             if (!is_a($class, self::class, true) || !isset($models[$id])) continue;
 

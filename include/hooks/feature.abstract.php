@@ -64,11 +64,11 @@ abstract class Feature extends Factory {
 
         if (is_null($name)) return null;
 
-        $held = self::$instances[static::get_cache_group()][$name] ?? null;
+        $held = Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $name);
 
         if ($held && !($held instanceof static)) {
 
-            if (!isset(self::$instances[static::get_cache_group()][static::class])) {
+            if (!Registry::has(static::INSTANCE_KIND, static::get_cache_group(), static::class)) {
 
                 $problem = "shares the name '{$name}' with " . get_class($held);
 
@@ -88,7 +88,7 @@ abstract class Feature extends Factory {
     protected function get_cache_key () {
 
         $name = parent::get_cache_key();
-        $held = is_null($name) ? null : (self::$instances[static::get_cache_group()][$name] ?? null);
+        $held = is_null($name) ? null : Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $name);
 
         return ($held && ($held !== $this) && !($held instanceof static)) ? static::class : $name;
 

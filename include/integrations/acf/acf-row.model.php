@@ -271,7 +271,7 @@ class ACF_Row extends Model {
         $result = $this->parent->field_delete_row($this->selector, $this->index + 1);
 
         // Sibling rows shift indexes after deletion — drop this instance's cache slot; cached siblings are now stale and should be re-queried.
-        unset(self::$instances[static::class][$this->id]);
+        Registry::remove(self::INSTANCE_KIND, static::class, $this->id);
         $this->index = null;
 
         return $result;

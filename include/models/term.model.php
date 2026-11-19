@@ -198,7 +198,7 @@ class Term extends WP_Model {
         $this->cache_instance();
         $this->unstash();
 
-        self::$instances[static::class][$term_id] = $this;
+        Registry::set(self::INSTANCE_KIND, static::class, $term_id, $this);
 
         if ($term_array['field_input'] ?? false) $this->update_fields($term_array['field_input']);
 

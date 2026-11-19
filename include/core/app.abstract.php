@@ -10,6 +10,8 @@ abstract class App extends Factory {
 
     use Autoloader;
 
+    const INSTANCE_KIND = 'app';
+
     protected static $cache_group = self::class;
 
     protected $reflection;
@@ -42,7 +44,7 @@ abstract class App extends Factory {
 
     public static function get_instance (mixed $data = null) {
 
-        $instance = self::$instances[static::$cache_group][static::class] ?? parent::get_instance($data);
+        $instance = Registry::get(static::INSTANCE_KIND, static::$cache_group, static::class) ?? parent::get_instance($data);
 
         if ($instance instanceof self && $instance->boots_late) { $instance->boots_late = false; $instance->boot(); }
 

@@ -10,22 +10,23 @@ abstract class Factory extends Creational {
 
     use Auto_Instantiate, Dependency_Injection;
 
-    protected static $instances = [];
+    const INSTANCE_KIND = 'registrant';
+
     protected static $cache_group = '__global__';
     protected static $cache_property = null;
 
     public static function get_group_instances (?string $group = null) {
 
         $group ??= static::get_cache_group();
-        return self::$instances[$group] ?? [];
+        return Registry::get_group(static::INSTANCE_KIND, $group);
 
     }
 
     public static function get_instance_map () {
 
         $map = [];
-        foreach (self::$instances as $group => $instances) {
-            $map[$group] = [];
+        foreach (['registrant', 'service', 'app'] as $kind) foreach (Registry::get_kind($kind) as $group => $instances) {
+            $map[$group] ??= [];
             foreach ($instances as $key => $instance) {
                 $map[$group][$key] = $instance::class;
             }
@@ -85,16 +86,15 @@ abstract class Factory extends Creational {
         static::prepare_data($data);
         if (!static::instance_condition($data)) return null;
 
+        $kind  = static::INSTANCE_KIND;
         $group = static::get_cache_group();
         $key   = static::get_data_key($data);
 
-        self::$instances[$group] ??= [];
-
-        if (!is_null($key) && ((self::$instances[$group][$key] ?? null) instanceof static)) return self::$instances[$group][$key]; // a name another class holds is theirs
+        if (!is_null($key) && (($found = Registry::get($kind, $group, $key)) instanceof static)) return $found; // a name another class holds is theirs
 
         // An array config that names a held name: a name is taken once. Where the refusal does not throw, the holder answers its own class and stays in place for another.
         $name = (is_array($data) && static::$cache_property && is_scalar($data[static::$cache_property] ?? null)) ? (string) $data[static::$cache_property] : null;
-        $held = is_null($name) ? null : (self::$instances[$group][$name] ?? null);
+        $held = is_null($name) ? null : Registry::get($kind, $group, $name);
 
         if ($held) {
 
@@ -108,8 +108,8 @@ abstract class Factory extends Creational {
 
         if ($instance = static::create($data)) {
 
-            if (($cache_key = $instance->get_cache_key()) && (!$held || ($cache_key !== $name))) self::$instances[$group][$cache_key] = $instance;
-            if (!is_null($key) && ($key !== $cache_key) && !isset(self::$instances[$group][$key])) self::$instances[$group][$key] = $instance;
+            if (($cache_key = $instance->get_cache_key()) && (!$held || ($cache_key !== $name))) Registry::set($kind, $group, $cache_key, $instance);
+            if (!is_null($key) && ($key !== $cache_key) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
 
         }
 
@@ -129,9 +129,10 @@ abstract class Factory extends Creational {
 
         if ($name === '') return static::refuse_declare('declares an empty name', 'give it a name');
 
+        $kind  = static::INSTANCE_KIND;
         $group = static::get_cache_group();
 
-        if ($held = self::$instances[$group][$name] ?? null) {
+        if ($held = Registry::get($kind, $group, $name)) {
 
             static::refuse_declare("declares '{$name}', which " . $held::class . ' already holds', "find it with inst('{$name}') or declare another name");
 
@@ -150,9 +151,9 @@ abstract class Factory extends Creational {
         if (!static::instance_condition($config)) return null;
         if (!$instance = static::create($config))  return null;
 
-        self::$instances[$group][$name] = $instance;
+        Registry::set($kind, $group, $name, $instance);
 
-        if (($key = $instance->get_cache_key()) && !isset(self::$instances[$group][$key])) self::$instances[$group][$key] = $instance;
+        if (($key = $instance->get_cache_key()) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
 
         return $instance;
 

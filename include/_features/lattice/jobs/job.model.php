@@ -108,7 +108,7 @@ class Job extends Model {
 
         if (!$job || ($job->blog === get_current_blog_id())) return $job;
 
-        unset(self::$instances[get_class($job)][$job->id]);
+        Registry::remove(self::INSTANCE_KIND, get_class($job), $job->id);
 
         return parent::get_instance($data, $auto_resolve);
 
@@ -128,7 +128,7 @@ class Job extends Model {
 
     public static function forget_instances () : void {
 
-        self::$instances = [];
+        Registry::forget_kind(self::INSTANCE_KIND);
         self::$types     = [];
 
     }

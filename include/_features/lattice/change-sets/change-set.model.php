@@ -53,7 +53,7 @@ class Change_Set extends Model implements Step_List {
 
         if (!$set || ($set->blog === get_current_blog_id())) return $set;
 
-        unset(self::$instances[get_class($set)][$set->id]);
+        Registry::remove(self::INSTANCE_KIND, get_class($set), $set->id);
 
         return parent::get_instance($data, $auto_resolve);
 

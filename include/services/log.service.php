@@ -38,7 +38,7 @@ class Log extends Service {
 
         if (!is_string($data)) return parent::get_data_key($data);
 
-        if (($data !== '') && ((self::$instances[static::get_cache_group()][$data] ?? null) instanceof static)) return $data;
+        if (($data !== '') && (Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $data) instanceof static)) return $data;
 
         $error_log = (string) ini_get('error_log');
         $directory = (new ReflectionClass(static::class))->getDefaultProperties()['directory'] ?? null;
