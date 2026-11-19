@@ -68,7 +68,7 @@ Auto-instantiated classes (Feature, Route, Post_Type, etc.) require no manual bo
 
 ## Getting started
 
-Lattice needs PHP 8.2 or later.
+Lattice needs PHP 8.2 and WordPress 6.6 or later.
 
 Require the framework, declare an `App` subclass in `include/` and ask for its instance. The sandbox plugin in this repository's parent does exactly this:
 
