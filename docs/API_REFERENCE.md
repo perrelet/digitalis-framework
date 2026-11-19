@@ -215,7 +215,7 @@ abstract class Command
 | `$subcommands` | `protected $subcommands = []` | `name => [about, synopsis]`, or `[about, synopsis, method]` when the name cannot be the method's (`list`). |
 | `register()` | `public static register(mixed ...$args): void` | Returns outside WP-CLI; else constructs with `$args` and adds. |
 | `add()` | `protected add(): void` | One `add_command()` per row, or the object whole; a dynamic set overrides it and calls the parent. |
-| `fail()` | `protected fail(string $message)` | `WP_CLI::error()`; `@return never` (the analysis runs as PHP 8.0). |
+| `fail()` | `protected fail(string $message)` | `WP_CLI::error()`; `@return never`. |
 | `answer()` | `protected answer(mixed $result): void` | JSON, pretty and unescaped; a `WP_Error` as `{code, message, data}` then exit 1. |
 | `table()` | `protected table(array $rows, array $fields, string $format = 'table'): void` | `format_items()`. |
 

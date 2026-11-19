@@ -4,7 +4,7 @@
     "type": "library",
     "license": "GPL-2.0-or-later",
     "require": {
-        "php": ">=8.0"
+        "php": ">=8.2"
     },
     "require-dev": {
         "php-stubs/acf-pro-stubs": "^6.8",

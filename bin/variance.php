@@ -6,7 +6,7 @@
 // Blind spots: class_alias beyond the Digitalis shim, eval and generated classes, `__call` methods, parameter renames
 // (named-argument callers only), and everything else PHP reports at compile time, such as two traits colliding.
 PHP_SAPI === 'cli' || exit;
-if (PHP_VERSION_ID < 80000) { fwrite(STDERR, "PHP 8.0+ required\n"); exit(2); }
+if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
 
 // Mirrors compat/digitalis-namespace.php; ~/lattice-v1-tests/variance.sh asserts the two lists match.
 const SUB_NAMESPACES = ['Component', 'Field', 'DB', 'WP', 'Woo', 'ACF', 'Oxygen'];

@@ -2,7 +2,7 @@
 // The boundary rule: include/{core,models,views,routing,query,registration} never name an ACF, WooCommerce or page-builder
 // symbol. Tokenizer-based, so strings and comments never match. `php bin/boundaries.php [framework-root]`; exit 1 on a hit.
 PHP_SAPI === 'cli' || exit;
-if (PHP_VERSION_ID < 80000) { fwrite(STDERR, "PHP 8.0+ required\n"); exit(2); }
+if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
 
 $root = realpath($argv[1] ?? dirname(__DIR__));
 $dirs = ['core', 'models', 'views', 'routing', 'query', 'registration'];

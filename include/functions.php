@@ -2,17 +2,6 @@
 
 declare(strict_types=1);
 
-// PHP: Introduced in 8.1 (https://stackoverflow.com/questions/173400/how-to-check-if-php-array-is-associative-or-sequential)
-
-if (!function_exists('array_is_list')) {
-    function array_is_list (array $arr) {
-        if ($arr === []) {
-            return true;
-        }
-        return array_keys($arr) === range(0, count($arr) - 1);
-    }
-}
-
 // ACF: Gets a field from a WP_Term
 
 if (!function_exists('get_tax_field')) {

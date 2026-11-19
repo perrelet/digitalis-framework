@@ -3,7 +3,7 @@
 // `php bin/scripts.php [framework-root]` walks the tree; `--list [root]` prints the scripts it would check;
 // `--check file...` checks the named files alone. Exit 1 on a hit.
 PHP_SAPI === 'cli' || exit;
-if (PHP_VERSION_ID < 80000) { fwrite(STDERR, "PHP 8.0+ required\n"); exit(2); }
+if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
 
 // Mirrors the Existing Scripts table of docs/SCRIPTS.md: a script leaves both when it is rewritten.
 $legacy = [

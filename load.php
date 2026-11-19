@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+if (PHP_VERSION_ID < 80200) throw new RuntimeException('Lattice needs PHP 8.2 or later; this site runs PHP ' . PHP_VERSION . '.');
+
 if (defined('LATTICE_VERSION')) return;
 
 define('LATTICE_VERSION',       '0.12.0');

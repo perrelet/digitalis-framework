@@ -10,6 +10,12 @@ The namespace is `Lattice\`, one sub-namespace per family (`Lattice\Component\Fo
 
 Framework hooks fire under lowercase dot-delimited names (`lattice.post_type.{class}.args` for `Digitalis/Post_Type/{Class}/Args`; the table in [HOOKS.md](./HOOKS.md#framework-hooks-summary)). `Hook::filter()` runs the legacy `Digitalis/...` name through `apply_filters_deprecated()` before the live one, so a callback on the old name keeps working and logs a deprecation; move it to the dotted name.
 
+### Requirements
+
+| Was | Now |
+|---|---|
+| PHP 8.0 or later | PHP 8.2 or later; `load.php` throws on an older PHP, and the `array_is_list` polyfill is gone |
+
 ### View lifecycle
 
 | Violation | Mechanical fix |

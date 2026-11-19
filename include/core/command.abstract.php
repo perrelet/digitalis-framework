@@ -36,7 +36,7 @@ abstract class Command {
 
     }
 
-    /** @return never The analysis runs as PHP 8.0 (phpstan.neon.dist), before the native type. */
+    /** @return never */
     protected function fail (string $message) {
 
         WP_CLI::error($message);
