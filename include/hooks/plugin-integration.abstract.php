@@ -14,9 +14,7 @@ abstract class Plugin_Integration extends Integration {
 
             $error = '$plugin must be a plugin basename or its directory, ' . get_debug_type(static::$plugin) . ' provided.';
 
-            Strict::violation(static::class, $error, 'Set $plugin to the plugin basename (woocommerce/woocommerce.php) or its directory.');
-
-            Strict::log_once(static::class, $error);
+            Strict::report(static::class, $error, 'Set $plugin to the plugin basename (woocommerce/woocommerce.php) or its directory.');
 
             return false;
 

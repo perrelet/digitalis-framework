@@ -51,6 +51,13 @@ final class Strict {
 
     }
 
+    public static function report (string $class, string $problem, string $fix) : void {
+
+        self::violation($class, $problem, $fix);
+        self::log_once($class, $problem);
+
+    }
+
     public static function audit (string $class) : void {
 
         if (!self::enabled()) return;

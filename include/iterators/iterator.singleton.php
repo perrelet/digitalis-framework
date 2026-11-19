@@ -143,8 +143,7 @@ abstract class Iterator extends Singleton {
 
             if (!preg_match(Cron_Scheduler::TIME_PATTERN, (string) $this->cron_time) || !$date_time) {
 
-                Strict::violation(static::class, "declares \$cron_time '{$this->cron_time}', which is not an H:i:s time.", "Declare \$cron_time as 'H:i:s', '02:00:00' for example.");
-                Strict::log_once(static::class, "\$cron_time '{$this->cron_time}' is not an H:i:s time; nothing is scheduled.");
+                Strict::report(static::class, "declares \$cron_time '{$this->cron_time}', which is not an H:i:s time, so nothing is scheduled.", "Declare \$cron_time as 'H:i:s', '02:00:00' for example.");
                 return;
 
             }
@@ -175,8 +174,7 @@ abstract class Iterator extends Singleton {
 
         if (!isset(wp_get_schedules()[$schedule])) {
 
-            Strict::violation(static::class, "schedules '{$action}' on '{$schedule}', which no cron_schedules filter registers.", "Declare a registered schedule, or register '{$schedule}' with a cron_schedules filter.");
-            Strict::log_once(static::class, "schedule '{$schedule}' is not registered; '{$action}' is not scheduled.");
+            Strict::report(static::class, "schedules '{$action}' on '{$schedule}', which no cron_schedules filter registers, so it is not scheduled.", "Declare a registered schedule, or register '{$schedule}' with a cron_schedules filter.");
             return false;
 
         }
@@ -1665,9 +1663,7 @@ abstract class Iterator extends Singleton {
 
         if (!is_string($directory) || !path_is_absolute($directory)) {
 
-            $problem = "declares \$log_file '{$this->log_file}' but no absolute directory resolves for it.";
-            Strict::violation(static::class, $problem, "Declare \$log_directory, add a lattice.iterator.log_directory filter, or set an absolute error_log ini.");
-            Strict::log_once(static::class, "{$problem} The run is not written to a file.");
+            Strict::report(static::class, "declares \$log_file '{$this->log_file}' but no absolute directory resolves for it, so the run is not written to a file.", "Declare \$log_directory, add a lattice.iterator.log_directory filter, or set an absolute error_log ini.");
 
             return $this->log_handle = null;
 

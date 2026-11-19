@@ -115,8 +115,7 @@ abstract class Cron_Scheduler extends Singleton {
 
             if (!preg_match(self::TIME_PATTERN, (string) $task['time']) || !$date_time) {
 
-                Strict::violation(static::class, "declares task '{$key}' at '{$task['time']}', which is not an H:i:s time.", "Declare the task's 'time' as 'H:i:s', '01:45:00' for example.");
-                Strict::log_once(static::class, "task '{$key}' time '{$task['time']}' is not an H:i:s time; it is not scheduled.");
+                Strict::report(static::class, "declares task '{$key}' at '{$task['time']}', which is not an H:i:s time, so it is not scheduled.", "Declare the task's 'time' as 'H:i:s', '01:45:00' for example.");
                 continue;
 
             }

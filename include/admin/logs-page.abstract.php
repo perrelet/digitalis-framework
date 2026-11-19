@@ -258,8 +258,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
             $error = 'declares $bytes_per_page as ' . var_export($this->bytes_per_page, true) . ', which is not a positive integer, so the log cannot be paged.';
 
-            Strict::violation(static::class, $error, 'Declare a positive number of bytes per page, or leave the default of ' . self::DEFAULT_BYTES_PER_PAGE . '.');
-            Strict::log_once(static::class, $error);
+            Strict::report(static::class, $error, 'Declare a positive number of bytes per page, or leave the default of ' . self::DEFAULT_BYTES_PER_PAGE . '.');
 
             $default = self::DEFAULT_BYTES_PER_PAGE;
 

@@ -72,8 +72,7 @@ abstract class Feature extends Factory {
 
                 $problem = "shares the name '{$name}' with " . get_class($held);
 
-                Strict::violation(static::class, $problem, 'give one of them its own id; outside strict each is found by its class');
-                Strict::log_once(static::class, $problem);
+                Strict::report(static::class, $problem, 'give one of them its own id; outside strict each is found by its class');
 
             }
 

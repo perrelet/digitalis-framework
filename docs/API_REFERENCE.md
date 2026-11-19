@@ -1145,6 +1145,14 @@ Which plugins WordPress is loading on this request (UTILITIES.md).
 | `active()` | `static active(): array` | Basenames of the plugins loading on this request, computed once per request |
 | `is_active()` | `static is_active(string $plugin): bool` | True for an active plugin's basename (`woocommerce/woocommerce.php`) or its directory (`woocommerce`) |
 
+### `Lattice\Strict`
+
+Strict mode (`LATTICE_STRICT`, default `WP_DEBUG`) for a check a consumer class can fail ([UPGRADING.md](./UPGRADING.md#v1-the-first-strict-boot)).
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `report()` | `static report(string $class, string $problem, string $fix): void` | Under strict, a `Strict_Violation` reading `Class (dir/file.php): problem. Fix.`, listed with the rest of an autoload walk's findings or thrown at once outside one; otherwise one `error_log()` line, `Lattice: {class}: {problem}`, per class and problem per request. Word `$problem` to say what the code does instead (`..., so it is not scheduled.`); the caller still takes its fallback |
+
 ---
 
 ## Hooks Reference

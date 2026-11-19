@@ -100,8 +100,7 @@ abstract class Factory extends Creational {
 
             $problem = "builds '{$name}' from a config, which " . $held::class . ' already holds';
 
-            Strict::violation(static::class, $problem, "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
-            Strict::log_once(static::class, $problem);
+            Strict::report(static::class, $problem, "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
 
             if ($held instanceof static) return $held;
 
@@ -162,8 +161,7 @@ abstract class Factory extends Creational {
     // Throws under strict; outside it, one log line and null.
     protected static function refuse_declare (string $problem, string $fix) : ?static {
 
-        Strict::violation(static::class, $problem, $fix);
-        Strict::log_once(static::class, $problem);
+        Strict::report(static::class, $problem, $fix);
 
         return null;
 

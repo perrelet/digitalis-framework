@@ -82,8 +82,7 @@ class Log_Format {
 
         $error = "declares the `{$theme}` theme rule `{$rule}`, which {$problem}, so the rule is skipped.";
 
-        Strict::violation($owner, $error, 'Write the rule as a pattern for the raw line, delimited by `/`, with non-capturing groups only and at least one character matched.');
-        Strict::log_once($owner, $error);
+        Strict::report($owner, $error, 'Write the rule as a pattern for the raw line, delimited by `/`, with non-capturing groups only and at least one character matched.');
 
     }
 

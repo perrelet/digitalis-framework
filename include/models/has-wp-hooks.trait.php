@@ -139,8 +139,7 @@ trait Has_WP_Hooks {
 
         $problem = "hook '{$hook_name}' {$problem}";
 
-        Strict::violation(static::class, $problem, $fix);
-        Strict::log_once(static::class, $problem);
+        Strict::report(static::class, $problem, $fix);
 
         return false;
 
