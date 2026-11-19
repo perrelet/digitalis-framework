@@ -11,7 +11,7 @@ class Credentials_Command {
 
     public static function register () : void {
 
-        $command = new static;
+        $command = new self;
 
         WP_CLI::add_command('lattice credentials list', [$command, 'list_scoped'], ['shortdesc' => 'Every scoped password, or one account\'s.', 'synopsis' => '[<user>]']);
         WP_CLI::add_command('lattice credentials show', [$command, 'show'], ['shortdesc' => 'A password\'s policy.', 'synopsis' => '<user> <uuid>']);
@@ -121,7 +121,13 @@ class Credentials_Command {
 
         $api = Credentials::inst();
 
-        if (!isset($args[0])) return $this->answer(['stored' => array_values($api->get_stored()), 'defined' => array_map(fn ($policy) => $policy ?: 'defined twice: unreadable', $api->get_defined())]);
+        if (!isset($args[0])) {
+
+            $this->answer(['stored' => array_values($api->get_stored()), 'defined' => array_map(fn ($policy) => $policy ?: 'defined twice: unreadable', $api->get_defined())]);
+
+            return;
+
+        }
 
         $name = $args[0];
 
@@ -133,11 +139,19 @@ class Credentials_Command {
 
             $api->delete_shared($ref);
 
-            return WP_CLI::success("{$name} deleted: every password holding it now denies everything.");
+            WP_CLI::success("{$name} deleted: every password holding it now denies everything.");
+
+            return;
 
         }
 
-        if (!isset($assoc['input'])) return $this->answer(['ref' => $ref, 'problem' => $problem, 'policy' => $ref ? ($api->get_stored()[$ref]['policy'] ?? $api->get_defined()[$ref]) : null]);
+        if (!isset($assoc['input'])) {
+
+            $this->answer(['ref' => $ref, 'problem' => $problem, 'policy' => $ref ? ($api->get_stored()[$ref]['policy'] ?? $api->get_defined()[$ref]) : null]);
+
+            return;
+
+        }
 
         if (array_key_exists($name, $api->get_defined())) WP_CLI::error("{$name} is defined in code.");
 

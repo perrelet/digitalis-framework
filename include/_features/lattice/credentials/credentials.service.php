@@ -475,7 +475,7 @@ class Credentials extends Service {
             || (($token === 'act:*') && str_starts_with($verb, 'act:'))
             || (($token === 'view:*') && str_starts_with($verb, 'view:'));
 
-        $verbs = (bool) array_filter($rule['verbs'], fn ($a) => array_filter($other['verbs'], fn ($b) => $covers($a, $b) || $covers($b, $a)));
+        $verbs = (bool) array_filter($rule['verbs'], fn ($a) => (bool) array_filter($other['verbs'], fn ($b) => $covers($a, $b) || $covers($b, $a)));
 
         $fields = match (true) {
             isset($rule['fields'], $other['fields']) => (bool) array_intersect($rule['fields'], $other['fields']),
@@ -515,9 +515,9 @@ class Credentials extends Service {
     protected function find_missing (array $rule) : array {
 
         return match ($rule['surface']) {
-            'resource' => $this->find_missing_on_resource($rule),
             'route'    => $this->route_exists($rule['target']) ? [] : ["route {$rule['target']}"],
             'ability'  => $this->ability_exists($rule['target']) ? [] : ["ability {$rule['target']}"],
+            default    => $this->find_missing_on_resource($rule),
         };
 
     }

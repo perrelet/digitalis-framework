@@ -203,9 +203,9 @@ class Credential_Policy {
         $target = is_array($request['target']) ? '' : (string) $request['target'];
 
         return match ($rule['surface']) {
-            'resource' => is_null($rule['target']) ? (($target !== static::SETS) && empty($request['named_only'])) : ($rule['target'] === $target),
             'route'    => (bool) array_filter((array) $request['target'], fn ($each) => preg_match('#^' . str_replace('\*', '.*', preg_quote(strtolower($rule['target']), '#')) . '$#', strtolower($each))),
             'ability'  => is_null($rule['target']) || ($rule['target'] === $target) || (str_ends_with($rule['target'], '/*') && (($request['facts']['category'] ?? null) === substr($rule['target'], 0, -2))),
+            default    => is_null($rule['target']) ? (($target !== static::SETS) && empty($request['named_only'])) : ($rule['target'] === $target),
         };
 
     }
