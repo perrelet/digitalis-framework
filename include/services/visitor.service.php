@@ -178,7 +178,7 @@ class Visitor extends Service {
 
         if (headers_sent() || $defer) {
 
-            return $this->set_cookie_js($key, $value, $ttl, $args, $defer);
+            return $this->set_cookie_js($key, $value, $ttl, $args, $defer || (did_action('wp_head') && !did_action('wp_footer')));
 
         } else {
 
