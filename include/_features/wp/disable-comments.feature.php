@@ -6,7 +6,7 @@ namespace Lattice\WP;
 
 class Disable_Comments extends \Lattice\Feature {
 
-    public function __construct () {
+    public function run () {
     
         $this->add_action('init', function () {
 

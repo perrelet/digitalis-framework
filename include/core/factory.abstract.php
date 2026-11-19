@@ -111,6 +111,8 @@ abstract class Factory extends Creational {
             if (($cache_key = $instance->get_cache_key()) && (!$held || ($cache_key !== $name))) Registry::set($kind, $group, $cache_key, $instance);
             if (!is_null($key) && ($key !== $cache_key) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
 
+            $instance->switch_on();
+
         }
 
         return $instance;
@@ -154,6 +156,7 @@ abstract class Factory extends Creational {
         Registry::set($kind, $group, $name, $instance);
 
         if (($key = $instance->get_cache_key()) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
+        $instance->switch_on();
 
         return $instance;
 
@@ -179,6 +182,9 @@ abstract class Factory extends Creational {
         return (is_null($data) || ($data === [])) ? static::class : (is_scalar($data) ? (string) $data : null);
 
     }
+
+    // Kept first, then switched on: a find inside switch-on answers this instance.
+    protected function switch_on () : void {}
 
     public static function prepare_data (mixed &$data) {}
 

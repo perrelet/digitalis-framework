@@ -10,9 +10,11 @@ class Task_Handler extends Singleton {
 
     protected $option_name = 'digitalis_tasks';
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         add_action('admin_init', [$this, 'process_tasks']);
+
+        parent::switch_on();
 
     }
 

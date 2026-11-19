@@ -6,7 +6,7 @@ namespace Lattice;
 
 use WP_Query;
 
-class Query_Profile extends Factory {
+class Query_Profile extends Registrant {
 
     protected $mode = 'selectable'; // selectable (default off, only runs when selected in _profiles) | ambient (default on, skipped when _profiles is provided) | baseline (almost always on, only skipped if provided in _suppress)
     protected $priority = 10;
@@ -22,7 +22,13 @@ class Query_Profile extends Factory {
         $this->role        = (array) $this->role;
         $this->context     = (array) $this->context;
 
+    }
+
+    protected function switch_on () : void {
+
         Query_Manager::get_instance()->register($this);
+
+        parent::switch_on();
 
     }
 

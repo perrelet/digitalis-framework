@@ -27,9 +27,9 @@ abstract class Logs_Page extends Admin_Sub_Page {
     protected $logs = [];
     protected $_logs;
 
-    public function __construct () {
+    protected function switch_on () : void {
 
-        parent::__construct();
+        parent::switch_on();
         add_action('admin_enqueue_scripts', [$this, 'maybe_enqueue_style']);
         add_action('admin_init', [$this, 'handle_clear']);
         add_action("wp_ajax_lattice_logs_{$this->slug}", [$this, 'ajax']);

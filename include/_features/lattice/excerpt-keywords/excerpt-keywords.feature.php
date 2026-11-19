@@ -8,7 +8,7 @@ require_once __DIR__ . '/has-keywords.trait.php';
 
 class Excerpt_Keywords extends Feature {
 
-    public function __construct () {
+    public function run () {
 
         $this->add_action('wp_after_insert_post', 'maybe_update_keywords');
         $this->add_action('lattice.relationship.partner_updated', 'update_partner_keywords');

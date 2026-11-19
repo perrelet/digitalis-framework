@@ -24,7 +24,7 @@ class Page_Loader extends Feature {
     protected $exit_speed     = 0;
     protected $failsafe_speed = 5;
 
-    public function __construct () {
+    public function run () {
 
         $this->add_action('wp_body_open',       'render_loader', 0);
         $this->add_action('wp_enqueue_scripts', 'enqueue');

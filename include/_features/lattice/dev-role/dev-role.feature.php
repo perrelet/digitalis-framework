@@ -11,7 +11,7 @@ class Dev_Role extends Feature {
     protected $cap      = 'dev';
     protected $meta_key = 'is_dev';
 
-    public function __construct () {
+    public function run () {
 
         $this->add_filter('user_has_cap', 'grant_cap', 10);
 

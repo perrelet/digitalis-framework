@@ -6,7 +6,7 @@ namespace Lattice\WP;
 
 class Turn_Off_Emojicons extends \Lattice\Feature {
 
-    public function __construct () {
+    public function run () {
 
         add_action('init', [$this, 'disable_emojis'], 0);
 

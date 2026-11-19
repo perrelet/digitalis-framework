@@ -37,7 +37,7 @@ abstract class Post_Type extends Singleton {
     protected $post_type;
     protected $removed_supports = [];
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         //if ($flush) flush_rewrite_rules();
         
@@ -76,6 +76,7 @@ abstract class Post_Type extends Singleton {
 
         }
 
+        parent::switch_on();
         $this->run();
 
     }

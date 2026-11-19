@@ -167,11 +167,11 @@ abstract class CSV_Iterator extends Iterator {
 
     //
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         if (($_GET['page'] ?? 0) == $this->get_menu_slug()) add_action('admin_init', [$this, 'maybe_upload_csv']);
 
-        parent::__construct();
+        parent::switch_on();
 
     }
 

@@ -16,7 +16,7 @@ class System_Emails extends \Lattice\Feature {
         'automatic_updates_debug_email',
     ];
 
-    public function __construct () {
+    public function run () {
 
         if (!$this->address) return;
 

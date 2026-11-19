@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Lattice;
 
-abstract class Shortcode extends Factory {
+abstract class Shortcode extends Registrant {
 
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';
@@ -12,10 +12,12 @@ abstract class Shortcode extends Factory {
     protected $slug = 'shortcode';
     protected $view = false;
 
-    public function __construct () {
+    protected function switch_on () : void {
         
         add_shortcode($this->slug, [$this, 'render']);
-        
+
+        parent::switch_on();
+
     }
 
     public function render (array|string $atts) {

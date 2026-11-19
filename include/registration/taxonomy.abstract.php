@@ -15,7 +15,7 @@ abstract class Taxonomy extends Singleton {
 
     protected $taxonomy;
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         // if ($flush) flush_rewrite_rules();
 
@@ -24,6 +24,7 @@ abstract class Taxonomy extends Singleton {
         if (method_exists($this, 'columns'))    add_filter("manage_edit-{$this->slug}_columns",     [$this, 'columns']);
         if (method_exists($this, 'column'))     add_filter("manage_{$this->slug}_custom_column",    [$this, 'column'], 10, 3);
 
+        parent::switch_on();
         $this->run();
 
     }

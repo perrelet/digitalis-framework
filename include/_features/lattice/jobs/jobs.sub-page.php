@@ -16,9 +16,9 @@ class Jobs_Page extends Admin_Sub_Page {
     protected $menu_title = 'Jobs';
     protected $capability = 'manage_options';
 
-    public function __construct () {
+    protected function switch_on () : void {
 
-        parent::__construct();
+        parent::switch_on();
 
         add_action("load-tools_page_{$this->slug}", [$this, 'act']);
 

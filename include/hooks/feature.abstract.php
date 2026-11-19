@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Lattice;
 
-abstract class Feature extends Factory {
-
-    use Has_WP_Hooks;
+abstract class Feature extends Registrant {
 
     protected static $cache_group    = self::class;
     protected static $cache_property = 'id';
@@ -25,15 +23,6 @@ abstract class Feature extends Factory {
     public static function load () {
 
         return call_user_func_array([static::class, 'get_instance'], func_get_args());
-
-    }
-
-    protected static function construct_instance ($instance, $data = []) {
-
-        parent::construct_instance($instance, $data);
-
-        $instance->add_hooks((array) $instance->get_hooks());
-        $instance->run();
 
     }
 
@@ -91,14 +80,6 @@ abstract class Feature extends Factory {
         $held = is_null($name) ? null : Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $name);
 
         return ($held && ($held !== $this) && !($held instanceof static)) ? static::class : $name;
-
-    }
-
-    public function run () {}
-
-    public function get_hooks () {
-
-        return [];
 
     }
 

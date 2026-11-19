@@ -32,13 +32,15 @@ abstract class User_Role extends Singleton {
 
     }
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         Task_Handler::get_instance()->add_task(
             "add_role_{$this->slug}",
             [$this, 'register'],
             crc32(serialize($this->get_caps()))
         );
+
+        parent::switch_on();
 
     }
 

@@ -8,20 +8,20 @@ use Exception;
 
 abstract class Singleton extends Creational {
 
-    use Auto_Instantiate;
+    use Auto_Instantiate, Is_Registrant;
 
     const INSTANCE_KIND = 'registrant';
 
-    protected function __construct() {}
+    public function __construct () {}
     public function __clone()        { throw new Exception("One for all and all for one."); }
     public function __wakeup()       { throw new Exception("You may not dream me into existence."); }
 
-    protected static function construct_instance (object $instance) {
-    
-        parent::construct_instance($instance);
+    // init() is a plain Singleton's step, not run(): a singleton's run() may be a job (d-pace's seeders).
+    protected function switch_on () : void {
 
-        $instance->init();
-    
+        $this->init();
+        $this->add_hooks((array) $this->get_hooks());
+
     }
 
     public static function get_instance () {
@@ -35,6 +35,7 @@ abstract class Singleton extends Creational {
         $instance = new $class_name();
         Registry::set(self::INSTANCE_KIND, self::class, $class_name, $instance);
         static::construct_instance($instance);
+        $instance->switch_on();
 
         return $instance;
 

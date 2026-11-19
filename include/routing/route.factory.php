@@ -15,7 +15,7 @@ use WP_Error;
  * @copyright 2023 Digitalis Web Corp
  */
 
-class Route extends Factory {
+class Route extends Registrant {
 
     use Dependency_Injection;
 
@@ -51,11 +51,13 @@ class Route extends Factory {
 
     }
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         add_action('rest_api_init', [$this, 'register_route']);
 
         if ($this->wp_query) add_filter('rest_request_before_callbacks', [$this, 'maybe_set_wp_query_vars'], 10, 3);
+
+        parent::switch_on();
 
     }
 

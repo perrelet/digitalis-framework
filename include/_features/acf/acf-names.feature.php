@@ -8,7 +8,7 @@ namespace Lattice;
 
 class ACF_Names extends Feature {
 
-    public function __construct () {
+    public function run () {
 
         if (!class_exists('acf') || !is_admin()) return;
 

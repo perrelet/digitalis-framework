@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Lattice;
 
-class Admin_Page extends Factory {
+class Admin_Page extends Registrant {
 
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';    
@@ -16,10 +16,12 @@ class Admin_Page extends Factory {
     protected $icon       = 'dashicons-marker';
     protected $position   = null;
 
-    public function __construct () {
+    protected function switch_on () : void {
     
         add_action('admin_menu', [$this, 'admin_menu'], 1000);
-    
+
+        parent::switch_on();
+
     }
 
     public function admin_menu () {

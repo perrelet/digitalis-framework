@@ -27,11 +27,13 @@ abstract class Cron_Scheduler extends Singleton {
 
     }
 
-    public function __construct () {
+    protected function switch_on () : void {
 
         add_filter('cron_schedules', [$this, 'schedules']);
 
         $this->schedule_tasks();
+
+        parent::switch_on();
 
     }
 

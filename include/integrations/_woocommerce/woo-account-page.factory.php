@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Lattice;
 
-class Woo_Account_Page extends Factory {
+class Woo_Account_Page extends Registrant {
 
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';    
@@ -100,12 +100,22 @@ class Woo_Account_Page extends Factory {
 
     }
 
+    private static bool $ran_once = false;
+
     public function __construct () {
 
-        if (!self::get_instance_count(self::class)) self::run_once();
+        if (is_null($this->endpoint)) $this->endpoint = $this->slug;
+
+    }
+
+    protected function switch_on () : void {
+
+        if (!self::$ran_once) {
+            self::$ran_once = true;
+            self::run_once();
+        }
 
         self::$pages[$this->slug] = $this;
-        if (is_null($this->endpoint)) $this->endpoint = $this->slug;
 
         if ($parent = $this->get_parent_page()) $parent->add_child($this);
 
@@ -117,6 +127,8 @@ class Woo_Account_Page extends Factory {
         add_action('parse_request',               [$this, 'maybe_add_permission_notice']);
         add_filter('woocommerce_get_query_vars',  [$this, 'get_query_vars']);
         if ($this->render) add_action('woocommerce_account_content', [$this, 'maybe_render_content'], 9);
+
+        parent::switch_on();
 
     }
 

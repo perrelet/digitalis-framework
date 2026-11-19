@@ -8,7 +8,7 @@ namespace Lattice\WP;
 
 class Hide_Admin_Bar extends \Lattice\Feature {
 
-    public function __construct () {
+    public function run () {
 
         $this->add_action('wp_head', 'style');
 

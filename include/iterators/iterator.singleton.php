@@ -125,7 +125,10 @@ abstract class Iterator extends Singleton {
 
     //
 
-    public function __construct () {
+    protected function switch_on () : void {
+
+        parent::switch_on();
+
 
         self::$registry[$this->key] = static::class;
 

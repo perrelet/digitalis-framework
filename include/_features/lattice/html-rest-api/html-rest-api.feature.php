@@ -13,7 +13,7 @@ class HTML_REST_API extends Feature {
 
     protected $url_builder;
 
-    public function __construct () {
+    public function run () {
 
         include 'html-rest-url.class.php';
 

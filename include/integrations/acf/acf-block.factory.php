@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Lattice;
 
-class ACF_Block extends Factory {
+class ACF_Block extends Registrant {
 
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';
@@ -31,11 +31,13 @@ class ACF_Block extends Factory {
 
     protected $field_key_map = [];
 
-    public function __construct () {
+    protected function switch_on () : void {
         
         add_action('acf/init', [$this, 'register']);
         add_action('acf/include_fields', [$this, 'include_fields']);
-        
+
+        parent::switch_on();
+
     }
 
     public function register () {

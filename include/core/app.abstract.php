@@ -6,7 +6,7 @@ namespace Lattice;
 
 use ReflectionClass;
 
-abstract class App extends Factory {
+abstract class App extends Registrant {
 
     use Autoloader;
 
@@ -27,11 +27,17 @@ abstract class App extends Factory {
 
         $this->use_classmap($this->path . '.classmap.php');
 
+    }
+
+    protected function switch_on () : void {
+
         if (static::plugins_loaded_done()) {
             $this->boots_late = true;
         } else {
             add_action('plugins_loaded', [$this, 'boot'], $this->get_boot_priority());
         }
+
+        parent::switch_on();
 
     }
 

@@ -64,8 +64,14 @@ abstract class Post_Status extends Singleton {
 
         $this->post_types = (array) $this->post_types;
 
+    }
+
+    protected function switch_on () : void {
+
         if ($this->get_register())  add_action('init', [$this, 'register']);
         if ($this->get_add_to_ui()) $this->add_to_ui();
+
+        parent::switch_on();
 
         //add_filter('wc_order_statuses', 'misha_add_status_to_list');
     

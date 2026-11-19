@@ -11,7 +11,7 @@ class Scroll_Classes extends Feature {
     protected $offset     = 1;
     protected $hysteresis = 0;
 
-    public function __construct () {
+    public function run () {
 
         $this->add_action('wp_enqueue_scripts', 'enqueue');
 

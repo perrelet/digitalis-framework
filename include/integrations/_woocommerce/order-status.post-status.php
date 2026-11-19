@@ -31,11 +31,18 @@ abstract class Order_Status extends Post_Status {
 
         $this->get_args();
 
+    }
+
+    // Replaces Post_Status's registration with WooCommerce's, so it skips to the singleton step.
+    protected function switch_on () : void {
+
         if ($this->register)   add_action('woocommerce_register_shop_order_post_statuses', [$this, 'register_order_status']);
         if ($this->add_to_ui)  $this->add_to_ui();
         if ($this->allow_edit) add_filter('wc_order_is_editable', [$this, 'wc_order_is_editable'], 9999, 2);
         if ($this->is_pending) add_filter('woocommerce_order_is_pending_statuses', [$this, 'order_is_pending_statuses']);
         if ($this->is_paid)    add_filter('woocommerce_order_is_paid_statuses',    [$this, 'order_is_paid_statuses']);
+
+        Singleton::switch_on();
     
     }
 
