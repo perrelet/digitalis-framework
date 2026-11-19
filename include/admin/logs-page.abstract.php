@@ -252,18 +252,7 @@ abstract class Logs_Page extends Admin_Sub_Page {
         if (!$logs = $this->get_logs()) return;
 
         $slug           = is_scalar($_GET['log'] ?? null) ? (string) $_GET['log'] : null;
-        $default        = (int) $this->bytes_per_page;
-
-        if ($default < 1) { // a subclass property of 0 divides by zero: a declaration error, named under strict on every request, the default size in production
-
-            $error = 'declares $bytes_per_page as ' . var_export($this->bytes_per_page, true) . ', which is not a positive integer, so the log cannot be paged.';
-
-            Strict::report(static::class, $error, 'Declare a positive number of bytes per page, or leave the default of ' . self::DEFAULT_BYTES_PER_PAGE . '.');
-
-            $default = self::DEFAULT_BYTES_PER_PAGE;
-
-        }
-
+        $default        = $this->get_bytes_per_page();
         $request        = is_scalar($_GET['bpp'] ?? null) ? (int) $_GET['bpp'] : 0;
         $bytes_per_page = $request > 0 ? $request : $default; // ?bpp=0 divides by zero too; the default rather than a clamp, since a one-byte page is empty
         $page           = is_scalar($_GET['paged'] ?? null) ? max(1, (int) $_GET['paged']) : 1;
@@ -659,12 +648,23 @@ abstract class Logs_Page extends Admin_Sub_Page {
 
     }
 
+    // A declared 0 would divide by zero, so it is reported on every request and pages at the default.
+    private function get_bytes_per_page () : int {
+
+        if ((int) $this->bytes_per_page > 0) return (int) $this->bytes_per_page;
+
+        Strict::report(static::class, 'declares $bytes_per_page as ' . var_export($this->bytes_per_page, true) . ', which is not a positive integer, so the log cannot be paged.', 'Declare a positive number of bytes per page, or leave the default of ' . self::DEFAULT_BYTES_PER_PAGE . '.');
+
+        return self::DEFAULT_BYTES_PER_PAGE;
+
+    }
+
     // What was appended after $size, cut at the last newline. The page is rendered afresh (reset) when the bytes before $size are
     // no longer the ones the reader has: a clear, a rotation, a rewrite, or more than a page appended.
     public function tail (array $log, int $size, string $key, int $bpp = 0, bool $plain = false) : array {
 
         $path = $log['path'];
-        $bpp  = ($bpp > 0) ? $bpp : self::DEFAULT_BYTES_PER_PAGE;
+        $bpp  = ($bpp > 0) ? $bpp : $this->get_bytes_per_page();
 
         clearstatcache(true, $path);
         $now = is_file($path) ? (int) filesize($path) : 0;
