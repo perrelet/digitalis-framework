@@ -103,9 +103,8 @@ class Settings_Page extends Admin_Page {
     protected $title      = 'Theme Settings';
     protected $capability = 'manage_options';
 
-    public function __construct() {
-        parent::__construct();
-
+    // Switch-on, not the constructor: a constructor only configures
+    public function run() {
         // Register ACF options page attached to this menu
         if (function_exists('acf_add_options_page')) {
             acf_add_options_page([

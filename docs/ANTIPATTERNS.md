@@ -413,9 +413,9 @@ A total built as `count()` of every id loads the whole table on every Start. Cou
 
 ## General PHP / Framework
 
-### `get_instance([...])` where a name is wanted
+### `declare()` where a find is wanted
 
-An array `get_instance()` builds on every call, so in a loop, a render or a hook that fires twice it adds its hooks again. Name it once and find it after: `Thing::declare('name', $config)` at load, `Thing::inst('name')` wherever it is needed. For a one-off nothing needs to find, `Thing::create($config)`.
+A registrant has one owner, which declares it at load; everyone else finds it. A `declare()` in a loop, a render or a hook that fires twice is refused aloud on its second call, and `get_instance([...])` with a config is refused outright. Declare once (`Thing::declare($config)`, or `Thing::declare('name', $config)` for a `$named` class) and find it after with `Thing::get_instance()` or `Thing::get_instance('name')`. For a one-off nothing needs to find, `Thing::create($config)`, which is never switched on.
 
 ### Prefix vendor model variables — reserve short names for framework models
 

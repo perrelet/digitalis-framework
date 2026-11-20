@@ -38,7 +38,7 @@ The [resources layer](./RESOURCES.md) loads it, so wherever the layer runs, poli
 - `review` answers `deny` where nothing can review: Proposals not loaded, or the resource does not take that verb in a set.
 - `Model_Resource::get_conditions()` names a resource's conditions; post types have `draft` (with pending), `published` and `private`.
 
-Presets: `read_only` and `propose_only`. A site defines its own with `Credentials::inst()->define($name, $policy)`; one defined twice is unreadable.
+Presets: `read_only` and `propose_only`. A site defines its own with `Credentials::get_instance()->define($name, $policy)`; one defined twice is unreadable.
 
 ## The CLI
 

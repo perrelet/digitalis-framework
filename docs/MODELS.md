@@ -183,13 +183,19 @@ $post = Post::get_instance($id, false);
 $post = Post::get_instance();        // Current post in loop
 $user = User::get_instance();        // Current logged-in user
 $term = Term::get_instance();        // Current queried term
-
-// Shorter alias — proxies get_instance() with the same args
-$user = User::inst();
-$post = Post::inst($id);
 ```
 
-`get_instance()` returns `null` when no object has that id (a deleted post, user, term or comment) or when the id fails the class's `validate_id()`. Validation runs on a fresh resolution only: an instance already cached in the request is returned, and `new Post($id)` skips it. A model wrapping a WooCommerce object follows saves: after another object saves its id, a clean cached model reloads, and a dirty one keeps its copy with a notice (see [Order Model](#order-model)).
+`get_instance()` answers the view held for that class and id, else a new view of the record another class already holds, else reads the record from storage. Within a request one class gets one object per id: two finds of `Project::get_instance(42)` are the same object, and `Post`, `Project` and any other view of post 42 share its record. It returns `null` when no object has that id, when the id fails the class's `validate_id()` or when the model was deleted in this request, by the framework or anyone else. Validation runs on a fresh resolution only: a view already held is returned, and `new Post($id)` skips it. An unsaved model (`create()`) is never kept: nothing finds it until its first save gives it an id. A model wrapping a WooCommerce object follows saves: after another object saves its id, a clean model reloads, and a dirty one keeps its edits with a notice (see [Order Model](#order-model)).
+
+### Records and views
+
+A model is a view of a record (`Lattice\Model_Record`), one per stored entity, site and id: a post, user, term, comment, ACF row, WooCommerce order or WooCommerce order item. The record holds what every view must agree on: the WordPress or WooCommerce object, the new, dirty and deleted marks, staged edits (a post's staged terms and thumbnail) and a change counter. `User`, `Customer` and `Account` views of user 1 share one record, so an edit through one is seen by the others and saved by any of them. Within a request a find from the same class answers the same view object; across `Model::release()` the record, not the view, is the identity.
+
+- **Derived values:** `$this->remember($key, $callback)` runs the callback once and keeps its answer on the record for the view's class; every edit, save and reload drops it. Use it for anything computed from the record (content, image sources, children) instead of a property: a property is the view's alone and goes stale when another view edits.
+- **Deleted:** a delete by anyone (`deleted_post`, `deleted_user`, `delete_term`, `deleted_comment`, WooCommerce's order and item deletes) marks the record. A held model answers `is_deleted()` true and later finds answer `null`. A trashed post is a status, not a delete.
+- **Release:** `Model::release()` drops the request's hold on every record. One still referenced elsewhere keeps its identity and is read again from storage if clean; the rest are freed, then WordPress's runtime cache is flushed. A record that dies dirty raises `_doing_it_wrong`, so save before the unit of work ends. Web requests never release; the jobs worker calls it between jobs, and any long WP-CLI or iterator run should call it per unit.
+- **Clone:** `clone $model` is a fresh read: a view of a new record read from storage, never kept, without the original's pending edits. Stage edits on the clone (`get_unsaved_copy()`) or save first. An unsaved model's clone copies its objects.
+- **Saves are followed:** after a `Post`, `Term`, `User` or `Order` save, every other held record standing on the rows it wrote reloads (an HPOS-off order's post record, for one). A save inside another save's hook never drops the outer save's staged input: a record mid-save is skipped, and a dirty one is skipped with one `_doing_it_wrong` per class saying to `reload()` before editing across another save.
 
 ### Multiple Instances
 
@@ -767,7 +773,7 @@ A reload replaces the model's object, so what `get_wc_order()`, `get_item()` or 
 
 On HPOS, a `woocommerce_update_order` callback that saves a copy runs before the model's own save has written its items, so a model saving new or edited items reads as dirty there and the notice fires although the caller did nothing wrong. The model's save then completes over the copy's.
 
-Each model's copy holds its own meta objects (copies served from WooCommerce's cache share them, so another copy's edit would show as this model's).
+Each record's copy holds its own meta objects (copies served from WooCommerce's cache share them, so another copy's edit would show as this model's). Views of one order share its record, so an edit through any of them makes every view dirty; the notice names the view that last edited.
 
 Rule 1 sees saves, not every write. These leave a clean model stale until `reload()`: meta writes that run no save, which on the post store means `save_meta_data()` alone and every `data_store->update_meta()` (Subscriptions' related-order cache), and on HPOS only those that `after_meta_change()` does not follow with a save (an ephemeral key such as the `_wp_trash_meta_*` cleanup after an untrash, an order with pending changes or a write within the same second as the last save); `wc_add_order_item()` and item-only saves for an `Order` whose items are loaded (an item save reloads `Order_Item` models only), bulk item removal (`delete_items_by_ids()`), the journal's `_lattice_version` raise (read from the meta table anyway), a deleted item (its model keeps its object) and a deleted refund, on either store. A filter that edits the copy it is handed (relabelling items for display, say) makes a model read through it dirty, so later saves by others raise the notice; edit clones instead.
 
@@ -927,7 +933,7 @@ Composite string: `acf:{type}:{selector}:{parent_id}:{index}` — e.g. `acf:post
 
 ### Caveats
 
-- **Sibling staleness on delete:** `delete()` clears the deleted instance's cache slot, but cached siblings still point to indexes that have shifted. Re-query after deletion.
+- **Sibling staleness on delete:** `delete()` marks the row deleted (`is_deleted()` is true and finds by its id answer `null`), but held siblings still point to indexes that have shifted. Re-query after deletion.
 - **Unsaved parents:** `save()` returns `false` if the parent's `get_field_id()` returns null (the parent isn't persisted yet, or no field provider is available). Save the parent first.
 - **In-memory criteria filter:** `query_for($parent, $criteria)` loads all rows then filters in PHP. No cross-parent query (would require `meta_query LIKE` on flat ACF subkeys).
 
@@ -945,14 +951,17 @@ Available on Post, User, and Term via `WP_Model`:
 | `is_dirty()` | `bool` | Has unsaved changes |
 | `is_saved()` | `bool` | Persisted to DB |
 | `is_unsaved()` | `bool` | New or dirty |
+| `is_deleted()` | `bool` | Deleted from storage in this request (any model) |
 
 ### Caching
 
 | Method | Description |
 |--------|-------------|
-| `cache_instance()` | Cache in static array |
+| `remember($key, $callback)` | Protected; keeps a derived value on the record for this view class until the next edit, save or reload |
+| `get_record()` | The shared `Model_Record` |
+| `Model::release()` | Static; drops the request's hold on every record (long runs, per unit of work) |
 | `clear_wp_model_cache()` | Clear WP object cache |
-| `reload()` | Refresh from database |
+| `reload()` | Refresh from database; drops remembered values |
 
 ### WordPress Object
 
@@ -1282,7 +1291,6 @@ Post::get_instance($id)        // Auto-resolve
 Post::get_instance($id, false) // Force base class
 Post::get_instances($ids)      // Multiple
 User::get_instance()           // Current user (no args → get_global_id)
-User::inst()                   // Shorter alias for get_instance()
 ```
 
 ### Common Patterns

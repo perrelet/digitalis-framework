@@ -1354,11 +1354,11 @@ class Box_Link extends Widget {
 ```php
 class Account_Switcher extends View {
     public function condition() {
-        return User::inst()->has_multiple_accounts();
+        return User::get_instance()->has_multiple_accounts();
     }
 
     public function view() {
-        $user     = User::inst();
+        $user     = User::get_instance();
         $accounts = $user->get_accounts();
 
         $options = [];

@@ -747,15 +747,15 @@ Automatic class loading and instantiation from directories.
 ```php
 namespace Lattice;
 
-class My_Plugin extends App {
+class My_Plugin extends App {   // App uses Autoloader; its constructor sets $this->path
 
-    use Autoloader;
-
-    public function __construct() {
-        $this->path = plugin_dir_path(__FILE__);
-        $this->autoload();  // Load from $this->path/include
+    // boot() calls load() on plugins_loaded, inside the app's batch
+    public function load() {
+        $this->autoload();  // Load from $this->path
     }
 }
+
+My_Plugin::get_instance();
 ```
 
 ### Directory Structure

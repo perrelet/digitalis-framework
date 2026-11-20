@@ -124,7 +124,6 @@ $projects = Project::get_instances([1, 2, 3]);
 
 // Current user
 $user = User::current();
-$user = User::inst();  // Alias
 
 // Force specific class (skip resolution)
 $post = Post::get_instance($id, false);
@@ -733,7 +732,7 @@ class Projects_Route extends Route {
     protected $route = 'projects';
 
     public function permission(\WP_REST_Request $request): bool {
-        return User::inst()->can('view_projects');
+        return User::get_instance()->can('view_projects');
     }
 
     public function callback(\WP_REST_Request $request): array {
@@ -768,7 +767,7 @@ class Project_Route extends Route {
 
     // $project injected from route param 'id'
     public function permission(\WP_REST_Request $request, ?Project $project = null): bool {
-        return $project && User::inst()->can('view_project', $project->get_id());
+        return $project && User::get_instance()->can('view_project', $project->get_id());
     }
 
     public function callback(\WP_REST_Request $request, ?Project $project = null): array {
@@ -791,7 +790,7 @@ class Create_Project_Route extends Route {
     ];
 
     public function permission(\WP_REST_Request $request): bool {
-        return User::inst()->can('create_projects');
+        return User::get_instance()->can('create_projects');
     }
 
     public function callback(\WP_REST_Request $request): array {
@@ -848,11 +847,11 @@ class Projects_Account_Page extends Woo_Account_Page {
     protected static $position = 15;
 
     public function can_access(): bool {
-        return User::inst()->has_account();
+        return User::get_instance()->has_account();
     }
 
     public function render(): void {
-        $projects = User::inst()->get_account()->get_projects();
+        $projects = User::get_instance()->get_account()->get_projects();
 
         foreach ($projects as $project) {
             echo new Project_Card(['project' => $project]);

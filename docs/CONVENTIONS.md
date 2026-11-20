@@ -108,24 +108,35 @@ class Dashboard_Layout extends Layout {
 
 ## Features
 
-### Name a configured feature with `id` when anything needs to reach it
+### One owner declares a feature; everyone else finds it
 
-A feature's name is its naming property: from its config, else the class's declared default, else its class. A feature that other code reaches declares a default (`protected $id = 'proposals';`), so it is found whether it was loaded bare or with config. A feature can also be booted from config as many times as needed, each config its own instance; give one an `id` and it is found by that name. A config with no name anywhere runs anonymously: a later bare `inst()` cannot find it and builds a second instance with every hook again.
+A feature's name is its naming property (`id` unless `$cache_property` says otherwise, `'slug'` for admin pages): the name `declare()` was given, else the class's declared default, else its class. A feature is single by default: one instance, found bare. A bare `get_instance()` answers it and builds it with its defaults on first use; `declare($config)` builds it live with a config under its default name. A feature other code reaches by name declares a default (`protected $id = 'proposals';`), so a base class finds it whichever way it was built. A family base declares no default (its placeholder is `null`), so only a concrete class names itself.
+
+A class built several times sets `protected static $named = true`. It is built only by `declare($name, $config)`, a bare find on it answers `null` and a find by name answers the holder or `null`, never building one. `load_feature()` with options declares the feature, taking a named class's name from the options' naming property.
 
 ```php
 $this->load_feature('lattice/dev-role');
-$this->load_feature('acf/acf-focal-point.feature.php', ['id' => 'event-images', 'group_key' => 'group_event_image']);
-$this->load_feature('acf/acf-focal-point.feature.php', ['id' => 'teacher-photos', 'group_key' => 'group_teacher_photo']);
+$this->load_feature('acf/acf-focal-point.feature.php', ['group_key' => 'group_event_image']);
 
-Dev_Role::inst();                                    // the unconfigured feature
-\Lattice\ACF\Focal_Point::inst('event-images');    // that config, from any class
+class Gallery_Sync extends Feature {
+    protected static $named = true;
+}
+
+Gallery_Sync::declare('event-images',   ['source' => 'event']);
+Gallery_Sync::declare('teacher-photos', ['source' => 'teacher']);
+
+Dev_Role::get_instance();                       // the single feature, built bare on first find
+\Lattice\ACF\Focal_Point::get_instance();       // single: one field group, found bare
+Gallery_Sync::get_instance('event-images');     // that config, from any class; null if no owner declared it
 ```
 
-The name is whichever property `$cache_property` points to, `id` by default; a feature named otherwise sets its own (`'slug'`), and `null` opts out of names altogether. Loading the same name again returns the instance already running; its new config is ignored. Names are scoped to the feature's class, so unrelated features may share one. A family that declares its own `$cache_group` shares one namespace instead, so its base class finds any member by name: `Meta_Box::inst('somm-keywords')` finds the `Keywords_Metabox`. Within a family a name is one instance, so keep names unique there (as meta box ids already are). The base class and the holding class find it; a sibling class asking for it gets `null`. Two classes declaring the same name are a strict violation; outside strict both run, each found by its class, with one log line. `create()` stays what it is everywhere: a new instance nothing can find again.
+A name is built once. A second `declare()` of a live name is refused aloud, same class included: strict throws, and outside strict one log line names the app that built the holder and the existing instance answers. An owner whose `declare($config)` comes after a bare find has already built the defaults is refused the same way, so the owner declares first and everyone else finds. A single class is refused any name but its default.
+
+Names are unique per family. Every feature shares one family, so a base class finds any feature by name and two classes claiming one name are refused. A family that declares its own `$cache_group` (meta boxes, profile sections, admin pages, shortcodes, blocks, account pages, routes) is a namespace of its own, so its base class finds any member by name: `Meta_Box::get_instance('somm-keywords')` finds the `Keywords_Metabox`. The base class and the holding class find it; a sibling class asking for it gets `null`. `create()` stays what it is everywhere: a new inert instance nothing finds and nothing switches on.
 
 ### Declare what a feature needs: `$requires` for features, `instance_condition()` for everything else
 
-A library feature that needs another lists it by path. `load_feature()` loads each requirement before the feature, so a site loads features in any order. A feature that needs a plugin or a function says so in `instance_condition()`, the gate `get_instance()` already asks: refused, it never exists, so there is nothing to half-disable.
+A library feature that needs another lists it by path. `load_feature()` loads each requirement before the feature, so a site loads features in any order. A feature that needs a plugin or a function says so in `instance_condition()`, the gate every build path asks (with the `lattice.instantiate` opt-out): refused, it never exists, so there is nothing to half-disable.
 
 ```php
 class Proposals extends Feature {
@@ -141,4 +152,4 @@ class Proposals extends Feature {
 }
 ```
 
-A requirement loads with its defaults. A site that configures one loads it first; configuring it after it loaded as a requirement is reported, since its options are ignored. A requirement that can't be found, a circular one or a refused condition stops the feature, and `load_feature()` reports it with `_doing_it_wrong()`, which reaches the debug log in every context. Don't check for another feature with `class_exists()`: the class exists as soon as its file is included, whether or not the feature runs.
+A requirement loads with its defaults. A site that configures one loads it first; configuring it after it loaded as a requirement is reported, since its options are ignored. A requirement that can't be found, a circular one or a refused condition stops the feature, and `load_feature()` reports it with `_doing_it_wrong()`, which reaches the debug log in every context. Don't check for another feature with `class_exists()`: the class exists as soon as its file is included, whether or not the feature runs. A feature built by any path, a bare find included, loads its `$requires` first, as through `load_feature()`. `load_feature()`'s options are an array; anything else is refused.

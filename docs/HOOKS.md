@@ -26,7 +26,8 @@ Lattice provides a trait-based hook system that wraps WordPress's `add_action`, 
 - **Automatic parameter counting** - No need to specify accepted args; a variadic callback takes every argument the hook passes, and a fourth argument to `add_filter()` / `add_action()` (or a fourth element in a hook map's array) overrides the count
 - **Method name shortcuts** - Use `'method_name'` instead of `[$this, 'method_name']`
 - **Loud refusals** - Under strict (`LATTICE_STRICT`, default `WP_DEBUG`) a callback WordPress could not call (not callable here, a non-public method, an instance method in a static shape, a stray hook type) is a `Strict_Violation` at registration that names the hook, the callback and the fix; production answers `false` and logs once. A callback another plugin provides belongs in a `~plugin/` directory or a `Plugin_Integration`
-- **Hook name sanitization** - Consistent naming with dot notation
+- **Hook names**: a string is WordPress's own name, used verbatim (`'acf/init'`); an array of parts is joined with dots and sanitized into a framework name
+- **Switch-off**: every hook added through the trait is recorded, and a registrant's `switch_off()` removes them
 - **Dependency injection** - Hook callbacks can receive injected dependencies
 - **Batch registration** - Register multiple hooks via `get_hooks()` array
 
@@ -41,11 +42,10 @@ The core trait for working with WordPress hooks.
 ```php
 namespace Lattice;
 
-class My_Class {
-    use Has_WP_Hooks;
+class My_Class extends Feature {   // a registrant: Feature, Integration, Singleton and the families use the trait
 
-    public function __construct() {
-        // Register hooks
+    // Called at switch-on, once the instance is kept; the constructor only configures
+    public function run() {
         $this->add_action('init', 'on_init');
         $this->add_filter('the_content', 'filter_content');
     }
@@ -133,7 +133,12 @@ $this->remove_all_filters('the_content', 10);
 // Remove all hooks (any priority)
 $this->remove_all_actions('init');
 $this->remove_all_filters('the_content');
+
+// Remove every hook this registrant added through the trait (get_hooks() and $this->add_*())
+My_Feature::get_instance()->switch_off();
 ```
+
+`switch_off()` lives on registrants (`Is_Registrant`) and removes only hooks added through `Has_WP_Hooks`; what `run()` did otherwise stays.
 
 ### Checking Hooks
 
@@ -249,14 +254,13 @@ public function get_hooks() {
 
 ### Feature with `run()` Method
 
-For initialization that doesn't need hooks:
+Switch-on registers `get_hooks()`, then calls `run()`, once the instance is kept. Inside an app's boot the whole batch is kept before any switch-on, so `run()` can find the app's other instances. Put setup and conditional hooks here, never in the constructor, which only configures:
 
 ```php
 class My_Feature extends Feature {
 
     public function run() {
-        // Called after hooks are registered
-        // Good for one-time setup
+        // Called after get_hooks() is registered
         $this->setup_defaults();
     }
 
@@ -279,15 +283,15 @@ class My_Feature extends Feature {
 }
 
 // Manual loading
-My_Feature::load();
-My_Feature::get_instance();
+My_Feature::get_instance();                // bare: the single feature, built on first find
+My_Feature::declare(['limit' => 5]);       // the owner: built live with a config; refused if already live
 ```
 
 ---
 
 ## Integration Class
 
-Integrations are singletons for third-party plugin/service integration.
+Integrations are singletons for third-party plugin/service integration. They switch on like every registrant: `get_hooks()`, then `run()`.
 
 ### Basic Integration
 
@@ -359,7 +363,7 @@ class WooCommerce_Integration extends Plugin_Integration {
 
 ### Sanitization Rules
 
-Hook names are automatically sanitized:
+A string hook name is WordPress's own and is used verbatim: `$this->add_filter('acf/get_field_label', ...)` hooks `acf/get_field_label`. Only the parts of an array name are joined and sanitized:
 
 | Input | Output |
 |-------|--------|
@@ -381,8 +385,8 @@ lattice.{component}.{class}.{property}
 ### Building Hook Names
 
 ```php
-// String
-$this->build_hook_name($name);  // Modifies in place
+// String: left as it is
+$this->build_hook_name($name);  // Modifies in place; a string is unchanged
 
 // Array - joined with delimiter
 $name = ['lattice', 'my_feature', 'action'];
@@ -750,6 +754,7 @@ class ACF_Customizations extends Feature {
 | `remove_filter($hook, $callback, $priority)` | Remove filter |
 | `remove_all_actions($hook, $priority)` | Remove all actions |
 | `remove_all_filters($hook, $priority)` | Remove all filters |
+| `switch_off()` | Remove every hook the registrant added (`Is_Registrant`) |
 | `has_action($hook, $callback)` | Check action exists |
 | `has_filter($hook, $callback)` | Check filter exists |
 | `do_action($hook, ...$args)` | Fire action |

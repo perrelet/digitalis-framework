@@ -295,7 +295,7 @@ class Order_Route extends Route {
 
     public function permission(WP_REST_Request $request, ?Order $order = null) {
         // $order is Order::get_instance($request->get_param('order')), and Order::get_instance(null) when the parameter is absent
-        return User::inst()->can('view_order', $order->get_id());
+        return User::get_instance()->can('view_order', $order->get_id());
     }
 
     public function callback(WP_REST_Request $request, ?Order $order = null) {
@@ -329,7 +329,7 @@ class Approve_Estimate_Route extends Order_Route {
     protected $route = 'approve-estimate';
 
     public function permission(WP_REST_Request $request, Order $order = null) {
-        $user = User::inst();
+        $user = User::get_instance();
 
         if (!$order->is_estimate()) return false;
         if (!$user->can('approve_estimate', $order->get_id())) return false;
@@ -338,7 +338,7 @@ class Approve_Estimate_Route extends Order_Route {
     }
 
     public function callback(WP_REST_Request $request, Order $order = null) {
-        $user = User::inst();
+        $user = User::get_instance();
 
         $order->set_status('approved', "Approved by {$user->get_display_name()}");
         $order->save();
@@ -514,13 +514,17 @@ $service = My_Service::create();
 ### How It Works
 
 ```php
-// In Factory
+// In Factory: the config is on the instance before the constructor runs
 public static function create(mixed $data = []) {
-    // constructor_inject resolves type-hinted params
-    $instance = static::constructor_inject(static::class, array_slice(func_get_args(), 1));  // every argument after $data
+    $instance = $reflection->newInstanceWithoutConstructor();
+    static::apply_config($instance, $data);
+    // method_inject resolves the constructor's type-hinted params from every argument after $data
+    $constructor->invokeArgs($instance, static::method_inject($constructor, array_slice(func_get_args(), 1)));
     // ...
 }
 ```
+
+`create()` builds an inert instance: never kept, never switched on. A constructor only configures; a registrant's hooks go in `get_hooks()` or `run()`, which run when `get_instance()` or `declare()` makes it live.
 
 ---
 

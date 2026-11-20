@@ -76,17 +76,17 @@ Run `wp lattice classmap` after deploying; a map that no longer matches the file
 ### Manual `require` causes redeclaration errors
 
 > **Wrong assumption:** you need to manually `include` or `require` files in `include/` to use their classes.
-> **Reality:** The autoloader recursively includes all `.php` files during `App::__construct() → autoload()`. Explicitly including an already-loaded file triggers a "Cannot redeclare class" fatal error.
+> **Reality:** The autoloader recursively includes all `.php` files during `App::boot() → load() → autoload()`. Explicitly including an already-loaded file triggers a "Cannot redeclare class" fatal error.
 
-### `new ClassName()` bypasses the singleton and creates duplicate instances
+### `new ClassName()` builds an inert copy
 
 > **Wrong assumption:** `new ClassName()` is equivalent to `ClassName::get_instance()`.
-> **Reality:** Auto-loaded classes are singletons. Using `new` creates a second instance with duplicate hook registration, separate cache slots, and potentially conflicting state. Always use `ClassName::get_instance()` for auto-loaded classes.
+> **Reality:** A constructor only configures. The framework switches an instance on (`get_hooks()`, then `run()`) only after `get_instance()`, `declare()` or the autoloader has kept it. `new ClassName()` and `ClassName::create()` build an instance that is never kept or switched on: no find answers it and none of its hooks fire. Reach the live instance with `ClassName::get_instance()`, and keep hooks out of constructors.
 
 ### WIP classes in `include/` auto-instantiate and run on every request
 
 > **Wrong assumption:** dropping a work-in-progress class file in `include/` makes it "available for later use."
-> **Reality:** Concrete classes in `include/` get instantiated during plugin bootstrap — constructor runs, hooks register, the class is wired into the request lifecycle. Use `_dirname/` for scratch work (entirely skipped) or `.abstract.` suffix to load the class without instantiation.
+> **Reality:** Concrete classes in `include/` get instantiated during plugin bootstrap: the instance is kept, its hooks register and `run()` is called on every request. Use `_dirname/` for scratch work (entirely skipped) or `.abstract.` suffix to load the class without instantiation.
 
 ---
 
@@ -265,6 +265,8 @@ return false;
 
 After loading a class, the autoloader can optionally instantiate it. This is controlled by the `get_auto_instantiation()` static method.
 
+The constructor only configures. A class built through `get_instance()` or `declare()` is kept first, then switched on: `get_hooks()` is registered, then `run()` is called. Each `App::boot()` runs its `load*()` methods as one batch: everything they build is kept as it is built and switched on together when they return, before `ensure_schema()`, `boot_shared()` and the `boot_*()` branches, so a `run()` may find any other instance of its app. A `declare()` made inside a `run()` joins the same batch. A build outside any batch switches on at once. The framework's own registrants (`Query_Manager`, `Task_Handler`) are built by `Lattice\Framework`, which `load.php` builds and which boots on `plugins_loaded` at priority 5.
+
 ### The `Auto_Instantiate` Trait
 
 ```php
@@ -284,9 +286,9 @@ Use this trait for classes that should auto-instantiate via `get_instance()`.
 | Value | Instantiation Method |
 |-------|---------------------|
 | `false` | No instantiation |
-| `true` | `new ClassName()` |
+| `true` | `new ClassName()`: an inert instance, never kept or switched on |
 | `'method_name'` | `ClassName::method_name()` |
-| `array` | `ClassName::get_instance($array)` |
+| `array` | `ClassName::declare($array)` |
 
 ### Examples
 
@@ -315,7 +317,7 @@ class My_Singleton extends Singleton {
 // Factory with arguments
 class My_Factory extends Factory {
     public static function get_auto_instantiation() {
-        return ['config' => 'value'];  // My_Factory::get_instance(['config' => 'value'])
+        return ['config' => 'value'];  // My_Factory::declare(['config' => 'value'])
     }
 }
 ```
@@ -376,7 +378,7 @@ class My_Feature extends Feature {
 
 ## Filters
 
-The autoloader provides filters to modify instantiation behavior:
+The autoloader provides filters to modify instantiation behavior. The same filters are the build gate's opt-out: every build path (the autoloader, a bare `get_instance()`, `declare()`) asks them with `true` and refuses when they answer `false`, so a class opted out here is never built.
 
 ### Global Filter
 
@@ -431,33 +433,29 @@ class My_Plugin extends App {
 }
 
 // Bootstrap
-new My_Plugin();
+My_Plugin::get_instance();
 ```
 
 ### App Lifecycle
 
 ```php
-// App constructor
+// The constructor only configures: path, url and the classmap
 public function __construct() {
     $this->path = plugin_dir_path(...);
-    $this->url = plugin_dir_url(...);
-
-    add_action('plugins_loaded', [$this, 'load']);
-    if (is_admin()) add_action('plugins_loaded', [$this, 'load_admin']);
+    $this->url  = plugin_dir_url(...);
 }
 
-// Default load() method
-public function load() {
-    $this->autoload();  // Loads from $this->path
-}
-
-// Default load_admin() method
-public function load_admin() {
-    $this->autoload($this->path . '_admin');
+// Switch-on adds boot() on plugins_loaded (priority 10), or boots at once when plugins_loaded has run
+public function boot() {
+    Batch::run(fn () => $this->load() /* then load_cli(), load_cron(), load_ajax() or load_admin() */);
+    $this->ensure_schema();
+    $this->boot_shared();
+    // boot_cli(), boot_cron(), boot_ajax(), boot_admin() or boot_front()
+    // on rest_api_init: load_rest() and boot_rest() when REST_REQUEST is set
 }
 ```
 
-An app built while `plugins_loaded` runs boots at the next priority, not 10; one built after it boots from the `get_instance()` that built it, whatever data that call was given (an App caches by class); `create()` and `new` never boot a late App.
+An app built while `plugins_loaded` runs boots at the next priority, not 10; one built after it boots from its switch-on. An app is single: `get_instance()` and `declare($config)` both build it under its class. `create()` and `new` build an inert app that never boots.
 
 ---
 
@@ -601,22 +599,15 @@ Plugin (loaded in order):
 // ~my-plugin/       → matches plugins/my-plugin/
 ```
 
-#### Class Instantiated Multiple Times
+#### Hooks Fire Twice, or Never
 
-**Symptom:** Constructor called multiple times
+**Symptom:** A callback runs twice, or a class's hooks never fire
 
 **Causes:**
-- Not using Singleton pattern
-- `get_auto_instantiation()` returning `true` instead of `'get_instance'`
+- Hooks added in the constructor, which also runs for every `new` and `create()`
+- `get_auto_instantiation()` returning `true`, which builds with `new`: an inert instance whose `get_hooks()` and `run()` never run
 
-**Solution:**
-```php
-class My_Singleton extends Singleton {
-    public static function get_auto_instantiation() {
-        return 'get_instance';  // Not true!
-    }
-}
-```
+**Solution:** add hooks in `get_hooks()` or `run()`, and leave `get_auto_instantiation()` at `'get_instance'`.
 
 ### Debugging
 
@@ -660,13 +651,13 @@ include/~plugin/      # ? Conditional on plugin active
 
 ```php
 return false;           // Don't instantiate
-return true;            // new ClassName()
+return true;            // new ClassName(), inert
 return 'method';        // ClassName::method()
-return ['args'];        // ClassName::get_instance(['args'])
+return ['config'];      // ClassName::declare(['config'])
 ```
 
 ### Lifecycle
 
 ```
-include → hello() → static_init() → instantiate
+include → hello() → static_init() → build and keep → (batch drains) get_hooks() → run()
 ```

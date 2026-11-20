@@ -52,7 +52,7 @@ class Offer extends \Digitalis\Post implements \Digitalis\Takes_Proposals {
 
 The trait is what makes a type moderated; `Takes_Proposals` names the contract the traits fulfil, and strict mode throws for a model that uses `Has_Proposals` without implementing it.
 
-Load it in `load()`, which runs in every context: the publish guard must see REST saves, and the cleanup cron must exist under cron. The wp-admin parts load on `init` in wp-admin, once resources have registered; `Proposals::inst('proposals')->load_admin()` loads them from the CLI.
+Load it in `load()`, which runs in every context: the publish guard must see REST saves, and the cleanup cron must exist under cron. The wp-admin parts load on `init` in wp-admin, once resources have registered; `Proposals::get_instance('proposals')->load_admin()` loads them from the CLI.
 
 | Option | Default | Means |
 |--------|---------|-------|

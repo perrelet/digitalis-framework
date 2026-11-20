@@ -90,96 +90,94 @@ framework/
 
 ## Core Design Patterns
 
+Every instance the framework keeps lives in one registry, `Lattice\Registry`, under a kind, a group and a key. There are four kinds: a **registrant** hooks into WordPress or registers with it (features, routes, admin pages, post types, iterators, `Query_Manager`); a **service** never hooks (`Log`, `Credentials`); an **app** is a registrant, one per class; an **entity** is stored data seen through a model, kept as a record with its views.
+
+A registrant's life has two steps. Its constructor only configures. Once the instance is kept, the framework switches it on: `get_hooks()` is registered, then `run()` is called. Every hook added through `Has_WP_Hooks` is recorded on the instance, and `switch_off()` removes them. `Registrant` (on `Factory`) and `Singleton` share this through the `Is_Registrant` trait; a family base adds its own hooks in `switch_on()` and calls the parent, while a site's class uses `get_hooks()` and `run()`.
+
+Switch-on is batched. `Lattice\Batch` keeps a frame per `App::boot()`: everything the app's `load*()` methods build is kept, then switched on together once they return, before `ensure_schema()`, `boot_shared()` and the `boot_*()` branches. A `declare()` made inside a `run()` joins the same drain. Only a build outside any batch switches on at once. `load.php` builds `Lattice\Framework`, the framework's own app, which boots on `plugins_loaded` at priority 5 (ahead of the consumers' 10, or at once when the framework is first loaded later, from a theme) and loads `Query_Manager`, `Task_Handler` and the deleted-entity listeners.
+
 ### 1. Singleton Pattern
 
-Ensures only one instance of a class exists. Used for services and managers.
+One instance per class, found bare. Used for registration families (`Post_Type`, `Taxonomy`, `Post_Status`, `User_Role`, `Iterator`, `Cron_Scheduler`) and managers.
 
 ```php
 namespace Lattice;
 
-abstract class Singleton extends Design_Pattern {
-    protected static $instances = [];
+abstract class Singleton extends Creational {
+    use Auto_Instantiate, Is_Registrant;
 
-    public static function get_instance() {
-        $class = static::class;
-        if (!isset(self::$instances[$class])) {
-            self::$instances[$class] = new static();
-        }
-        return self::$instances[$class];
+    const INSTANCE_KIND = 'registrant';
+
+    protected static $cache_group = self::class; // a family base sets its own, so its members are audited for the slugs they claim
+
+    public function __construct () {}            // public: `new` builds an inert instance
+
+    public static function get_instance () {
+        // the held instance, else may_build(), keep, then switch on through the batch
     }
 
-    // Prevents cloning and unserialization
-    public function __clone() { throw new Exception("Cannot clone singleton"); }
-    public function __wakeup() { throw new Exception("Cannot unserialize singleton"); }
+    public function run () {}
 }
 ```
 
+A singleton takes no config and no name. `new` builds an inert instance that is never kept or switched on. Two members of one family claiming the same `$slug` is a strict violation. Cloning and unserializing throw.
+
 ### 2. Factory Pattern
 
-Creates and caches instances with optional property-based caching. Instances are stored in a shared registry keyed by `$cache_group` and the value of `$cache_property` on the instance (`Log` keys on its path instead, through `get_cache_key()`). Features scope that registry per class and name configs by `id`: see [CONVENTIONS: Features](./CONVENTIONS.md#features).
+`Factory` builds and keeps registrants and services under `$cache_group` and a key: the name, which is the value of `$cache_property` (`id` for features, `slug` for admin pages and shortcodes), else the class. A family is one group: every feature shares one, so a base class finds a subclass's instance by name and two classes claiming one name are refused. `Registrant extends Factory` adds the switch-on; `Service extends Factory` never hooks.
 
 ```php
 namespace Lattice;
 
 abstract class Factory extends Creational {
-    protected static $cache_group    = '__global__'; // Namespace for instance storage
-    protected static $cache_property = null;         // Instance property to use as cache key
+    protected static $cache_group    = '__global__';
+    protected static $cache_property = null;    // the property that holds the name
+    protected static $named          = false;   // true: built only under names given to declare()
 
-    public static function create(mixed $data = []) {
-        // Creates new instance with optional caching
-    }
-
-    public static function get_instance(mixed $data = null) {
-        // Returns cached instance or creates new one
-    }
-
-    public static function declare(string $name, array $config = []) {
-        // Builds once and keeps the instance under $name
-    }
-
-    public static function get_instance_map() {
-        // Returns ['group' => ['key' => ClassName]] map of all cached instances
-    }
-
-    public static function get_group_instances(?string $group = null) {
-        // Returns all instances in a cache group (used by App::get_apps())
-    }
+    public static function get_instance(mixed $data = null) { /* finds; builds a single class bare */ }
+    public static function declare(string|array $name = [], array $config = []) { /* builds live under a name */ }
+    public static function create(mixed $data = []) { /* builds inert */ }
+    public static function get_group_instances(?string $group = null) { /* every instance in a group (App::get_apps()) */ }
+    public static function get_instance_map() { /* ['group' => ['key' => ClassName]] */ }
 }
 ```
 
-Four calls cover every case:
+Three verbs cover every case:
 
 | Call | Answers |
 |---|---|
-| `Thing::inst()` | The class's own instance, built on first use |
-| `Thing::declare('name', $config)` | A new instance kept under `name`. A name is taken once: declaring it again is a strict violation, and outside strict the holder answers |
-| `Thing::inst('name')` | The instance holding `name`, or `null`. Only an instance of the asking class or a subclass is answered |
-| `Thing::create($config)` | A new instance nothing finds again |
+| `Thing::get_instance()` | The class's own instance, under its declared default name, else its class. A single class is built on first find; a named class (`$named = true`) answers `null` |
+| `Thing::get_instance('name')` | The registrant holding `name`, or `null`. A find by name never builds a registrant; a service (`Log::get_instance($path)`) is built on any find |
+| `Thing::declare($config)` | The class built live under its default name with that config |
+| `Thing::declare('name', $config)` | A named class built live under `name`; a single class is refused any name but its default |
+| `Thing::create($config)` | A new inert instance: never kept, never switched on, found by nothing. A scalar is refused |
 
-A config is on the instance before its constructor runs, so a constructor reads what it was configured with. In a family named by a property (`id`, `slug`) the declared name fills that property. A route's name is only a name: its path comes in the config, since plugins share paths and a GET and a POST route share one. `App` and `Model` refuse `declare()`: an app is found by its class, a model by its id.
+A second build of a live name is refused aloud, same class included: strict throws, and outside strict one log line names the app that built the holder. An owner whose `declare($config)` comes after a bare find already built the defaults is refused the same way, so the owner declares and everyone else finds. `get_instance([...])` with a config is refused: declare it, or `create()` one nothing finds.
 
-`get_instance([...])` with a config is the legacy form: it builds on every call. Where the config names a name the family already holds, the call is a strict violation; outside strict the holder answers.
+A config is on the instance before its constructor runs, so a constructor reads what it was configured with. In a family named by a property the declared name fills that property, and a config giving another value is refused. A family base declares no default name (its placeholder is `null`), so only a concrete class's own declaration names it. A route's name is only a name: its path comes in the config, since plugins share paths and a GET and a POST route share one. `Model` refuses `declare()`: a model is found by its id. An app is single, found and declared by its class.
 
-`$cache_group` allows subclass families to share or isolate their instance caches. Override it to prevent cross-class cache collisions. `get_group_instances()` retrieves all instances registered under a group — used by `App` to discover all active plugin Apps.
+Every build, by a find, `declare()` or the autoloader, passes one gate, `Creational::may_build()`, asked on a registry miss: the `lattice.instantiate` filters (seeded `true`; only `false` refuses), then the class's `instance_condition($data)`, then `prepare_build()` (a feature loads its `$requires`). A class the site opted out is refused on every path.
 
 ### 3. Model Pattern
 
-Entity abstraction with automatic class resolution based on specificity.
+Entity abstraction with automatic class resolution based on specificity, and one record per stored entity.
 
 ```php
 namespace Lattice;
 
-class Model extends Factory {
-    protected static $class_map = [];  // Maps each class to its registered subclasses and their specificity
+abstract class Model extends Factory {
+    const INSTANCE_KIND = 'entity';
 
-    // Automatically resolves to most specific subclass
+    // Resolves to the most specific subclass, then answers the held view for that class, else a view of the held record, else reads it
     public static function get_instance(mixed $data = null, ?bool $auto_resolve = null) {
         [$id, $class_name] = static::resolve_data($data, $auto_resolve);
         if ($class_name != static::class) return $class_name::get_instance($data, false);
-        // cached instance, else validate and hydrate `new $class_name($id)`
+        // held view (null if deleted), else validate and `new $class_name($id)`
     }
 }
 ```
+
+A model is a view of a `Lattice\Model_Record`, which holds what an edit or a save must agree on: the id, the new, dirty and deleted marks, the WordPress or WooCommerce object, staged edits and a change counter. Records are kept under their storage and site (`post`, `user`, `term`, `comment`, `wc_order`, `wc_order_item`, `acf_row`), so `User`, `Customer` and `Account` views of user 1 share one record; views are kept by class and id. A view binds the properties its class lists in `get_record_properties()` to the record by reference, so `$this->wp_post` reads the shared object. `remember()` memoises derived values on the record, `Model::release()` frees records between units of a long run, a save reloads every other record over the rows it wrote and a clone is a fresh read. See [MODELS.md: Records and views](./MODELS.md#records-and-views).
 
 ---
 
@@ -273,7 +271,7 @@ Business logic is handled by Features and Integrations that hook into WordPress.
 
 ```
 Design_Pattern
-├── Feature (Factory)    # Optional functionality with hooks
+├── Feature (Registrant)  # Optional functionality with hooks
 └── Integration (Singleton)  # Plugin/service integrations
 ```
 
@@ -292,8 +290,8 @@ trait Has_WP_Hooks {
     }
 }
 
-// Feature and Integration (which use the trait) pass their get_hooks() to add_hooks() on construction
-abstract class Feature extends Factory {
+// At switch-on, after the instance is kept, a registrant passes get_hooks() to add_hooks(), then calls run()
+abstract class Feature extends Registrant {
     public function get_hooks () {
         return [
             'hook_name' => 'method_name',
@@ -309,13 +307,11 @@ is useful documentation.
 
 ### Hook Naming Convention
 
-Hooks are namespaced using the class name:
+A string is WordPress's own hook name and is used verbatim (`'acf/init'`, `'load-tools_page_x'`). An array is a framework name: its parts are joined with `.` and sanitized.
 
 ```php
-// Class: Lattice\My_Feature
-// Hook name: lattice.my_feature.method_name
-$this->add_hook('my_event', 'handle_event');
-// Registers: lattice.my_feature.my_event
+$this->add_hook('acf/get_field_label', 'filter_label');            // registers acf/get_field_label
+$this->add_hook(['lattice', 'my_feature', 'event'], 'on_event');   // registers lattice.my_feature.event
 ```
 
 ---
@@ -494,9 +490,9 @@ class My_Feature extends Feature {
 | Return Value | Behavior |
 |--------------|----------|
 | `false` | No instantiation |
-| `true` | `new ClassName()` |
+| `true` | `new ClassName()`: an inert instance, never kept or switched on |
 | `'method_name'` | `ClassName::method_name()` |
-| `array` | `ClassName::get_instance($array)` |
+| `array` | `ClassName::declare($array)` |
 
 ### Autoload Usage
 
@@ -590,7 +586,7 @@ class Order_Route extends Route {
 
     // $order is automatically injected from request param
     public function permission(WP_REST_Request $request, ?Order $order = null) {
-        return User::inst()->can('view_order', $order->get_id());
+        return User::get_instance()->can('view_order', $order->get_id());
     }
 
     public function callback(WP_REST_Request $request, ?Order $order = null) {

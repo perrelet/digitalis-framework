@@ -42,7 +42,7 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ## Autoloader contract — inclusion is also instantiation
 
-**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly in `App::boot()` on `plugins_loaded` (priority 10; from `get_instance()` when the app is built after it) — every file loads and eligible classes get instances on every request.
+**The framework auto-includes files in `include/` (recursive) and auto-instantiates concrete classes.** This happens invisibly in `App::boot()` on `plugins_loaded` (priority 10, the framework's own app at 5; at once when the app is built after `plugins_loaded`): every file loads and eligible classes get instances on every request.
 
 ### What gets auto-included
 
@@ -54,7 +54,7 @@ Static methods `hello()` then `static_init()` fire immediately after `include_on
 
 ### What gets auto-instantiated
 
-Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `ClassName::get_instance()` by default (see [`get_auto_instantiation()`](./docs/AUTOLOADER.md#auto-instantiation)). The constructor runs. The instance exists for the request.
+Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `ClassName::get_instance()` by default (see [`get_auto_instantiation()`](./docs/AUTOLOADER.md#auto-instantiation)); an array from the `lattice.instantiate` filter is passed to `declare()`. The constructor only configures. Switch-on comes after the instance is kept: `get_hooks()` is registered, then `run()` is called. Each `App::boot()` is one batch: everything its `load*()` methods build is switched on together once they return, before any `boot_*()` runs. The instance exists for the request; `switch_off()` removes the hooks it added. See [AUTOLOADER.md](./docs/AUTOLOADER.md#auto-instantiation).
 
 ### What opts out
 
@@ -71,9 +71,9 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 **DO NOT** manually `require` / `require_once` / `include` files in `include/` — the autoloader already loaded them; explicit include causes redeclaration errors.
 
-**DO NOT** `new ClassName()` for an auto-loaded class — it's already a singleton; `new` bypasses `get_instance()`, creating a second instance with duplicate hook registration. Use `ClassName::get_instance()` (idempotent — returns the cached singleton).
+**DO NOT** hook from a constructor. A constructor only configures; hooks go in `get_hooks()` or `run()`, which the framework calls once the instance is kept. `new ClassName()` and `ClassName::create()` build an inert instance that is never kept or switched on: harmless, but nothing finds it and none of its hooks fire. Reach the live one with `ClassName::get_instance()`.
 
-**A name is given, not derived.** `Thing::declare('name', $config)` builds once under a name, `Thing::inst('name')` finds it, `Thing::create($config)` builds one nothing finds, and a bare `Thing::inst()` is the class's own instance. A taken name is a strict violation. `get_instance([...])` with a config is legacy and builds on every call. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md#2-factory-pattern).
+**A name is given, not derived.** `get_instance()` is the one find verb. A bare `Thing::get_instance()` answers the class's own instance and builds a single class on first use; `Thing::get_instance('name')` answers the registrant holding that name or `null`, and never builds one; a service builds on any find. `Thing::declare($config)` builds the class live under its name with that config, and a class that sets `protected static $named = true` is built only by `Thing::declare('name', $config)`. A second build of a live name is refused aloud (strict throws, naming the app that built it); names are unique per family (every feature shares one). `create($config)` builds one nothing finds. Every build path passes one gate, which honours the `lattice.instantiate` opt-out. See [ARCHITECTURE.md](./docs/ARCHITECTURE.md#2-factory-pattern).
 
 **DO NOT** use `include/` for WIP / scratch classes — they'll auto-instantiate and run on every request. Use `_dirname/` (skipped entirely) for scratch, or `.abstract.` in the filename if you want the parent loaded but not instantiated.
 
@@ -89,13 +89,13 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
 ## Class Hierarchy
 
-"Auto-instantiated" means the autoloader creates a singleton instance on load — no manual bootstrapping needed.
+"Auto-instantiated" means the autoloader builds the class's instance through `get_instance()` and switches it on; no manual bootstrapping needed.
 
 ### Plugin Bootstrap
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `App` | `Factory` | Base plugin class; provides autoloader entry point and rendering coordination | yes |
+| `App` | `Registrant` | Base plugin class; provides autoloader entry point and rendering coordination | yes |
 
 ### WordPress Models
 
@@ -184,7 +184,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `Feature` | `Factory` | Hook registrar via `get_hooks()`. `$requires` lists library features `load_feature()` loads first; `instance_condition()` gates the rest (see [CONVENTIONS](./docs/CONVENTIONS.md)) | yes |
+| `Feature` | `Registrant` | Hook registrar via `get_hooks()`. `$requires` lists library features `load_feature()` loads first; `instance_condition()` gates the rest (see [CONVENTIONS](./docs/CONVENTIONS.md)) | yes |
 | `Integration` | `Singleton` | Conditional feature (checks plugin availability) | yes |
 | `Plugin_Integration` | `Integration` | Integration requiring a specific plugin; `$plugin` is a plugin basename or its directory (`Plugins::is_active()`); anything but a string is a strict violation | yes |
 | `ACF\Bidirectional_Relationship` | `Feature` | Keeps two ACF relationship fields in sync across posts, users, and terms; configure via `$key_1/2`, `$type_1/2` (`'post'\|'user'\|'term'`), `$post_type_1/2`, `$taxonomy_1/2`, `$limit_1/2`, `$allow_self`, `$force_add`. A `'post'` side may be a WooCommerce order: HPOS orders resolve their type via `Order::get_instance`, and deletion is caught on `woocommerce_before_delete_order`. Fires `lattice.relationship.partner_updated` (`$type`, `$id`, `$key`, `$relationship`) after each partner write; `Excerpt_Keywords` listens to rebuild the partner's keywords, since the write is not a save. `lattice.relationship.sync` (`$sync`, `$type`, `$id`, `$relationship`) refuses one record's sync, as proposals does for its drafts; `Bidirectional_Relationship::suppress()` / `restore()` pause every sync (they nest) | yes |
@@ -240,7 +240,7 @@ The run record (status, total, stalled), the stall rule and `$halt_on_fail` are 
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `Singleton` | — | Single-instance service/manager base | yes |
+| `Singleton` | — | Single-instance registrant base; switches on with `get_hooks()` then `run()` | yes |
 | `Cron_Scheduler` | `Singleton` | WP cron job management | yes |
 | `Task_Handler` | `Singleton` | One-time background task queue | yes |
 | `Command` | — | A `wp` command: `$name`, a `$subcommands` table or docblocks, `register()` on `cli_init`; `fail()`, `answer()`, `table()` | |
@@ -299,7 +299,9 @@ The run record (status, total, stalled), the stall rule and `$halt_on_fail` are 
 ```php
 Post::get_instance(mixed $data = null, ?bool $auto_resolve = null): ?static   // id, WP_Post, uuid or null (the global post)
 Post::get_instances($ids): static[]
-Post::create(mixed $data = []): static                                        // new and unsaved; does not resolve
+Post::create(mixed $data = []): static                                        // new and unsaved; does not resolve; never kept until saved
+Thing::create(mixed $data = []): ?static                                      // a registrant or service: inert, never kept or switched on; a scalar is refused
+Thing::declare(string|array $name = [], array $config = []): ?static          // a registrant live under its name; refused on a live name
 Post::query(array $args = [], &$query = null): static[]   // returns plain array; $query receives the WP_Query
 
 $post->get_id(): int
@@ -425,7 +427,7 @@ public function get_hooks(): array {
 // unless explicit 'action' / 'filter' documentation is worth the extra ceremony.
 // accepted_args is derived via reflection on the callback (every argument for a variadic); a fourth element overrides it.
 
-public function run(): void  // called immediately on instantiation (before hooks fire)
+public function run(): void  // called at switch-on, after get_hooks() is registered and the instance is kept
 ```
 
 ### Admin_Page / Admin_Sub_Page
@@ -595,10 +597,13 @@ Escape user data before it becomes a `content`, `label` or cell param (`esc_html
 The autoloader calls these static methods immediately after `include_once`, before any instantiation and regardless of `get_auto_instantiation()`. Use them for static-time registration (`register_post_type()`, hooks bound to `[static::class, '…']`) that doesn't need an instance. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
 
 **Never manually `require` files in `include/` — the autoloader already loaded them.**
-Explicit `include`/`require` on auto-loaded files causes redeclaration errors. The autoloader recursively includes all files during `App::__construct()`. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+Explicit `include`/`require` on auto-loaded files causes redeclaration errors. The autoloader recursively includes all files during `App::boot()`. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
 
-**Never `new ClassName()` for auto-loaded classes — use `ClassName::get_instance()`.**
-`new` bypasses the singleton, creating a second instance with duplicate hook registration. Auto-loaded classes are already singletons. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+**Find a live class with `ClassName::get_instance()`; `new` and `create()` build an inert copy.**
+An inert instance is never kept or switched on, so its hooks never fire and no find answers it. Constructors only configure; hooks belong in `get_hooks()` and `run()`. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
+
+**One stored entity is one record, whatever views it.**
+`User`, `Customer` and `Account` views of user 1 share edits and staged values; a find from the same class answers the same view. `clone` is a fresh read from storage without pending edits; derived values go through `$this->remember($key, $callback)`, dropped on every edit; long runs call `Model::release()` per unit of work. See [MODELS.md#records-and-views](./docs/MODELS.md#records-and-views).
 
 **Never put WIP classes in `include/` — they auto-instantiate on every request.**
 Any concrete class in `include/` gets instantiated during plugin bootstrap. Use `_dirname/` for scratch work or `.abstract.` suffix to prevent instantiation. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).

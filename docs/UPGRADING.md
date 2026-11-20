@@ -371,6 +371,35 @@ A throw mid-render now also unwinds any output buffer the render opened, so a `S
 
 `Woo_Account_Page` and `Shortcode` register their slug or tag in the constructor, so an instance built over a held name still takes the endpoint or tag over, as before.
 
+### Life cycle (0.13 to 0.14)
+
+A constructor configures; the framework switches an instance on once it is kept. `get_instance()` finds, `declare()` builds live under a name, `create()` builds inert. A stored entity is one record shared by every model that views it. The 1.0 script rewrites the mechanical rows; the rest are hand edits.
+
+| Change | What to do |
+|---|---|
+| `inst()` is removed | `get_instance()` with the same arguments |
+| `get_instance([...])` with a config is refused (it built on every call) | `declare($config)` to make it live, `create($config)` for one nothing finds |
+| A constructor only configures; switch-on is `get_hooks()`, then `run()`, after the instance is kept. Hooks added in a constructor now run for every `new` and `create()` too | Move hooks out of constructors into `get_hooks()` or `run()` |
+| `new` and `create()` build an inert instance, never kept or switched on; `new My_Plugin()` no longer boots an app, and `get_auto_instantiation()` returning `true` builds an inert one | `My_Plugin::get_instance()`; return `'get_instance'` from `get_auto_instantiation()` |
+| `Singleton::init()` is `run()` (and `Integration`'s override is gone), so every singleton switches on with `get_hooks()` then `run()` | Rename `init()` to `run()` and `parent::init()` to `parent::run()`. A singleton whose own `run()` is a job (d-pace's `Ion_Source_Category_Reshuffle`) would now run on every request: rename that method first |
+| `declare(string $name, array $config = [])` is `declare(string\|array $name = [], array $config = [])`: `declare($config)` builds a class under its default name, `declare('name', $config)` only a `$named` class | A single class: `declare($config)`. A class built under several names: `protected static $named = true`, then `declare('name', $config)` |
+| A bare find builds a single class; a find by name never builds a registrant and answers the holder or `null`; a bare find on a `$named` class answers `null` | Have the owner declare it; find it everywhere else |
+| A second build of a live name, same class included, is refused aloud (strict throws naming the app that built it); a `declare($config)` after a bare find built the defaults used to drop its config silently | Declare once, in the owner, before anything finds it |
+| Names are unique per family: every feature shares one group (a name was scoped to its class), and `Post_Type`, `Taxonomy`, `Post_Status`, `User_Role`, `Iterator` and `Cron_Scheduler` each group their members, with a strict audit of two claiming one slug | Give each feature its own id, each family member its own slug |
+| The family bases' placeholder names (`'digitalis-metabox'`, `'digitalis-profile-section'`, `'admin-menu-page'`, `'shortcode'`, `'custom-block'`, `'account_page'`) are `null` | Declare `$id` or `$slug` on every concrete class |
+| `load_feature($file, $options)` declares the feature with `$options`, which must be an array (`true` is refused) | Pass an array, or no options |
+| A feature found bare loads its `$requires`, as through `load_feature()`; the `lattice.instantiate` opt-out refuses every build path, a find and `declare()` included | Nothing, unless a find relied on building an opted-out class |
+| `Query_Manager` and `Task_Handler` are built by the framework's own app (`Lattice\Framework`, `plugins_loaded` 5), not by a find | Nothing; `add_task()` and queries find them |
+| `Post::clear_content_cache()` is removed | Delete the call: derived values follow edits (`remember()`) |
+| `Job::forget_instances()` is `Job::forget_types()`; the models it freed are freed by `Model::release()` | Call both in a long run, per unit of work |
+| `Factory::$instances`, `Model::$instances` and `Singleton::$instances` are gone | `Lattice\Registry` (`get()`, `remove()`, `get_group()`); `get_group_instances()` and `get_instance_map()` keep their shape |
+| `App::declare()` was refused | Allowed: an app is single, declared under its class |
+| `REST_REQUEST` was tested at `plugins_loaded`, before it is defined, so `load_rest()` and `boot_rest()` never ran | They run on REST requests, at `rest_api_init` priority 0, after the front branch; check what your `boot_rest()` does now that it runs |
+| A string hook name passed to `$this->add_*()` was sanitized (`'acf/get_field_label'` hooked `acf.get_field_label` and never fired) | A string is WordPress's name, used verbatim; only array parts are joined and sanitized. Fix any callback written for the dotted form |
+| Views of one entity shared nothing: `User`, `Customer` and `Account` views of user 1 held separate copies | They share one record: an edit through one is seen and saved by all. A find from one class answers one object per id; a deleted entity answers `null` |
+| `clone` copied the object, pending edits included | A clone of a saved model is a fresh read from storage; stage edits on the clone or save first |
+| An unsaved model was kept in the instance map under its uuid | It is kept only once saved |
+
 ### Rendering
 
 | Violation | Mechanical fix |

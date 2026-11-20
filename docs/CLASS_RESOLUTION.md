@@ -124,7 +124,7 @@ Under strict, `validate_id()` re-entering resolution for the same class and id (
 
 ### Factory Method Integration
 
-`get_instance()` resolves; `create()` does not. It builds a new, unsaved instance of the class it is called on (a uuid id until `save()`), so call it on the class you want:
+`get_instance()` resolves; `create()` does not. It builds a new, unsaved instance of the class it is called on (a uuid id until `save()`), so call it on the class you want. An unsaved model is never kept, so `create()` never replaces a held model and nothing finds the new one until its first save binds it to its id. Pass it data, not an id: an id is a find, `get_instance($id)`. On a registrant or service, `Factory::create()` refuses a scalar and answers `null`.
 
 ```php
 public static function create(mixed $data = []) {
@@ -194,7 +194,7 @@ protected static $context_options = [
 ];
 ```
 
-Override `$context_options` in a subclass to register additional contexts. `validate_id()` checks `(int) $id === (int) get_option($key)` for the context's option, and `get_global_id()` is overridden so `Front_Page::inst()` (no args) returns the option-referenced instance regardless of the global `$post`.
+Override `$context_options` in a subclass to register additional contexts. `validate_id()` checks `(int) $id === (int) get_option($key)` for the context's option, and `get_global_id()` is overridden so `Front_Page::get_instance()` (no args) returns the option-referenced instance regardless of the global `$post`.
 
 ### User Specificity
 
@@ -755,7 +755,7 @@ class Front_Page extends Page {
     // Specificity: 10001 — pinned to whichever page is set in Settings → Reading
 }
 
-// Front_Page::inst() returns the front-page instance regardless of which
+// Front_Page::get_instance() returns the front-page instance regardless of which
 // request you're on (or null if no front page is set).
 ```
 

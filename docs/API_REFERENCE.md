@@ -40,15 +40,17 @@ Base abstract class for all design patterns.
 
 ### `Lattice\Singleton`
 
-Ensures single instance per class.
+One registrant per class, found bare. Switches on through `Is_Registrant`: `get_hooks()`, then `run()`, after the instance is kept.
 
 ```php
-abstract class Singleton extends Design_Pattern
+abstract class Singleton extends Creational
 ```
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `get_instance()` | `static get_instance(): static` | Returns the singleton instance |
+| `get_instance()` | `static get_instance(): ?static` | The held instance, else builds it through the build gate; `null` when the gate refuses |
+| `run()` | `public run()` | Called at switch-on, after `get_hooks()` is registered |
+| `switch_off()` | `public switch_off(): void` | Removes every hook added through the instance |
 | `__clone()` | `public __clone(): void` | Throws Exception (cloning disabled) |
 | `__wakeup()` | `public __wakeup(): void` | Throws Exception (unserialization disabled) |
 
@@ -66,30 +68,28 @@ abstract class Factory extends Creational
 |----------|------|---------|-------------|
 | `$cache_group` | `string` | `'__global__'` | Namespace for instance storage. Override to isolate a family of subclasses. |
 | `$cache_property` | `string\|null` | `null` | Instance property whose value becomes the cache key. |
-| `$instances` | `array` | `[]` | Shared static registry of all cached instances. |
+| `$named` | `bool` | `false` | `true`: built only under a name given to `declare($name, $config)`; a bare find answers `null`. |
+
+Instances are kept in `Lattice\Registry` under kind, group and key.
 
 `get_cache_group()` and `get_data_key($data)` are the seams a subclass overrides to change where an instance is stored and how `get_instance($data)` finds it. `get_cache_key()` is the third, the key an instance is stored under: `Log` answers its path there, and its `get_data_key()` resolves a bare file name to the path it has in the called class. `Feature` overrides the first two: each feature class is its own group unless a family declares one, and a config is found by its `$cache_property` (`id` by default). See [CONVENTIONS: Features](./CONVENTIONS.md#features).
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `create()` | `static create(mixed $data = []): ?static` | Creates new instance; returns nothing for scalar data |
-| `get_instance()` | `static get_instance(mixed $data = null): ?static` | Bare (`null` or `[]`): the class's own instance. Scalar: the instance holding that name, if it is one of the asking class. Array: legacy, builds on every call |
-| `declare()` | `static declare(string $name, array $config = []): ?static` | Builds once and keeps the instance under `$name`; a taken name is a strict violation and answers the holder outside strict |
+| `create()` | `static create(mixed $data = []): ?static` | A new inert instance, never kept or switched on; refused for scalar data |
+| `get_instance()` | `static get_instance(mixed $data = null): ?static` | Bare (`null` or `[]`): the class's own instance, built on first find unless the class is `$named`. Scalar: the registrant holding that name if it is one of the asking class, else `null`, never built; a service is built on any find. Array: refused |
+| `declare()` | `static declare(string\|array $name = [], array $config = []): ?static` | `declare($config)` builds the class live under its default name; `declare($name, $config)` a `$named` class under `$name`. A live name is refused aloud (strict throws), naming the app that built it |
 | `get_instance_map()` | `static get_instance_map(): array` | Returns `['group' => ['key' => ClassName]]` map of all cached instances |
 
 ---
 
 ### `Lattice\Creational`
 
-Base for creational patterns with instance tracking.
+Base for creational patterns. Holds the one build gate, `may_build()` (final), asked on every registry miss: the `lattice.instantiate` filters (only `false` refuses), then `instance_condition($data)`, then `prepare_build()`.
 
 ```php
-abstract class Creational extends Design_Pattern
+class Creational extends Design_Pattern
 ```
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `$instances` | `array` | Tracks all created instances |
 
 ---
 
@@ -110,8 +110,10 @@ abstract class Model extends Factory
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `create()` | `static create(mixed $data = []): static` | Creates a new, unsaved instance of the called class (no resolution) |
-| `get_instance()` | `static get_instance(mixed $data = null, ?bool $auto_resolve = null): ?static` | Gets model by ID with auto-resolution |
+| `create()` | `static create(mixed $data = []): static` | Creates a new, unsaved instance of the called class (no resolution); never kept until saved |
+| `get_instance()` | `static get_instance(mixed $data = null, ?bool $auto_resolve = null): ?static` | Gets model by ID with auto-resolution: the held view, else a view of the held record, else a read; `null` once deleted |
+| `release()` | `static release(): void` | Drops the request's hold on every record; long runs call it per unit of work |
+| `is_deleted()` | `public is_deleted(): bool` | Whether storage no longer has the entity |
 | `get_instances()` | `static get_instances($ids): array` | Gets multiple models (a non-iterable such as `false`, `null` or a `WP_Error` gives `[]`) |
 | `get_class_name()` | `static get_class_name(mixed $id, ?bool $auto_resolve = null): string` | Resolves most specific class for ID |
 | `validate_id()` | `static validate_id(mixed $id): bool` | Validates ID for this model |
@@ -138,12 +140,12 @@ abstract class Service extends Factory
 Feature factory with WordPress hook support.
 
 ```php
-abstract class Feature extends Factory
+abstract class Feature extends Registrant
 ```
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `run()` | `public run(): void` | Called on instantiation |
+| `run()` | `public run(): void` | Called at switch-on, after `get_hooks()` is registered |
 | `get_hooks()` | `public get_hooks(): array` | Returns hooks to register |
 
 ---
@@ -159,7 +161,7 @@ abstract class Integration extends Singleton
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `get_hooks()` | `public get_hooks(): array` | Returns hooks to register |
-| `init()` | `public init(): void` | Initialization logic |
+| `run()` | `public run(): void` | Called at switch-on, after `get_hooks()` is registered |
 
 ---
 
@@ -168,7 +170,7 @@ abstract class Integration extends Singleton
 Plugin application base class.
 
 ```php
-abstract class App extends Factory
+abstract class App extends Registrant
 ```
 
 | Property | Type | Description |
@@ -365,7 +367,7 @@ A `$filters` key is the taxonomy slug or the ACF field name (the meta key the cl
 | `remove_support()` | `protected remove_support(string $support): void` | Drop a feature from the list before registration, whether given as a value (`'title'`) or as a key with arguments (`'editor' => [...]`); the list it leaves is reindexed |
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
-| `get_filters()` | `protected get_filters(): array` | Override to compute `$filters`; called on construction and by each `build_filters()` (`admin_controller()` and `render_filters()`), so from the second build `$this->filters`, what the default returns, already holds the parsed entries: an override extending `parent::get_filters()` receives them, one returning its own array is parsed afresh each build |
+| `get_filters()` | `protected get_filters(): array` | Override to compute `$filters`; called at switch-on and by each `build_filters()` (`admin_controller()` and `render_filters()`), so from the second build `$this->filters`, what the default returns, already holds the parsed entries: an override extending `parent::get_filters()` receives them, one returning its own array is parsed afresh each build |
 | `get_filter_request_value()` | `protected get_filter_request_value(string $group, array $filter): string\|false` | The request value an admin filter's control posted (`$group` is `'tax'` or `'meta'`), unslashed; a non-scalar value is `false` |
 | `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls static `$method` on `$model_class`, then static on the post type's class, then on the instance; `$default` when none has it |
 | `columns()` | `public columns(array $columns): array` | Modifies admin columns |
@@ -492,10 +494,10 @@ class Query_Manager extends Singleton
 
 ### `Lattice\Query_Profile`
 
-Profile that self-registers with `Query_Manager` on construction. Declares when it applies and what it does.
+Profile that registers with `Query_Manager` at switch-on. Declares when it applies and what it does.
 
 ```php
-class Query_Profile extends Factory
+class Query_Profile extends Registrant
 ```
 
 | Property | Type | Default | Description |
@@ -759,7 +761,7 @@ class Field extends Component
 Admin menu page.
 
 ```php
-abstract class Admin_Page extends Singleton
+class Admin_Page extends Registrant
 ```
 
 | Property | Type | Default | Description |
@@ -835,7 +837,7 @@ Groups raw log text into entries and wraps a line's tokens. Plain class, built f
 WP_List_Table wrapper.
 
 ```php
-abstract class Admin_Table extends Singleton
+abstract class Admin_Table extends Feature
 ```
 
 | Method | Signature | Description |
