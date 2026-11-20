@@ -199,7 +199,7 @@ class Model extends Factory {
         if (is_null($id))                 return null;
         if ($class_name != static::class) return $class_name::get_instance($data, false);
 
-        if ($held = Registry::get(self::INSTANCE_KIND, $class_name, $id)) return $held;
+        if (($held = Registry::get(self::INSTANCE_KIND, $class_name, $id)) && ($held->get_record()->site === get_current_blog_id())) return $held;
         if (!static::validate_data($data))              return null;
 
         self::strict_enter('validate', $id);
@@ -335,14 +335,75 @@ class Model extends Factory {
     protected $id;
     protected $is_new;
 
+    protected ?Model_Record $model_record = null;
+
+    // The storage a record is kept under: views of one storage and id share it. Unshared by default.
+    protected static function get_record_storage () : string {
+
+        return static::class;
+
+    }
+
+    // The properties every view of a record shares, bound by reference.
+    protected static function get_record_properties () : array {
+
+        return ['id', 'is_new'];
+
+    }
+
+    public function get_record () : Model_Record {
+
+        return $this->model_record ??= new Model_Record(static::get_record_storage(), get_current_blog_id());
+
+    }
+
+    protected function bind_record (Model_Record $record) : void {
+
+        foreach (static::get_record_properties() as $property) {
+
+            if (!property_exists($this, $property)) continue;
+
+            if (!array_key_exists($property, $record->state)) $record->state[$property] = $this->$property;
+
+            $this->$property = &$record->state[$property];
+
+        }
+
+        $record->views[static::class] = $this;
+        $this->model_record           = $record;
+
+    }
+
+    // A clone leaves the record: its properties stop being references, so a clone's reload never reaches the original.
+    public function __clone () {
+
+        foreach (static::get_record_properties() as $property) {
+
+            if (!property_exists($this, $property)) continue;
+
+            $value = $this->$property;
+            unset($this->$property);
+            $this->$property = $value;
+
+        }
+
+        $this->model_record = null;
+
+    }
+
     public function __construct (mixed $data = null) {
 
-        if (is_scalar($data)) {
+        if (is_scalar($data) && ($record = Model_Record::find(static::get_record_storage(), $data))) {
+
+            $this->bind_record($record);
+
+        } elseif (is_scalar($data)) {
 
             $this->id     = $data;
             $this->is_new = false; //is_int($data) ? ($data < 0) : false;
 
             $this->hydrate_instance();
+            $this->bind_record($this->get_record());
 
         } else {
 
@@ -350,6 +411,7 @@ class Model extends Factory {
             $this->is_new = true;
 
             $this->build_instance($data);
+            $this->bind_record($this->get_record());
 
         }
 
@@ -369,6 +431,8 @@ class Model extends Factory {
     public function cache_instance () {
     
         Registry::set(self::INSTANCE_KIND, static::class, $this->id, $this);
+
+        if (!$this->is_new) $this->get_record()->keep($this->id);
         return $this;
     
     }

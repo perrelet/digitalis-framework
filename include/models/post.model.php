@@ -10,6 +10,18 @@ use WP_Query;
 
 class Post extends WP_Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'post';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'wp_post', 'staged_terms', 'staged_thumbnail_id'];
+
+    }
+
     use Has_WP_Post;
 
     protected static $post_type      = false;       // string            - Validate by post_type. Leave false to allow any generic post type.

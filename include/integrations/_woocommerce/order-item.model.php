@@ -13,6 +13,18 @@ use \WC_Order_Item_Product;
  */
 class Order_Item extends Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'wc_order_item';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'item'];
+
+    }
+
     use Has_WC_Data;
 
     const WC_DATA = 'item';

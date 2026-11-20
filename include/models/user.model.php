@@ -11,6 +11,18 @@ use WP_User_Query;
 
 class User extends WP_Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'user';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'wp_user', 'customer'];
+
+    }
+
     use Has_WP_User;
 
     protected static $role = false; // string|false|array - Validate by user role. Leave false to allow any role.

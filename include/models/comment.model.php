@@ -8,6 +8,18 @@ use WP_Comment;
 
 class Comment extends WP_Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'comment';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'wp_comment'];
+
+    }
+
     use Has_WP_Comment;
 
     public static function extract_id (mixed $data = null) {

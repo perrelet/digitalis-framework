@@ -6,6 +6,18 @@ namespace Lattice;
 
 class ACF_Row extends Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'acf_row';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'parent', 'selector', 'index', 'data', 'dirty'];
+
+    }
+
     protected static $repeater = null; // string|null - ACF repeater field name; subclass discriminator for auto-resolution; null on the base class
 
     protected $parent;     // Post|User|Term instance

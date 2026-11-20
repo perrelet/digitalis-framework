@@ -6,6 +6,12 @@ namespace Lattice;
 
 abstract class WP_Model extends Model {
 
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'dirty'];
+
+    }
+
     use Has_WP_Model, Is_Stashable;
 
     public static function validate_id (mixed $id) {

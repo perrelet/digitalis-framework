@@ -11,6 +11,18 @@ use WP_Error;
 
 class Term extends WP_Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'term';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'wp_term'];
+
+    }
+
     use Has_WP_Term;
 
     protected static $taxonomy  = null;

@@ -13,12 +13,17 @@ trait Has_WC_Data {
 
     public function __call ($name, $args) {
 
+        // Views of one order share its edits; the notice names the view that made them.
+        if (preg_match('/^(set|add|update|delete|remove)_/', (string) $name)) $this->get_record()->state['editor'] = static::class;
+
         return call_user_func_array([$this->{static::WC_DATA}, $name], $args);
 
     }
 
     // WC_Abstract_Order::__clone() is empty, so a cloned WC_Order shares its meta and items with the original.
     public function __clone () {
+
+        parent::__clone();
 
         $object = $this->{static::WC_DATA};
         $class  = $object::class;
@@ -116,6 +121,8 @@ trait Has_WC_Data {
 
         if (!$id) return;
 
+        $followed = [];
+
         foreach (Registry::get_kind(self::INSTANCE_KIND) as $class => $models) {
 
             if (!is_a($class, self::class, true) || !isset($models[$id])) continue;
@@ -127,7 +134,10 @@ trait Has_WC_Data {
 
                 if (!($object instanceof WC_Data) || ($object === $exclude) || ((int) $object->get_id() !== $id) || !in_array(self::get_wc_data_type($object), $types, true)) continue;
 
-                if ($model->is_dirty()) self::notice_held_wc_data($class); else $model->reload();
+                if (isset($followed[$record = spl_object_id($model->get_record())])) continue;
+                $followed[$record] = true;
+
+                if ($model->is_dirty()) self::notice_held_wc_data($model->get_record()->state['editor'] ?? $class); else $model->reload();
 
             } catch (\Throwable $e) {
 

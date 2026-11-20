@@ -13,6 +13,18 @@ use WP_Error;
 
 class Order extends Model {
 
+    protected static function get_record_storage () : string {
+
+        return 'wc_order';
+
+    }
+
+    protected static function get_record_properties () : array {
+
+        return [...parent::get_record_properties(), 'wc_order'];
+
+    }
+
     use Has_Fields, Has_WC_Data;
 
     const WC_DATA = 'wc_order';
