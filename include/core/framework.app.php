@@ -14,6 +14,8 @@ final class Framework extends App {
 
     public function load () {
 
+        Model_Record::follow_deletes();
+
         Query_Manager::get_instance();
         Task_Handler::get_instance();
 

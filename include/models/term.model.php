@@ -189,7 +189,7 @@ class Term extends WP_Model {
 
             if (!$name = ($term_array['name'] ?? false)) return;
             unset($term_array['name']);
-            $result = wp_insert_term($name, $taxonomy, $term_array);
+            $result = Model_Record::insert($this->get_record(), fn () => wp_insert_term($name, $taxonomy, $term_array));
 
         } else {
 

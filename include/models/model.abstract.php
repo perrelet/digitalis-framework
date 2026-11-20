@@ -199,7 +199,7 @@ class Model extends Factory {
         if (is_null($id))                 return null;
         if ($class_name != static::class) return $class_name::get_instance($data, false);
 
-        if (($held = Registry::get(self::INSTANCE_KIND, $class_name, $id)) && ($held->get_record()->site === get_current_blog_id())) return $held;
+        if (($held = Registry::get(self::INSTANCE_KIND, $class_name, $id)) && ($held->get_record()->site === get_current_blog_id())) return $held->is_deleted() ? null : $held;
         if (!static::validate_data($data))              return null;
 
         self::strict_enter('validate', $id);
@@ -367,6 +367,50 @@ class Model extends Factory {
 
     }
 
+    public function is_deleted () : bool {
+
+        return (bool) ($this->get_record()->state['deleted'] ?? false);
+
+    }
+
+    // Drops the request's hold on every record: one still held elsewhere keeps its identity and is read again, the rest are freed. Long runs call it per unit of work.
+    public static function release () : void {
+
+        $records = [];
+        $views   = [];
+
+        foreach (Registry::get_kind('record') as $group => $held) foreach ($held as $id => $record) $records[] = [$group, $id, \WeakReference::create($record), $record->is_dirty(), implode(', ', array_keys($record->views))];
+        foreach (Registry::get_kind(self::INSTANCE_KIND) as $class => $held) foreach ($held as $id => $view) $views[] = [$class, $id, \WeakReference::create($view)];
+
+        unset($held, $record, $view);
+
+        Registry::forget_kind('record');
+        Registry::forget_kind(self::INSTANCE_KIND);
+
+        gc_collect_cycles();
+
+        foreach ($views as [$class, $id, $weak]) if ($view = $weak->get()) Registry::set(self::INSTANCE_KIND, $class, $id, $view);
+
+        foreach ($records as [$group, $id, $weak, $dirty, $classes]) {
+
+            if ($record = $weak->get()) {
+
+                Registry::set('record', $group, $id, $record);
+
+                if (!$dirty && ($view = reset($record->views)) && method_exists($view, 'reload')) $view->reload();
+
+            } elseif ($dirty) {
+
+                _doing_it_wrong(esc_html($classes), esc_html("An unsaved model ({$group} {$id}) was released with its edits; save it before the unit of work ends."), '0.14.0');
+
+            }
+
+        }
+
+        if (function_exists('wp_cache_supports') && wp_cache_supports('flush_runtime')) wp_cache_flush_runtime();
+
+    }
+
     protected function touch_record () : void {
 
         $this->get_record()->touch();
@@ -419,7 +463,11 @@ class Model extends Factory {
             $this->is_new = false; //is_int($data) ? ($data < 0) : false;
 
             $this->hydrate_instance();
-            $this->bind_record($this->get_record());
+
+            $record       = $this->get_record();
+            $record->kept = !Model_Record::is_unbound(static::get_record_storage());
+
+            $this->bind_record($record);
 
         } else {
 
@@ -446,9 +494,11 @@ class Model extends Factory {
 
     public function cache_instance () {
     
+        if ($this->is_new || !$this->get_record()->kept) return $this;
+
         Registry::set(self::INSTANCE_KIND, static::class, $this->id, $this);
 
-        if (!$this->is_new) $this->get_record()->keep($this->id);
+        $this->get_record()->keep($this->id);
         return $this;
     
     }

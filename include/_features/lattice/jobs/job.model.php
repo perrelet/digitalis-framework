@@ -126,10 +126,9 @@ class Job extends Model {
 
     }
 
-    public static function forget_instances () : void {
+    public static function forget_types () : void {
 
-        Registry::forget_kind(self::INSTANCE_KIND);
-        self::$types     = [];
+        self::$types = [];
 
     }
 

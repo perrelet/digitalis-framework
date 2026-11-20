@@ -107,7 +107,9 @@ class Order extends Model {
 
         try {
 
-            $id = $order->save();
+            if ($this->is_new()) $this->get_record()->state['match'] = fn ($id) => $id && ((int) $order->get_id() === (int) $id);
+
+            $id = $this->is_new() ? Model_Record::insert($this->get_record(), fn () => $order->save()) : $order->save();
 
         } finally {
 

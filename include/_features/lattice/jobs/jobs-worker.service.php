@@ -198,9 +198,8 @@ class Jobs_Worker extends Service {
 
     protected function forget () : void {
 
-        Job::forget_instances();
-
-        if (function_exists('wp_cache_supports') && wp_cache_supports('flush_runtime')) wp_cache_flush_runtime();
+        Model::release();
+        Job::forget_types();
 
     }
 

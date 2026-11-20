@@ -310,7 +310,7 @@ class Post extends WP_Model {
         if ($this->is_new()) {
 
             if (isset($post_array['ID'])) unset($post_array['ID']);
-            $post_id = wp_insert_post(wp_slash($post_array), true, $fire_after_hooks && !$defer_hooks);
+            $post_id = Model_Record::insert($this->get_record(), fn () => wp_insert_post(wp_slash($post_array), true, $fire_after_hooks && !$defer_hooks));
 
         } else {
 
