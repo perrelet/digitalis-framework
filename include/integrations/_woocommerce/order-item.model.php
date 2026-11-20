@@ -13,6 +13,13 @@ use \WC_Order_Item_Product;
  */
 class Order_Item extends Model {
 
+    // Item saves are followed by Has_WC_Data; no other record stands on an item's row.
+    protected static function get_record_rows (int|string $id) : array {
+
+        return [];
+
+    }
+
     protected static function get_record_storage () : string {
 
         return 'wc_order_item';

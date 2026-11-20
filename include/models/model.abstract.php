@@ -397,7 +397,7 @@ class Model extends Factory {
 
                 Registry::set('record', $group, $id, $record);
 
-                if (!$dirty && ($view = reset($record->views)) && method_exists($view, 'reload')) $view->reload();
+                if (!$dirty) $record->reload_guarded();
 
             } elseif ($dirty) {
 
@@ -447,7 +447,43 @@ class Model extends Factory {
 
         }
 
-        $this->model_record = null;
+        // A clone stays out of the map: its saves are followed into the mapped record, never registered over it.
+        $this->model_record       = new Model_Record(static::get_record_storage(), get_current_blog_id());
+        $this->model_record->kept = false;
+
+        $this->bind_record($this->model_record);
+        $this->read_clone();
+
+    }
+
+    // A saved clone is read from storage without the original's pending edits; an unsaved one copies its objects.
+    protected function read_clone () : void {
+
+        $defaults = (new \ReflectionClass($this))->getDefaultProperties();
+
+        foreach (static::get_record_properties() as $property) {
+
+            if (!property_exists($this, $property) || in_array($property, ['id', 'is_new'], true)) continue;
+
+            if ($this->is_new && is_object($this->$property)) $this->$property = clone $this->$property;
+            elseif (array_key_exists($property, $defaults))   $this->$property = $defaults[$property];
+
+        }
+
+        if (!$this->is_new) $this->hydrate_instance();
+
+    }
+
+    // The WordPress rows a record of this class stands on; a save reloads every other record over the rows it wrote.
+    protected static function get_record_rows (int|string $id) : array {
+
+        return [];
+
+    }
+
+    protected function follow_save () : void {
+
+        Model_Record::follow_rows(static::get_record_rows($this->id), $this->get_record());
 
     }
 
@@ -498,6 +534,7 @@ class Model extends Factory {
 
         Registry::set(self::INSTANCE_KIND, static::class, $this->id, $this);
 
+        $this->get_record()->rows = static::get_record_rows($this->id);
         $this->get_record()->keep($this->id);
         return $this;
     

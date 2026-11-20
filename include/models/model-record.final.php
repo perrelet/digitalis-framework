@@ -14,6 +14,7 @@ final class Model_Record {
 
     public bool  $bound   = false;
     public bool  $kept    = true;
+    public array $rows    = [];
 
     // Each unbound insert in flight, by storage; a WooCommerce object matches by its own id, a WordPress row binds at its first hook.
     private static array $inserting = [];
@@ -83,6 +84,52 @@ final class Model_Record {
         // Marked, not removed: the WooCommerce follow on the same hook still reaches the views to warn a dirty one.
         $record->state['deleted'] = true;
         $record->touch();
+
+    }
+
+    public static function follow_rows (array $rows, self $saver) : void {
+
+        if (!$rows) return;
+
+        $written = array_map('serialize', $rows);
+
+        foreach (Registry::get_kind('record') as $records) foreach ($records as $record) {
+
+            if (($record === $saver) || !array_intersect(array_map('serialize', $record->rows), $written)) continue;
+
+            $record->reload_guarded();
+
+        }
+
+    }
+
+    // The one guard every reload goes through: a record mid-insert or holding edits is left alone, and a held edit is reported once per class.
+    public function reload_guarded () : void {
+
+        if (self::in_flight($this)) return;
+
+        $view = reset($this->views);
+
+        if ($this->is_dirty()) {
+
+            static $noticed = [];
+
+            if ($view && !isset($noticed[$view::class])) {
+                $noticed[$view::class] = true;
+                _doing_it_wrong(esc_html($view::class), esc_html($view::class . ' kept unsaved edits across a save of its row by another model, and its own save would write over that one: reload() before editing across such a save.'), '0.14.0');
+            }
+
+            return;
+
+        }
+
+        if ($view && method_exists($view, 'reload')) $view->reload();
+
+    }
+
+    public static function in_flight (self $record) : bool {
+
+        return in_array($record, self::$inserting[$record->storage] ?? [], true);
 
     }
 

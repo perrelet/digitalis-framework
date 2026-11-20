@@ -313,7 +313,6 @@ abstract class Model_Resource extends Singleton {
 
         $copy = $model->get_unsaved_copy($this->to_raw($values, $this->get_fields_for($model, $values)));
 
-        if (is_object($copy) && method_exists($copy, 'get_wp_post') && $copy->get_wp_post()) $copy->set_wp_post(clone $copy->get_wp_post());
 
         $this->stage_model_values($copy, $values);
 

@@ -8,6 +8,12 @@ use WP_Comment;
 
 class Comment extends WP_Model {
 
+    protected static function get_record_rows (int|string $id) : array {
+
+        return [['comments', $id]];
+
+    }
+
     protected static function get_record_storage () : string {
 
         return 'comment';

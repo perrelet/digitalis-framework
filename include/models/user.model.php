@@ -11,6 +11,12 @@ use WP_User_Query;
 
 class User extends WP_Model {
 
+    protected static function get_record_rows (int|string $id) : array {
+
+        return [['users', $id]];
+
+    }
+
     protected static function get_record_storage () : string {
 
         return 'user';
@@ -148,7 +154,11 @@ class User extends WP_Model {
 
         $user_data['ID'] = $this->get_id();
 
-        return wp_update_user($user_data);
+        $result = wp_update_user($user_data);
+
+        $this->follow_save();
+
+        return $result;
 
         //TODO: wp_insert_user
 

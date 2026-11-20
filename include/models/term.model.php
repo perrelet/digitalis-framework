@@ -11,6 +11,12 @@ use WP_Error;
 
 class Term extends WP_Model {
 
+    protected static function get_record_rows (int|string $id) : array {
+
+        return [['terms', $id]];
+
+    }
+
     protected static function get_record_storage () : string {
 
         return 'term';
@@ -215,6 +221,8 @@ class Term extends WP_Model {
         Registry::set(self::INSTANCE_KIND, static::class, $term_id, $this);
 
         if ($term_array['field_input'] ?? false) $this->update_fields($term_array['field_input']);
+
+        $this->follow_save();
 
         return $this;
 

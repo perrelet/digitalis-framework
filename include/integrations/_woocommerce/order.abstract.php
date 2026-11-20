@@ -13,6 +13,13 @@ use WP_Error;
 
 class Order extends Model {
 
+    // With HPOS off an order is also a post, so a Post save and an Order save follow each other; Has_WC_Data follows the order's own saves.
+    protected static function get_record_rows (int|string $id) : array {
+
+        return \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ? [] : [['posts', $id]];
+
+    }
+
     protected static function get_record_storage () : string {
 
         return 'wc_order';
@@ -130,6 +137,8 @@ class Order extends Model {
             if (!$this->is_dirty()) $this->reload();
 
         }
+
+        $this->follow_save();
 
         return $id;
 

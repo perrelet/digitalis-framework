@@ -10,6 +10,12 @@ use WP_Query;
 
 class Post extends WP_Model {
 
+    protected static function get_record_rows (int|string $id) : array {
+
+        return [['posts', $id]];
+
+    }
+
     protected static function get_record_storage () : string {
 
         return 'post';
@@ -342,6 +348,8 @@ class Post extends WP_Model {
         if ($post_array['field_input'] ?? false) $this->update_fields($post_array['field_input']);
 
         if ($defer_hooks) wp_after_insert_post($post_id, $update, $wp_before);
+
+        $this->follow_save();
 
         // TODO: Add to cache
 

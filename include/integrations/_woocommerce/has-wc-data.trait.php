@@ -24,9 +24,7 @@ trait Has_WC_Data {
     }
 
     // WC_Abstract_Order::__clone() is empty, so a cloned WC_Order shares its meta and items with the original.
-    public function __clone () {
-
-        parent::__clone();
+    protected function read_clone () : void {
 
         $object = $this->{static::WC_DATA};
         $class  = $object::class;
@@ -139,7 +137,7 @@ trait Has_WC_Data {
 
                 if (!($object instanceof WC_Data) || ($object === $exclude) || ((int) $object->get_id() !== $id) || !in_array(self::get_wc_data_type($object), $types, true)) continue;
 
-                if (isset($followed[$record = spl_object_id($model->get_record())])) continue;
+                if (Model_Record::in_flight($model->get_record()) || isset($followed[$record = spl_object_id($model->get_record())])) continue;
                 $followed[$record] = true;
 
                 if ($model->is_dirty()) self::notice_held_wc_data($model->get_record()->state['editor'] ?? $class); else $model->reload();
