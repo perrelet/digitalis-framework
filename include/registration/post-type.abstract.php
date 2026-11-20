@@ -16,6 +16,8 @@ use WP_Post;
  */
 abstract class Post_Type extends Singleton {
 
+    protected static $cache_group = self::class;
+
     const AJAX_Flag = 'digitalis_ajax_query';
 
     protected $slug         = 'post-type';
@@ -77,7 +79,6 @@ abstract class Post_Type extends Singleton {
         }
 
         parent::switch_on();
-        $this->run();
 
     }
 

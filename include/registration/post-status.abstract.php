@@ -6,6 +6,8 @@ namespace Lattice;
 
 abstract class Post_Status extends Singleton {
 
+    protected static $cache_group = self::class;
+
     protected $slug        = 'post-status';
     protected $post_types  = ['post'];
 

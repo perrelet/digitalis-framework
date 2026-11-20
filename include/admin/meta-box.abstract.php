@@ -8,7 +8,7 @@ abstract class Meta_Box extends Feature {
 
     protected static $cache_group = self::class;
 
-    protected $id       = 'digitalis-metabox';
+    protected $id       = null;
     protected $title    = 'Lattice Metabox';
     protected $text_domain = 'default'; // Domain for $title, which is the consumer's string.
     protected $screen   = null;

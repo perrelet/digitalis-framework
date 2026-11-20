@@ -26,7 +26,7 @@ class ACF_Option_Pages extends Singleton {
     protected $page      = [];
     protected $sub_pages = [];
 
-    public function init () {
+    public function run () {
 
         if (!function_exists('acf_add_options_page')) return;
 

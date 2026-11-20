@@ -9,7 +9,7 @@ class Admin_Page extends Registrant {
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';    
 
-    protected $slug       = 'admin-menu-page';
+    protected $slug       = null;
     protected $title      = 'Page Title';
     protected $menu_title = 'Menu Title';
     protected $capability = 'manage_options';

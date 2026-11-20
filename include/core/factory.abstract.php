@@ -78,71 +78,82 @@ abstract class Factory extends Creational {
 
     }
 
+    // A single class is found bare and built on first find; a named one is built only by declare($name, ...); a service on any find.
+    protected static $named = false;
+
     public static function get_instance (mixed $data = null) {
 
         $class_name = Call::get_class_name(static::class, $data);
         if ($class_name != static::class) return $class_name::get_instance($data);
 
+        if (is_array($data) && ($data !== [])) return static::refuse_declare('passes a config to get_instance()', 'make it live with declare($config), or build one nothing finds with create($config)');
+
         static::prepare_data($data);
-        if (!static::instance_condition($data)) return null;
 
-        $kind  = static::INSTANCE_KIND;
-        $group = static::get_cache_group();
-        $key   = static::get_data_key($data);
+        if (is_null($key = static::get_data_key($data))) return null;
 
-        if (!is_null($key) && (($found = Registry::get($kind, $group, $key)) instanceof static)) return $found; // a name another class holds is theirs
+        if ($found = Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $key)) {
 
-        // An array config that names a held name: a name is taken once. Where the refusal does not throw, the holder answers its own class and stays in place for another.
-        $name = (is_array($data) && static::$cache_property && is_scalar($data[static::$cache_property] ?? null)) ? (string) $data[static::$cache_property] : null;
-        $held = is_null($name) ? null : Registry::get($kind, $group, $name);
+            if ($found instanceof static) return $found;
 
-        if ($held) {
-
-            $problem = "builds '{$name}' from a config, which " . $held::class . ' already holds';
-
-            Strict::report(static::class, $problem, "find it with inst('{$name}'), name a new one with declare(), or build one nothing finds with create()");
-
-            if ($held instanceof static) return $held;
+            return (is_null($data) || ($data === [])) ? static::refuse_declare("claims '{$key}', which " . $found::class . ' already holds', 'give one of them its own name') : null;
 
         }
 
-        if ($instance = static::create($data)) {
+        $bare = is_null($data) || ($data === []);
 
-            if (($cache_key = $instance->get_cache_key()) && (!$held || ($cache_key !== $name))) Registry::set($kind, $group, $cache_key, $instance);
-            if (!is_null($key) && ($key !== $cache_key) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
+        if ((static::INSTANCE_KIND !== 'service') && (!$bare || static::$named)) return null;
 
-            Batch::defer(fn () => $instance->switch_on());
-
-        }
-
-        return $instance;
+        return self::build($key, $data);
 
     }
 
     /**
-     * Builds once and keeps the instance under $name: a name is taken once, and inst($name) finds it.
+     * Makes a registrant live once: declare($config) under its name, declare($name, $config) for a named class.
      *
      * @return ?static
      */
-    public static function declare (string $name, array $config = []) {
+    public static function declare (string|array $name = [], array $config = []) {
+
+        if (is_array($name)) {
+            $config = $name;
+            $name   = null;
+        }
 
         $class_name = Call::get_class_name(static::class, $config);
-        if ($class_name != static::class) return $class_name::declare($name, $config);
+        if ($class_name != static::class) return is_null($name) ? $class_name::declare($config) : $class_name::declare($name, $config);
+
+        $property = static::$cache_property;
+
+        if (is_null($name) && is_string($property) && is_scalar($config[$property] ?? null)) $name = (string) $config[$property];
+
+        $default = (string) static::get_data_key(null);
+
+        if (is_null($name)) {
+
+            if (static::$named) return static::refuse_declare('declares without a name', "it is a named class: declare('name', \$config)");
+
+            $name = $default;
+
+        } elseif (!static::$named && ($name !== $default) && (static::INSTANCE_KIND !== 'service')) {
+
+            return static::refuse_declare("declares '{$name}'", "it is a single class, live under '{$default}': declare(\$config), or set \$named for one built under several names");
+
+        }
 
         if ($name === '') return static::refuse_declare('declares an empty name', 'give it a name');
 
-        $kind  = static::INSTANCE_KIND;
-        $group = static::get_cache_group();
+        if ($held = Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $name)) {
 
-        if ($held = Registry::get($kind, $group, $name)) {
+            $builder = Registry::get_builder(static::INSTANCE_KIND, static::get_cache_group(), $name) ?? 'no app';
 
-            static::refuse_declare("declares '{$name}', which " . $held::class . ' already holds', "find it with inst('{$name}') or declare another name");
+            static::refuse_declare("declares '{$name}', which " . $held::class . " already holds (built by {$builder})", "find it with get_instance('{$name}'), or make one owner declare it");
 
             return ($held instanceof static) ? $held : null;
 
         }
 
-        if ($property = static::$cache_property) {
+        if ($property) {
 
             if (isset($config[$property]) && (!is_scalar($config[$property]) || ((string) $config[$property] !== $name))) return static::refuse_declare("declares '{$name}' and gives another {$property}", "leave {$property} out: the name fills it");
 
@@ -150,12 +161,22 @@ abstract class Factory extends Creational {
 
         }
 
-        if (!static::instance_condition($config)) return null;
-        if (!$instance = static::create($config))  return null;
+        return self::build($name, $config);
 
-        Registry::set($kind, $group, $name, $instance);
+    }
 
-        if (($key = $instance->get_cache_key()) && !Registry::has($kind, $group, $key)) Registry::set($kind, $group, $key, $instance);
+    private static function build (string $key, mixed $data) : ?static {
+
+        if (!static::may_build($data))       return null;
+        if (!$instance = static::create($data)) return null;
+
+        $kind  = static::INSTANCE_KIND;
+        $group = static::get_cache_group();
+
+        Registry::set($kind, $group, $key, $instance);
+
+        if (($cache_key = $instance->get_cache_key()) && ((string) $cache_key !== $key) && !Registry::has($kind, $group, $cache_key)) Registry::set($kind, $group, $cache_key, $instance);
+
         Batch::defer(fn () => $instance->switch_on());
 
         return $instance;

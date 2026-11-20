@@ -18,9 +18,9 @@ abstract class User_Resource extends Model_Resource {
     protected array $outside = [];
 
     // Outside changes raise the version and are journaled without values (A13).
-    public function init () {
+    public function run () {
 
-        parent::init();
+        parent::run();
 
         $columns = ['user_email' => 'email', 'display_name' => 'display_name', 'user_url' => 'url'];
 

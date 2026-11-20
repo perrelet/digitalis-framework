@@ -193,7 +193,7 @@ trait Autoloader {
 
         } elseif (!is_scalar($instantiation)) {
 
-            $call = [$class_name, 'get_instance'];
+            $call = [$class_name, 'declare'];
             return is_callable($call) ? call_user_func($call, $instantiation) : false;
 
         } else {

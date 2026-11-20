@@ -47,13 +47,6 @@ abstract class App extends Registrant {
 
     }
 
-    // An app is found by its class.
-    public static function declare (string $name, array $config = []) {
-
-        return static::refuse_declare("declares '{$name}'", 'an app is one per class: use inst()');
-
-    }
-
     // One App per class: stored and looked up by class whatever get_instance() was given (Factory only looks up a scalar key).
     protected function get_cache_key () {
 
@@ -88,7 +81,7 @@ abstract class App extends Registrant {
         Batch::run(function () use ($contexts) {
             $this->load();
             foreach ($contexts as $context) if ($context !== 'front') $this->{"load_{$context}"}();
-        });
+        }, static::class);
 
         $this->ensure_schema();
         $this->boot_shared();
@@ -184,7 +177,8 @@ abstract class App extends Registrant {
         unset($this->loading_features[$feature]);
 
         if ($missing)                          return $this->refuse_feature("{$feature} needs " . implode(', ', $missing) . ', which did not load.');
-        if (!$feature::get_instance($options)) return $this->refuse_feature("{$feature} did not load.");
+        if (!is_null($options) && !is_array($options)) return $this->refuse_feature("{$feature} takes an array of options, not " . gettype($options) . '.');
+        if (!(is_null($options) ? $feature::get_instance() : $feature::declare($options))) return $this->refuse_feature("{$feature} did not load.");
 
         $this->loaded_features[$feature] ??= $required ? 'requirement' : 'site';
 

@@ -24,7 +24,7 @@ abstract class Model_Resource extends Singleton {
     protected $post_type;
     protected $record_fields = [];
 
-    public function init () {
+    public function run () {
 
         Resources::inst()->register($this);
 

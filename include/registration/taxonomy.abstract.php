@@ -6,6 +6,8 @@ namespace Lattice;
 
 abstract class Taxonomy extends Singleton {
 
+    protected static $cache_group = self::class;
+
     protected $slug = 'taxonomy';
     protected $post_types = [];
 
@@ -25,7 +27,6 @@ abstract class Taxonomy extends Singleton {
         if (method_exists($this, 'column'))     $this->add_filter("manage_{$this->slug}_custom_column", [$this, 'column'], 10, 3);
 
         parent::switch_on();
-        $this->run();
 
     }
     

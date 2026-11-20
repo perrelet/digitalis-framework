@@ -9,7 +9,7 @@ class Woo_Account_Page extends Registrant {
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';    
 
-    protected $slug = 'account_page';
+    protected $slug = null;
     protected $title = 'Account Page';
     protected $endpoint = null;
     protected $icon = null;

@@ -92,7 +92,7 @@ class Proposals extends Feature {
     public function load_admin () {
 
         Proposals_Admin::get_instance();
-        Proposals_Table::get_instance(['post_type' => $this->get_post_types()]);
+        Proposals_Table::declare(['post_type' => $this->get_post_types()]);
         Proposal_Review_Box::get_instance();
         Proposals_Page::declare($this->page_slug);
 

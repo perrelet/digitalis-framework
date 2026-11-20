@@ -9,6 +9,8 @@ use DateTimeZone;
 
 abstract class Iterator extends Singleton {
 
+    protected static $cache_group = self::class;
+
     use Dependency_Injection;
 
     protected $title              = 'Iterator';
@@ -1672,7 +1674,7 @@ abstract class Iterator extends Singleton {
 
         }
 
-        return $this->log_handle = Log::get_instance(['file' => $this->log_file, 'directory' => $directory, 'name' => $this->title]);
+        return $this->log_handle = Log::create(['file' => $this->log_file, 'directory' => $directory, 'name' => $this->title]);
 
     }
 

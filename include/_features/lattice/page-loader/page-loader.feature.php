@@ -16,6 +16,8 @@ namespace Lattice;
 
 class Page_Loader extends Feature {
 
+    protected $id = 'page-loader';
+
     protected $spinner        = 'default';
     protected $color          = '#555555';
     protected $background     = '#ffffff';

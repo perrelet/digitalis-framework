@@ -9,7 +9,7 @@ class ACF_Block extends Registrant {
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';
 
-    protected $slug = 'custom-block';
+    protected $slug = null;
     protected $view = false;
 
     protected $block    = [

@@ -22,64 +22,30 @@ abstract class Feature extends Registrant {
 
     public static function load () {
 
-        return call_user_func_array([static::class, 'get_instance'], func_get_args());
+        return func_num_args() ? static::declare(...func_get_args()) : static::get_instance();
 
     }
 
-    // Unless a subclass sets its own $cache_group, each feature class gets a group of its own.
-    protected static function get_cache_group () {
+    // A feature built by any path has its requirements, as through load_feature().
+    protected static function prepare_build () : bool {
 
-        return (static::$cache_group === self::class) ? static::class : static::$cache_group;
+        foreach (static::get_requirements() as $requirement) if (!Framework::get_instance()?->load_feature($requirement)) return false;
+
+        return true;
 
     }
 
     protected static function get_data_key ($data) {
 
-        if ($data === []) $data = null;
-
-        if (is_array($data)) return static::$cache_property ? ($data[static::$cache_property] ?? static::get_default_name()) : null;
-        if (!is_null($data)) return parent::get_data_key($data);
-
-        return static::get_default_name() ?? static::class;
+        return is_null($data) ? (static::get_default_name() ?? static::class) : parent::get_data_key($data);
 
     }
 
-    // The naming property's declared default, unless another class in the family holds that name.
     protected static function get_default_name () : ?string {
 
-        if (!static::$cache_property) return null;
+        $name = static::$cache_property ? ((new \ReflectionClass(static::class))->getDefaultProperties()[static::$cache_property] ?? null) : null;
 
-        $name = (new \ReflectionClass(static::class))->getDefaultProperties()[static::$cache_property] ?? null;
-
-        if (is_null($name)) return null;
-
-        $held = Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $name);
-
-        if ($held && !($held instanceof static)) {
-
-            if (!Registry::has(static::INSTANCE_KIND, static::get_cache_group(), static::class)) {
-
-                $problem = "shares the name '{$name}' with " . get_class($held);
-
-                Strict::report(static::class, $problem, 'give one of them its own id; outside strict each is found by its class');
-
-            }
-
-            return null;
-
-        }
-
-        return (string) $name;
-
-    }
-
-    // A name another class in the family holds stays theirs: this one is kept under its class.
-    protected function get_cache_key () {
-
-        $name = parent::get_cache_key();
-        $held = is_null($name) ? null : Registry::get(static::INSTANCE_KIND, static::get_cache_group(), $name);
-
-        return ($held && ($held !== $this) && !($held instanceof static)) ? static::class : $name;
+        return is_null($name) ? null : (string) $name;
 
     }
 

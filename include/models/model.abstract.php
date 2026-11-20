@@ -186,9 +186,9 @@ class Model extends Factory {
     }
 
     // A model is found by its id.
-    public static function declare (string $name, array $config = []) {
+    public static function declare (string|array $name = [], array $config = []) {
 
-        return static::refuse_declare("declares '{$name}'", 'a model is found by its id: use get_instance()');
+        return static::refuse_declare('declares ' . (is_string($name) ? "'{$name}'" : 'a config'), 'a model is found by its id: use get_instance()');
 
     }
 

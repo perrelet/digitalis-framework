@@ -9,6 +9,8 @@ use DateTimeZone;
 
 abstract class Cron_Scheduler extends Singleton {
 
+    protected static $cache_group = self::class;
+
     // H:i:s and nothing else: createFromFormat() would accept '9:00:00' and roll '25:61:61' over to tomorrow without a word.
     public const TIME_PATTERN = '/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d\z/';
 

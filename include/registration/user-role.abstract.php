@@ -6,6 +6,8 @@ namespace Lattice;
 
 abstract class User_Role extends Singleton {
 
+    protected static $cache_group = self::class;
+
     protected $slug     = 'user-role';
     protected $singular = 'Role';
     protected $caps     = [];

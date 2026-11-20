@@ -10,10 +10,12 @@ use Closure;
 final class Batch {
 
     private static array $frames = [];
+    private static array $owners = [];
 
-    public static function run (callable $build) : void {
+    public static function run (callable $build, ?string $owner = null) : void {
 
         self::$frames[] = [];
+        self::$owners[] = $owner;
         $depth = array_key_last(self::$frames);
 
         try {
@@ -28,8 +30,15 @@ final class Batch {
         } finally {
 
             array_pop(self::$frames);
+            array_pop(self::$owners);
 
         }
+
+    }
+
+    public static function get_owner () : ?string {
+
+        return self::$owners ? end(self::$owners) : null;
 
     }
 

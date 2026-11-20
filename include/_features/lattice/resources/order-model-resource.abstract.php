@@ -21,9 +21,9 @@ abstract class Order_Model_Resource extends Model_Resource {
 
     }
 
-    public function init () {
+    public function run () {
 
-        if (static::is_supported()) parent::init();
+        if (static::is_supported()) parent::run();
 
     }
 

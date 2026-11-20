@@ -7,6 +7,7 @@ namespace Lattice;
 final class Registry {
 
     private static array $instances = [];
+    private static array $builders  = [];
 
     public static function get (string $kind, string $group, int|string $key) : ?object {
 
@@ -23,12 +24,19 @@ final class Registry {
     public static function set (string $kind, string $group, int|string $key, object $instance) : void {
 
         self::$instances[$kind][$group][$key] = $instance;
+        self::$builders[$kind][$group][$key]  = Batch::get_owner();
+
+    }
+
+    public static function get_builder (string $kind, string $group, int|string $key) : ?string {
+
+        return self::$builders[$kind][$group][$key] ?? null;
 
     }
 
     public static function remove (string $kind, string $group, int|string $key) : void {
 
-        unset(self::$instances[$kind][$group][$key]);
+        unset(self::$instances[$kind][$group][$key], self::$builders[$kind][$group][$key]);
 
     }
 
@@ -46,7 +54,7 @@ final class Registry {
 
     public static function forget_kind (string $kind) : void {
 
-        unset(self::$instances[$kind]);
+        unset(self::$instances[$kind], self::$builders[$kind]);
 
     }
 

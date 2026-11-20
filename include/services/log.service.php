@@ -25,7 +25,9 @@ class Log extends Service {
     }
 
     // The name is the file.
-    public static function declare (string $name, array $config = []) {
+    public static function declare (string|array $name = [], array $config = []) {
+
+        if (is_array($name)) [$name, $config] = [(string) ($name['file'] ?? ''), $name];
 
         if (isset($config['file']) && ($config['file'] !== $name)) return static::refuse_declare("declares '{$name}' and gives another file", 'leave file out: the name fills it');
 

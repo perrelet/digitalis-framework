@@ -9,7 +9,7 @@ abstract class Shortcode extends Registrant {
     protected static $cache_group    = self::class;
     protected static $cache_property = 'slug';
 
-    protected $slug = 'shortcode';
+    protected $slug = null;
     protected $view = false;
 
     protected function switch_on () : void {

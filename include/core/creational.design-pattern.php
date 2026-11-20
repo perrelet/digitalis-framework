@@ -16,6 +16,25 @@ class Creational extends Design_Pattern {
     
     }
 
+    // The one build gate, asked on a registry miss: the loader's opt-out binds every path, and instance_condition() stays the class's own answer.
+    final protected static function may_build (mixed $data = []) : bool {
+
+        $build = Hook::filter('lattice.instantiate', true, static::class, '');
+        $build = Hook::filter(['lattice', 'instantiate', static::class], $build, '');
+
+        if ($build === false)                         return false;
+        if (!static::instance_condition($data ?? [])) return false; // @phpstan-ignore arguments.count (Factory's override takes the config; consumer singletons declare it with no parameters, so the base cannot)
+
+        return static::prepare_build();
+
+    }
+
+    protected static function prepare_build () : bool {
+
+        return true;
+
+    }
+
     public static function get_instance_indexes () {
     
         return self::$instance_indexes;

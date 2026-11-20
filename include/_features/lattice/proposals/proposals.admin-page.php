@@ -6,6 +6,8 @@ namespace Lattice;
 
 class Proposals_Page extends Admin_Page {
 
+    protected static $named = true;
+
     protected $slug       = 'lattice-proposals';
     protected $title      = 'Proposed Changes';
     protected $menu_title = 'Proposed Changes';
