@@ -6,7 +6,7 @@ if (PHP_VERSION_ID < 80200) throw new RuntimeException('Lattice needs PHP 8.2 or
 
 if (defined('LATTICE_VERSION')) return;
 
-define('LATTICE_VERSION',       '0.13.0');
+define('LATTICE_VERSION',       '0.14.0');
 define('LATTICE_PATH',          plugin_dir_path( __FILE__ ));
 define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/_features/');
 define('LATTICE_URI',           plugin_dir_url(__FILE__));
