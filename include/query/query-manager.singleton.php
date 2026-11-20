@@ -10,7 +10,6 @@ class Query_Manager extends Singleton {
 
     protected const STAMP_KEY = 'digitalis';
 
-    protected $context;
     protected $profiles   = [];
     protected $sorted     = true;
     protected $mods_by_id = [];
@@ -18,7 +17,6 @@ class Query_Manager extends Singleton {
 
     public function __construct (array $profiles = []) {
 
-        $this->context = $this->detect_context();
 
         foreach ($profiles as $profile) $this->register($profile);
 
@@ -34,9 +32,10 @@ class Query_Manager extends Singleton {
 
     }
 
+    // Read when asked: REST_REQUEST is defined at parse_request, after the manager is built.
     public function get_context () {
 
-        return $this->context;
+        return $this->detect_context();
 
     }
 

@@ -88,6 +88,19 @@ abstract class App extends Registrant {
 
         foreach ($contexts as $context) $this->{"boot_{$context}"}();
 
+        // REST_REQUEST is defined at parse_request, long after plugins_loaded, so the REST branch waits for the server.
+        if (!array_intersect($contexts, ['cli', 'cron'])) $this->add_action('rest_api_init', [$this, 'boot_rest_request'], 0, 0);
+
+    }
+
+    public function boot_rest_request () {
+
+        if (!defined('REST_REQUEST') || !REST_REQUEST) return;
+
+        Batch::run(fn () => $this->load_rest(), static::class);
+
+        $this->boot_rest();
+
     }
 
     protected function get_boot_contexts () : array {
@@ -97,8 +110,7 @@ abstract class App extends Registrant {
 
         $contexts = wp_doing_ajax() ? ['ajax'] : [];
 
-        if (defined('REST_REQUEST') && REST_REQUEST) return [...$contexts, 'rest'];
-        if (is_admin())                              return [...$contexts, 'admin'];
+        if (is_admin()) return [...$contexts, 'admin'];
 
         return [...$contexts, 'front'];
 
