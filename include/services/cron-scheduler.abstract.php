@@ -69,20 +69,7 @@ abstract class Cron_Scheduler extends Singleton {
 
     public function schedule_tasks () {
 
-        $stored = get_option($this->get_option_name(), []);
-        $dirty  = false;
-
-        // Unschedule removed tasks
-
-        foreach ($stored as $key => $entry) {
-            if (!isset($this->tasks[$key])) {
-                wp_clear_scheduled_hook($this->get_action_name($key));
-                unset($stored[$key]);
-                $dirty = true;
-            }
-        }
-
-        // Schedule new or updated tasks
+        $tasks = [];
 
         foreach ($this->tasks as $key => $task) {
 
@@ -93,48 +80,47 @@ abstract class Cron_Scheduler extends Singleton {
                 'schedule' => 'daily',
                 'time'     => '00:00:00',
             ]);
-            $hash = $this->get_task_hash($task);
 
             $this->add_action($action, [$this, $key], 10, 1);
 
             // Migrate old backslash-format action names
-
             $legacy_action = strtolower(static::class) . '_' . $key;
-            if ($legacy_action !== $action && wp_next_scheduled($legacy_action)) {
-                wp_clear_scheduled_hook($legacy_action);
-            }
+            if ($legacy_action !== $action && wp_next_scheduled($legacy_action)) wp_clear_scheduled_hook($legacy_action);
 
-            // Skip if already scheduled with the same config
-
-            $stored_hash = isset($stored[$key]) ? $stored[$key]['hash'] : null;
-
-            if ($stored_hash === $hash && wp_next_scheduled($action)) continue;
-
-            // Reschedule
-
-            wp_clear_scheduled_hook($action);
-
-            $date_string = (new DateTime)->format('Y-m-d') . ' ' . $task['time'];
-            $date_time   = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
-
-            if (!preg_match(self::TIME_PATTERN, (string) $task['time']) || !$date_time) {
-
-                Strict::report(static::class, "declares task '{$key}' at '{$task['time']}', which is not an H:i:s time, so it is not scheduled.", "Declare the task's 'time' as 'H:i:s', '01:45:00' for example.");
-                continue;
-
-            }
-
-            wp_schedule_event($this->get_first_run($task), $task['schedule'], $action);
-
-            $stored[$key] = [
-                'hash' => $hash,
-                'time' => time(),
-            ];
-            $dirty = true;
+            $tasks[$key] = $task;
 
         }
 
-        if ($dirty) update_option($this->get_option_name(), $stored, false);
+        Lasting::sync(
+            $this->get_option_name(),
+            array_map(fn ($task) => $this->get_task_hash($task), $tasks),
+            fn (string $key) => $this->reschedule_task($key, $tasks[$key]),
+            fn (string $key) => wp_clear_scheduled_hook($this->get_action_name($key)),
+            fn (string $key) => (bool) wp_next_scheduled($this->get_action_name($key)),
+        );
+
+    }
+
+    private function reschedule_task (string $key, array $task) : bool {
+
+        $action = $this->get_action_name($key);
+
+        wp_clear_scheduled_hook($action);
+
+        $date_string = (new DateTime)->format('Y-m-d') . ' ' . $task['time'];
+        $date_time   = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, new DateTimeZone($this->get_timezone()));
+
+        if (!preg_match(self::TIME_PATTERN, (string) $task['time']) || !$date_time) {
+
+            Strict::report(static::class, "declares task '{$key}' at '{$task['time']}', which is not an H:i:s time, so it is not scheduled.", "Declare the task's 'time' as 'H:i:s', '01:45:00' for example.");
+
+            return false;
+
+        }
+
+        wp_schedule_event($this->get_first_run($task), $task['schedule'], $action);
+
+        return true;
 
     }
 

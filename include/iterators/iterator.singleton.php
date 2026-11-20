@@ -157,7 +157,10 @@ abstract class Iterator extends Singleton {
 
             $this->add_action($cron_action_start, [$this, 'cron_start'], 10, 1);
 
-            if (!wp_next_scheduled($cron_action_start)) {
+            // A changed cron_time or schedule moves the event; an unchanged one is left where it is.
+            Lasting::sync($this->get_option_key() . '_schedule', [$cron_action_start => md5($this->cron_time . '|' . $this->cron_schedule . '|' . $this->get_timezone())], function () use ($date_time, $cron_action_start) {
+
+                wp_clear_scheduled_hook($cron_action_start);
 
                 // If today's slot has already passed, push to tomorrow — otherwise wp_schedule_event
                 // accepts the past timestamp and WP-cron fires it immediately on the next poll, locking
@@ -166,7 +169,9 @@ abstract class Iterator extends Singleton {
 
                 $this->schedule_event($date_time->getTimestamp(), $this->cron_schedule, $cron_action_start);
 
-            }
+                return true;
+
+            }, null, fn () => (bool) wp_next_scheduled($cron_action_start));
 
         }
 

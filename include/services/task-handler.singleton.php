@@ -43,50 +43,24 @@ class Task_Handler extends Singleton {
 
     public function process_tasks () {
 
-        $history = get_option($this->option_name, []);
-        $dirty   = false;
-
-        // Prune tasks no longer registered
-
-        foreach ($history as $slug => $entry) {
-            if (!isset($this->tasks[$slug])) {
-                unset($history[$slug]);
-                $dirty = true;
-            }
-        }
-
-        // Run new or updated tasks
-
-        foreach ($this->tasks as $slug => $task) {
-
-            $stored_version = isset($history[$slug]) ? $history[$slug]['version'] : 0;
-
-            if ($stored_version === $task['version']) continue;
+        Lasting::sync($this->option_name, array_map(fn ($task) => $task['version'], $this->tasks), function (string $slug) {
 
             try {
-                if (is_callable($task['callback'])) call_user_func($task['callback']);
+
+                $callback = $this->tasks[$slug]['callback'];
+                if (is_callable($callback)) call_user_func($callback);
+
             } catch (\Throwable $e) {
-                Log::w(sprintf(
-                    "[%s] %s: %s in %s:%d\n%s",
-                    $slug,
-                    get_class($e),
-                    $e->getMessage(),
-                    $e->getFile(),
-                    $e->getLine(),
-                    $e->getTraceAsString()
-                ), 'task-handler.log');
-                continue;
+
+                Log::w(sprintf("[%s] %s: %s in %s:%d\n%s", $slug, get_class($e), $e->getMessage(), $e->getFile(), $e->getLine(), $e->getTraceAsString()), 'task-handler.log');
+
+                return false;
+
             }
 
-            $history[$slug] = [
-                'version' => $task['version'],
-                'time'    => time(),
-            ];
-            $dirty = true;
+            return true;
 
-        }
-
-        if ($dirty) update_option($this->option_name, $history, false);
+        });
 
     }
 
