@@ -357,6 +357,22 @@ class Model extends Factory {
 
     }
 
+    protected function remember (string $key, callable $callback) : mixed {
+
+        $memo = &$this->get_record()->memo[static::class];
+
+        if (!is_array($memo) || !array_key_exists($key, $memo)) $memo[$key] = $callback();
+
+        return $memo[$key];
+
+    }
+
+    protected function touch_record () : void {
+
+        $this->get_record()->touch();
+
+    }
+
     protected function bind_record (Model_Record $record) : void {
 
         foreach (static::get_record_properties() as $property) {

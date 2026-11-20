@@ -200,6 +200,8 @@ class ACF_Row extends Model {
 
     public function set_field ($key, $value) {
 
+        $this->touch_record();
+
         $this->data[$key] = $value;
         $this->dirty      = true;
 
@@ -242,6 +244,8 @@ class ACF_Row extends Model {
     // CRUD
 
     public function save () {
+
+        $this->touch_record();
 
         if (!$this->parent)                         return false;
         if (!$this->selector)                       return false;
@@ -291,6 +295,8 @@ class ACF_Row extends Model {
     }
 
     public function reload () {
+
+        $this->touch_record();
 
         $this->hydrate_instance();
         $this->dirty = false;

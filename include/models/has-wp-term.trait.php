@@ -180,15 +180,9 @@ trait Has_WP_Term {
     
     }
 
-    protected $children = null;
-
     public function get_children () {
 
-        if (is_null($this->children)) $this->children = static::query([
-            'parent' => $this->get_id(),
-        ]);
-    
-        return $this->children;
+        return $this->remember('children', fn () => static::query(['parent' => $this->get_id()]));
     
     }
 

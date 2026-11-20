@@ -129,35 +129,22 @@ trait Has_WP_Post {
 
     }
 
-    protected $content_cache = [];
-
     public function get_content (bool $apply_filters = true, ?string $more_link_text = null, bool $strip_teaser = false) {
 
-        $key = serialize([$apply_filters, $more_link_text, $strip_teaser]);
-
-        if (!isset($this->content_cache[$key])) {
+        return $this->remember('content:' . serialize([$apply_filters, $more_link_text, $strip_teaser]), function () use ($apply_filters, $more_link_text, $strip_teaser) {
 
             $content = get_the_content($more_link_text, $strip_teaser, $this->wp_post);
-            if ($apply_filters) $content = apply_filters('the_content', $content);
-            $this->content_cache[$key] = $content;
 
-        }
+            return $apply_filters ? apply_filters('the_content', $content) : $content;
 
-        return $this->content_cache[$key];
+        });
 
     }
 
     public function set_content ($content) {
-    
-        $this->clear_content_cache();
-        return $this->set_wp_model_prop('post_content', $content);
-    
-    }
 
-    public function clear_content_cache () {
-    
-        $this->content_cache = [];
-    
+        return $this->set_wp_model_prop('post_content', $content);
+
     }
 
     public function get_excerpt (bool $force_trim = false) {
@@ -704,7 +691,6 @@ trait Has_WP_Post {
     /* public function reload_wp_post () {
 
         $this->init_wp_model($this->id);
-        $this->content_cache = [];
     
     } */
 

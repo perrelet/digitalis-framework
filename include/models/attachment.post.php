@@ -106,13 +106,9 @@ class Attachment extends Post {
 
     }
 
-    protected $src_cache = [];
-
     public function get_image_src (string|array $size = 'medium', bool $icon = false) {
 
-        $key = serialize([$size, $icon]);
-        if (!isset($this->src_cache[$key])) $this->src_cache[$key] = wp_get_attachment_image_src($this->wp_post->ID, $size, $icon);
-        return $this->src_cache[$key];
+        return $this->remember('src:' . serialize([$size, $icon]), fn () => wp_get_attachment_image_src($this->wp_post->ID, $size, $icon));
     
     }
 

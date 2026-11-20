@@ -178,6 +178,8 @@ class Term extends WP_Model {
 
     public function save (array $term_array = []) {
 
+        $this->touch_record();
+
         $taxonomy = static::$taxonomy ? static::$taxonomy : ($term_array['taxonomy'] ?? false);
         if (!$taxonomy) return; // TODO: HANDLE ERROR
 

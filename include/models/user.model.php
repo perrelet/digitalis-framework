@@ -144,6 +144,8 @@ class User extends WP_Model {
 
     public function save (array $user_data = []) {
 
+        $this->touch_record();
+
         $user_data['ID'] = $this->get_id();
 
         return wp_update_user($user_data);

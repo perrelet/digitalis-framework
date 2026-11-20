@@ -75,6 +75,7 @@ abstract class WP_Model extends Model {
 
             $this->get_wp_model()->$prop = $value;
             $this->dirty = true;
+            $this->touch_record();
             $this->cache_wp_model();
 
         }
@@ -134,6 +135,7 @@ abstract class WP_Model extends Model {
         $this->unstash();
         $this->is_new() ? $this->build_instance([]) : $this->hydrate_instance();
         $this->dirty = false;
+        $this->touch_record();
 
         return $this;
     

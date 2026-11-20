@@ -63,7 +63,6 @@ class Order_Item extends Model {
     //
 
     protected $item;
-    protected $siblings;
 
     protected function build_instance ($data) {
 
@@ -77,7 +76,6 @@ class Order_Item extends Model {
 
     protected function hydrate_instance () {
 
-        $this->siblings = null;
         $this->item     = new \WC_Order_Item_Product($this->id);
 
         $this->hold_wc_data();
@@ -161,29 +159,26 @@ class Order_Item extends Model {
 
         if (!$group_id = $this->get_group_id()) return [];
 
-        if (is_null($this->siblings)) {
+        $siblings = $this->remember('siblings', function () use ($group_id) {
 
-            $this->siblings = [];
+            $siblings = [];
 
             if (($wc_order = $this->get_order()) && ($wc_items = $wc_order->get_items())) foreach ($wc_items as $wc_item) {
 
                 if ($wc_item->get_id() == $this->get_item_id()) continue;
-
-                if (($sibling_group_id = $wc_item->get_meta('_group', true)) && ($sibling_group_id == $group_id)) {
-
-                    $this->siblings[] = $wc_item;
-
-                }
+                if (($sibling_group_id = $wc_item->get_meta('_group', true)) && ($sibling_group_id == $group_id)) $siblings[] = $wc_item;
 
             }
 
-        }
-        
+            return $siblings;
+
+        });
+
         if ($product_type) {
 
             $filtered = [];
 
-            if ($this->siblings) foreach ($this->siblings as $wc_sibling) {
+            if ($siblings) foreach ($siblings as $wc_sibling) {
 
                 if (($wc_product = $wc_sibling->get_product()) && ($wc_product->get_type() == $product_type)) $filtered[] = $wc_sibling;
 
@@ -193,7 +188,7 @@ class Order_Item extends Model {
 
         } else {
 
-            return $this->siblings;
+            return $siblings;
 
         }
 

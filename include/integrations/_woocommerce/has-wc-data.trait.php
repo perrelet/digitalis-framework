@@ -14,7 +14,10 @@ trait Has_WC_Data {
     public function __call ($name, $args) {
 
         // Views of one order share its edits; the notice names the view that made them.
-        if (preg_match('/^(set|add|update|delete|remove)_/', (string) $name)) $this->get_record()->state['editor'] = static::class;
+        if (preg_match('/^(set|add|update|delete|remove)_/', (string) $name)) {
+            $this->get_record()->state['editor'] = static::class;
+            $this->touch_record();
+        }
 
         return call_user_func_array([$this->{static::WC_DATA}, $name], $args);
 
@@ -60,6 +63,8 @@ trait Has_WC_Data {
         }
 
         if (!$this->{static::WC_DATA}) $this->{static::WC_DATA} = $held;
+
+        $this->touch_record();
 
     }
 

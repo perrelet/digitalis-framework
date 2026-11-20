@@ -286,7 +286,6 @@ class Post extends WP_Model {
 
     public function reload () {
 
-        $this->clear_content_cache();
     
         return parent::reload();
     
@@ -330,8 +329,8 @@ class Post extends WP_Model {
         $this->hydrate_instance();
 
         $this->dirty = false;
+        $this->touch_record();
         $this->cache_instance();
-        $this->clear_content_cache();
         $this->unstash();
 
         if ($tax_input) foreach ($tax_input as $taxonomy => $terms) {

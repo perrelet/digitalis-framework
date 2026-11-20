@@ -77,6 +77,8 @@ trait Has_Fields {
 
     public function update_field (int|string $selector, mixed $value) {
 
+        $this->touch_record();
+
         return $this->field_call('update', $selector, $value);
 
     }
@@ -130,6 +132,8 @@ trait Has_Fields {
     }
 
     public function delete_field (string $selector) {
+
+        $this->touch_record();
 
         return $this->field_call('delete', $selector);
 
