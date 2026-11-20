@@ -547,6 +547,7 @@ final class Resource_Field {
 
         return match (true) {
             in_array($this->type, static::CHOICE_TYPES, true)              => (!empty($this->acf['allow_custom']) || !empty($this->acf['other_choice']) || array_key_exists((string) $value, $this->get_choices())) ? '' : 'is one of ' . implode(', ', array_keys($this->get_choices())),
+            $this->type === 'true_false'                                  => in_array($value, [0, 1, '0', '1', true, false, ''], true) ? '' : 'is 0 or 1',
             (bool) $this->get_format()                                    => $this->is_formatted((string) $value) ? '' : 'is a date as ' . $this->get_format(),
             in_array($this->type, ['post_object', 'relationship'], true),
             ($this->type === 'page_link') && is_numeric($value)           => ($id && get_post_status($id) && (!$types || in_array(static::get_record_type($id), $types, true))) ? '' : 'is the id of a ' . implode(' or ', $types ?: ['post']),
