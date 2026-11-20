@@ -14,8 +14,8 @@ class Resources_Collection_Route extends Resource_Route {
     public function callback (WP_REST_Request $request) {
 
         return ($request->get_method() === 'POST')
-            ? Resources::inst()->create_record($request['resource'], $this->get_input($request), 'rest')
-            : Resources::inst()->list($request['resource'], $request->get_query_params());
+            ? Resources::get_instance()->create_record($request['resource'], $this->get_input($request), 'rest')
+            : Resources::get_instance()->list($request['resource'], $request->get_query_params());
 
     }
 

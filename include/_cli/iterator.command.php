@@ -93,7 +93,7 @@ class Iterator_Command extends Command {
         $job = ($id && class_exists(Job::class)) ? Job::get_instance($id) : null;
 
         if (!$job instanceof Job)                          $this->fail('The job is queued behind the open one; the worker runs it in turn.');
-        if (!Jobs_Worker::inst()->run_named($job))         $this->fail('The job could not be taken now (the worker is paused, or the job is leased); it runs on the next tick.');
+        if (!Jobs_Worker::get_instance()->run_named($job))         $this->fail('The job could not be taken now (the worker is paused, or the job is leased); it runs on the next tick.');
 
         $state = (string) $job->get_state();
 

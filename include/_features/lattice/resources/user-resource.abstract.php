@@ -34,7 +34,7 @@ abstract class User_Resource extends Model_Resource {
 
     protected function note_outside_change (int $user_id, string $field) : void {
 
-        if (!$user_id || Resources::inst()->get_account_write($user_id) || !($model = $this->find($user_id))) return;
+        if (!$user_id || Resources::get_instance()->get_account_write($user_id) || !($model = $this->find($user_id))) return;
 
         if (!isset($this->outside[$user_id])) {
 
@@ -45,7 +45,7 @@ abstract class User_Resource extends Model_Resource {
         }
 
         // Without its step, so undo_set never counts it as the set's own.
-        $this->outside[$user_id]['_marks'] ??= array_diff_key(Resources::inst()->get_held_marks([]), ['set_step' => 0]);
+        $this->outside[$user_id]['_marks'] ??= array_diff_key(Resources::get_instance()->get_held_marks([]), ['set_step' => 0]);
         $this->outside[$user_id][$field] = true;
 
     }
@@ -58,7 +58,7 @@ abstract class User_Resource extends Model_Resource {
 
             unset($fields['_marks']);
 
-            Journal::inst()->write([
+            Journal::get_instance()->write([
                 'via'       => is_admin() ? 'admin' : 'other',
                 'resource'  => $this->get_name(),
                 'record_id' => $user_id,
@@ -149,7 +149,7 @@ abstract class User_Resource extends Model_Resource {
     public function insert_model ($model, array $meta = []) : object {
 
         $roles   = $model->get_account_roles();
-        $current = class_exists(Credentials::class) ? Credentials::inst()->get_current() : null;
+        $current = class_exists(Credentials::class) ? Credentials::get_instance()->get_current() : null;
 
         if ($current) $meta[Credentials::MADE_BY] = $current['uuid'];
 
@@ -216,7 +216,7 @@ abstract class User_Resource extends Model_Resource {
 
         if (($reassign === (int) $model->get_id()) || !($target = $this->find($reassign))) return ['reassign is another account.'];
 
-        return Resources::inst()->credential_allows($this, 'act:delete', $target) ? [] : ['reassign is an account this password may hand content to.'];
+        return Resources::get_instance()->credential_allows($this, 'act:delete', $target) ? [] : ['reassign is an account this password may hand content to.'];
 
     }
 
@@ -383,7 +383,7 @@ abstract class User_Resource extends Model_Resource {
             'order'          => 'DESC',
         ]);
 
-        if (class_exists(Credentials::class) && !is_null($roles = Credentials::inst()->get_roles_reached($this->get_name(), 'list')) && ($covered = $this->build_covered_query($roles))) $query['meta_query'] = $covered;
+        if (class_exists(Credentials::class) && !is_null($roles = Credentials::get_instance()->get_roles_reached($this->get_name(), 'list')) && ($covered = $this->build_covered_query($roles))) $query['meta_query'] = $covered;
 
         return (static::$model_class)::query(apply_filters('lattice.resources.query', $query, $this));
 
@@ -510,7 +510,7 @@ abstract class User_Resource extends Model_Resource {
 
     protected function made_by_current ($model) : bool {
 
-        $current = class_exists(Credentials::class) ? Credentials::inst()->get_current() : null;
+        $current = class_exists(Credentials::class) ? Credentials::get_instance()->get_current() : null;
 
         return $current && (get_user_meta($model->get_id(), Credentials::MADE_BY, true) === $current['uuid']);
 

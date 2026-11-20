@@ -50,7 +50,7 @@ class Lattice_Resources_Orders extends Feature {
 
     protected function find ($id) : array {
 
-        $resource = (is_numeric($id) && ((int) $id > 0)) ? Resources::inst()->get_resource_for_record((int) $id) : null;
+        $resource = (is_numeric($id) && ((int) $id > 0)) ? Resources::get_instance()->get_resource_for_record((int) $id) : null;
         $model    = ($resource instanceof Order_Model_Resource) ? $resource->find((int) $id) : null;
 
         return ($model && !$this->stands_aside($resource, (int) $id)) ? [$resource, $model] : [null, null];
@@ -60,7 +60,7 @@ class Lattice_Resources_Orders extends Feature {
     // A layer write journals itself.
     protected function stands_aside (Model_Resource $resource, int $id) : bool {
 
-        return Resources::inst()->is_writing('new') || Resources::inst()->is_writing("{$resource->get_name()}:{$id}");
+        return Resources::get_instance()->is_writing('new') || Resources::get_instance()->is_writing("{$resource->get_name()}:{$id}");
 
     }
 
@@ -178,7 +178,7 @@ class Lattice_Resources_Orders extends Feature {
 
     public function exclude_version ($data) {
 
-        foreach (Resources::inst()->get_resources() as $resource) if ($resource instanceof Order_Model_Resource) unset($data[($resource->get_model_class())::get_version_key()]);
+        foreach (Resources::get_instance()->get_resources() as $resource) if ($resource instanceof Order_Model_Resource) unset($data[($resource->get_model_class())::get_version_key()]);
 
         unset($data[Resources::SET_KEY]);
 
@@ -294,13 +294,13 @@ class Lattice_Resources_Orders extends Feature {
 
             [$resource, $model] = $this->find($id);
 
-            if (!$model || !Resources::inst()->is_journaled($resource, $model)) return;
+            if (!$model || !Resources::get_instance()->is_journaled($resource, $model)) return;
 
             $before = $state ? $state['before'] : $this->read($resource, $model);
 
             if (!$before || in_array((string) ($before['status'] ?? ''), static::DRAFTS, true)) return;
 
-            Journal::inst()->write([
+            Journal::get_instance()->write([
                 'via'            => $state['via'] ?? $this->get_via(),
                 'resource'       => $resource->get_name(),
                 'record_id'      => $id,
@@ -359,11 +359,11 @@ class Lattice_Resources_Orders extends Feature {
 
         if ($state['created'] && in_array($status, static::DRAFTS, true)) return;
 
-        if ((!$state['created'] && ($after === $state['before'])) || !Resources::inst()->is_journaled($resource, $model)) return;
+        if ((!$state['created'] && ($after === $state['before'])) || !Resources::get_instance()->is_journaled($resource, $model)) return;
 
         $was = $state['created'] ? '' : $state['status'];
 
-        Journal::inst()->write([
+        Journal::get_instance()->write([
             'via'            => $state['via'],
             'resource'       => $resource->get_name(),
             'record_id'      => $id,

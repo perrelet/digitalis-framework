@@ -103,7 +103,7 @@ trait Has_WP_Comment {
 
         if ($author instanceof User)         { $author = $author->get_username(); }
         else if ($author instanceof WP_User) { $author = $author->user_login; }
-        else if (!is_string($author))        { $author = (($user = User::inst($author)) ? $user->get_username() : null); }
+        else if (!is_string($author))        { $author = (($user = User::get_instance($author)) ? $user->get_username() : null); }
 
         if ($author) return $this->set_wp_model_prop('comment_author', $author);
 

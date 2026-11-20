@@ -90,13 +90,13 @@ class Change_Set_Resource extends Model_Resource {
 
     public function get_readable_steps ($set) : array {
 
-        return $set->is_mine() ? $set->get_steps() : array_filter($set->get_steps(), [Resources::inst(), 'may_read_step']);
+        return $set->is_mine() ? $set->get_steps() : array_filter($set->get_steps(), [Resources::get_instance(), 'may_read_step']);
 
     }
 
     protected function mask_step (array $step, array $values) : array {
 
-        $target = Resources::inst()->get_resource($step['resource']);
+        $target = Resources::get_instance()->get_resource($step['resource']);
 
         return $target ? $target->mask_held($values, is_null($step['id']) ? null : $target->find($step['id'])) : array_map([Resource_Field::class, 'mask_value'], $values);
 
@@ -183,7 +183,7 @@ class Change_Set_Resource extends Model_Resource {
     // has_undone_rows() is what says a set cannot go on (D55): an undo's own outcome cannot.
     public function get_states ($model) : array {
 
-        return ['state' => $model->get_state(), 'undone' => Journal::inst()->has_undone_rows($model->get_key())];
+        return ['state' => $model->get_state(), 'undone' => Journal::get_instance()->has_undone_rows($model->get_key())];
 
     }
 
@@ -357,13 +357,13 @@ class Change_Set_Resource extends Model_Resource {
 
         $step = ['op' => $op, 'resource' => $name, 'id' => $id, 'action' => $action, 'input' => $input, 'values' => $values, 'expected' => null, 'wait' => array_key_exists('wait', $sent) ? !empty($sent['wait']) : !empty($kept['wait'])];
 
-        if ($refused = Resources::inst()->refuse_step($step) ?: Resources::inst()->refuse_proposing($step)) return [null, [$refused]];
+        if ($refused = Resources::get_instance()->refuse_step($step) ?: Resources::get_instance()->refuse_proposing($step)) return [null, [$refused]];
 
-        $target = Resources::inst()->get_resource($name);
+        $target = Resources::get_instance()->get_resource($name);
 
         if ($kept) foreach ($values as $field => $value) if (array_key_exists($field, $kept['values'])) $values[$field] = $this->unmask_held($target, $field, $value, $kept['values'][$field]);
 
-        $held = Resources::inst()->hold_values($name, $id, $values);
+        $held = Resources::get_instance()->hold_values($name, $id, $values);
 
         if (is_wp_error($held)) return [null, [$held->get_error_message()]];
         if ($held['problems'])  return [null, $held['problems']];
@@ -480,7 +480,7 @@ class Change_Set_Resource extends Model_Resource {
         if (trim($set->get_purpose()) === '') return $this->invalid(['Say what it is for before applying it.']);
         if (!$set->get_steps())               return $this->invalid(['It holds no steps.']);
 
-        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::inst()->preview_set($set)];
+        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::get_instance()->preview_set($set)];
 
         return $this->walk_set($set, $input['seen'] ?? null, (string) ($input['why'] ?? ''), $via, 'apply_set');
 
@@ -493,7 +493,7 @@ class Change_Set_Resource extends Model_Resource {
 
         $before  = $this->read($set);
         $version = $set->get_version();
-        $result  = Resources::inst()->apply_set($set, $seen['steps'], $via);
+        $result  = Resources::get_instance()->apply_set($set, $seen['steps'], $via);
 
         if (is_wp_error($result)) return $result;
 
@@ -597,7 +597,7 @@ class Change_Set_Resource extends Model_Resource {
 
     public function act_undo_set ($set, array $input, string $via) {
 
-        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'rows' => Resources::inst()->preview_undo($set)];
+        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'rows' => Resources::get_instance()->preview_undo($set)];
 
         $seen = $input['seen'] ?? null;
 
@@ -605,7 +605,7 @@ class Change_Set_Resource extends Model_Resource {
 
         $before  = $this->read($set);
         $version = $set->get_version();
-        $result  = Resources::inst()->undo_set($set, $seen['rows'], $via);
+        $result  = Resources::get_instance()->undo_set($set, $seen['rows'], $via);
 
         if (is_wp_error($result)) return $result;
 
@@ -693,7 +693,7 @@ class Change_Set_Resource extends Model_Resource {
 
         global $wpdb;
 
-        $target = Resources::inst()->get_resource($step['resource']);
+        $target = Resources::get_instance()->get_resource($step['resource']);
         $record = null;
 
         if ($step['op'] === 'create') {
@@ -714,7 +714,7 @@ class Change_Set_Resource extends Model_Resource {
         if (!$applied && $record && ($target->get_status($record) !== 'trash')) return $this->refuse('Its record exists, so applying again would make a second: trash it first.');
 
         $action = ($step['op'] === 'act') ? $step['action'] : $step['op'];
-        $rows   = $applied ? array_filter(Journal::inst()->rows_for_set($set->get_key()), fn ($row) => ($row['set_step'] === $position) && is_null($row['undoes']) && ($row['action'] === $action) && (is_null($step['id']) || ($row['record_id'] === (string) $step['id']))) : [];
+        $rows   = $applied ? array_filter(Journal::get_instance()->rows_for_set($set->get_key()), fn ($row) => ($row['set_step'] === $position) && is_null($row['undoes']) && ($row['action'] === $action) && (is_null($step['id']) || ($row['record_id'] === (string) $step['id']))) : [];
         $detail = $applied ? array_filter(['journal_id' => $rows ? end($rows)['id'] : null, 'record_id' => $record?->get_id()]) : (($step['op'] === 'create') ? ['record_id' => null] : []);
 
         $settled = Change_Set::transaction(function () use ($set, $position, $applied, $detail) {
@@ -757,14 +757,14 @@ class Change_Set_Resource extends Model_Resource {
 
             if (in_array($step['marker'], ['applied', 'skipped'], true) || ($step['op'] !== 'update') || is_null($step['expected'])) continue;
 
-            $target   = Resources::inst()->get_resource($step['resource']);
+            $target   = Resources::get_instance()->get_resource($step['resource']);
             $model    = $target?->find($step['id']);
-            $compared = Resources::inst()->compare_expected($step['resource'], $step['id'], $step['values'], $step['expected']);
+            $compared = Resources::get_instance()->compare_expected($step['resource'], $step['id'], $step['values'], $step['expected']);
 
             if (is_wp_error($compared)) { $left[] = "Step {$position}: {$compared->get_error_message()}"; continue; }
 
             // A field this account is not shown stays as it is, which does not stop the ones beside it.
-            $held = Resources::inst()->hold_values($step['resource'], $step['id'], array_intersect_key($step['values'], $target->get_fields_for($model, $step['values'])));
+            $held = Resources::get_instance()->hold_values($step['resource'], $step['id'], array_intersect_key($step['values'], $target->get_fields_for($model, $step['values'])));
 
             if (is_wp_error($held)) { $left[] = "Step {$position}: {$held->get_error_message()}"; continue; }
 
@@ -857,7 +857,7 @@ class Change_Set_Resource extends Model_Resource {
     // A request that died left its markers and not its state, and nobody could say so until now.
     protected function settle ($model) : void {
 
-        Resources::inst()->settle_started($model);
+        Resources::get_instance()->settle_started($model);
 
         $model->settle_state();
 
@@ -886,7 +886,7 @@ class Change_Set_Resource extends Model_Resource {
     // A row the layer does not write for it: an action through the service, the cron, a delete. It carries its own marks, so a walk under way never claims it.
     public function write_row ($model, string $action, string $why, array $before, int $version_before, string $via) : int {
 
-        return Journal::inst()->write([
+        return Journal::get_instance()->write([
             'via'            => $via,
             'resource'       => $this->get_name(),
             'record_id'      => $model->get_id(),

@@ -26,7 +26,7 @@ abstract class Model_Resource extends Singleton {
 
     public function run () {
 
-        Resources::inst()->register($this);
+        Resources::get_instance()->register($this);
 
     }
 

@@ -336,7 +336,7 @@ class Jobs_Worker extends Service {
             Job::FAILED, Job::CANCELLED, 'Its class has gone.', Job::PENDING, ...$types
         ));
 
-        if ($found) Jobs_Log::inst()->log("{$found} jobs of an unknown type ended.");
+        if ($found) Jobs_Log::get_instance()->log("{$found} jobs of an unknown type ended.");
 
         $wpdb->query($wpdb->prepare("UPDATE {$table} SET run_after = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 HOUR), parked_at = IFNULL(parked_at, UTC_TIMESTAMP()) WHERE {$where}", Job::PENDING, ...$types));
 

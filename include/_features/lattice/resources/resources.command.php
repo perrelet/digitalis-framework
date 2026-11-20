@@ -22,7 +22,7 @@ class Resources_Command extends Command {
 
         parent::add();
 
-        foreach (Resources::inst()->get_resources() as $name => $resource) WP_CLI::add_command("{$this->name} {$name}", fn ($args, $assoc) => $this->run($name, $args, $assoc), [
+        foreach (Resources::get_instance()->get_resources() as $name => $resource) WP_CLI::add_command("{$this->name} {$name}", fn ($args, $assoc) => $this->run($name, $args, $assoc), [
             'shortdesc' => "list, get, create, update, trash, untrash, view or an action on {$resource->get_label()}.",
             'synopsis'  => '<operation> [<id>] [<view>] [--status=<status>] [--search=<search>] [--page=<page>] ' . static::CONTROL . ' [--<field>=<value>]',
         ]);
@@ -31,13 +31,13 @@ class Resources_Command extends Command {
 
     public function guide ($args, $assoc) {
 
-        $this->answer(Resources::inst()->guide());
+        $this->answer(Resources::get_instance()->guide());
 
     }
 
     public function journal ($args, $assoc) {
 
-        $this->answer(Resources::inst()->journal([
+        $this->answer(Resources::get_instance()->journal([
             'resource'  => (string) ($assoc['resource'] ?? ''),
             'record_id' => (string) ($assoc['id'] ?? ''),
             'set'       => $assoc['set'] ?? null,
@@ -50,7 +50,7 @@ class Resources_Command extends Command {
 
     public function undo ($args, $assoc) {
 
-        $this->answer(Resources::inst()->undo((int) $args[0], $this->get_input($assoc), 'cli'));
+        $this->answer(Resources::get_instance()->undo((int) $args[0], $this->get_input($assoc), 'cli'));
 
     }
 
@@ -60,7 +60,7 @@ class Resources_Command extends Command {
 
         if (is_null($id) && !in_array($operation, ['list', 'create'], true)) $this->fail("Give the record's id: wp lattice {$name} {$operation} <id>");
 
-        $api = Resources::inst();
+        $api = Resources::get_instance();
 
         // The synopsis takes any flag for an action's input, so WP-CLI no longer stops a mistyped one: a write must not go ahead without its --dry-run.
         $extra = array_diff_key($assoc, array_flip(['input', 'version', 'why', 'confirm', 'dry-run', 'status', 'search', 'page']));

@@ -37,7 +37,7 @@ class Jobs_Page extends Admin_Sub_Page {
     public function callback () {
 
         $state  = sanitize_key($_GET['state'] ?? '');
-        $worker = Jobs_Worker::inst();
+        $worker = Jobs_Worker::get_instance();
         $pause  = $worker->get_pause();
 
         echo '<h1>Jobs</h1>';
@@ -134,7 +134,7 @@ class Jobs_Page extends Admin_Sub_Page {
 
         if (!current_user_can($this->capability)) wp_die('You cannot do that.');
 
-        $worker = Jobs_Worker::inst();
+        $worker = Jobs_Worker::get_instance();
         $job    = $id ? Job::get_instance($id) : null;
 
         match ($action) {

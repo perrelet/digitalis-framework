@@ -255,7 +255,7 @@ class Job extends Model {
 
         if (!$id = static::write_row($row)) return null;
 
-        if ($now) Jobs_Worker::inst()->run_after_response($id);
+        if ($now) Jobs_Worker::get_instance()->run_after_response($id);
 
         return new static($id);
 
@@ -806,7 +806,7 @@ class Job extends Model {
 
         if ($result && $this->refresh() && ($this->row['state'] === static::DONE)) {
 
-            if (!is_null($this->row['total']) && ((int) $this->row['done'] < (int) $this->row['total'])) Jobs_Log::inst()->log(sprintf('Job #%d (%s) finished at %d of %d.', $this->id, static::$type, $this->row['done'], $this->row['total']));
+            if (!is_null($this->row['total']) && ((int) $this->row['done'] < (int) $this->row['total'])) Jobs_Log::get_instance()->log(sprintf('Job #%d (%s) finished at %d of %d.', $this->id, static::$type, $this->row['done'], $this->row['total']));
 
             static::announce($this, static::DONE);
 
@@ -860,7 +860,7 @@ class Job extends Model {
 
     protected function log_failure (string $error) : void {
 
-        Jobs_Log::inst()->log(sprintf('Job #%d (%s): %s', $this->id, static::$type, $error));
+        Jobs_Log::get_instance()->log(sprintf('Job #%d (%s): %s', $this->id, static::$type, $error));
 
     }
 
@@ -905,7 +905,7 @@ class Job extends Model {
 
         } catch (Throwable $e) {
 
-            Jobs_Log::inst()->log('lattice.jobs.ended: ' . $e->getMessage());
+            Jobs_Log::get_instance()->log('lattice.jobs.ended: ' . $e->getMessage());
 
         }
 
@@ -1094,7 +1094,7 @@ class Job extends Model {
 
         if (self::$current?->stepping) throw new LogicException('run_one() cannot be called inside handle().');
 
-        return Jobs_Worker::inst()->run_named($this);
+        return Jobs_Worker::get_instance()->run_named($this);
 
     }
 

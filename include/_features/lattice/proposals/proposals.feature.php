@@ -67,7 +67,7 @@ class Proposals extends Feature {
         Proposal_Cleanup::get_instance();
 
         // Here and not above: a feature's file is included before its requirements load. Absent while the feature's tables are not current.
-        if (!Resources::inst()->get_resource('change_set')) return;
+        if (!Resources::get_instance()->get_resource('change_set')) return;
 
         require_once __DIR__ . '/proposal-set-resource.class.php';
 
@@ -106,7 +106,7 @@ class Proposals extends Feature {
 
     public function get_post_types () : array {
 
-        $resources = Resources::inst()->get_resources();
+        $resources = Resources::get_instance()->get_resources();
         $key       = implode(',', array_keys($resources));
 
         if (!isset($this->types[$key])) {

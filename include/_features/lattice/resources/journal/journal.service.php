@@ -27,7 +27,7 @@ class Journal extends Service {
 
         global $wpdb;
 
-        if (!array_key_exists('set_key', $row)) $row += Resources::inst()->get_held_marks($row);
+        if (!array_key_exists('set_key', $row)) $row += Resources::get_instance()->get_held_marks($row);
 
         $wpdb->insert($this->get_table(), [
             'at'             => gmdate('Y-m-d H:i:s'),
@@ -42,9 +42,9 @@ class Journal extends Service {
             'version_before' => (int) ($row['version_before'] ?? 0),
             'version_after'  => (int) ($row['version_after'] ?? 0),
             'undoes'         => $row['undoes'] ?? null,
-        ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) + ['credential' => Credentials::inst()->get_uuid(), 'credential_name' => is_null($name = Credentials::inst()->get_name()) ? null : mb_substr($name, 0, 255)] : []));
+        ] + (Journal_Schema::is_current() ? array_map(fn ($mark) => is_null($mark) ? null : (int) $mark, array_intersect_key($row, array_flip(static::MARKS))) + ['credential' => Credentials::get_instance()->get_uuid(), 'credential_name' => is_null($name = Credentials::get_instance()->get_name()) ? null : mb_substr($name, 0, 255)] : []));
 
-        Resources::inst()->note_row((int) $wpdb->insert_id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
+        Resources::get_instance()->note_row((int) $wpdb->insert_id, (string) $row['action'], (string) $row['resource'], (string) $row['record_id']);
 
         return (int) $wpdb->insert_id;
 
@@ -221,7 +221,7 @@ class Journal extends Service {
         $before = gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS);
         $done   = 0;
 
-        foreach (Resources::inst()->get_resources() as $resource) {
+        foreach (Resources::get_instance()->get_resources() as $resource) {
 
             if (!$resource->is_named_only()) continue;
 

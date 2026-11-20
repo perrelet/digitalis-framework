@@ -105,7 +105,7 @@ class Resources extends Service {
             'framework' => LATTICE_VERSION,
             'features'  => ['dry_run', 'journal', 'undo', 'trash', 'expected'],
             'resources' => array_values(array_map([$this, 'describe_resource'], array_filter(array_map([$this, 'get_resource'], array_keys($this->resources)), fn ($resource) => $resource && $this->may_quietly($resource, 'list')))),
-        ] + (($current = Credentials::inst()->get_current()) ? ['credential' => Credentials::inst()->explain($current['entry'])] : []));
+        ] + (($current = Credentials::get_instance()->get_current()) ? ['credential' => Credentials::get_instance()->explain($current['entry'])] : []));
 
     }
 
@@ -183,7 +183,7 @@ class Resources extends Service {
 
         if (!$readable && !$named) return [];
 
-        $rows = Journal::inst()->query(($named ? [] : ['resources' => $readable]) + $args);
+        $rows = Journal::get_instance()->query(($named ? [] : ['resources' => $readable]) + $args);
 
         // A row keeps only the fields its reader may read.
         return array_values(array_map(fn ($row) => $this->bar_row($row), array_filter($rows, function ($row) use ($readable, $named) {
@@ -291,7 +291,7 @@ class Resources extends Service {
 
                 $model = $found;
 
-                if ($this->is_journaled($resource, $model)) Journal::inst()->write(['via' => $via, 'resource' => $resource->get_name(), 'record_id' => $model->get_id(), 'action' => 'create', 'why' => $change->why, 'before' => null, 'after' => ['_partial' => true] + $resource->read($model)]);
+                if ($this->is_journaled($resource, $model)) Journal::get_instance()->write(['via' => $via, 'resource' => $resource->get_name(), 'record_id' => $model->get_id(), 'action' => 'create', 'why' => $change->why, 'before' => null, 'after' => ['_partial' => true] + $resource->read($model)]);
 
             }
 
@@ -464,7 +464,7 @@ class Resources extends Service {
 
         }
 
-        $journaled = !$this->is_journaled($resource, $made ?? $model) ? null : Journal::inst()->write([
+        $journaled = !$this->is_journaled($resource, $made ?? $model) ? null : Journal::get_instance()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => ($made ?? $model)->get_id(),
@@ -579,7 +579,7 @@ class Resources extends Service {
 
         }
 
-        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::inst()->write([
+        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::get_instance()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $post_id,
@@ -654,7 +654,7 @@ class Resources extends Service {
 
         if (!Journal_Schema::is_current()) return $this->refuse_state('The journal is not up to date, so its rows would lose their marks.');
         if ($this->walk)                   return $this->refuse_state('Another set is being walked in this request.');
-        if (Journal::inst()->has_undone_rows($set->get_key())) return $this->refuse_state('Part of it has been undone, so what it says is no longer live: withdraw it.');
+        if (Journal::get_instance()->has_undone_rows($set->get_key())) return $this->refuse_state('Part of it has been undone, so what it says is no longer live: withdraw it.');
 
         $steps   = $set->get_steps();
         $seen    = array_map(fn ($each) => is_array($each) ? $each : null, $seen);
@@ -739,7 +739,7 @@ class Resources extends Service {
             $record   = $resource?->find_by_set_key(static::get_set_key($set->get_key(), $position));
             $row      = null;
 
-            if ($record) foreach (Journal::inst()->rows_for_set($set->get_key()) as $each) if (($each['action'] === 'create') && ($each['set_step'] === $position) && ((string) $each['record_id'] === (string) $record->get_id()) && empty($each['after']['_partial'])) $row = $each;
+            if ($record) foreach (Journal::get_instance()->rows_for_set($set->get_key()) as $each) if (($each['action'] === 'create') && ($each['set_step'] === $position) && ((string) $each['record_id'] === (string) $record->get_id()) && empty($each['after']['_partial'])) $row = $each;
 
             $row ? $set->mark($position, 'applied', ['journal_id' => $row['id'], 'record_id' => $record->get_id()]) : $set->mark($position, 'unknown', $record ? ['record_id' => $record->get_id()] : []);
 
@@ -857,7 +857,7 @@ class Resources extends Service {
 
     protected function plan_undo (Step_List $set) : array {
 
-        $journal = Journal::inst();
+        $journal = Journal::get_instance();
         $rows    = $journal->rows_for_set($set->get_key());
         $own     = array_filter($rows, fn ($row) => !is_null($row['set_step']) && is_null($row['undoes']));
         $undoing = $journal->undoing(array_column($own, 'id'));
@@ -957,7 +957,7 @@ class Resources extends Service {
     // Applied, with nothing to undo it from: the row could not be written, a filter kept it off, or it was pruned.
     protected function get_steps_without_rows (Step_List $set) : array {
 
-        $rowed = array_flip(array_map('intval', array_column(array_filter(Journal::inst()->rows_for_set($set->get_key()), fn ($row) => !is_null($row['set_step'])), 'set_step')));
+        $rowed = array_flip(array_map('intval', array_column(array_filter(Journal::get_instance()->rows_for_set($set->get_key()), fn ($row) => !is_null($row['set_step'])), 'set_step')));
 
         return array_keys(array_filter($set->get_steps(), fn ($step, $position) => (($step['marker'] ?? '') === 'applied') && !isset($rowed[$position]), ARRAY_FILTER_USE_BOTH));
 
@@ -1324,7 +1324,7 @@ class Resources extends Service {
     // $accepted: a version an action's or a move's strict check also takes, since a set's own later rows moved it. Only undo_set() passes one: never from input, so no route reaches it.
     public function undo (int $row_id, array $input, string $via, ?int $accepted = null) : array|WP_Error {
 
-        if (!$row = Journal::inst()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
+        if (!$row = Journal::get_instance()->find($row_id)) return $this->error('not_found', "No journal row {$row_id}.", 404);
 
         if (Journal::is_scrubbed($row)) return $this->error('locked', 'Its values were erased, so there is nothing to put back.', 409, ['reason' => 'erased']);
 
@@ -1337,7 +1337,7 @@ class Resources extends Service {
 
         $at_row = fn () => in_array($model->get_version(), [$row['version_after'], $accepted], true);
 
-        $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => array_map(fn ($row) => $this->bar_row($row), Journal::inst()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id]))]);
+        $moved = fn (string $since) => $this->stale($model, "{$since} changed after that row: undo the rows after it first.", ['since' => array_map(fn ($row) => $this->bar_row($row), Journal::get_instance()->query(['resource' => $row['resource'], 'record_id' => $row['record_id'], 'since' => $row_id]))]);
 
         $inverse = ['version' => $model->get_version()] + array_intersect_key($input, array_flip(static::CONTROL));
         $trashed = $this->is_trashed($resource, $model);
@@ -1601,7 +1601,7 @@ class Resources extends Service {
         $model->finish_version();
         $resource->forget_values($model);
 
-        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::inst()->write([
+        $journaled = !$this->is_journaled($resource, $model) ? null : Journal::get_instance()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $model->get_id(),
@@ -1785,7 +1785,7 @@ class Resources extends Service {
 
         foreach ($this->get_resources() as $resource) if ($resource->is_named_only()) {
 
-            $done += Journal::inst()->scrub($resource->get_name(), (string) $user_id, '_scrubbed');
+            $done += Journal::get_instance()->scrub($resource->get_name(), (string) $user_id, '_scrubbed');
 
             do_action('lattice.resources.erased', $resource, $user_id);
 
@@ -1802,7 +1802,7 @@ class Resources extends Service {
 
         $rows = [];
 
-        foreach ($user ? $this->get_resources() : [] as $resource) if ($resource->is_named_only()) for ($at = 1; $found = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $user->ID, 'page' => $at]); $at++) array_push($rows, ...$found);
+        foreach ($user ? $this->get_resources() : [] as $resource) if ($resource->is_named_only()) for ($at = 1; $found = Journal::get_instance()->query(['resource' => $resource->get_name(), 'record_id' => (string) $user->ID, 'page' => $at]); $at++) array_push($rows, ...$found);
 
         foreach ($rows as $row) $items[] = [
             'group_id'    => 'lattice-journal',
@@ -1924,7 +1924,7 @@ class Resources extends Service {
 
     protected function has_credential () : bool {
 
-        return (bool) Credentials::inst()->get_current();
+        return (bool) Credentials::get_instance()->get_current();
 
     }
 
@@ -1948,13 +1948,13 @@ class Resources extends Service {
 
         if (is_null($entry)) {
 
-            if (!$current = Credentials::inst()->get_current()) return null;
+            if (!$current = Credentials::get_instance()->get_current()) return null;
 
             $entry = $current['entry'];
 
         }
 
-        return Credentials::inst()->answer_fields($entry, array_filter([
+        return Credentials::get_instance()->answer_fields($entry, array_filter([
             'surface'    => 'resource',
             'target'     => $resource->get_name(),
             'named_only' => $resource->is_named_only() ?: null,
@@ -2085,9 +2085,9 @@ class Resources extends Service {
 
         if (!\WP_Application_Passwords::get_user_application_password($author, $uuid)) return 'The password that wrote it is gone.';
 
-        if (is_null($entry = Credentials::inst()->get_entry($author, $uuid))) return '';
+        if (is_null($entry = Credentials::get_instance()->get_entry($author, $uuid))) return '';
 
-        if (Credentials::inst()->refuse_entry($entry)) return 'The password that wrote it may no longer propose.';
+        if (Credentials::get_instance()->refuse_entry($entry)) return 'The password that wrote it may no longer propose.';
 
         foreach ($set->get_steps() as $position => $step) if (!in_array($step['marker'] ?? '', ['applied', 'skipped'], true) && $this->refuse_proposing($step, $entry, $author)) return "Its author may no longer propose step {$position}.";
 

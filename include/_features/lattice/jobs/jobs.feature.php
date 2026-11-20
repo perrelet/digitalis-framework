@@ -40,7 +40,7 @@ class Lattice_Jobs extends Feature {
         Job_End::static_init();
         Iterator_Job::static_init();
 
-        if (!Jobs_Schema::is_current() && ((Jobs_Worker::inst()->get_pause()['why'] ?? '') !== Jobs_Worker::UNINSTALLED)) Jobs_Schema::ensure();
+        if (!Jobs_Schema::is_current() && ((Jobs_Worker::get_instance()->get_pause()['why'] ?? '') !== Jobs_Worker::UNINSTALLED)) Jobs_Schema::ensure();
 
         Jobs_Tick::get_instance();
 
@@ -56,7 +56,7 @@ class Lattice_Jobs extends Feature {
 
     public function iterator_runner ($runner, $iterator) {
 
-        return $runner ?? Iterator_Job_Runner::inst();
+        return $runner ?? Iterator_Job_Runner::get_instance();
 
     }
 
@@ -83,7 +83,7 @@ class Lattice_Jobs extends Feature {
 
         if (!current_user_can('manage_options')) return;
 
-        $worker = Jobs_Worker::inst();
+        $worker = Jobs_Worker::get_instance();
         $pause  = $worker->get_pause();
 
         if ($pause)                          $this->print_notice('Jobs are paused: ' . $pause['why'] . '.');

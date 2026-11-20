@@ -29,7 +29,7 @@ class Jobs_Tick extends Cron_Scheduler {
 
     public function schedule_tasks () {
 
-        if ((Jobs_Worker::inst()->get_pause()['why'] ?? '') === Jobs_Worker::UNINSTALLED) {
+        if ((Jobs_Worker::get_instance()->get_pause()['why'] ?? '') === Jobs_Worker::UNINSTALLED) {
 
             if (get_option($this->get_option_name())) $this->unschedule_tasks();
 
@@ -49,13 +49,13 @@ class Jobs_Tick extends Cron_Scheduler {
 
     public function tick () {
 
-        Jobs_Worker::inst()->tick();
+        Jobs_Worker::get_instance()->tick();
 
     }
 
     public function prune () {
 
-        Jobs_Worker::inst()->prune();
+        Jobs_Worker::get_instance()->prune();
 
     }
 

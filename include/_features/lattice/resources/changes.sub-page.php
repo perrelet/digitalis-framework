@@ -16,7 +16,7 @@ class Changes_Page extends Admin_Sub_Page {
 
         $filters = array_filter(['resource' => sanitize_key($_GET['resource'] ?? ''), 'record_id' => sanitize_text_field(wp_unslash($_GET['record'] ?? '')), 'set' => (int) ($_GET['set'] ?? 0), 'proposer' => (int) ($_GET['proposer'] ?? 0)]);
         $paged   = max(1, (int) ($_GET['paged'] ?? 1));
-        $rows    = Journal::inst()->query($filters + ['page' => $paged]);
+        $rows    = Journal::get_instance()->query($filters + ['page' => $paged]);
 
         echo '<h1>Changes</h1>';
 
@@ -49,11 +49,11 @@ class Changes_Page extends Admin_Sub_Page {
     protected function render_row (array $row) : void {
 
         $user     = get_userdata($row['user_id']);
-        $resource = Resources::inst()->get_resource($row['resource']);
+        $resource = Resources::get_instance()->get_resource($row['resource']);
         $model    = $resource?->find($row['record_id']);
         $record   = $model ? '<a href="' . esc_url($resource->get_edit_url($model)) . '">' . esc_html($resource->summarise($model)['title'] ?: "#{$row['record_id']}") . '</a>' : esc_html("#{$row['record_id']}");
         $history  = '<a href="' . esc_url(add_query_arg(['resource' => $row['resource'], 'record' => $row['record_id']], $this->get_url())) . '">history</a>';
-        $lines    = $resource ? $resource->present_changes($row['before'] ?? [], $row['after'] ?? [], $model) : Resources::inst()->diff($row['before'] ?? [], $row['after'] ?? []);
+        $lines    = $resource ? $resource->present_changes($row['before'] ?? [], $row['after'] ?? [], $model) : Resources::get_instance()->diff($row['before'] ?? [], $row['after'] ?? []);
         $changes  = array_map(fn ($line) => esc_html(($line['label'] ?? $line['field']) . ': ' . (($line['before'] ?? '') === '' ? '∅' : $line['before']) . ' → ' . (($line['after'] ?? '') === '' ? '∅' : $line['after'])), $lines);
 
         echo '<tr>';

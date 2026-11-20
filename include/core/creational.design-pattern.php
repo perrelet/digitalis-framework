@@ -78,12 +78,6 @@ class Creational extends Design_Pattern {
     public static function make () {}
     public static function get_instance () {}
 
-    public static function inst () {
-    
-        return static::get_instance(...func_get_args());
-    
-    }
-
     protected $instance_index = null; // Not available until after __construct
 
     public function get_instance_index () {

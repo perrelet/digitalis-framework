@@ -35,7 +35,7 @@ class Proposal {
 
     public static function get_post_types () : array {
 
-        return Proposals::inst('proposals')?->get_post_types() ?? [];
+        return Proposals::get_instance('proposals')?->get_post_types() ?? [];
 
     }
 
@@ -64,7 +64,7 @@ class Proposal {
 
     public static function get_resource_for (string $post_type) : ?Model_Resource {
 
-        return in_array($post_type, static::get_post_types(), true) ? Resources::inst()->get_resource_for_post_type($post_type) : null;
+        return in_array($post_type, static::get_post_types(), true) ? Resources::get_instance()->get_resource_for_post_type($post_type) : null;
 
     }
 
@@ -150,7 +150,7 @@ class Proposal {
     // Here, not on the page: mail built in REST saves and cron needs it.
     public static function get_queue_url () : string {
 
-        return admin_url('admin.php?page=' . (Proposals::inst('proposals')?->get_page_slug() ?? ''));
+        return admin_url('admin.php?page=' . (Proposals::get_instance('proposals')?->get_page_slug() ?? ''));
 
     }
 
@@ -450,7 +450,7 @@ class Proposal {
 
         if (!($resource = $this->get_resource()) || !($original = $this->get_original())) return new WP_Error('not_found', 'The live version is gone.', ['status' => 404]);
 
-        return Resources::inst()->update($resource->get_name(), $original->get_id(), $input + ['version' => $this->draft->get_proposal_base_version(), 'why' => $this->get_why()] + $this->get_values(), 'admin');
+        return Resources::get_instance()->update($resource->get_name(), $original->get_id(), $input + ['version' => $this->draft->get_proposal_base_version(), 'why' => $this->get_why()] + $this->get_values(), 'admin');
 
     }
 

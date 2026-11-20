@@ -46,7 +46,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
         // Read before the steps, so a step list that moves meanwhile is stale and not taken as seen.
         $version  = $set->get_version();
-        $reviewer = current_user_can('approve_proposals') && Resources::inst()->credential_allows($this, 'act:approve_proposal', $set) && !($set->get_credential() && $set->is_mine());
+        $reviewer = current_user_can('approve_proposals') && Resources::get_instance()->credential_allows($this, 'act:approve_proposal', $set) && !($set->get_credential() && $set->is_mine());
         $read     = array_combine(array_keys($this->get_readable_steps($set)), $this->read_steps($set));
 
         $steps = match (true) {
@@ -75,7 +75,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
             'purpose'      => $set->get_purpose(),
             'author_id'    => $set->get_author_id(),
             'submitted_at' => $set->get_submitted_at(),
-            'undone'       => Journal::inst()->has_undone_rows($set->get_key()),
+            'undone'       => Journal::get_instance()->has_undone_rows($set->get_key()),
             'unsettled'    => (bool) $this->refuse_unsettled($set),
             'closed'       => $set->is_closed(),
             'note'         => $set->get_note(),
@@ -91,7 +91,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
         $steps = [];
 
         // A step hidden from this reader is left out of its preview too.
-        foreach (array_intersect_key(Resources::inst()->preview_set($set), $read) as $position => $preview) $steps[$position] = array_filter(['conflicts' => $this->label_conflicts($preview['refusal']['data']['conflicts'] ?? [])]) + $preview + $read[$position];
+        foreach (array_intersect_key(Resources::get_instance()->preview_set($set), $read) as $position => $preview) $steps[$position] = array_filter(['conflicts' => $this->label_conflicts($preview['refusal']['data']['conflicts'] ?? [])]) + $preview + $read[$position];
 
         return $steps;
 
@@ -100,7 +100,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
     protected function check_steps ($set, array $read) : array {
 
         $stored = $set->get_steps();
-        $plan   = Resources::inst()->plan_steps($stored);
+        $plan   = Resources::get_instance()->plan_steps($stored);
         $steps  = [];
 
         foreach ($read as $position => $step) {
@@ -110,7 +110,7 @@ class Proposal_Set_Resource extends Change_Set_Resource {
             // What it would find depends on the steps before it, not on what is live now.
             $check = (($held['op'] === 'update') && !$plan[$position]['done'] && !$plan[$position]['reached']) ? $this->check_update_step($held) : ['checked' => false];
 
-            $steps[$position] = $step + ['flags' => Resources::inst()->get_step_flags($held)] + $plan[$position] + $check;
+            $steps[$position] = $step + ['flags' => Resources::get_instance()->get_step_flags($held)] + $plan[$position] + $check;
 
         }
 
@@ -120,8 +120,8 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
     protected function check_update_step (array $step) : array {
 
-        $compared = Resources::inst()->compare_expected($step['resource'], $step['id'], $step['values'], $step['expected']);
-        $problems = Resources::inst()->check_update($step['resource'], $step['id'], $step['values']);
+        $compared = Resources::get_instance()->compare_expected($step['resource'], $step['id'], $step['values'], $step['expected']);
+        $problems = Resources::get_instance()->check_update($step['resource'], $step['id'], $step['values']);
 
         foreach ([$compared, $problems] as $answer) if (is_wp_error($answer)) return ['checked' => false, 'refusal' => $answer->get_error_message()];
 
@@ -189,9 +189,9 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
         if (($set->get_state() !== Change_Set::DRAFT) && (($set->get_state() !== Change_Set::APPLIED_IN_PART) || $set->get_submitted_at())) return 'It cannot be submitted in this state.';
 
-        if (Journal::inst()->has_undone_rows($set->get_key())) return 'Part of it has been undone, so what it says is no longer live: withdraw it.';
+        if (Journal::get_instance()->has_undone_rows($set->get_key())) return 'Part of it has been undone, so what it says is no longer live: withdraw it.';
 
-        return Resources::inst()->refuse_author($set) ?: $this->refuse_unsettled($set);
+        return Resources::get_instance()->refuse_author($set) ?: $this->refuse_unsettled($set);
 
     }
 
@@ -235,13 +235,13 @@ class Proposal_Set_Resource extends Change_Set_Resource {
 
         if (count($this->get_readable_steps($set)) < count($set->get_steps())) return 'It holds a step this password may not read.';
 
-        return Resources::inst()->refuse_author($set);
+        return Resources::get_instance()->refuse_author($set);
 
     }
 
     public function act_approve_proposal ($set, array $input, string $via) {
 
-        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::inst()->preview_set($set)];
+        if (!empty($input['dry_run'])) return ['dry_run' => true, 'version' => $set->get_version(), 'steps' => Resources::get_instance()->preview_set($set)];
 
         $result = $this->walk_set($set, $input['seen'] ?? null, (string) ($input['why'] ?? ''), $via, 'approve_proposal');
 

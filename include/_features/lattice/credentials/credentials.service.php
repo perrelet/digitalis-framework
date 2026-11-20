@@ -371,7 +371,7 @@ class Credentials extends Service {
 
         $resources = [];
 
-        foreach (class_exists(Resources::class) ? Resources::inst()->get_resources() : [] as $name => $resource) {
+        foreach (class_exists(Resources::class) ? Resources::get_instance()->get_resources() : [] as $name => $resource) {
 
             $ask = fn (string $verb, array $fields = []) => $this->answer_fields($entry, ['surface' => 'resource', 'target' => $name, 'verb' => $verb, 'fields' => $fields, 'facts' => ['any_record' => true]] + ($resource->is_named_only() ? ['named_only' => true] : []));
 
@@ -401,7 +401,7 @@ class Credentials extends Service {
 
         $accounts = [];
 
-        foreach (class_exists(Resources::class) ? Resources::inst()->get_resources() : [] as $name => $resource) {
+        foreach (class_exists(Resources::class) ? Resources::get_instance()->get_resources() : [] as $name => $resource) {
 
             $named = array_filter($rules, fn ($rule) => ($rule['surface'] === 'resource') && ($rule['target'] === $name));
 
@@ -415,7 +415,7 @@ class Credentials extends Service {
 
         }
 
-        if (array_filter($resources, fn ($resource) => in_array('review', $resource['verbs'], true)) && !isset((class_exists(Resources::class) ? Resources::inst()->get_resource(Credential_Policy::SETS) : null)?->get_actions()['submit_proposal'])) $flags[] = 'Nothing here can review a change (Proposals is not loaded), so review answers deny (S7).';
+        if (array_filter($resources, fn ($resource) => in_array('review', $resource['verbs'], true)) && !isset((class_exists(Resources::class) ? Resources::get_instance()->get_resource(Credential_Policy::SETS) : null)?->get_actions()['submit_proposal'])) $flags[] = 'Nothing here can review a change (Proposals is not loaded), so review answers deny (S7).';
 
         return array_filter([
             'readable'  => true,
@@ -525,7 +525,7 @@ class Credentials extends Service {
 
     protected function find_missing_on_resource (array $rule) : array {
 
-        $resources = class_exists(Resources::class) ? Resources::inst() : null;
+        $resources = class_exists(Resources::class) ? Resources::get_instance() : null;
 
         if (is_null($rule['target']) && (isset($rule['roles']) || (($rule['records'] ?? null) === 'made_by_credential'))) return ['accounts on resource:*, which never reaches one'];
 

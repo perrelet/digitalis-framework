@@ -43,13 +43,13 @@ class Lattice_Resources extends Feature {
 
     public function add_exporter ($exporters) {
 
-        return $exporters + ['lattice-journal' => ['exporter_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'export_personal_data']]];
+        return $exporters + ['lattice-journal' => ['exporter_friendly_name' => 'Changes to accounts', 'callback' => [Resources::get_instance(), 'export_personal_data']]];
 
     }
 
     public function add_eraser ($erasers) {
 
-        return $erasers + ['lattice-journal' => ['eraser_friendly_name' => 'Changes to accounts', 'callback' => [Resources::inst(), 'erase_personal_data']]];
+        return $erasers + ['lattice-journal' => ['eraser_friendly_name' => 'Changes to accounts', 'callback' => [Resources::get_instance(), 'erase_personal_data']]];
 
     }
 
@@ -96,7 +96,7 @@ class Lattice_Resources extends Feature {
 
     protected function find ($post_id) : array {
 
-        $resource = Resources::inst()->get_resource_for_post_type((string) get_post_type($post_id));
+        $resource = Resources::get_instance()->get_resource_for_post_type((string) get_post_type($post_id));
         $model    = $resource?->find($post_id);
 
         return $model ? [$resource, $model] : [null, null];
@@ -121,7 +121,7 @@ class Lattice_Resources extends Feature {
 
     public function raise_version ($post_id) {
 
-        if ($this->is_autosave() || $this->is_preview($post_id) || Resources::inst()->is_writing($post_id)) return;
+        if ($this->is_autosave() || $this->is_preview($post_id) || Resources::get_instance()->is_writing($post_id)) return;
 
         [, $model] = $this->find($post_id);
 
@@ -172,7 +172,7 @@ class Lattice_Resources extends Feature {
 
     public static function describe_change (Model_Resource $resource, $record_id, int $seen) : string {
 
-        $row = Journal::inst()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
+        $row = Journal::get_instance()->query(['resource' => $resource->get_name(), 'record_id' => (string) $record_id, 'per_page' => 1])[0] ?? null;
 
         if (!$row || ($row['version_after'] <= $seen)) return '';
 
@@ -187,7 +187,7 @@ class Lattice_Resources extends Feature {
     // Relationship sync writes the partner's meta without saving it.
     public function raise_partner_version ($type, $id) {
 
-        if (($type !== 'post') || Resources::inst()->is_writing($id)) return;
+        if (($type !== 'post') || Resources::get_instance()->is_writing($id)) return;
 
         [$resource, $model] = $this->find($id);
 
@@ -208,7 +208,7 @@ class Lattice_Resources extends Feature {
 
     public function take_before ($post_id) {
 
-        if ($this->is_autosave() || Resources::inst()->is_writing()) return;
+        if ($this->is_autosave() || Resources::get_instance()->is_writing()) return;
 
         [$resource, $model] = $this->find($post_id);
 
@@ -235,9 +235,9 @@ class Lattice_Resources extends Feature {
 
         if (!$model) return;
 
-        if (!Resources::inst()->is_writing($post_id)) $model->finish_version();
+        if (!Resources::get_instance()->is_writing($post_id)) $model->finish_version();
 
-        if ($this->is_autosave() || Resources::inst()->is_writing() || ($wp_post->post_status === 'auto-draft') || ($update && !$before)) return;
+        if ($this->is_autosave() || Resources::get_instance()->is_writing() || ($wp_post->post_status === 'auto-draft') || ($update && !$before)) return;
 
         $resource->forget_values($model);
         $model->reload();
@@ -248,9 +248,9 @@ class Lattice_Resources extends Feature {
 
         $this->last_save = $created ? null : ['post_id' => (int) $post_id, 'values' => $before['values'], 'version' => $before['version'], 'via' => $via, 'row' => 0];
 
-        if ((!$created && $after === $before['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
+        if ((!$created && $after === $before['values']) || !Resources::get_instance()->is_journaled($resource, $model)) return;
 
-        $row = Journal::inst()->write([
+        $row = Journal::get_instance()->write([
             'via'            => $via,
             'resource'       => $resource->get_name(),
             'record_id'      => $post_id,
@@ -269,14 +269,14 @@ class Lattice_Resources extends Feature {
 
         [$resource, $model] = $this->find($post_id);
 
-        if (!$model || (get_post_status($post_id) === 'auto-draft') || !Resources::inst()->is_journaled($resource, $model)) return;
+        if (!$model || (get_post_status($post_id) === 'auto-draft') || !Resources::get_instance()->is_journaled($resource, $model)) return;
 
         $resource->forget_values($model);
 
         // WordPress's purge deletes a list in one loop: one unreadable record must not stop it.
         try { $before = $resource->read($model); } catch (\Throwable $e) { $before = null; }
 
-        Journal::inst()->write([
+        Journal::get_instance()->write([
             'via'            => is_admin() ? 'admin' : 'other',
             'resource'       => $resource->get_name(),
             'record_id'      => $post_id,
@@ -303,12 +303,12 @@ class Lattice_Resources extends Feature {
         $resource->forget_values($model);
         $model->reload();
 
-        if ((($after = $resource->read($model)) === $save['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
+        if ((($after = $resource->read($model)) === $save['values']) || !Resources::get_instance()->is_journaled($resource, $model)) return;
 
         $row = ['action' => 'restore', 'after' => $after, 'version_after' => $model->get_version()];
 
-        if ($save['row']) Journal::inst()->amend($save['row'], $row);
-        else Journal::inst()->write($row + ['via' => $save['via'], 'resource' => $resource->get_name(), 'record_id' => $post_id, 'before' => $save['values'], 'version_before' => $save['version']]);
+        if ($save['row']) Journal::get_instance()->amend($save['row'], $row);
+        else Journal::get_instance()->write($row + ['via' => $save['via'], 'resource' => $resource->get_name(), 'record_id' => $post_id, 'before' => $save['values'], 'version_before' => $save['version']]);
 
     }
 
@@ -319,9 +319,9 @@ class Lattice_Resources extends Feature {
 
         global $plugin_page;
 
-        if (is_numeric($post_id) || !is_string($plugin_page) || Resources::inst()->is_writing()) return;
+        if (is_numeric($post_id) || !is_string($plugin_page) || Resources::get_instance()->is_writing()) return;
 
-        $resource = Resources::inst()->get_resource_for_page($plugin_page);
+        $resource = Resources::get_instance()->get_resource_for_page($plugin_page);
 
         if (!$model = $resource?->find($plugin_page)) return;
 
@@ -338,7 +338,7 @@ class Lattice_Resources extends Feature {
 
     public function print_page_version ($page) {
 
-        if ($model = Resources::inst()->get_resource_for_page((string) ($page['menu_slug'] ?? ''))?->find($page['menu_slug'])) $this->print_version_field($model);
+        if ($model = Resources::get_instance()->get_resource_for_page((string) ($page['menu_slug'] ?? ''))?->find($page['menu_slug'])) $this->print_version_field($model);
 
     }
 
@@ -348,14 +348,14 @@ class Lattice_Resources extends Feature {
 
         unset($this->before[$slug]);
 
-        if (!$before || !($resource = Resources::inst()->get_resource_for_page($slug)) || !($model = $resource->find($slug))) return;
+        if (!$before || !($resource = Resources::get_instance()->get_resource_for_page($slug)) || !($model = $resource->find($slug))) return;
 
         $model->finish_version();
         $resource->forget_values($model);
 
-        if ((($after = $resource->read($model)) === $before['values']) || !Resources::inst()->is_journaled($resource, $model)) return;
+        if ((($after = $resource->read($model)) === $before['values']) || !Resources::get_instance()->is_journaled($resource, $model)) return;
 
-        Journal::inst()->write([
+        Journal::get_instance()->write([
             'via'            => 'admin',
             'resource'       => $resource->get_name(),
             'record_id'      => $slug,
@@ -370,7 +370,7 @@ class Lattice_Resources extends Feature {
 
     public function prune_journal () {
 
-        Journal::inst()->prune();
+        Journal::get_instance()->prune();
 
     }
 

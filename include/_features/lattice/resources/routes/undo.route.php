@@ -13,7 +13,7 @@ class Resources_Undo_Route extends Resource_Route {
 
     public function callback (WP_REST_Request $request) {
 
-        return Resources::inst()->undo((int) $request['row'], $this->get_input($request), 'rest');
+        return Resources::get_instance()->undo((int) $request['row'], $this->get_input($request), 'rest');
 
     }
 

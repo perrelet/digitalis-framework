@@ -51,7 +51,7 @@ class Lattice_Credentials extends Feature {
 
     public function run () {
 
-        foreach (static::PRESETS as $name => $policy) Credentials::inst()->define($name, $policy);
+        foreach (static::PRESETS as $name => $policy) Credentials::get_instance()->define($name, $policy);
 
     }
 
@@ -63,7 +63,7 @@ class Lattice_Credentials extends Feature {
 
     public function forget ($user_id, $item) {
 
-        Credentials::inst()->clear_entry((int) $user_id, (string) ($item['uuid'] ?? ''));
+        Credentials::get_instance()->clear_entry((int) $user_id, (string) ($item['uuid'] ?? ''));
 
     }
 
@@ -72,16 +72,16 @@ class Lattice_Credentials extends Feature {
     // A refusal here leaves the request with nobody, before any plugin code sees the account.
     public function refuse_password ($error, $wp_user, $item, $password) {
 
-        $entry = Credentials::inst()->get_entry((int) $wp_user->ID, (string) ($item['uuid'] ?? ''));
+        $entry = Credentials::get_instance()->get_entry((int) $wp_user->ID, (string) ($item['uuid'] ?? ''));
 
         if (is_null($entry)) return;
 
-        $reason = Credentials::inst()->refuse_entry($entry);
+        $reason = Credentials::get_instance()->refuse_entry($entry);
 
         if (!$reason && !(defined('REST_REQUEST') && REST_REQUEST)) $reason = 'lattice_credential_api_only';
         // Multisite gives a super admin everything before any capability filter runs, so a scoped password is not offered there yet.
         if (!$reason && is_multisite()) $reason = 'lattice_credential_multisite';
-        if (!$reason && !Credentials::inst()->may_reach($entry, [$this->get_path()], $this->get_method())) $reason = 'lattice_credential';
+        if (!$reason && !Credentials::get_instance()->may_reach($entry, [$this->get_path()], $this->get_method())) $reason = 'lattice_credential';
 
         if ($reason) $error->add('forbidden', 'This password may not do that.', ['status' => 403, 'reason' => $reason]);
 
@@ -89,7 +89,7 @@ class Lattice_Credentials extends Feature {
 
     public function note_password ($wp_user, $item) {
 
-        Credentials::inst()->note_current((int) $wp_user->ID, (string) ($item['uuid'] ?? ''), (string) ($item['name'] ?? ''));
+        Credentials::get_instance()->note_current((int) $wp_user->ID, (string) ($item['uuid'] ?? ''), (string) ($item['name'] ?? ''));
 
     }
 
@@ -124,19 +124,19 @@ class Lattice_Credentials extends Feature {
 
     public function refuse_session ($send) {
 
-        return Credentials::inst()->get_current() ? false : $send;
+        return Credentials::get_instance()->get_current() ? false : $send;
 
     }
 
     // Decided on the path and every pattern WordPress could match it to, so a path reaching a denied handler is refused however it is spelt.
     protected function refuse_route ($request) : ?WP_Error {
 
-        if (!$current = Credentials::inst()->get_current()) return null;
+        if (!$current = Credentials::get_instance()->get_current()) return null;
 
         $path     = $request->get_route();
         $patterns = array_filter(array_keys(rest_get_server()->get_routes()), fn ($pattern) => preg_match('@^' . $pattern . '$@i', $path));
 
-        if (Credentials::inst()->may_reach($current['entry'], [$path, ...$patterns], $request->get_method())) return null;
+        if (Credentials::get_instance()->may_reach($current['entry'], [$path, ...$patterns], $request->get_method())) return null;
 
         return new WP_Error('forbidden', 'This password may not do that.', ['status' => 403, 'reason' => 'lattice_credential']);
 
@@ -149,13 +149,13 @@ class Lattice_Credentials extends Feature {
 
     public function limit_meta_caps ($caps, $cap, $user_id, $args) {
 
-        if (!($current = Credentials::inst()->get_current()) || ((int) $user_id !== $current['user_id'])) return $caps;
+        if (!($current = Credentials::get_instance()->get_current()) || ((int) $user_id !== $current['user_id'])) return $caps;
 
         // Only the layer's own check of an account resource (A11).
         if (in_array($cap, static::ACCOUNT_CAPS, true)) return $this->is_layer_checking() ? $caps : ['do_not_allow'];
 
         // A read bar holds for code that checks capabilities, outside the layer, which asks the policy itself.
-        if (($cap === 'read_post') && class_exists(Resources::class) && !Resources::inst()->is_checking() && ($post = get_post($args[0] ?? null)) && ($resource = Resources::inst()->get_resource_for_post_type($post->post_type)) && !Resources::inst()->credential_reads($resource, $resource->find($post->ID))) return ['do_not_allow'];
+        if (($cap === 'read_post') && class_exists(Resources::class) && !Resources::get_instance()->is_checking() && ($post = get_post($args[0] ?? null)) && ($resource = Resources::get_instance()->get_resource_for_post_type($post->post_type)) && !Resources::get_instance()->credential_reads($resource, $resource->find($post->ID))) return ['do_not_allow'];
 
         return $caps;
 
@@ -163,7 +163,7 @@ class Lattice_Credentials extends Feature {
 
     public function limit_roles ($roles) {
 
-        return (Credentials::inst()->get_current() && !$this->is_layer_checking()) ? [] : $roles;
+        return (Credentials::get_instance()->get_current() && !$this->is_layer_checking()) ? [] : $roles;
 
     }
 
@@ -173,7 +173,7 @@ class Lattice_Credentials extends Feature {
 
         global $wpdb;
 
-        if (!Credentials::inst()->get_current()) return $check;
+        if (!Credentials::get_instance()->get_current()) return $check;
 
         // MySQL matches a meta key ignoring case, trailing spaces and accents, so a key outside plain ASCII could reach a guarded one.
         $key = strtolower(rtrim((string) $key));
@@ -189,7 +189,7 @@ class Lattice_Credentials extends Feature {
     // By its row, the key it holds and, on an update, the key it would take.
     public function guard_meta_by_mid ($check, $meta_id, $value = null, $key = null) {
 
-        if (!Credentials::inst()->get_current()) return $check;
+        if (!Credentials::get_instance()->get_current()) return $check;
 
         $row = get_metadata_by_mid('user', (int) $meta_id);
 
@@ -202,7 +202,7 @@ class Lattice_Credentials extends Feature {
     // Fired with the new password before it is written, and a user sync listens here.
     public function guard_reset ($wp_user, $password) {
 
-        if (Credentials::inst()->get_current()) $this->stop('This password may not reset a password.');
+        if (Credentials::get_instance()->get_current()) $this->stop('This password may not reset a password.');
 
     }
 
@@ -215,19 +215,19 @@ class Lattice_Credentials extends Feature {
 
     public function guard_option ($value, $option, $old) {
 
-        return (Credentials::inst()->get_current() && $this->is_guarded_option((string) $option) && ($value !== $old)) ? $this->stop('This password may not change roles or policies.') : $value;
+        return (Credentials::get_instance()->get_current() && $this->is_guarded_option((string) $option) && ($value !== $old)) ? $this->stop('This password may not change roles or policies.') : $value;
 
     }
 
     public function guard_added_option ($option) {
 
-        if (Credentials::inst()->get_current() && $this->is_guarded_option((string) $option)) $this->stop('This password may not change roles or policies.');
+        if (Credentials::get_instance()->get_current() && $this->is_guarded_option((string) $option)) $this->stop('This password may not change roles or policies.');
 
     }
 
     public function guard_user_data ($data, $update, $user_id, $userdata) {
 
-        if (!Credentials::inst()->get_current()) return $data;
+        if (!Credentials::get_instance()->get_current()) return $data;
 
         $account = $this->stopped ? null : $this->find_account_write($update ? (int) $user_id : 0, $update ? null : (string) ($data['user_login'] ?? ''));
 
@@ -250,7 +250,7 @@ class Lattice_Credentials extends Feature {
 
         global $wpdb;
 
-        if (!Credentials::inst()->get_current() || !$old_user_data) return;
+        if (!Credentials::get_instance()->get_current() || !$old_user_data) return;
 
         // wp_insert_user() sets the new account's password through here.
         if (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $account->is_unsaved()) return;
@@ -265,7 +265,7 @@ class Lattice_Credentials extends Feature {
 
     public function guard_delete ($user_id, $reassign) {
 
-        if (!Credentials::inst()->get_current()) return;
+        if (!Credentials::get_instance()->get_current()) return;
 
         if (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $account->get_staged('delete') && ((int) $reassign === (int) $account->get_staged('reassign'))) return;
 
@@ -275,7 +275,7 @@ class Lattice_Credentials extends Feature {
 
     public function refuse_reset ($allow, $user_id) {
 
-        if (!Credentials::inst()->get_current()) return $allow;
+        if (!Credentials::get_instance()->get_current()) return $allow;
 
         return (!$this->stopped && ($account = $this->find_account_write((int) $user_id)) && $this->is_sending_link($account)) ? $allow : false;
 
@@ -285,7 +285,7 @@ class Lattice_Credentials extends Feature {
 
     protected function is_layer_checking () : bool {
 
-        return class_exists(Resources::class) && Resources::inst()->is_checking_accounts();
+        return class_exists(Resources::class) && Resources::get_instance()->is_checking_accounts();
 
     }
 
@@ -297,7 +297,7 @@ class Lattice_Credentials extends Feature {
 
     protected function find_account_write (int $user_id, ?string $login = null) : ?object {
 
-        return class_exists(Resources::class) ? Resources::inst()->get_account_write($user_id, $login) : null;
+        return class_exists(Resources::class) ? Resources::get_instance()->get_account_write($user_id, $login) : null;
 
     }
 
@@ -320,7 +320,7 @@ class Lattice_Credentials extends Feature {
 
         $this->stopped = true;
 
-        if (class_exists(Resources::class) && Resources::inst()->is_writing()) throw new Credential_Stop($message);
+        if (class_exists(Resources::class) && Resources::get_instance()->is_writing()) throw new Credential_Stop($message);
 
         if (defined('REST_REQUEST') && REST_REQUEST) wp_send_json(['code' => 'forbidden', 'message' => $message, 'data' => ['status' => 403, 'reason' => 'lattice_credential']], 403);
 
@@ -330,9 +330,9 @@ class Lattice_Credentials extends Feature {
 
     public function gate_ability ($result, $name, $input, $ability) {
 
-        if (!($current = Credentials::inst()->get_current()) || ($result !== true)) return $result;
+        if (!($current = Credentials::get_instance()->get_current()) || ($result !== true)) return $result;
 
-        $answer = Credentials::inst()->answer($current['entry'], ['surface' => 'ability', 'target' => (string) $name, 'verb' => 'run', 'facts' => ['category' => $ability->get_category()]]);
+        $answer = Credentials::get_instance()->answer($current['entry'], ['surface' => 'ability', 'target' => (string) $name, 'verb' => 'run', 'facts' => ['category' => $ability->get_category()]]);
 
         return ($answer === 'allow') ? $result : new WP_Error('forbidden', 'This password may not run that.', ['status' => 403, 'reason' => 'lattice_credential']);
 

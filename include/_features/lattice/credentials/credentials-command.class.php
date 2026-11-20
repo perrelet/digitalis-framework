@@ -27,7 +27,7 @@ class Credentials_Command {
 
         $user = isset($args[0]) ? $this->find_user($args[0]) : null;
 
-        $this->answer(array_values(array_filter(Credentials::inst()->get_scoped(), fn ($scoped) => !$user || ($scoped['user_id'] === $user->ID))));
+        $this->answer(array_values(array_filter(Credentials::get_instance()->get_scoped(), fn ($scoped) => !$user || ($scoped['user_id'] === $user->ID))));
 
     }
 
@@ -35,11 +35,11 @@ class Credentials_Command {
 
         [$user, $uuid] = $this->find_password($args);
 
-        $entry = Credentials::inst()->get_entry($user->ID, $uuid);
+        $entry = Credentials::get_instance()->get_entry($user->ID, $uuid);
 
-        [, $problems] = Credentials::inst()->read($entry);
+        [, $problems] = Credentials::get_instance()->read($entry);
 
-        $this->answer(['entry' => $entry, 'problems' => is_null($entry) ? [] : $problems, 'expired' => $entry ? Credentials::inst()->is_expired($entry) : false]);
+        $this->answer(['entry' => $entry, 'problems' => is_null($entry) ? [] : $problems, 'expired' => $entry ? Credentials::get_instance()->is_expired($entry) : false]);
 
     }
 
@@ -47,11 +47,11 @@ class Credentials_Command {
 
         [$user, $uuid] = $this->find_password($args);
 
-        $entry = isset($assoc['input']) ? $this->read_json((string) $assoc['input']) : (Credentials::inst()->get_entry($user->ID, $uuid) ?: ['version' => 1]);
+        $entry = isset($assoc['input']) ? $this->read_json((string) $assoc['input']) : (Credentials::get_instance()->get_entry($user->ID, $uuid) ?: ['version' => 1]);
 
         if (isset($assoc['policy'])) {
 
-            [$ref, $problem] = Credentials::inst()->find_shared((string) $assoc['policy']);
+            [$ref, $problem] = Credentials::get_instance()->find_shared((string) $assoc['policy']);
 
             if (!$ref) WP_CLI::error($problem ?? "No shared policy {$assoc['policy']}.");
 
@@ -61,13 +61,13 @@ class Credentials_Command {
 
         if (isset($assoc['expires'])) $entry['expires'] = $assoc['expires'];
 
-        [$policies, $problems] = Credentials::inst()->read($entry);
+        [$policies, $problems] = Credentials::get_instance()->read($entry);
 
-        if (isset($entry['rules']) && $policies) array_push($problems, ...Credentials::inst()->get_unknown($policies[0]));
+        if (isset($entry['rules']) && $policies) array_push($problems, ...Credentials::get_instance()->get_unknown($policies[0]));
 
         if ($problems) WP_CLI::error(implode(' ', $problems));
 
-        if (!Credentials::inst()->set_entry($user->ID, $uuid, $entry)) WP_CLI::error("{$user->user_login}'s stored policies cannot be read, so every password on the account is refused: repair them before setting one.");
+        if (!Credentials::get_instance()->set_entry($user->ID, $uuid, $entry)) WP_CLI::error("{$user->user_login}'s stored policies cannot be read, so every password on the account is refused: repair them before setting one.");
 
         $this->answer(['user_id' => $user->ID, 'uuid' => $uuid, 'entry' => $entry]);
 
@@ -77,7 +77,7 @@ class Credentials_Command {
 
         [$user, $uuid] = $this->find_password($args);
 
-        if (!Credentials::inst()->clear_entry($user->ID, $uuid)) WP_CLI::error("{$user->user_login}'s stored policies cannot be read: repair them first.");
+        if (!Credentials::get_instance()->clear_entry($user->ID, $uuid)) WP_CLI::error("{$user->user_login}'s stored policies cannot be read: repair them first.");
 
         WP_CLI::success("{$uuid} is a full password again.");
 
@@ -89,7 +89,7 @@ class Credentials_Command {
 
         [$surface, $target] = array_pad(explode(':', $args[2], 2), 2, '');
 
-        $entry = Credentials::inst()->get_entry($user->ID, $uuid);
+        $entry = Credentials::get_instance()->get_entry($user->ID, $uuid);
 
         if (is_null($entry)) WP_CLI::error("{$uuid} holds no policy: it may do what its account may.");
 
@@ -103,7 +103,7 @@ class Credentials_Command {
             'dry_run' => !empty($assoc['dry-run']),
         ], fn ($value) => !is_null($value));
 
-        $this->answer(['answer' => Credentials::inst()->answer($entry, $request), 'fields' => Credentials::inst()->answer_fields($entry, $request)]);
+        $this->answer(['answer' => Credentials::get_instance()->answer($entry, $request), 'fields' => Credentials::get_instance()->answer_fields($entry, $request)]);
 
     }
 
@@ -111,15 +111,15 @@ class Credentials_Command {
 
         [$user, $uuid] = $this->find_password($args);
 
-        $entry = Credentials::inst()->get_entry($user->ID, $uuid);
+        $entry = Credentials::get_instance()->get_entry($user->ID, $uuid);
 
-        $this->answer(is_null($entry) ? ['scoped' => false, 'answer' => 'It may do whatever its account may.'] : Credentials::inst()->explain($entry, true));
+        $this->answer(is_null($entry) ? ['scoped' => false, 'answer' => 'It may do whatever its account may.'] : Credentials::get_instance()->explain($entry, true));
 
     }
 
     public function shared ($args, $assoc) {
 
-        $api = Credentials::inst();
+        $api = Credentials::get_instance();
 
         if (!isset($args[0])) {
 

@@ -14,7 +14,7 @@ class Visitor extends Service {
 
     public function __construct () {
     
-        $this->user = User::inst();
+        $this->user = User::get_instance();
     
     }
 

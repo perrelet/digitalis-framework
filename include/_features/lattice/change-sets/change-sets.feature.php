@@ -98,7 +98,7 @@ class Lattice_Change_Sets extends Feature {
 
         $wpdb->query($wpdb->prepare('UPDATE ' . Change_Set::table() . " SET purpose = %s, note = IF(note IS NULL, NULL, %s), reason = IF(reason IS NULL, NULL, %s) WHERE set_id IN ({$in})", Journal::ERASED, Journal::ERASED, Journal::ERASED));
 
-        foreach ($ids as $id) Journal::inst()->scrub('change_set', (string) $id, $mark);
+        foreach ($ids as $id) Journal::get_instance()->scrub('change_set', (string) $id, $mark);
 
         $wpdb->query($wpdb->prepare('UPDATE ' . Journal_Table::get_name($wpdb) . " SET why = %s WHERE set_key IN ({$in}) AND why <> ''", Journal::ERASED));
 
@@ -108,7 +108,7 @@ class Lattice_Change_Sets extends Feature {
 
         global $wpdb;
 
-        $names = array_map(fn ($resource) => $resource->get_name(), array_filter(Resources::inst()->get_resources(), fn ($resource) => $resource->is_named_only()));
+        $names = array_map(fn ($resource) => $resource->get_name(), array_filter(Resources::get_instance()->get_resources(), fn ($resource) => $resource->is_named_only()));
 
         if (!$names) return;
 
@@ -142,7 +142,7 @@ class Lattice_Change_Sets extends Feature {
     // Proposals registers its own resource under this name, so this asks for whichever is registered.
     protected function get_resource () : Change_Set_Resource {
 
-        return Resources::inst()->get_resource('change_set');
+        return Resources::get_instance()->get_resource('change_set');
 
     }
 
@@ -150,7 +150,7 @@ class Lattice_Change_Sets extends Feature {
 
         global $wpdb;
 
-        $resource = Resources::inst()->get_resource_for_record($post_id);
+        $resource = Resources::get_instance()->get_resource_for_record($post_id);
 
         if (!$resource) return;
 
@@ -190,7 +190,7 @@ class Lattice_Change_Sets extends Feature {
         $resource = $this->get_resource();
         $set      = $resource->find((int) $set_id);
 
-        if (!$set || Resources::inst()->refuse_read($resource, $set)) return $named;
+        if (!$set || Resources::get_instance()->refuse_read($resource, $set)) return $named;
 
         return [...(array) $named, ...array_map(fn ($step) => "{$step['resource']}:{$step['id']}", array_filter($set->get_steps(), fn ($step) => !is_null($step['id'])))];
 

@@ -18,7 +18,7 @@ class Proposal_Set_Review extends View {
 
     public function params (&$p) {
 
-        $review = Resources::inst()->view('change_set', $p['set_id'], 'review');
+        $review = Resources::get_instance()->view('change_set', $p['set_id'], 'review');
 
         $p['refusal'] = is_wp_error($review) ? $review->get_error_message() : '';
         $p['review']  = $review;
@@ -34,9 +34,9 @@ class Proposal_Set_Review extends View {
 
             $this->prepare_forms($p);
 
-            $set = Resources::inst()->get_resource('change_set')->find($p['set_id']);
+            $set = Resources::get_instance()->get_resource('change_set')->find($p['set_id']);
 
-            $journal     = Journal::inst();
+            $journal     = Journal::get_instance();
             $rows        = array_column($journal->rows_for_set($set->get_key()), null, 'id');
             $undone      = array_flip(array_column($journal->undoing(array_column($review['steps'], 'journal_id')), 'undoes'));
             $p['steps']  = array_map(fn ($position) => $this->present_step($position, $review['steps'][$position], $review, $rows, $undone), array_keys($review['steps']));
@@ -52,7 +52,7 @@ class Proposal_Set_Review extends View {
 
     protected function prepare_forms (&$p) : void {
 
-        $api    = Resources::inst();
+        $api    = Resources::get_instance();
         $set    = $api->get_resource('change_set')->find($p['set_id']);
         $record = $api->get('change_set', $p['set_id']);
         $review = $p['review'];
@@ -135,12 +135,12 @@ class Proposal_Set_Review extends View {
 
     protected function present_step (int $position, array $step, array $review, array $rows, array $undone) : array {
 
-        $resource  = Resources::inst()->get_resource($step['resource']);
+        $resource  = Resources::get_instance()->get_resource($step['resource']);
         $found     = (!empty($step['id']) && $resource) ? $resource->find($step['id']) : null;
-        $model     = ($found && !Resources::inst()->refuse_read($resource, $found)) ? $found : null;
+        $model     = ($found && !Resources::get_instance()->refuse_read($resource, $found)) ? $found : null;
         $live      = $this->is_live($step);
         $is_undone = $live && isset($undone[$step['journal_id'] ?? 0]);
-        $row       = !empty($step['journal_id']) ? ($rows[$step['journal_id']] ?? Journal::inst()->find((int) $step['journal_id'])) : null;
+        $row       = !empty($step['journal_id']) ? ($rows[$step['journal_id']] ?? Journal::get_instance()->find((int) $step['journal_id'])) : null;
 
         return [
             'number'       => $position + 1,
@@ -307,9 +307,9 @@ class Proposal_Set_Review extends View {
 
     protected function describe_undo_row (array $row) : array {
 
-        $resource = Resources::inst()->get_resource($row['resource']);
+        $resource = Resources::get_instance()->get_resource($row['resource']);
         $model    = $resource?->find($row['record_id']);
-        $title    = ($model && !Resources::inst()->refuse_read($resource, $model)) ? ($resource->summarise($model)['title'] ?: "#{$row['record_id']}") : "#{$row['record_id']}";
+        $title    = ($model && !Resources::get_instance()->refuse_read($resource, $model)) ? ($resource->summarise($model)['title'] ?: "#{$row['record_id']}") : "#{$row['record_id']}";
         $undoes   = match ($row['action']) { 'update', 'restore' => 'put its fields back', 'trash' => 'restore it', 'untrash' => 'move it back to the Trash', 'create' => 'move it to the Trash', default => 'reverse ' . lcfirst($this->label_action($resource, (string) $row['action'])) };
 
         return [

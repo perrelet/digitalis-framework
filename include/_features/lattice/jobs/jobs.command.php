@@ -39,7 +39,7 @@ class Jobs_Command extends Command {
 
     public function run ($args, $assoc) {
 
-        $worker = Jobs_Worker::inst();
+        $worker = Jobs_Worker::get_instance();
 
         if (!$worker->is_open()) $this->fail('The worker is paused, or the schema is not current.');
 
@@ -73,7 +73,7 @@ class Jobs_Command extends Command {
 
     public function pause ($args, $assoc) {
 
-        Jobs_Worker::inst()->pause();
+        Jobs_Worker::get_instance()->pause();
 
         WP_CLI::success('Paused.');
 
@@ -81,13 +81,13 @@ class Jobs_Command extends Command {
 
     public function resume ($args, $assoc) {
 
-        WP_CLI::success(sprintf('Resumed; %d discarded.', Jobs_Worker::inst()->resume(!empty($assoc['discard']))));
+        WP_CLI::success(sprintf('Resumed; %d discarded.', Jobs_Worker::get_instance()->resume(!empty($assoc['discard']))));
 
     }
 
     public function uninstall ($args, $assoc) {
 
-        Jobs_Worker::inst()->uninstall(!empty($assoc['drop']));
+        Jobs_Worker::get_instance()->uninstall(!empty($assoc['drop']));
 
         WP_CLI::success('Uninstalled.');
 

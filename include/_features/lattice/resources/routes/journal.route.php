@@ -13,7 +13,7 @@ class Resources_Journal_Route extends Resource_Route {
 
     public function callback (WP_REST_Request $request) {
 
-        return Resources::inst()->journal([
+        return Resources::get_instance()->journal([
             'resource'  => (string) $request->get_param('resource'),
             'record_id' => (string) $request->get_param('id'),
             'set'       => $request->get_param('set'),

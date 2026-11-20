@@ -70,7 +70,7 @@ class Proposals_Admin extends Feature {
 
         $screen = get_current_screen();
 
-        if (!in_array($screen?->post_type, Proposal::get_post_types(), true) && !str_ends_with((string) $hook, Proposals::inst('proposals')->get_page_slug())) return;
+        if (!in_array($screen?->post_type, Proposal::get_post_types(), true) && !str_ends_with((string) $hook, Proposals::get_instance('proposals')->get_page_slug())) return;
 
         wp_enqueue_style('lattice-proposals', plugin_dir_url(__FILE__) . 'proposals.css', [], LATTICE_VERSION);
 
@@ -198,7 +198,7 @@ class Proposals_Admin extends Feature {
 
         if ($action === 'reject_proposal') $input['note'] = sanitize_textarea_field($sent[static::NOTE] ?? '');
 
-        $result = Resources::inst()->act('change_set', $set_id, $action, $input, 'admin');
+        $result = Resources::get_instance()->act('change_set', $set_id, $action, $input, 'admin');
 
         if (is_wp_error($result)) return ['set_refused', $result->get_error_message()];
 

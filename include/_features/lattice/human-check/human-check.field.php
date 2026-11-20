@@ -18,7 +18,7 @@ class Human_Check extends \Lattice\Field {
 
     public function params (&$p) {
 
-        $widget = Lattice_Human_Check::inst()->get_widget((string) $p['action'], (array) $p['widget']);
+        $widget = Lattice_Human_Check::get_instance()->get_widget((string) $p['action'], (array) $p['widget']);
 
         $p['widget_config'] = $widget;
 
@@ -45,7 +45,7 @@ class Human_Check extends \Lattice\Field {
     public function view () {
 
         echo $this['element'];
-        echo wp_get_script_tag(['src' => Lattice_Human_Check::inst()->get_loader_url(), 'async' => true]);
+        echo wp_get_script_tag(['src' => Lattice_Human_Check::get_instance()->get_loader_url(), 'async' => true]);
 
     }
 

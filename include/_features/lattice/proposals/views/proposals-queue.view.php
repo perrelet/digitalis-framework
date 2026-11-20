@@ -28,7 +28,7 @@ class Proposals_Queue extends View {
 
         $proposals = Proposal::query_open($p['reviewer'] ? [] : ['author' => get_current_user_id()]);
 
-        $sets = Resources::inst()->get_resource('change_set')?->query_queue() ?? [];
+        $sets = Resources::get_instance()->get_resource('change_set')?->query_queue() ?? [];
 
         $p['rows'] = [...array_map(fn ($proposal) => $this->describe_proposal($proposal, $p['reviewer']), $proposals), ...array_map(fn ($set) => $this->describe_set($set, $p['reviewer']), $sets)];
 
@@ -81,7 +81,7 @@ class Proposals_Queue extends View {
 
         return [
             'title'      => wp_html_excerpt($set->get_purpose(), 80, '…') ?: "Set #{$set->get_id()}",
-            'review_url' => Resources::inst()->get_resource('change_set')->get_edit_url($set),
+            'review_url' => Resources::get_instance()->get_resource('change_set')->get_edit_url($set),
             'live_url'   => null,
             'gone'       => false,
             'type'       => 'Change set',
