@@ -174,7 +174,10 @@ class Model extends Factory {
     
     }
 
+    // A stored model is found by its id; create() builds a new one and never replaces what the map holds.
     public static function create (mixed $data = []) {
+
+        if (is_scalar($data)) return static::refuse_declare('creates from an id', 'find a stored model with get_instance($id); create() builds a new, unsaved one');
 
         static::prepare_data($data);
 
