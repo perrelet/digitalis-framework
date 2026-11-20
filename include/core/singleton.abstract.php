@@ -33,7 +33,7 @@ abstract class Singleton extends Creational {
 
         Registry::set(self::INSTANCE_KIND, static::$cache_group, $class_name, $instance);
         static::construct_instance($instance);
-        Batch::defer(fn () => $instance->switch_on());
+        Batch::defer($instance, fn () => $instance->switch_on());
 
         return $instance;
 

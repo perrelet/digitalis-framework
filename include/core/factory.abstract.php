@@ -175,9 +175,14 @@ abstract class Factory extends Creational {
 
         Registry::set($kind, $group, $key, $instance);
 
-        if (($cache_key = $instance->get_cache_key()) && ((string) $cache_key !== $key) && !Registry::has($kind, $group, $cache_key)) Registry::set($kind, $group, $cache_key, $instance);
+        if (($cache_key = $instance->get_cache_key()) && ((string) $cache_key !== $key)) {
 
-        Batch::defer(fn () => $instance->switch_on());
+            if (!$held = Registry::get($kind, $group, $cache_key)) Registry::set($kind, $group, $cache_key, $instance);
+            elseif ($held !== $instance) Strict::report(static::class, "claims '{$cache_key}', which " . $held::class . ' already holds', 'give one of them its own ' . static::$cache_property);
+
+        }
+
+        Batch::defer($instance, fn () => $instance->switch_on());
 
         return $instance;
 
@@ -198,9 +203,20 @@ abstract class Factory extends Creational {
 
     }
 
+    // A bare find keys on the naming property's declared default (an admin page's slug), else the class, so the name, the find and the property agree.
     protected static function get_data_key ($data) {
 
-        return (is_null($data) || ($data === [])) ? static::class : (is_scalar($data) ? (string) $data : null);
+        if (is_null($data) || ($data === [])) return static::get_default_name() ?? static::class;
+
+        return is_scalar($data) ? (string) $data : null;
+
+    }
+
+    protected static function get_default_name () : ?string {
+
+        $name = static::$cache_property ? ((new \ReflectionClass(static::class))->getDefaultProperties()[static::$cache_property] ?? null) : null;
+
+        return is_scalar($name) ? (string) $name : null;
 
     }
 

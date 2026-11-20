@@ -157,8 +157,13 @@ abstract class Iterator extends Singleton {
 
             $this->add_action($cron_action_start, [$this, 'cron_start'], 10, 1);
 
+            $stamp = md5($this->cron_time . '|' . $this->cron_schedule . '|' . $this->get_timezone());
+
+            // The first request after 0.14.0 adopts a live event instead of moving it, so an overdue run is not skipped.
+            if ((get_option($this->get_option_key() . '_schedule', null) === null) && wp_next_scheduled($cron_action_start)) update_option($this->get_option_key() . '_schedule', [$cron_action_start => ['stamp' => $stamp, 'time' => time()]], false);
+
             // A changed cron_time or schedule moves the event; an unchanged one is left where it is.
-            Lasting::sync($this->get_option_key() . '_schedule', [$cron_action_start => md5($this->cron_time . '|' . $this->cron_schedule . '|' . $this->get_timezone())], function () use ($date_time, $cron_action_start) {
+            Lasting::sync($this->get_option_key() . '_schedule', [$cron_action_start => $stamp], function () use ($date_time, $cron_action_start) {
 
                 wp_clear_scheduled_hook($cron_action_start);
 

@@ -9,8 +9,6 @@ use Lattice\Feature;
 
 class Focal_Point extends Feature {
 
-    protected static $named = true;
-
     protected $focal = null;
 
     protected $group_key    = 'group_focal_point';

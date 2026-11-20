@@ -35,18 +35,4 @@ abstract class Feature extends Registrant {
 
     }
 
-    protected static function get_data_key ($data) {
-
-        return is_null($data) ? (static::get_default_name() ?? static::class) : parent::get_data_key($data);
-
-    }
-
-    protected static function get_default_name () : ?string {
-
-        $name = static::$cache_property ? ((new \ReflectionClass(static::class))->getDefaultProperties()[static::$cache_property] ?? null) : null;
-
-        return is_null($name) ? null : (string) $name;
-
-    }
-
 }

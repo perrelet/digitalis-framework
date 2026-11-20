@@ -40,6 +40,12 @@ final class Registry {
 
     }
 
+    public static function forget_instance (object $instance) : void {
+
+        foreach (self::$instances as $kind => $groups) foreach ($groups as $group => $instances) foreach ($instances as $key => $held) if ($held === $instance) self::remove($kind, $group, $key);
+
+    }
+
     public static function get_group (string $kind, string $group) : array {
 
         return self::$instances[$kind][$group] ?? [];
