@@ -85,6 +85,8 @@ trait Has_Fields {
 
     public function update_sub_field (string|array $selector, mixed $value) {
 
+        $this->touch_record();
+
         return $this->field_call('update_sub', $selector, $value);
 
     }
@@ -97,11 +99,15 @@ trait Has_Fields {
 
     public function field_add_row (string $selector, array|false $row = false) {
 
+        $this->touch_record();
+
         return $this->field_call('add_row', $selector, $row);
 
     }
 
     public function field_add_sub_row (string $selector, array|false $row = false) {
+
+        $this->touch_record();
 
         return $this->field_call('add_sub_row', $selector, $row);
 
@@ -109,11 +115,15 @@ trait Has_Fields {
 
     public function field_update_row (string $selector, int $i = 1, array|false $row = false) {
 
+        $this->touch_record();
+
         return $this->field_call('update_row', $selector, $i, $row);
 
     }
 
     public function field_update_sub_row (string $selector, int $i = 1, array|false $row = false) {
+
+        $this->touch_record();
 
         return $this->field_call('update_sub_row', $selector, $i, $row);
 
@@ -121,11 +131,15 @@ trait Has_Fields {
 
     public function field_delete_row (string $selector, int $i = 1) {
 
+        $this->touch_record();
+
         return $this->field_call('delete_row', $selector, $i);
 
     }
 
     public function field_delete_sub_row (string $selector, int $i = 1) {
+
+        $this->touch_record();
 
         return $this->field_call('delete_sub_row', $selector, $i);
 
@@ -140,6 +154,8 @@ trait Has_Fields {
     }
 
     public function delete_sub_field (string|array $selector) {
+
+        $this->touch_record();
 
         return $this->field_call('delete_sub', $selector);
 

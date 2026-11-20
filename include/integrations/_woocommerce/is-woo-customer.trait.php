@@ -17,6 +17,8 @@ trait Is_Woo_Customer {
 
     public function __call ($name, $arguments) {
 
+        if (preg_match('/^(set|add|update|delete|remove)_/', (string) $name)) $this->touch_record();
+
         return call_user_func_array([$this->get_customer(), $name], $arguments);
     
     }

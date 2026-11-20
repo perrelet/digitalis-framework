@@ -53,6 +53,8 @@ trait Has_WP_Post {
 
     public function set_wp_post ($wp_post) {
 
+        $this->touch_record();
+
         $wp_post->ID = $this->get_id();
         $this->wp_post = $wp_post;
         return $this;
@@ -376,6 +378,8 @@ trait Has_WP_Post {
 
     public function stage_thumbnail_id (int $attachment_id) {
 
+        $this->touch_record();
+
         $this->staged_thumbnail_id = $attachment_id;
         $this->dirty               = true;
 
@@ -424,6 +428,8 @@ trait Has_WP_Post {
     // Written by save(), where set_terms() writes at once.
     public function stage_terms (array $term_ids, string $taxonomy) {
 
+        $this->touch_record();
+
         $this->staged_terms[$taxonomy] = array_map('intval', $term_ids);
         $this->dirty                   = true;
 
@@ -446,12 +452,16 @@ trait Has_WP_Post {
     }
 
     public function set_terms (string|int|array $terms, string $taxonomy = 'post_tag', bool $append = false) {
+
+        $this->touch_record();
     
         return wp_set_post_terms($this->wp_post->ID, $terms, $taxonomy, $append);
     
     }
 
     public function add_terms (string|int|array $terms, string $taxonomy = 'post_tag') {
+
+        $this->touch_record();
     
         return $this->set_terms($terms, $taxonomy, true);
     

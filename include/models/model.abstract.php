@@ -468,7 +468,7 @@ class Model extends Factory {
 
             if (!property_exists($this, $property) || in_array($property, ['id', 'is_new'], true)) continue;
 
-            if ($this->is_new && is_object($this->$property)) $this->$property = clone $this->$property;
+            if ($this->is_new)                                $this->$property = is_object($this->$property) ? clone $this->$property : $this->$property;
             elseif (array_key_exists($property, $defaults))   $this->$property = $defaults[$property];
 
         }

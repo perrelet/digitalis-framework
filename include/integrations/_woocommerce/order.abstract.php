@@ -112,21 +112,24 @@ class Order extends Model {
 
         add_action($hook, $watch);
 
+        $was_new = $this->is_new();
+
         try {
 
-            if ($this->is_new()) $this->get_record()->state['match'] = fn ($id) => $id && ((int) $order->get_id() === (int) $id);
+            if ($was_new) $this->get_record()->state['match'] = fn ($id) => $id && ((int) $order->get_id() === (int) $id);
 
-            $id = $this->is_new() ? Model_Record::insert($this->get_record(), fn () => $order->save()) : $order->save();
+            $id = $was_new ? Model_Record::insert($this->get_record(), fn () => $order->save()) : $order->save();
 
         } finally {
 
             remove_action($hook, $watch);
+            unset($this->get_record()->state['match']);
 
         }
 
         if (!$saved) return new WP_Error('not_saved', 'The order was not saved.');
 
-        if ($this->is_new()) {
+        if ($was_new) {
 
             $this->is_new = false;
             $this->id     = $id;

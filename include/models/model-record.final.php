@@ -16,9 +16,8 @@ final class Model_Record {
     public bool  $kept    = true;
     public array $rows    = [];
 
-    // Each unbound insert in flight, by storage; a WooCommerce object matches by its own id, a WordPress row binds at its first hook.
+    // Each insert in flight, by storage. A WooCommerce object matches by its own id; a WordPress row has no hook that names only it (any write inside the insert fires the same ones), so a find of that storage reads a fresh view outside the map until the insert returns.
     private static array $inserting = [];
-    private static bool  $listening = false;
 
     public function __construct (public readonly string $storage, public readonly int $site) {}
 
@@ -27,7 +26,9 @@ final class Model_Record {
         if ($record = Registry::get('record', $storage . '@' . get_current_blog_id(), $id)) return $record;
 
         foreach (self::$inserting[$storage] ?? [] as $inserting) if (!$inserting->bound && ($match = $inserting->state['match'] ?? null) && $match($id)) {
-            $inserting->bound = true;
+            $inserting->bound           = true;
+            $inserting->state['id']     = $id;
+            $inserting->state['is_new'] = false;
             $inserting->keep($id);
             return $inserting;
         }
@@ -37,8 +38,6 @@ final class Model_Record {
     }
 
     public static function insert (self $record, callable $write) : mixed {
-
-        self::listen();
 
         self::$inserting[$record->storage][] = $record;
 
@@ -60,20 +59,6 @@ final class Model_Record {
         foreach (self::$inserting[$storage] ?? [] as $inserting) if (!$inserting->bound) return true;
 
         return false;
-
-    }
-
-    public static function bind_insert (string $storage, int|string $id) : void {
-
-        $stack  = self::$inserting[$storage] ?? [];
-        $record = $stack ? end($stack) : null;
-
-        if (!$record || $record->bound || !$id || isset($record->state['match'])) return;
-
-        $record->bound = true;
-        $record->keep($id);
-
-        if ($view = reset($record->views)) (function () use ($id) { $this->id = $id; $this->hydrate_instance(); })->call($view);
 
     }
 
@@ -106,7 +91,7 @@ final class Model_Record {
     // The one guard every reload goes through: a record mid-insert or holding edits is left alone, and a held edit is reported once per class.
     public function reload_guarded () : void {
 
-        if (self::in_flight($this)) return;
+        if (self::in_flight($this) || !empty($this->state['deleted'])) return;
 
         $view = reset($this->views);
 
@@ -141,17 +126,6 @@ final class Model_Record {
 
     }
 
-    private static function listen () : void {
-
-        if (self::$listening) return;
-        self::$listening = true;
-
-        foreach (['clean_post_cache' => 0, 'set_object_terms' => 0, 'added_post_meta' => 1] as $hook => $at) add_action($hook, fn (...$args) => self::bind_insert('post', (int) $args[$at]), PHP_INT_MIN, 4);
-        add_action('transition_post_status', fn ($new, $old, $post) => self::bind_insert('post', (int) ($post->ID ?? 0)), PHP_INT_MIN, 3);
-        foreach (['create_term', 'edit_terms'] as $hook) add_action($hook, fn ($term_id) => self::bind_insert('term', (int) $term_id), PHP_INT_MIN, 1);
-
-    }
-
     public static function follow_deletes () : void {
 
         add_action('deleted_post',    fn ($id) => self::mark_deleted('post', (int) $id), PHP_INT_MAX, 1);
@@ -159,6 +133,7 @@ final class Model_Record {
         add_action('delete_term',     fn ($id) => self::mark_deleted('term', (int) $id), PHP_INT_MAX, 1);
         add_action('deleted_comment', fn ($id) => self::mark_deleted('comment', (int) $id), PHP_INT_MAX, 1);
         add_action('woocommerce_delete_order', fn ($id) => self::mark_deleted('wc_order', (int) $id), PHP_INT_MAX, 1);
+        add_action('woocommerce_delete_subscription', fn ($id) => self::mark_deleted('wc_order', (int) $id), PHP_INT_MAX, 1);
         add_action('woocommerce_delete_order_item', fn ($id) => self::mark_deleted('wc_order_item', (int) $id), PHP_INT_MAX, 1);
 
     }

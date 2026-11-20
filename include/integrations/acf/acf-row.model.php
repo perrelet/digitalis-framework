@@ -288,6 +288,10 @@ class ACF_Row extends Model {
 
         // Sibling rows shift indexes after deletion — drop this instance's cache slot; cached siblings are now stale and should be re-queried.
         Model_Record::mark_deleted(static::get_record_storage(), $this->id);
+
+        // The next row moves into this index: free the id so a find of it builds a fresh view.
+        Registry::remove(self::INSTANCE_KIND, static::class, $this->id);
+        Registry::remove('record', static::get_record_storage() . '@' . get_current_blog_id(), $this->id);
         $this->index = null;
 
         return $result;
