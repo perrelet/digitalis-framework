@@ -1,9 +1,10 @@
 <?php
 // The 1.0 script: rewrites a consumer tree from the 0.x forms to 1.0's and lists what it cannot rewrite.
-// `php bin/lattice-1.0.php CONSUMER_ROOT [--write]`. A dry run prints every rewrite, then the hand edits; --write applies the
+// `php bin/lattice-1.0.php CONSUMER_ROOT [--write] [--deps DIR]`. A dry run prints every rewrite, then the hand edits; --write applies the
 // rewrites to a clean git checkout and prints the same. Exit 0 when nothing is left by hand, 1 when hand edits remain, 2 on usage.
 // The walk stops at nested repositories, .gitmodules paths, vendor/ and node_modules/. Names resolve against the framework
 // tree beside this script; the shim's order, the constants and the legacy hooks are embedded, since compat/ leaves in 1.0.
+// An empty nested tree (an uninitialised submodule) is read for class ancestry from DIR/<its name>, default the root's siblings.
 PHP_SAPI === 'cli' || exit;
 if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
 
@@ -54,10 +55,14 @@ const LEAVING = [
 
 $root  = null;
 $write = false;
+$deps  = null;
+$args  = array_slice($argv, 1);
 
-foreach (array_slice($argv, 1) as $arg) {
-    if ($arg === '--write')              $write = true;
-    elseif (str_starts_with($arg, '--')) usage("Unknown option $arg");
+while (($arg = array_shift($args)) !== null) {
+    if ($arg === '--write')                    $write = true;
+    elseif ($arg === '--deps')                 $deps = array_shift($args) ?? usage('--deps needs a directory');
+    elseif (str_starts_with($arg, '--deps='))  $deps = substr($arg, 7);
+    elseif (str_starts_with($arg, '--'))       usage("Unknown option $arg");
     elseif ($root === null)              $root = $arg;
     else                                 usage('One consumer root only');
 }
@@ -66,6 +71,7 @@ if ($root === null) usage('No consumer root given');
 $real = realpath($root);
 if (!$real || !is_dir($real)) usage("Not a directory: $root");
 $root      = $real;
+$deps      = realpath($deps ?? dirname($root)) ?: usage("Not a directory: $deps");
 $framework = dirname(__DIR__);
 if (!is_dir("$framework/include")) usage("No include/ beside the script at $framework");
 
@@ -76,7 +82,7 @@ if ($write) {
 }
 
 function usage (string $message): never {
-    fwrite(STDERR, "$message\nUsage: php bin/lattice-1.0.php CONSUMER_ROOT [--write]\n");
+    fwrite(STDERR, "$message\nUsage: php bin/lattice-1.0.php CONSUMER_ROOT [--write] [--deps DIR]\n");
     exit(2);
 }
 
@@ -330,7 +336,7 @@ function rule_names_import (array $t, int $i, array $lines, array &$out, array &
 
     if ($brace === null) {
         for ($j = $first; $j < $end; $j++) {
-            if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING])) continue;
+            if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
             if (tok_text($t[sig($t, $j, -1)]) === 'as' || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
             [$new, $reason] = rewrite_name('\\' . ltrim($t[$j][1], '\\'));
             if ($reason !== null) { $hand[] = [$lines[$j], $reason]; continue; }
@@ -441,10 +447,222 @@ function markdown_lines (string $source): array {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Render
+
+function class_index (string $root, string $deps, string $framework): array {
+    $index = [];
+    $seen  = [];
+    $files = [];
+    $walk  = function (string $dir) use (&$walk, &$files, &$seen, $deps): void {
+        if (isset($seen[realpath($dir)])) return;
+        $seen[realpath($dir)] = true;
+        foreach (scandir($dir) as $entry) {
+            if ($entry === '.' || $entry === '..' || $entry === '.git' || $entry === 'vendor' || $entry === 'node_modules') continue;
+            $path = "$dir/$entry";
+            if (is_dir($path)) {
+                $empty = !array_diff(scandir($path), ['.', '..', '.git']);
+                if ($empty && is_dir("$deps/$entry")) $walk("$deps/$entry");
+                elseif (!$empty) $walk($path);
+            } elseif (str_ends_with($entry, '.php')) {
+                $files[] = $path;
+            }
+        }
+    };
+    $walk($root);
+    $walk("$framework/include");
+    foreach ($files as $file) {
+        $t    = @token_get_all(file_get_contents($file));
+        $ns   = '';
+        $uses = [];
+        foreach ($t as $i => $tok) {
+            if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) { $ns = $t[sig($t, $i, 1)][1]; $uses = []; }
+            if (is_tok($tok, [T_USE]) && is_tok($t[sig($t, $i, -1)] ?? null, [T_OPEN_TAG]) || is_tok($tok, [T_USE]) && in_array(tok_text($t[sig($t, $i, -1)] ?? ''), [';', '}'], true)) {
+                for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{'; $j = sig($t, $j, 1)) {
+                    if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
+                    $full  = ltrim($t[$j][1], '\\');
+                    $alias = is_tok($t[sig($t, $j, 1)] ?? null, [T_AS]) ? tok_text($t[sig($t, sig($t, $j, 1), 1)]) : substr(strrchr("\\$full", '\\'), 1);
+                    $uses[strtolower($alias)] = $full;
+                }
+            }
+            if (!is_tok($tok, [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM]) || is_tok($t[sig($t, $i, -1)] ?? null, [T_DOUBLE_COLON, T_NEW])) continue;
+            $j = sig($t, $i, 1);
+            if (!is_tok($t[$j] ?? null, [T_STRING])) continue;
+            $name   = ($ns ? "$ns\\" : '') . $t[$j][1];
+            $parent = null;
+            $k = sig($t, $j, 1);
+            if (is_tok($t[$k] ?? null, [T_EXTENDS])) $parent = canonical_class(qualify(tok_text($t[sig($t, $k, 1)]), $ns, $uses));
+            $index[strtolower($name)] ??= [$name, $parent];
+        }
+    }
+    return $index;
+}
+
+function qualify (string $name, string $ns, array $uses): string {
+    if ($name[0] === '\\') return substr($name, 1);
+    $first = strtolower(strstr($name, '\\', true) ?: $name);
+    if (in_array(strtolower($name), ['self', 'static', 'parent'], true)) return strtolower($name);
+    if (isset($uses[$first])) return $uses[$first] . substr($name, strlen($first));
+    return ($ns ? "$ns\\" : '') . $name;
+}
+
+function canonical_class (string $name): string {
+    [$new] = rewrite_name('\\' . $name);
+    return ltrim($new ?? $name, '\\');
+}
+
+// true, false, or null when the ancestry leaves every indexed tree before it ends.
+function is_view (?string $class, array $index): ?bool {
+    for ($hops = 0; $class !== null && $hops < 40; $hops++) {
+        if (strtolower($class) === 'lattice\view') return true;
+        if (!isset($index[strtolower($class)])) return null;
+        $class = $index[strtolower($class)][1];
+    }
+    return false;
+}
+
+// Class names something swaps through lattice.class (or its legacy name), from every tree in DIR and the consumer.
+function swapped_classes (array $trees): array {
+    $swapped = [];
+    foreach ($trees as $tree) {
+        $it = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(new RecursiveDirectoryIterator($tree, FilesystemIterator::SKIP_DOTS), fn ($f) => !in_array($f->getFilename(), ['.git', 'vendor', 'node_modules'], true)));
+        foreach ($it as $file) {
+            if ($file->getExtension() !== 'php') continue;
+            $source = file_get_contents($file->getPathname());
+            if (!str_contains($source, 'Class/') && !str_contains($source, 'lattice.class.')) continue;
+            if (!preg_match_all('#[\'"](?:Digitalis/Class/|lattice\.class\.)([A-Za-z0-9_./\\\\]+)[\'"]#', $source, $m)) continue;
+            foreach ($m[1] as $tail) {
+                $tail = preg_replace('#^(Digitalis|lattice)[/.]#i', 'Lattice/', $tail);
+                $swapped[sanitize_hook($tail)] = true;
+            }
+        }
+    }
+    return $swapped;
+}
+
+function call_args (array $t, int $open): array {
+    $args  = [];
+    $depth = 0;
+    $start = $open + 1;
+    for ($i = $open; $i < count($t); $i++) {
+        $text = tok_text($t[$i]);
+        if (in_array($text, ['(', '[', '{'], true) || is_tok($t[$i], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) $depth++;
+        if (in_array($text, [')', ']', '}'], true)) {
+            $depth--;
+            if ($depth === 0) { if (trim(tokens_text($t, $start, $i - 1, [])) !== '') $args[] = [$start, $i - 1]; return [$args, $i]; }
+        }
+        if ($text === ',' && $depth === 1) { $args[] = [$start, $i - 1]; $start = $i + 1; }
+    }
+    return [$args, count($t) - 1];
+}
+
+function tokens_text (array $t, int $from, int $to, array $out): string {
+    $text = '';
+    for ($i = $from; $i <= $to; $i++) $text .= $out[$i] ?? tok_text($t[$i]);
+    return $text;
+}
+
+// A `:` that closes a ternary (`? a : b`, `?:`), not a `case` label or an alternative-syntax header.
+function is_ternary_else (array $t, int $colon): bool {
+    for ($depth = 0, $i = $colon - 1; $i >= 0; $i--) {
+        $text = tok_text($t[$i]);
+        if (in_array($text, [')', ']'], true)) $depth++;
+        elseif (in_array($text, ['(', '['], true)) { if ($depth-- === 0) return false; }
+        elseif ($depth === 0 && in_array($text, [';', '{', '}'], true) || is_tok($t[$i], [T_OPEN_TAG, T_CASE, T_DEFAULT])) return false;
+        elseif ($depth === 0 && $text === '?') return true;
+    }
+    return false;
+}
+
+function rule_render (array $t, array $lines, array &$out, array &$rewrites, array &$hand, array $index, array $swapped): void {
+    $ns      = '';
+    $uses    = [];
+    $depth   = 0;
+    $classes = [];
+    $pending = null;
+    for ($i = 0; $i < count($t); $i++) {
+        $tok  = $t[$i];
+        $text = tok_text($tok);
+        if ($text === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) { $depth++; if ($pending !== null && $text === '{') { $classes[] = [$pending, $depth]; $pending = null; } }
+        if ($text === '}') { if ($classes && end($classes)[1] === $depth) array_pop($classes); $depth--; }
+        if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) { $ns = $t[sig($t, $i, 1)][1]; $uses = []; }
+        if (is_tok($tok, [T_USE]) && !$classes && tok_text($t[sig($t, $i, 1)] ?? '') !== '(') {
+            for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{'; $j = sig($t, $j, 1)) {
+                if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
+                $full  = ltrim($t[$j][1], '\\');
+                $alias = is_tok($t[sig($t, $j, 1)] ?? null, [T_AS]) ? tok_text($t[sig($t, sig($t, $j, 1), 1)]) : substr(strrchr("\\$full", '\\'), 1);
+                $uses[strtolower($alias)] = $full;
+            }
+        }
+        if (is_tok($tok, [T_CLASS, T_TRAIT]) && !is_tok($t[sig($t, $i, -1)] ?? null, [T_DOUBLE_COLON, T_NEW]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING])) {
+            $pending = ($ns ? "$ns\\" : '') . $t[sig($t, $i, 1)][1];
+        }
+
+        if (is_tok($tok, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE]) && preg_match('/::render\b/', $text)) {
+            $hand[] = [$lines[$i], "a string callable to render ($text): build the view with new, resolving the class with Call::get_class_name() if it is swapped"];
+            continue;
+        }
+        if (is_tok($tok, [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED]) && preg_match('/(^|\\\\)Call$/', $text) && tok_text($t[sig($t, $i, 1)] ?? '') === '::' && in_array(strtolower(tok_text($t[sig($t, sig($t, $i, 1), 1)] ?? '')), ['static', 'static_array'], true)) {
+            [$args] = call_args($t, sig($t, sig($t, sig($t, $i, 1), 1), 1));
+            if (isset($args[1]) && literal_value($t[sig($t, $args[1][0] - 1, 1)] ?? null) === 'render') $hand[] = [$lines[$i], "Call::static(..., 'render', ...): build the view with new, resolving the class with Call::get_class_name()"];
+            continue;
+        }
+
+        if (!is_tok($tok, [T_DOUBLE_COLON]) || tok_text($t[sig($t, $i, 1)] ?? '') !== 'render' || tok_text($t[sig($t, sig($t, $i, 1), 1)] ?? '') !== '(') continue;
+        $recv = sig($t, $i, -1);
+        $open = sig($t, sig($t, $i, 1), 1);
+        $line = $lines[$recv];
+        $written = tok_text($t[$recv]);
+        $current = $classes ? end($classes)[0] : null;
+
+        if (is_tok($t[$recv], [T_VARIABLE]) || $written === ')' || $written === '}') { $hand[] = [$line, "$written::render(): build the view with new"]; continue; }
+        $keyword = strtolower($written);
+        if (is_tok($t[$recv], [T_STATIC]) || $keyword === 'self' || $keyword === 'parent') {
+            $class = $keyword === 'parent' ? ($current !== null ? ($index[strtolower($current)][1] ?? null) : null) : $current;
+            $new_class = $keyword === 'parent' ? null : $keyword;
+        } else {
+            $class = canonical_class(qualify($written, $ns, $uses));
+            $new_class = $out[$recv] ?? $written;
+        }
+        $view = is_view($class, $index);
+        if ($view === false) continue;
+        if ($view === null) { $hand[] = [$line, "$written::render(): its ancestry leaves every tree the script can read (pass --deps): rewrite it by hand if it is a View"]; continue; }
+        if ($new_class === null) { $hand[] = [$line, "parent::render() on a View: build the parent's view with new"]; continue; }
+
+        [$args, $close] = call_args($t, $open);
+        $before = sig($t, $recv, -1);
+        $after  = sig($t, $close, 1);
+        $second = isset($args[1]) ? strtolower(trim(tokens_text($t, $args[1][0], $args[1][1], $out))) : 'true';
+        $params = isset($args[0]) ? trim(tokens_text($t, $args[0][0], $args[0][1], $out)) : '';
+        $prev   = tok_text($t[$before] ?? '');
+        $controlled = false;
+        if ($prev === ')') {
+            for ($d = 0, $q = $before; $q >= 0; $q--) { $v = tok_text($t[$q]); if ($v === ')') $d++; if ($v === '(' && --$d === 0) break; }
+            $controlled = is_tok($t[sig($t, $q, -1)] ?? null, [T_IF, T_ELSEIF, T_FOREACH, T_FOR, T_WHILE]);
+        }
+        $label = $prev === ':' && !is_ternary_else($t, $before);
+        $statement = ($controlled || $label || in_array($prev, [';', '{', '}'], true) || is_tok($t[$before] ?? null, [T_OPEN_TAG, T_ELSE])) && (tok_text($t[$after] ?? '') === ';' || is_tok($t[$after] ?? null, [T_CLOSE_TAG]));
+
+        if (count($args) > 2 || !in_array($second, ['true', 'false'], true)) { $hand[] = [$line, "$written::render(...) with a print flag known only at run time: echo new $written(...) or (string) new $written(...)"]; continue; }
+        if ($second === 'false') $new = "(string) new $new_class($params)";
+        elseif ($statement)      $new = "echo new $new_class($params)";
+        else                     { $hand[] = [$line, "$written::render() prints and its result is used (" . (is_tok($t[$before] ?? null, [T_RETURN]) ? 'returned' : 'an expression') . "): print it with echo new, then return or use what you meant"]; continue; }
+
+        $out[$recv] = $new;
+        for ($k = $recv + 1; $k <= $close; $k++) $out[$k] = '';
+        $rewrites[] = [$line, 'render', preg_replace('/\s+/', ' ', "$written::render(" . substr($params, 0, 40) . (strlen($params) > 40 ? '...' : '') . ($second === 'false' ? ', false' : '') . ") -> " . substr($new, 0, strrpos($new, '(') ?: strlen($new)) . '(...)')];
+        if (isset($swapped[sanitize_hook((string) $class)])) {
+            $hand[] = [$line, "$written is swapped through lattice.class: resolve it first, \$class = Call::get_class_name($written::class), then new \$class(...)"];
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Run
 
 $files = consumer_files($root);
 $fired = fired_families($files);
+$index = class_index($root, $deps, $framework);
+$swapped = swapped_classes(array_merge([$root], glob("$deps/*", GLOB_ONLYDIR)));
 $total_rewrites = 0;
 $changed_files  = 0;
 $hand_edits     = [];
@@ -478,6 +696,7 @@ foreach ($files as $file) {
         rule_names($t, $lines, $out, $rewrites, $hand);
         rule_constants($t, $lines, $out, $rewrites, $hand);
         rule_hooks($t, $lines, $out, $rewrites, $hand, $fired);
+        rule_render($t, $lines, $out, $rewrites, $hand, $index, $swapped);
     }
 
     foreach ($hand as [$line, $reason]) $hand_edits[] = [$relative, $line, $reason];
