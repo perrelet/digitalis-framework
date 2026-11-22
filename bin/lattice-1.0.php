@@ -439,7 +439,7 @@ function fired_families (array $files): array {
 
 function markdown_lines (string $source): array {
     $hits = [];
-    $patterns = ['/(?<![\w\\\\])\\\\?Digitalis\\\\{1,2}[A-Za-z_]/', '/\bDIGITALIS_(FRAMEWORK_[A-Z]+|LIBRARY_PATH)\b/', '#Digitalis/(Instantiate|Class|Post_Type|Taxonomy|DB/WPDB|Field_Group/Field|Form/Params)\b#'];
+    $patterns = ['/(?<![\w\\\\])\\\\?Digitalis\\\\{1,2}[A-Za-z_]/', '/\bDIGITALIS_(FRAMEWORK_[A-Z]+|LIBRARY_PATH)\b/', '#Digitalis/(Instantiate|Class|Post_Type|Taxonomy|DB/WPDB|Field_Group/Field|Form/Params)\b#', "/['\"]field['\"]\\s*=>\\s*[\\\\\\w]+::class/"];
     foreach (preg_split('/\R/', $source) as $n => $line) {
         foreach ($patterns as $pattern) if (preg_match($pattern, $line)) { $hits[] = $n + 1; break; }
     }
@@ -511,9 +511,9 @@ function canonical_class (string $name): string {
 }
 
 // true, false, or null when the ancestry leaves every indexed tree before it ends.
-function is_view (?string $class, array $index): ?bool {
+function is_a_class (?string $class, string $base, array $index): ?bool {
     for ($hops = 0; $class !== null && $hops < 40; $hops++) {
-        if (strtolower($class) === 'lattice\view') return true;
+        if (strtolower($class) === strtolower($base)) return true;
         if (!isset($index[strtolower($class)])) return null;
         $class = $index[strtolower($class)][1];
     }
@@ -623,7 +623,7 @@ function rule_render (array $t, array $lines, array &$out, array &$rewrites, arr
             $class = canonical_class(qualify($written, $ns, $uses));
             $new_class = $out[$recv] ?? $written;
         }
-        $view = is_view($class, $index);
+        $view = is_a_class($class, 'Lattice\\View', $index);
         if ($view === false) continue;
         if ($view === null) { $hand[] = [$line, "$written::render(): its ancestry leaves every tree the script can read (pass --deps): rewrite it by hand if it is a View"]; continue; }
         if ($new_class === null) { $hand[] = [$line, "parent::render() on a View: build the parent's view with new"]; continue; }
@@ -649,10 +649,211 @@ function rule_render (array $t, array $lines, array &$out, array &$rewrites, arr
 
         $out[$recv] = $new;
         for ($k = $recv + 1; $k <= $close; $k++) $out[$k] = '';
-        $rewrites[] = [$line, 'render', preg_replace('/\s+/', ' ', "$written::render(" . substr($params, 0, 40) . (strlen($params) > 40 ? '...' : '') . ($second === 'false' ? ', false' : '') . ") -> " . substr($new, 0, strrpos($new, '(') ?: strlen($new)) . '(...)')];
+        $rewrites[] = [$line, 'render', preg_replace('/\s+/', ' ', "$written::render(" . substr($params, 0, 40) . (strlen($params) > 40 ? '...' : '') . ($second === 'false' ? ', false' : '') . ") -> " . substr($new, 0, strpos($new, '(', strpos($new, 'new ')) ?: strlen($new)) . '(...)')];
         if (isset($swapped[sanitize_hook((string) $class)])) {
             $hand[] = [$line, "$written is swapped through lattice.class: resolve it first, \$class = Call::get_class_name($written::class), then new \$class(...)"];
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Fields
+
+// Each entry of the array opening at $open: first and last significant token, its literal key (if any) and where its value starts.
+function array_entries (array $t, int $open): array {
+    [$items] = call_args($t, $open);
+    $entries = [];
+    foreach ($items as [$from, $to]) {
+        $first = sig($t, $from - 1, 1);
+        $last  = sig($t, $to + 1, -1);
+        if ($first < 0 || $first > $to) continue;
+        $arrow = null;
+        for ($depth = 0, $k = $first; $k <= $last; $k++) {
+            $text = tok_text($t[$k]);
+            if (in_array($text, ['(', '[', '{'], true) || is_tok($t[$k], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) $depth++;
+            elseif (in_array($text, [')', ']', '}'], true)) $depth--;
+            elseif ($depth === 0 && is_tok($t[$k], [T_DOUBLE_ARROW])) { $arrow = $k; break; }
+        }
+        $keyed = $arrow !== null && sig($t, $first, 1) === $arrow;
+        $entries[] = ['from' => $first, 'to' => $last, 'key' => $keyed ? literal_value($t[$first]) : null, 'value' => $arrow !== null ? sig($t, $arrow, 1) : $first];
+    }
+    return $entries;
+}
+
+function entry_named (array $entries, string $key): ?array {
+    foreach ($entries as $entry) if ($entry['key'] === $key) return $entry;
+    return null;
+}
+
+function class_constant (array $t, array $entry): ?int {
+    $v = $entry['value'];
+    if (!is_tok($t[$v], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) return null;
+    $colon = sig($t, $v, 1);
+    return tok_text($t[$colon]) === '::' && is_tok($t[sig($t, $colon, 1)], [T_CLASS]) && sig($t, $colon, 1) === $entry['to'] ? $v : null;
+}
+
+function drop_entry (array $t, array $entry, array &$out): void {
+    $comma = sig($t, $entry['to'], 1);
+    $last = in_array(tok_text($t[sig($t, $comma, 1)] ?? ''), [']', ')'], true);
+    if (tok_text($t[$comma]) === ',' && $last) {
+        $from = is_tok($t[$entry['from'] - 1], [T_WHITESPACE]) ? $entry['from'] - 1 : $entry['from'];
+        $to   = $comma;
+    } elseif (tok_text($t[$comma]) === ',') {
+        $from = $entry['from'];
+        $to   = is_tok($t[$comma + 1] ?? null, [T_WHITESPACE]) ? $comma + 1 : $comma;
+    } else {
+        $prev = sig($t, $entry['from'], -1);
+        $from = tok_text($t[$prev]) === ',' ? $prev : $entry['from'];
+        $to   = $entry['to'];
+    }
+    for ($k = $from; $k <= $to; $k++) $out[$k] = '';
+}
+
+function rule_fields (array $t, array $lines, array &$out, array &$rewrites, array &$hand, array $index): void {
+    $ns      = '';
+    $uses    = [];
+    $braces  = [];
+    $pending = null;
+    $init    = null;
+    $stack   = [];
+    $arrays  = [];
+    for ($i = 0; $i < count($t); $i++) {
+        $tok  = $t[$i];
+        $text = tok_text($tok);
+        if ($text === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) { $braces[] = $text === '{' ? ($pending ?? 'block') : 'block'; $pending = null; continue; }
+        if ($text === '}') { array_pop($braces); continue; }
+        if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) { $ns = $t[sig($t, $i, 1)][1]; $uses = []; }
+        if (is_tok($tok, [T_USE]) && !$braces || is_tok($tok, [T_USE]) && $braces === ['block'] && $ns !== '') {
+            for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{' && tok_text($t[$j]) !== '('; $j = sig($t, $j, 1)) {
+                if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
+                $full  = ltrim($t[$j][1], '\\');
+                $alias = is_tok($t[sig($t, $j, 1)] ?? null, [T_AS]) ? tok_text($t[sig($t, sig($t, $j, 1), 1)]) : substr(strrchr("\\$full", '\\'), 1);
+                $uses[strtolower($alias)] = $full;
+            }
+        }
+        if (is_tok($tok, [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM]) && !is_tok($t[sig($t, $i, -1)] ?? null, [T_DOUBLE_COLON])) $pending = 'class';
+        if (is_tok($tok, [T_FUNCTION])) $pending = 'fn';
+        if ($text === ';' && $pending === 'fn') $pending = null;
+        if ($text === ';' && $init === count($braces) && !$stack) $init = null;
+        // PHP allows no `new` in a property default or a class constant, so a field array there cannot become an object in place.
+        if (end($braces) === 'class' && !$stack && $pending === null && $init === null && is_tok($tok, [T_VARIABLE, T_CONST, T_CASE])) $init = count($braces);
+
+        $prev = sig($t, $i, -1);
+        if (is_tok($tok, [T_ATTRIBUTE])) { $stack[] = ['open' => $i, 'array' => false, 'start' => $i]; continue; }
+        if ($text === '[' || $text === '(') {
+            $is_array = $text === '[' ? !is_tok($t[$prev] ?? null, [T_VARIABLE, T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_CONSTANT_ENCAPSED_STRING]) && !in_array(tok_text($t[$prev] ?? ''), [']', ')', '}'], true) : is_tok($t[$prev] ?? null, [T_ARRAY]);
+            $stack[] = ['open' => $i, 'array' => $is_array, 'start' => $is_array && $text === '(' ? $prev : $i];
+            continue;
+        }
+        if (($text === ']' || $text === ')') && $stack) {
+            $frame = array_pop($stack);
+            if (!$frame['array']) continue;
+            $arrays[$frame['start']] = $frame + ['close' => $i, 'parent' => $stack ? end($stack)['start'] : null, 'init' => $init !== null, 'ns' => $ns, 'uses' => $uses];
+        }
+    }
+    if (!$arrays) return;
+
+    $class_of = function (int $tok, array $a) use ($t, $index): array {
+        $class = canonical_class(qualify(tok_text($t[$tok]), $a['ns'], $a['uses']));
+        return [is_a_class($class, 'Lattice\\Field', $index), is_a_class($class, 'Lattice\\Component\\Field_Group', $index)];
+    };
+    foreach ($arrays as &$a) {
+        $a['entries'] = array_entries($t, $a['open']);
+        $a['field']   = null;
+        if (($entry = entry_named($a['entries'], 'field')) && ($cls = class_constant($t, $entry)) !== null) {
+            [$field, $group] = $class_of($cls, $a);
+            if ($field || $group) $a['field'] = ['entry' => $entry, 'class' => $cls, 'is_field' => $field];
+            elseif ($field === null || $group === null) $hand[] = [$lines[$cls], tok_text($t[$cls]) . "::class under 'field': its ancestry leaves every tree the script can read (pass --deps): if it is a Field, build it with new " . tok_text($t[$cls]) . '([...])'];
+        }
+    }
+    unset($a);
+
+    $entry_holding = function (?int $parent, int $start) use ($arrays): ?array {
+        if ($parent === null || !isset($arrays[$parent])) return null;
+        foreach ($arrays[$parent]['entries'] as $entry) if ($entry['value'] === $start) return $entry;
+        return null;
+    };
+    $assigned_to = function (array $a) use ($t): ?string {
+        $eq = sig($t, $a['start'], -1);
+        if (tok_text($t[$eq] ?? '') !== '=') return null;
+        $q = sig($t, $eq, -1);
+        while (tok_text($t[$q] ?? '') === ']') { for ($d = 0; $q >= 0; $q--) { $v = tok_text($t[$q]); if ($v === ']') $d++; if ($v === '[' && --$d === 0) break; } $q = sig($t, $q, -1); }
+        return is_tok($t[$q] ?? null, [T_VARIABLE]) && $q !== sig($t, $eq, -1) ? $t[$q][1] : null;
+    };
+    $field_vars = [];
+    foreach ($arrays as $a) if ($a['field'] && ($var = $assigned_to($a)) !== null) $field_vars[$var] = true;
+
+    $rename_key = function (array $a) use ($t, $lines, &$out, &$rewrites, &$hand): void {
+        if (!($key = entry_named($a['entries'], 'key'))) return;
+        $name = entry_named($a['entries'], 'name');
+        $quote = tok_text($t[$key['from']])[0];
+        $out[$key['from']] = "{$quote}name{$quote}";
+        $pad = $t[$key['from'] + 1] ?? null;
+        if (is_tok($pad, [T_WHITESPACE]) && !isset($out[$key['from'] + 1]) && preg_match('/^  +$/', $pad[1])) $out[$key['from'] + 1] = substr($pad[1], 1);
+        if ($name === null) { $rewrites[] = [$lines[$key['from']], 'fields', "'key' -> 'name'"]; return; }
+        drop_entry($t, $name, $out);
+        $rewrites[] = [$lines[$key['from']], 'fields', "'key' -> 'name', its own 'name' dropped ('key' won at render)"];
+        $value = fn ($entry) => trim(tokens_text($t, $entry['value'], $entry['to'], []));
+        if ($value($key) !== $value($name)) $hand[] = [$lines[$key['from']], "a field carried 'key' (" . $value($key) . ") and 'name' (" . $value($name) . "): 'key' won at render and is kept as 'name'; check what read 'name' before render (Field_Group's defaults and field_params)"];
+    };
+    $wrap = function (array $a, string $before, string $after) use ($t, &$out): void {
+        $out[$a['start']] = $before;
+        for ($k = $a['start'] + 1; $k <= $a['open']; $k++) $out[$k] = '';
+        $out[$a['close']] = $after;
+    };
+
+    foreach ($arrays as $a) {
+        $line   = $lines[$a['start']];
+        $holder = $entry_holding($a['parent'], $a['start']);
+        $parent = $a['parent'] !== null ? ($arrays[$a['parent']] ?? null) : null;
+        $type   = $parent ? entry_named($parent['entries'], 'type') : null;
+
+        if ($holder && $holder['key'] === 'args' && $type && in_array(literal_value($t[$type['value']]), ['field', 'meta'], true) && $type['value'] === $type['to']) {
+            $filter = $entry_holding($parent['parent'], $parent['start'])['key'] ?? null;
+            if ($key = entry_named($a['entries'], 'key')) {
+                $value = literal_value($t[$key['value']]);
+                if ($value !== null && $value === $filter && $key['value'] === $key['to']) {
+                    drop_entry($t, $key, $out);
+                    $rewrites[] = [$lines[$key['from']], 'fields', "args 'key' => '$value' dropped (the filter's name)"];
+                } else {
+                    $hand[] = [$lines[$key['from']], "an admin table filter's args 'key' (" . trim(tokens_text($t, $key['value'], $key['to'], [])) . ") differs from its filter's name '$filter': 1.0 names the field after the filter, so rename the filter or move the key to its 'meta_key', then pass 'field' => new X([...])"];
+                    continue;
+                }
+            }
+            $others = array_filter($a['entries'], fn ($e) => !in_array($e['key'], ['field', 'key'], true));
+            if (!$a['field']) {
+                if ($others && !entry_named($a['entries'], 'field')) $hand[] = [$line, "an admin table filter's args with no 'field' (Input by default): pass 'field' => new \\Lattice\\Field\\Input([...]) holding them"];
+                continue;
+            }
+            $class = $out[$a['field']['class']] ?? tok_text($t[$a['field']['class']]);
+            if ($a['init']) { $hand[] = [$line, "an admin table filter's args in a property default, where PHP allows no new: move the filters into filters() and pass 'field' => new $class([...])"]; continue; }
+            drop_entry($t, $a['field']['entry'], $out);
+            $wrap($a, "['field' => new $class([", '])]');
+            $rewrites[] = [$line, 'fields', "args 'field' => $class::class -> 'field' => new $class([...])"];
+            continue;
+        }
+
+        if ($a['field']) {
+            if ($a['field']['is_field']) $rename_key($a);
+            $class = $out[$a['field']['class']] ?? tok_text($t[$a['field']['class']]);
+            if ($a['init']) { $hand[] = [$line, "'field' => $class::class in a property default or constant, where PHP allows no new: build the field list in a method (get_fields(), params()) as new $class([...])"]; continue; }
+            drop_entry($t, $a['field']['entry'], $out);
+            $wrap($a, "new $class([", '])');
+            $rewrites[] = [$line, 'fields', "['field' => $class::class, ...] -> new $class([...])"];
+            continue;
+        }
+
+        $call = sig($t, $a['start'], -1);
+        if (tok_text($t[$call] ?? '') === '(' && ($callee = sig($t, $call, -1)) >= 0) {
+            $before = sig($t, $callee, -1);
+            $recv   = is_tok($t[$before] ?? null, [T_NEW]) ? $callee : (strtolower(tok_text($t[$callee])) === 'render' && tok_text($t[$before] ?? '') === '::' ? sig($t, $before, -1) : null);
+            if ($recv !== null && is_tok($t[$recv], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED]) && $class_of($recv, $a)[0]) { $rename_key($a); continue; }
+        }
+
+        if (!entry_named($a['entries'], 'key') && !entry_named($a['entries'], 'name')) continue;
+        $in_list = $parent && $holder && $holder['key'] === null && array_filter($parent['entries'], fn ($e) => isset($arrays[$e['value']]) && $arrays[$e['value']]['field']);
+        $var     = $assigned_to($a);
+        if ($in_list || $var !== null && isset($field_vars[$var])) $hand[] = [$line, "a field array with no 'field' (Input by default) beside field arrays: build it as new \\Lattice\\Field\\Input([...]), its 'key' as 'name'"];
     }
 }
 
@@ -696,6 +897,7 @@ foreach ($files as $file) {
         rule_names($t, $lines, $out, $rewrites, $hand);
         rule_constants($t, $lines, $out, $rewrites, $hand);
         rule_hooks($t, $lines, $out, $rewrites, $hand, $fired);
+        rule_fields($t, $lines, $out, $rewrites, $hand, $index);
         rule_render($t, $lines, $out, $rewrites, $hand, $index, $swapped);
     }
 
