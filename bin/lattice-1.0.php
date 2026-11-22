@@ -439,7 +439,7 @@ function fired_families (array $files): array {
 
 function markdown_lines (string $source): array {
     $hits = [];
-    $patterns = ['/(?<![\w\\\\])\\\\?Digitalis\\\\{1,2}[A-Za-z_]/', '/\bDIGITALIS_(FRAMEWORK_[A-Z]+|LIBRARY_PATH)\b/', '#Digitalis/(Instantiate|Class|Post_Type|Taxonomy|DB/WPDB|Field_Group/Field|Form/Params)\b#', "/['\"]field['\"]\\s*=>\\s*[\\\\\\w]+::class/"];
+    $patterns = ['/(?<![\w\\\\])\\\\?Digitalis\\\\{1,2}[A-Za-z_]/', '/\bDIGITALIS_(FRAMEWORK_[A-Z]+|LIBRARY_PATH)\b/', '#Digitalis/(Instantiate|Class|Post_Type|Taxonomy|DB/WPDB|Field_Group/Field|Form/Params)\b#', "/['\"]field['\"]\\s*=>\\s*[\\\\\\w]+::class/", '/::(render|inst)\s*\(/i'];
     foreach (preg_split('/\R/', $source) as $n => $line) {
         foreach ($patterns as $pattern) if (preg_match($pattern, $line)) { $hits[] = $n + 1; break; }
     }
@@ -471,12 +471,24 @@ function class_index (string $root, string $deps, string $framework): array {
     $walk($root);
     $walk("$framework/include");
     foreach ($files as $file) {
-        $t    = @token_get_all(file_get_contents($file));
-        $ns   = '';
-        $uses = [];
+        $t       = @token_get_all(file_get_contents($file));
+        $ns      = '';
+        $uses    = [];
+        $depth   = 0;
+        $stack   = [];
+        $pending = null;
         foreach ($t as $i => $tok) {
+            $text = tok_text($tok);
+            if ($text === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) { $depth++; if ($pending !== null && $text === '{') { $stack[] = [$pending, $depth]; $pending = null; } }
+            if ($text === '}') { if ($stack && end($stack)[1] === $depth) array_pop($stack); $depth--; }
             if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) { $ns = $t[sig($t, $i, 1)][1]; $uses = []; }
-            if (is_tok($tok, [T_USE]) && is_tok($t[sig($t, $i, -1)] ?? null, [T_OPEN_TAG]) || is_tok($tok, [T_USE]) && in_array(tok_text($t[sig($t, $i, -1)] ?? ''), [';', '}'], true)) {
+            $body = $stack && end($stack)[1] === $depth ? end($stack)[0] : null;
+            if ($body !== null && is_tok($tok, [T_FUNCTION]) && strtolower(tok_text($t[sig($t, $i, 1)] ?? '')) === 'inst' && !preg_match('/^(lattice|digitalis)\\\\/', $body)) $index[$body][2] = true;
+            if (is_tok($tok, [T_USE]) && $body !== null) {
+                for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{'; $j = sig($t, $j, 1)) {
+                    if (is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING])) $index[$body][3][] = canonical_class(qualify($t[$j][1], $ns, $uses));
+                }
+            } elseif (is_tok($tok, [T_USE]) && !$stack && tok_text($t[sig($t, $i, 1)] ?? '') !== '(') {
                 for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{'; $j = sig($t, $j, 1)) {
                     if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
                     $full  = ltrim($t[$j][1], '\\');
@@ -491,7 +503,8 @@ function class_index (string $root, string $deps, string $framework): array {
             $parent = null;
             $k = sig($t, $j, 1);
             if (is_tok($t[$k] ?? null, [T_EXTENDS])) $parent = canonical_class(qualify(tok_text($t[sig($t, $k, 1)]), $ns, $uses));
-            $index[strtolower($name)] ??= [$name, $parent];
+            $index[strtolower($name)] ??= [$name, $parent, false, []];
+            $pending = strtolower($name);
         }
     }
     return $index;
@@ -858,6 +871,98 @@ function rule_fields (array $t, array $lines, array &$out, array &$rewrites, arr
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Life cycle
+
+// A trait's own uses are walked too; $seen stops a cycle.
+function own_inst (?string $class, array $index, array $seen = []): ?string {
+    for ($hops = 0; $class !== null && $hops < 40 && isset($index[$key = strtolower($class)]) && !isset($seen[$key]); $hops++) {
+        $seen[$key] = true;
+        if ($index[$key][2]) return $index[$key][0];
+        foreach ($index[$key][3] as $trait) if ($owner = own_inst($trait, $index, $seen)) return $owner;
+        $class = $index[$key][1];
+    }
+    return null;
+}
+
+function rule_lifecycle (array $t, array $lines, array &$out, array &$rewrites, array &$hand, array $index): void {
+    $ns      = '';
+    $uses    = [];
+    $depth   = 0;
+    $classes = [];
+    $pending = null;
+    for ($i = 0; $i < count($t); $i++) {
+        $tok  = $t[$i];
+        $text = tok_text($tok);
+        if ($text === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) { $depth++; if ($pending !== null && $text === '{') { $classes[] = [$pending, $depth]; $pending = null; } }
+        if ($text === '}') { if ($classes && end($classes)[1] === $depth) array_pop($classes); $depth--; }
+        if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) { $ns = $t[sig($t, $i, 1)][1]; $uses = []; }
+        if (is_tok($tok, [T_USE]) && !$classes && tok_text($t[sig($t, $i, 1)] ?? '') !== '(') {
+            for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{'; $j = sig($t, $j, 1)) {
+                if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
+                $full  = ltrim($t[$j][1], '\\');
+                $alias = is_tok($t[sig($t, $j, 1)] ?? null, [T_AS]) ? tok_text($t[sig($t, sig($t, $j, 1), 1)]) : substr(strrchr("\\$full", '\\'), 1);
+                $uses[strtolower($alias)] = $full;
+            }
+        }
+        if (is_tok($tok, [T_CLASS, T_TRAIT]) && !is_tok($t[sig($t, $i, -1)] ?? null, [T_DOUBLE_COLON, T_NEW]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING])) {
+            $pending = ($ns ? "$ns\\" : '') . $t[sig($t, $i, 1)][1];
+        }
+
+        if (is_tok($tok, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE]) && preg_match('/::inst\b/i', $text)) { $hand[] = [$lines[$i], "a string callable to inst ($text): use get_instance"]; continue; }
+        if (strtolower((string) literal_value($tok)) === 'inst' && tok_text($t[sig($t, $i, -1)] ?? '') === ',') { $hand[] = [$lines[$i], "a callable naming inst ($text): use get_instance"]; continue; }
+        if (!is_tok($tok, [T_DOUBLE_COLON])) continue;
+        $verb_at = sig($t, $i, 1);
+        $verb    = strtolower(tok_text($t[$verb_at] ?? ''));
+        if (!in_array($verb, ['inst', 'get_instance'], true) || tok_text($t[sig($t, $verb_at, 1)] ?? '') !== '(') continue;
+        $recv    = sig($t, $i, -1);
+        $open    = sig($t, $verb_at, 1);
+        $line    = $lines[$recv];
+        $written = tok_text($t[$recv]);
+        $shown   = $out[$recv] ?? $written;
+        $named   = is_tok($t[$recv], [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED]);
+        $current = $classes ? end($classes)[0] : null;
+        $keyword = strtolower($written);
+        $class   = match (true) {
+            is_tok($t[$recv], [T_STATIC]) || $keyword === 'self' => $current,
+            $keyword === 'parent'                               => $current !== null ? ($index[strtolower($current)][1] ?? null) : null,
+            $named                                              => canonical_class(qualify($written, $ns, $uses)),
+            default                                             => null,
+        };
+
+        if ($verb === 'inst') {
+            if ($owner = own_inst($class, $index)) { $hand[] = [$line, "$written::inst() reaches $owner's own inst(), so it is left as written: rename that method, or call get_instance() if the framework's find was meant"]; continue; }
+            $out[$verb_at] = 'get_instance';
+            $rewrites[] = [$line, 'lifecycle', "$written::inst() -> get_instance()"];
+        }
+
+        [$args] = call_args($t, $open);
+        $first  = $args ? sig($t, $args[0][0] - 1, 1) : -1;
+        $array  = null;
+        if (count($args) === 1 && (tok_text($t[$first]) === '[' || is_tok($t[$first], [T_ARRAY]))) {
+            $array_open = tok_text($t[$first]) === '[' ? $first : sig($t, $first, 1);
+            [$items, $array_close] = call_args($t, $array_open);
+            if ($array_close === sig($t, $args[0][1] + 1, -1)) $array = $items ? array_entries($t, $array_open) : [];
+        }
+
+        if ($array === null) continue;
+        if ($array === []) { $hand[] = [$line, "$written::$verb([]) is a bare find already: write $shown::get_instance()"]; continue; }
+        $file = count($array) === 1 && $array[0]['key'] === 'file' && $array[0]['value'] === $array[0]['to'] ? $t[$array[0]['value']] : null;
+        $hand[] = [$line, is_tok($file, [T_CONSTANT_ENCAPSED_STRING]) && is_a_class($class, 'Lattice\\Log', $index)
+            ? "$written::$verb([...]) passes a config, which get_instance() refuses in 1.0: the owner declares the log, $shown::declare({$file[1]});"
+            : "$written::$verb([...]) passes a config, which get_instance() refuses in 1.0: the owner makes it live with $shown::declare([...]) (a \$named class: declare('name', [...])), or create([...]) builds one nothing finds"];
+    }
+}
+
+// A field group's field hook acts on the arrays the Fields rule turns into objects, so its callback stops matching silently.
+function rule_field_hooks (array $t, array $lines, array &$hand): void {
+    foreach (hook_sites($t) as [$i, $function]) {
+        if (!in_array($function, ['add_filter', 'add_action', 'get_hooks'], true)) continue;
+        if (!in_array(literal_value($t[$i]), ['Digitalis/Field_Group/Field', 'lattice.field_group.field'], true)) continue;
+        $hand[] = [$lines[$i], "a callback on lattice.field_group.field: fields reach it as objects once the 'field' shorthand is new X([...]), so a callback that tests is_array(\$field) or edits \$field['...'] stops matching without an error; port it to the field object"];
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Run
 
 $files = consumer_files($root);
@@ -897,6 +1002,9 @@ foreach ($files as $file) {
         rule_names($t, $lines, $out, $rewrites, $hand);
         rule_constants($t, $lines, $out, $rewrites, $hand);
         rule_hooks($t, $lines, $out, $rewrites, $hand, $fired);
+        rule_field_hooks($t, $lines, $hand);
+        // Before Fields and Render: both blank whole ranges and rebuild them from $out, which would drop or resurrect a later rename.
+        rule_lifecycle($t, $lines, $out, $rewrites, $hand, $index);
         rule_fields($t, $lines, $out, $rewrites, $hand, $index);
         rule_render($t, $lines, $out, $rewrites, $hand, $index, $swapped);
     }
