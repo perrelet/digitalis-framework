@@ -5,6 +5,7 @@
 // The walk stops at nested repositories, .gitmodules paths, vendor/ and node_modules/. Names resolve against the framework
 // tree beside this script; the shim's order, the constants and the legacy hooks are embedded, since compat/ leaves in 1.0.
 // An empty nested tree (an uninitialised submodule) is read for class ancestry from DIR/<its name>, default the root's siblings.
+// What leaves the framework for the consumer to own (the theme chain, Can_Load, scss/) is copied from the framework repository at COPY_SOURCE.
 PHP_SAPI === 'cli' || exit;
 if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
 
@@ -104,7 +105,7 @@ function consumer_files (string $root): array {
             if (is_dir($path)) {
                 if ($entry === 'vendor' || $entry === 'node_modules' || isset($skip[$path]) || file_exists("$path/.git")) continue;
                 $walk($path);
-            } elseif (preg_match('/\.(php|md)$/', $entry)) {
+            } elseif (preg_match('/\.(php|md|scss)$/', $entry)) {
                 $files[] = $path;
             }
         }
@@ -166,9 +167,11 @@ function framework_names (string $framework): array {
 }
 
 [$CLASSES, $NAMESPACES] = framework_names($framework);
+$COPIED = [];
 
 function resolve_digitalis (string $rest): array {
-    global $CLASSES, $NAMESPACES;
+    global $CLASSES, $NAMESPACES, $COPIED;
+    if (isset($COPIED[strtolower($rest)])) return [$COPIED[strtolower($rest)], null];
     $leaving = array_change_key_case(LEAVING);
     if (isset($leaving[strtolower($rest)])) return [null, $leaving[strtolower($rest)]];
     $candidates = ["Lattice\\$rest"];
@@ -186,24 +189,26 @@ function resolve_flat_lattice (string $short): ?string {
 }
 
 function rewrite_name (string $written): array {
+    global $COPIED;
     $lead = str_starts_with($written, '\\') ? '\\' : '';
     $name = ltrim($written, '\\');
     if (preg_match('/^Digitalis\\\\(.+)$/', $name, $m)) {
         [$target, $reason] = resolve_digitalis($m[1]);
         return $target === null ? [null, $reason] : [$lead . $target, null];
     }
-    if (preg_match('/^Lattice\\\\([^\\\\]+)$/', $name, $m) && ($target = resolve_flat_lattice($m[1]))) return [$lead . $target, null];
+    if (preg_match('/^Lattice\\\\([^\\\\]+)$/', $name, $m) && ($target = $COPIED[strtolower($m[1])] ?? resolve_flat_lattice($m[1]))) return [$lead . $target, null];
     return [$written, null];
 }
 
 const NAME_IN_TEXT = '/(?<![\w\\\\])(\\\\{0,2})(Digitalis|Lattice)(\\\\{1,2})([A-Za-z_]\w*(?:\\\\{1,2}[A-Za-z_]\w*)*)/';
 
 function rewrite_names_in_text (string $text, array &$unresolved): string {
-    return preg_replace_callback(NAME_IN_TEXT, function ($m) use (&$unresolved) {
+    global $COPIED;
+    return preg_replace_callback(NAME_IN_TEXT, function ($m) use (&$unresolved, $COPIED) {
         $sep   = $m[3];
         $parts = preg_split('/\\\\{1,2}/', $m[4]);
         if ($m[2] === 'Lattice') {
-            $target = count($parts) === 1 ? resolve_flat_lattice($parts[0]) : null;
+            $target = count($parts) === 1 ? ($COPIED[strtolower($parts[0])] ?? resolve_flat_lattice($parts[0])) : null;
             return $target === null ? $m[0] : $m[1] . str_replace('\\', $sep, $target);
         }
         [$target, $reason] = resolve_digitalis(implode('\\', $parts));
@@ -503,7 +508,7 @@ function class_index (string $root, string $deps, string $framework): array {
             $parent = null;
             $k = sig($t, $j, 1);
             if (is_tok($t[$k] ?? null, [T_EXTENDS])) $parent = canonical_class(qualify(tok_text($t[sig($t, $k, 1)]), $ns, $uses));
-            $index[strtolower($name)] ??= [$name, $parent, false, []];
+            $index[strtolower($name)] ??= [$name, $parent, false, [], $file];
             $pending = strtolower($name);
         }
     }
@@ -963,30 +968,301 @@ function rule_field_hooks (array $t, array $lines, array &$hand): void {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Copies
+
+// The stream's base, the same tree UPGRADING.md pastes from, whatever 0.x copy of the framework the consumer carries.
+const COPY_SOURCE = '45b11fc';
+
+const COPY_CLASSES = [
+    'Theme'                   => ['include/hooks/theme.abstract.php', 'lattice-copy/theme.abstract.php', null],
+    'Woocommerce_Theme'       => ['include/integrations/_woocommerce/woocommerce.theme.php', 'lattice-copy/~woocommerce/woocommerce-theme.abstract.php', 'Theme'],
+    'Woocommerce_Clean_Theme' => ['include/integrations/_woocommerce/woocommerce-clean.theme.php', 'lattice-copy/~woocommerce/woocommerce-clean-theme.abstract.php', 'Woocommerce_Theme'],
+    'Can_Load'                => ['include/deprecated/loaders.php', 'lattice-copy/can-load.trait.php', null],
+];
+
+function copy_failure (string $message): never {
+    fwrite(STDERR, "$message\n");
+    exit(2);
+}
+
+function copy_git (string $framework, array $args): string {
+    static $cache = [];
+    $run = function (array $args) use ($framework): array {
+        $proc = proc_open(array_merge(['git', '-C', $framework], $args), [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        $out  = stream_get_contents($pipes[1]);
+        stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        return [proc_close($proc), $out];
+    };
+    if (!$cache && $run(['cat-file', '-e', COPY_SOURCE . '^{commit}'])[0] !== 0) {
+        copy_failure('The copies come from the framework at ' . COPY_SOURCE . ", which the repository at $framework does not have: fetch its history (git fetch --unshallow) and run again");
+    }
+    $key = implode("\0", $args);
+    if (!isset($cache[$key])) {
+        [$rc, $cache[$key]] = $run($args);
+        if ($rc !== 0) copy_failure('git ' . implode(' ', $args) . " failed in $framework");
+    }
+    return $cache[$key];
+}
+
+function copy_edit (string &$text, string $from, string $to, string $what, array &$rewrites): void {
+    if (substr_count($text, $from) !== 1) copy_failure('The copy source at ' . COPY_SOURCE . " does not read `$from` exactly once: the Copies rule needs updating");
+    $at = strpos($text, $from);
+    $rewrites[] = [substr_count($text, "\n", 0, $at) + 1, 'copies', $what];
+    $text = substr_replace($text, $to, $at, strlen($from));
+}
+
+// loaders.php declares Can_Load first, then the Has_* traits that leave without a copy.
+function trait_source (string $source, string $name): string {
+    $t     = token_get_all($source);
+    $text  = '';
+    $found = false;
+    $depth = 0;
+    foreach ($t as $i => $tok) {
+        $text .= tok_text($tok);
+        if (!$found) { $found = is_tok($tok, [T_TRAIT]) && tok_text($t[sig($t, $i, 1)] ?? '') === $name; continue; }
+        if (tok_text($tok) === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) $depth++;
+        if (tok_text($tok) === '}' && --$depth === 0) return "$text\n";
+    }
+    copy_failure('The copy source at ' . COPY_SOURCE . " declares no trait $name");
+}
+
+// A framework class the copy names unqualified would resolve inside the copy's namespace, so each gets a use line.
+function class_copy (string $source, string $namespace, array $imports): array {
+    global $CLASSES;
+    $t = token_get_all($source);
+    foreach ($t as $i => $tok) {
+        if (!is_tok($tok, [T_STRING]) || isset(COPY_CLASSES[$tok[1]]) || !isset($CLASSES[strtolower("Lattice\\{$tok[1]}")])) continue;
+        if (is_tok($t[sig($t, $i, -1)] ?? null, [T_NEW, T_EXTENDS, T_IMPLEMENTS, T_INSTANCEOF]) || is_tok($t[sig($t, $i, 1)] ?? null, [T_DOUBLE_COLON])) $imports[] = $CLASSES[strtolower("Lattice\\{$tok[1]}")];
+    }
+    $imports = array_unique($imports);
+    sort($imports);
+    $rewrites = [];
+    $use = $imports ? "\n\n" . implode("\n", array_map(fn ($name) => "use $name;", $imports)) : '';
+    copy_edit($source, 'namespace Lattice;', "namespace $namespace;$use", "namespace Lattice -> $namespace" . ($imports ? '; use ' . implode(', ', $imports) : ''), $rewrites);
+    return [$source, $rewrites];
+}
+
+function scss_mask (string $line, bool $block): array {
+    $code  = $line;
+    $bare  = $line;
+    $quote = null;
+    for ($i = 0, $n = strlen($line); $i < $n; $i++) {
+        $c    = $line[$i];
+        $next = $line[$i + 1] ?? '';
+        if ($block) {
+            if ($c === '*' && $next === '/') { $code[$i] = $bare[$i] = $code[$i + 1] = $bare[$i + 1] = ' '; $i++; $block = false; }
+            elseif ($c !== "\n") $code[$i] = $bare[$i] = ' ';
+        } elseif ($quote !== null) {
+            if ($c === '\\' && $i + 1 < $n) $bare[$i++] = ' ';
+            elseif ($c === $quote) $quote = null;
+            $bare[$i] = ' ';
+        } elseif ($c === '"' || $c === "'") {
+            $quote    = $c;
+            $bare[$i] = ' ';
+        } elseif ($c === '/' && $next === '/') {
+            for (; $i < $n && $line[$i] !== "\n"; $i++) $code[$i] = $bare[$i] = ' ';
+        } elseif ($c === '/' && $next === '*') {
+            $code[$i] = $bare[$i] = $code[$i + 1] = $bare[$i + 1] = ' ';
+            $i++;
+            $block = true;
+        }
+    }
+    return [$code, $bare, $block];
+}
+
+function scss_imports (string $source): array {
+    $imports = [];
+    $strays  = [];
+    $block   = false;
+    $depth   = 0;
+    $offset  = 0;
+    foreach (preg_split('/(?<=\n)/', $source) as $n => $line) {
+        [$code, $bare, $block] = scss_mask($line, $block);
+        preg_match_all('/@(?:import|use|forward)\b[^;]*/', $bare, $statements, PREG_OFFSET_CAPTURE);
+        foreach ($statements[0] as [$statement, $at]) {
+            $nested_depth = $depth + substr_count($bare, '{', 0, $at) - substr_count($bare, '}', 0, $at);
+            preg_match_all('/([\'"])(.*?)\1/', substr($code, $at, strlen($statement)), $quoted, PREG_OFFSET_CAPTURE);
+            foreach ($quoted[2] as [$path, $from]) {
+                if (preg_match('#^\#\{\$digitalis_path\}/?scss/(.+)$#', $path, $m))                         $nested = false;
+                elseif (!str_starts_with($path, '#{') && preg_match('#(?:^|/)framework/scss/(.+)$#', $path, $m)) $nested = true;
+                else continue;
+                $imports[] = [$n + 1, $offset + $at + $from, strlen($path), $path, "lattice/$m[1]", $nested_depth > 0, $nested];
+                $code = substr_replace($code, str_repeat(' ', strlen($path)), $at + $from, strlen($path));
+            }
+        }
+        if (preg_match('/\$digitalis_(path|uri)\b/', $code)) $strays[] = $n + 1;
+        $depth  += substr_count($bare, '{') - substr_count($bare, '}');
+        $offset += strlen($line);
+    }
+    return [$imports, $strays];
+}
+
+// Every copy is decided from the whole tree before any file is rewritten, since the names rule aims each use at its copy.
+function plan_copies (string $root, array $files, array $index, string $framework): array {
+    global $COPIED;
+    $copies   = [];
+    $scss     = [];
+    $hand     = [];
+    $need     = [];
+    $comments = [];
+    $strings  = '';
+
+    foreach ($files as $file) {
+        if (!str_ends_with($file, '.php')) continue;
+        $relative = substr($file, strlen($root) + 1);
+        $source   = file_get_contents($file);
+        $t        = token_get_all($source);
+        $lines    = lines_of($t);
+        $skip     = (bool) preg_match('/^\s*namespace\s+Digitalis\s*[;{\\\\]/m', $source);
+        $ns       = '';
+        $ns_depth = 0;
+        $depth    = 0;
+        $import   = false;
+        foreach ($t as $i => $tok) {
+            $text = tok_text($tok);
+            if (is_tok($tok, [T_COMMENT, T_DOC_COMMENT])) { $comments[] = [$relative, $lines[$i], $text]; continue; }
+            if (is_tok($tok, [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE])) { $strings .= "$text\n"; continue; }
+            if ($skip) continue;
+            if ($text === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) $depth++;
+            if ($text === '}') $depth--;
+            if ($text === ';') $import = false;
+            if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) {
+                $ns       = $t[sig($t, $i, 1)][1];
+                $ns_depth = tok_text($t[sig($t, sig($t, $i, 1), 1)] ?? '') === '{' ? $depth + 1 : 0;
+            }
+            if (is_tok($tok, [T_USE]) && $depth === $ns_depth && tok_text($t[sig($t, $i, 1)] ?? '') !== '(') $import = true;
+            if (!is_tok($tok, [T_NAME_FULLY_QUALIFIED]) && !(is_tok($tok, [T_NAME_QUALIFIED]) && ($ns === '' || $import))) continue;
+            if (!preg_match('/^\\\\?(?:Digitalis|Lattice)\\\\(\w+)$/', $text, $m)) continue;
+            foreach (array_keys(COPY_CLASSES) as $short) if (strcasecmp($short, $m[1]) === 0) $need[$short] ??= [$relative, $lines[$i]];
+        }
+    }
+
+    $dirs = [];
+    foreach ($files as $file) {
+        if (!str_ends_with($file, '.scss')) continue;
+        $relative = substr($file, strlen($root) + 1);
+        $source   = file_get_contents($file);
+        [$imports, $strays] = scss_imports($source);
+        foreach ($strays as $line) $hand[$relative][] = [$line, 'names $digitalis_path or $digitalis_uri, which 1.0 no longer injects: point it at a path of the consumer\'s own'];
+        if (!$imports) continue;
+        $off = array_values(array_filter($comments, fn ($comment) => str_contains($comment[2], $relative)));
+        if ($off && !str_contains($strings, $relative)) {
+            foreach ($imports as $import) $hand[$relative][] = [$import[0], "imports the framework's scss/ ({$import[3]}), but the stylesheet's only enqueue is commented out ({$off[0][0]}:{$off[0][1]}): no copy made; delete the import, or re-aim it at a copy if the stylesheet comes back"];
+            continue;
+        }
+        $rewrites = [];
+        foreach ($imports as [$line, , , $old, $new, $in_selector, $nested]) {
+            $rewrites[] = [$line, 'scss', "$old -> $new"];
+            if ($in_selector) $hand[$relative][] = [$line, "an import inside a selector, re-aimed to $new: compile it and compare the output"];
+            if ($nested)      $hand[$relative][] = [$line, "an import that reached the framework's scss/ through a nested tree ($old), re-aimed to its own copy: compile it and compare the output"];
+        }
+        foreach (array_reverse($imports) as [, $at, $length, , $new]) $source = substr_replace($source, $new, $at, $length);
+        $scss[$relative] = [$source, $rewrites];
+        $dirs[dirname($relative) === '.' ? 'lattice' : dirname($relative) . '/lattice'] = true;
+    }
+    if ($dirs) {
+        $sources = preg_split('/\n/', trim(copy_git($framework, ['ls-tree', '-r', '--name-only', COPY_SOURCE, '--', 'scss/'])));
+        foreach (array_keys($dirs) as $dir) foreach ($sources as $from) $copies["$dir/" . substr($from, 5)] = [copy_git($framework, ['show', COPY_SOURCE . ":$from"]), [], COPY_SOURCE . ":$from"];
+    }
+
+    if ($need) {
+        foreach (array_keys($need) as $short) for ($parent = COPY_CLASSES[$short][2]; $parent !== null; $parent = COPY_CLASSES[$parent][2]) $need[$parent] ??= $need[$short];
+        $own  = array_flip($files);
+        $apps = [];
+        foreach ($index as $entry) if (isset($own[$entry[4] ?? '']) && is_a_class($entry[0], 'Lattice\App', $index)) $apps[substr($entry[0], 0, (int) strrpos($entry[0], '\\'))][] = $entry[4];
+        $plugin = null;
+        foreach (glob("$root/*.php") as $file) if (preg_match('/^[ \t\/*#]*Plugin Name:/mi', (string) file_get_contents($file, false, null, 0, 8192))) { $plugin = basename($file); break; }
+        $why = match (true) {
+            count($apps) !== 1 || array_key_first($apps) === '' => 'no one App subclass names the plugin\'s namespace (found: ' . (implode(', ', array_keys($apps)) ?: 'none') . ')',
+            count(array_unique(array_map('dirname', reset($apps)))) !== 1 => 'its App subclasses sit in more than one directory',
+            isset($need['Woocommerce_Clean_Theme']) && $plugin === null => 'no plugin file (a root .php with a Plugin Name header) to aim woo-clean.js at',
+            default => null,
+        };
+        [$at_file, $at_line] = reset($need);
+        if ($why !== null) {
+            $hand[$at_file][] = [$at_line, implode(', ', array_keys($need)) . " leave(s) in 1.0 and no copy is made: $why; copy from UPGRADING.md by hand"];
+        } else {
+            $namespace = array_key_first($apps) . '\\Lattice_Copy';
+            $base      = ltrim(substr(dirname(reset($apps)[0]), strlen($root)), '/');
+            $prefix    = $base === '' ? '' : "$base/";
+            foreach (COPY_CLASSES as $short => [$from, $to]) {
+                if (!isset($need[$short])) continue;
+                $COPIED[strtolower($short)] = "$namespace\\$short";
+                $source = copy_git($framework, ['show', COPY_SOURCE . ":$from"]);
+                if ($short === 'Can_Load') $source = trait_source($source, 'Can_Load');
+                [$text, $rewrites] = class_copy($source, $namespace, $short === 'Can_Load' ? ['Lattice\Hook'] : []);
+                $up = 'dirname(__DIR__, ' . substr_count("$prefix$to", '/') . ')';
+                if ($short === 'Woocommerce_Clean_Theme') {
+                    copy_edit($text, "LATTICE_PATH . 'templates/woocommerce-clean/'", "$up . '/templates/lattice-copy/woocommerce-clean/'", "the clean template from the consumer's templates/lattice-copy/", $rewrites);
+                    copy_edit($text, "LATTICE_URI . 'assets/js/woo-clean.js'", "plugin_dir_url($up . '/$plugin') . 'assets/js/lattice-copy/woo-clean.js'", "woo-clean.js from the consumer's assets/js/lattice-copy/", $rewrites);
+                }
+                if ($short === 'Can_Load') copy_edit($text, "apply_filters('Digitalis/Instantiate/' . ltrim(\$class_name, '\\\\'), true, \$file_path)", "Hook::filter(['lattice', 'instantiate', ltrim(\$class_name, '\\\\')], true, \$file_path)", 'Digitalis/Instantiate/{class} -> lattice.instantiate.{class}', $rewrites);
+                $copies[$prefix . $to] = [$text, $rewrites, COPY_SOURCE . ":$from"];
+            }
+            if (isset($need['Woocommerce_Clean_Theme'])) {
+                foreach (['templates/woocommerce-clean/myaccount/navigation.php' => 'templates/lattice-copy/woocommerce-clean/myaccount/navigation.php', 'assets/js/woo-clean.js' => 'assets/js/lattice-copy/woo-clean.js'] as $from => $to) {
+                    $copies[$to] = [copy_git($framework, ['show', COPY_SOURCE . ":$from"]), [], COPY_SOURCE . ":$from"];
+                }
+            }
+        }
+    }
+
+    foreach ($copies as $path => [$text]) {
+        if (!file_exists("$root/$path")) continue;
+        if (file_get_contents("$root/$path") !== $text) $hand[$path][] = [1, 'the copy from ' . COPY_SOURCE . ' would land here, but a different file is in the way: not overwritten; compare them by hand'];
+        unset($copies[$path]);
+    }
+    foreach ($hand as &$edits) usort($edits, fn ($a, $b) => $a[0] <=> $b[0]);
+    return [$copies, $scss, $hand];
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Run
 
 $files = consumer_files($root);
 $fired = fired_families($files);
 $index = class_index($root, $deps, $framework);
 $swapped = swapped_classes(array_merge([$root], glob("$deps/*", GLOB_ONLYDIR)));
+[$copies, $stylesheets, $planned] = plan_copies($root, $files, $index, $framework);
 $total_rewrites = 0;
 $changed_files  = 0;
+$copied_files   = 0;
 $hand_edits     = [];
 
-foreach ($files as $file) {
+foreach (array_merge($files, array_map(fn ($path) => "$root/$path", array_keys($copies))) as $file) {
     $relative = substr($file, strlen($root) + 1);
-    $source   = file_get_contents($file);
+    $copy     = $copies[$relative] ?? null;
+    $source   = $copy[0] ?? file_get_contents($file);
+    $rewrites = $copy ? [['-', 'copies', "new, from {$copy[2]}"], ...$copy[1]] : [];
+    $hand     = $planned[$relative] ?? [];
+    unset($planned[$relative]);
 
     if (str_ends_with($file, '.md')) {
         if ($hits = markdown_lines($source)) $hand_edits[] = [$relative, $hits[0], count($hits) . ' doc line(s) name forms the script rewrites in code (lines ' . implode(', ', $hits) . '): move them by hand'];
         continue;
     }
 
-    $t        = token_get_all($source);
-    $lines    = lines_of($t);
-    $out      = [];
-    $rewrites = [];
-    $hand     = [];
+    if (!str_ends_with($file, '.php')) {
+        [$new, $more] = $stylesheets[$relative] ?? [$source, []];
+        array_push($rewrites, ...$more);
+        foreach ($hand as [$line, $reason]) $hand_edits[] = [$relative, $line, $reason];
+        if (!$rewrites) continue;
+        echo "$relative\n";
+        foreach ($rewrites as [$line, $rule, $what]) printf("  %5s  %-9s %s\n", $line, $rule, $what);
+        $total_rewrites += count($more);
+        $copy ? $copied_files++ : $changed_files++;
+        if ($write) {
+            if ($copy && !is_dir(dirname($file))) mkdir(dirname($file), 0777, true);
+            file_put_contents($file, $new);
+        }
+        continue;
+    }
+
+    $t     = token_get_all($source);
+    $lines = lines_of($t);
+    $out   = [];
 
     $declares_digitalis = false;
     foreach ($t as $i => $tok) {
@@ -1012,23 +1288,25 @@ foreach ($files as $file) {
     foreach ($hand as [$line, $reason]) $hand_edits[] = [$relative, $line, $reason];
     if (!$rewrites) continue;
 
-    usort($rewrites, fn ($a, $b) => $a[0] <=> $b[0]);
+    usort($rewrites, fn ($a, $b) => ($a[0] === '-' ? 0 : $a[0]) <=> ($b[0] === '-' ? 0 : $b[0]));
     echo "$relative\n";
-    foreach ($rewrites as [$line, $rule, $what]) printf("  %5d  %-9s %s\n", $line, $rule, preg_replace('/\s+/', ' ', $what));
-    $total_rewrites += count($rewrites);
-    $changed_files++;
+    foreach ($rewrites as [$line, $rule, $what]) printf("  %5s  %-9s %s\n", $line, $rule, preg_replace('/\s+/', ' ', $what));
+    $total_rewrites += count(array_filter($rewrites, fn ($rewrite) => $rewrite[1] !== 'copies'));
+    $copy ? $copied_files++ : $changed_files++;
 
     if ($write) {
         $new = '';
         foreach ($t as $i => $tok) $new .= $out[$i] ?? tok_text($tok);
+        if ($copy && !is_dir(dirname($file))) mkdir(dirname($file), 0777, true);
         file_put_contents($file, $new);
     }
 }
+foreach ($planned as $relative => $hand) foreach ($hand as [$line, $reason]) $hand_edits[] = [$relative, $line, $reason];
 
 if ($hand_edits) {
     echo "\nHand edits\n";
     foreach ($hand_edits as [$relative, $line, $reason]) echo "  $relative:$line  $reason\n";
 }
 
-printf("\nRESULT: %d rewrite(s) in %d file(s)%s, %d hand edit(s)\n", $total_rewrites, $changed_files, $write ? ' written' : '', count($hand_edits));
+printf("\nRESULT: %d rewrite(s) in %d file(s)%s, %d file(s) copied, %d hand edit(s)\n", $total_rewrites, $changed_files, $write ? ' written' : '', $copied_files, count($hand_edits));
 exit($hand_edits ? 1 : 0);
