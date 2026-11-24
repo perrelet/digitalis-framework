@@ -909,7 +909,7 @@ abstract class Iterator extends Singleton {
 
         echo "<div class='lattice'>"; // the token scope: admin-tokens.css styles nothing outside it
 
-        Iterator_UI::render($ui_options);
+        echo new Iterator_UI($ui_options);
 
         echo "</div>";
 

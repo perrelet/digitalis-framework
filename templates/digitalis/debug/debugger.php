@@ -31,7 +31,7 @@
             </code>
         </div>
         <?php foreach ($values as $i => $value) {
-            Lattice\Debug_Code_Block::render([
+            echo new Lattice\Debug_Code_Block([
                 'label' => $arg_names[$i] ?? false,
                 'code'  => $value,
             ]);

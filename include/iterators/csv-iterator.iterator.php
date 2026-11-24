@@ -307,7 +307,7 @@ abstract class CSV_Iterator extends Iterator {
             $fields[] = $this->get_submit_field();
 
             echo "<div class='lattice'>";
-            Form::render([
+            echo new Form([
                 'classes' => ['iterator-panel', 'intake'],
                 'action'  => $_SERVER['REQUEST_URI'],
                 'method'  => 'post',
@@ -321,7 +321,7 @@ abstract class CSV_Iterator extends Iterator {
         } else {
 
             echo "<div class='lattice'><div class='iterator-panel csv-info'>";
-            Table::render([
+            echo new Table([
                 'rows'      => $this->get_csv_info_rows(),
                 'first_row' => false,
                 'first_col' => true,

@@ -177,7 +177,9 @@ class Route extends Registrant {
 
     public function render_view (string $view, array $params) {
 
-        return call_user_func("{$view}::render", $params, false);
+        $class = Call::get_class_name($view);
+
+        return (string) new $class($params);
 
     }
 

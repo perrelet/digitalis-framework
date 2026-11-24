@@ -50,7 +50,7 @@ abstract class Archive extends Component {
 
             if ($controls = $this->get_archive_controls()) {
 
-                Field_Group::render([
+                echo new Field_Group([
                     'fields'    => $controls,
                     'id'        => "{$this['id']}-controls",
                     'classes'   => [

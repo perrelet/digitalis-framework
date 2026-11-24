@@ -49,7 +49,7 @@ abstract class Users_Table extends Screen_Table {
 
     public function render_filter_submit () {
 
-        \Lattice\Field\Input::render([
+        echo new \Lattice\Field\Input([
             'type'    => 'submit',
             'value'   => 'Filter',
             'classes' => ['button'],

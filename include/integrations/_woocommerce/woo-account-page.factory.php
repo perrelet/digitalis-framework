@@ -392,7 +392,16 @@ class Woo_Account_Page extends Registrant {
 
             $this->render_before();
 
-            $view ? call_user_func("{$view}::render") : $this->render();
+            if ($view) {
+
+                $class = Call::get_class_name($view);
+                echo new $class();
+
+            } else {
+
+                $this->render();
+
+            }
 
             $this->render_after();
 

@@ -64,13 +64,6 @@ abstract class View implements \ArrayAccess {
 
     }
 
-    public static function render (mixed $params = [], bool $print = true) {
-
-        $class_name = Call::get_class_name(static::class);
-        return (new $class_name($params))->print(!$print);
-
-    }
-
     public static function get_defaults () {
 
         return static::get_inherited_prop('defaults', static::get_merge_keys());

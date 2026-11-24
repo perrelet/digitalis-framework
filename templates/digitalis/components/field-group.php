@@ -5,7 +5,8 @@
         if ($field instanceof Lattice\View) {
             $field->print();
         } else {
-            Lattice\Call::static($field['field'], 'render', $field);
+            $field_class = Lattice\Call::get_class_name($field['field']);
+            echo new $field_class($field);
         }
     } ?>
 <?= $element->close() ?>

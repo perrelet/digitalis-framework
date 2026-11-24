@@ -234,7 +234,9 @@ class ACF_Block extends Registrant {
 
         }
 
-        $html = $view ? call_user_func("{$view}::render", $params, false) : $this->view($params);
+        if ($view) $view = Call::get_class_name($view);
+
+        $html = $view ? (string) new $view($params) : $this->view($params);
 
         if ($is_preview) {
 

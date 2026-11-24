@@ -296,7 +296,7 @@ abstract class Admin_Table extends Feature {
 
                 if ($terms) foreach ($terms as $term) $options[$term->term_id] = $term->name;
     
-                \Lattice\Field\Select_Nice::render([
+                echo new \Lattice\Field\Select_Nice([
                     'key'     => $filter['name'],
                     'wrap'    => false,
                     'options' => $options,
@@ -321,20 +321,22 @@ abstract class Admin_Table extends Feature {
     public function render_meta_filter ($filter) {
 
         $field_class = $filter['args']['field'];
-    
-        $call = $field_class . "::render";
 
-        if (is_callable($call)) call_user_func($call, $filter['args']);
+        if (View::class_error($field_class)) return;
+
+        $class = Call::get_class_name($field_class);
+        echo new $class($filter['args']);
     
     }
 
     public function render_field_filter ($filter) {
 
         $field_class = $filter['args']['field'];
-    
-        $call = $field_class . "::render";
 
-        if (is_callable($call)) call_user_func($call, $filter['args']);
+        if (View::class_error($field_class)) return;
+
+        $class = Call::get_class_name($field_class);
+        echo new $class($filter['args']);
     
     }
 

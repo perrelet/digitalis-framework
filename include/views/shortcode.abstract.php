@@ -31,7 +31,7 @@ abstract class Shortcode extends Registrant {
 
         }
 
-        $class    = Call::get_class_name($this->view); // through the lattice.class.{name} filter, as View::render() does
+        $class    = Call::get_class_name($this->view);
         $defaults = $class::get_defaults();
         $atts     = shortcode_atts($defaults, $atts, $this->slug);
         $view     = new $class($atts);
