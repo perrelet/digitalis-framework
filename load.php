@@ -59,15 +59,6 @@ $lattice_woocommerce = function () {
 
 if (did_action('woocommerce_loaded')) $lattice_woocommerce(); else add_action('woocommerce_loaded', $lattice_woocommerce);
 
-add_filter('sassy-variables', function ($variables) {
-
-    $variables['digitalis_path'] = '"' . str_replace('\\', '/', LATTICE_PATH) . '"';
-    $variables['digitalis_uri'] = '"' . str_replace('\\', '/', LATTICE_URI) . '"';
-
-    return $variables;
-
-});
-
 //
 
 
