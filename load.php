@@ -54,8 +54,6 @@ $lattice_woocommerce = function () {
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/order.abstract.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/product-type.abstract.php';
     require_once LATTICE_PATH . 'include/integrations/_woocommerce/woo-account-page.factory.php';
-    require_once LATTICE_PATH . 'include/integrations/_woocommerce/woocommerce.theme.php';
-    require_once LATTICE_PATH . 'include/integrations/_woocommerce/woocommerce-clean.theme.php';
 
 };
 

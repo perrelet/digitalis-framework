@@ -15,7 +15,6 @@ $legacy = [
     'assets/js/human-check.js',
     'assets/js/menu-drawer.js',
     'assets/js/menu.js',
-    'assets/js/woo-clean.js',
     'include/_features/lattice/page-loader/page-loader.js',
     'include/_features/lattice/proposals/proposal-status.js',
     'include/_features/lattice/proposals/proposals.js',
