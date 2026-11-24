@@ -423,12 +423,12 @@ class Route extends Registrant {
 
         if (self::declares_prop($reflection, $class, 'version'))               Strict::violation($class, "declares \$version, which Route never reads.", "Put the version in \$namespace: 'my-plugin/v1'.");
         if (self::declares_method($reflection, $class, 'permission_callback')) Strict::violation($class, "defines permission_callback(), which Route never calls; permission_wrap() calls permission().", "Rename it permission(WP_REST_Request \$request).");
-        if (self::declares_prop($reflection, $class, 'rest_args'))             Strict::violation($class, "declares \$rest_args, a Deprecated_Route property Route never reads.", "\$definition carries register_rest_route's arguments and \$args its 'args' map.");
-        if (self::declares_prop($reflection, $class, 'html_prefix'))           Strict::violation($class, "declares \$html_prefix, a Deprecated_Route property Route never reads.", "HTML is served at wp-html/ once the app loads the 'lattice/html-rest-api' feature; \$format = 'html' then points get_url() there.");
+        if (self::declares_prop($reflection, $class, 'rest_args'))             Strict::violation($class, "declares \$rest_args, which Route never reads.", "\$definition carries register_rest_route's arguments and \$args its 'args' map.");
+        if (self::declares_prop($reflection, $class, 'html_prefix'))           Strict::violation($class, "declares \$html_prefix, which Route never reads.", "HTML is served at wp-html/ once the app loads the 'lattice/html-rest-api' feature; \$format = 'html' then points get_url() there.");
 
         foreach (['get_params', 'get_rest_args', 'register_api_routes'] as $method) {
 
-            if (self::declares_method($reflection, $class, $method)) Strict::violation($class, "defines {$method}(), a Deprecated_Route method Route never calls, so nothing it returns reaches register_rest_route().", "Route registers itself from protected \$args (register_rest_route's 'args' map; override public get_args() when computed) and \$definition.");
+            if (self::declares_method($reflection, $class, $method)) Strict::violation($class, "defines {$method}(), which Route never calls, so nothing it returns reaches register_rest_route().", "Route registers itself from protected \$args (register_rest_route's 'args' map; override public get_args() when computed) and \$definition.");
 
         }
 
