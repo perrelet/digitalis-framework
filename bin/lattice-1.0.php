@@ -1099,6 +1099,22 @@ function scss_imports (string $source): array {
     return [$imports, $strays];
 }
 
+function copy_home (string $root, array $files, array $index): array {
+    $own  = array_flip($files);
+    $apps = [];
+    foreach ($index as $entry) if (isset($own[$entry[4] ?? '']) && is_a_class($entry[0], 'Lattice\App', $index)) $apps[substr($entry[0], 0, (int) strrpos($entry[0], '\\'))][] = $entry[4];
+    $plugin = null;
+    foreach (glob("$root/*.php") as $file) if (preg_match('/^[ \t\/*#]*Plugin Name:/mi', (string) file_get_contents($file, false, null, 0, 8192))) { $plugin = basename($file); break; }
+    $why = match (true) {
+        count($apps) !== 1 || array_key_first($apps) === '' => 'no one App subclass names the plugin\'s namespace (found: ' . (implode(', ', array_keys($apps)) ?: 'none') . ')',
+        count(array_unique(array_map('dirname', reset($apps)))) !== 1 => 'its App subclasses sit in more than one directory',
+        default => null,
+    };
+    if ($why !== null) return [null, null, $plugin, $why];
+    $base = ltrim(substr(dirname(reset($apps)[0]), strlen($root)), '/');
+    return [array_key_first($apps) . '\\Lattice_Copy', $base === '' ? '' : "$base/", $plugin, null];
+}
+
 // Every copy is decided from the whole tree before any file is rewritten, since the names rule aims each use at its copy.
 function plan_copies (string $root, array $files, array $index, string $framework): array {
     global $COPIED;
@@ -1169,24 +1185,12 @@ function plan_copies (string $root, array $files, array $index, string $framewor
 
     if ($need) {
         foreach (array_keys($need) as $short) for ($parent = COPY_CLASSES[$short][2]; $parent !== null; $parent = COPY_CLASSES[$parent][2]) $need[$parent] ??= $need[$short];
-        $own  = array_flip($files);
-        $apps = [];
-        foreach ($index as $entry) if (isset($own[$entry[4] ?? '']) && is_a_class($entry[0], 'Lattice\App', $index)) $apps[substr($entry[0], 0, (int) strrpos($entry[0], '\\'))][] = $entry[4];
-        $plugin = null;
-        foreach (glob("$root/*.php") as $file) if (preg_match('/^[ \t\/*#]*Plugin Name:/mi', (string) file_get_contents($file, false, null, 0, 8192))) { $plugin = basename($file); break; }
-        $why = match (true) {
-            count($apps) !== 1 || array_key_first($apps) === '' => 'no one App subclass names the plugin\'s namespace (found: ' . (implode(', ', array_keys($apps)) ?: 'none') . ')',
-            count(array_unique(array_map('dirname', reset($apps)))) !== 1 => 'its App subclasses sit in more than one directory',
-            isset($need['Woocommerce_Clean_Theme']) && $plugin === null => 'no plugin file (a root .php with a Plugin Name header) to aim woo-clean.js at',
-            default => null,
-        };
+        [$namespace, $prefix, $plugin, $why] = copy_home($root, $files, $index);
+        if ($why === null && isset($need['Woocommerce_Clean_Theme']) && $plugin === null) $why = 'no plugin file (a root .php with a Plugin Name header) to aim woo-clean.js at';
         [$at_file, $at_line] = reset($need);
         if ($why !== null) {
             $hand[$at_file][] = [$at_line, implode(', ', array_keys($need)) . " leave(s) in 1.0 and no copy is made: $why; copy from UPGRADING.md by hand"];
         } else {
-            $namespace = array_key_first($apps) . '\\Lattice_Copy';
-            $base      = ltrim(substr(dirname(reset($apps)[0]), strlen($root)), '/');
-            $prefix    = $base === '' ? '' : "$base/";
             foreach (COPY_CLASSES as $short => [$from, $to]) {
                 if (!isset($need[$short])) continue;
                 $COPIED[strtolower($short)] = "$namespace\\$short";
@@ -1219,6 +1223,141 @@ function plan_copies (string $root, array $files, array $index, string $framewor
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Post_Type
+
+function class_members (string $file): array {
+    static $cache = [];
+    if (isset($cache[$file])) return $cache[$file];
+    $t       = @token_get_all(file_get_contents($file));
+    $lines   = lines_of($t);
+    $n       = count($t);
+    $ns      = '';
+    $classes = [];
+    for ($i = 0; $i < $n; $i++) {
+        if (is_tok($t[$i], [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) $ns = $t[sig($t, $i, 1)][1];
+        if (!is_tok($t[$i], [T_CLASS]) || is_tok($t[sig($t, $i, -1)] ?? null, [T_DOUBLE_COLON, T_NEW]) || !is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING])) continue;
+        $class = ['name' => ($ns ? "$ns\\" : '') . $t[sig($t, $i, 1)][1], 'abstract' => false, 'line' => $lines[$i], 'props' => [], 'methods' => [], 'sets_slug' => false];
+        for ($k = sig($t, $i, -1); $k >= 0 && is_tok($t[$k], [T_ABSTRACT, T_FINAL, T_READONLY]); $k = sig($t, $k, -1)) if (is_tok($t[$k], [T_ABSTRACT])) $class['abstract'] = true;
+        for ($j = $i; $j < $n && $t[$j] !== '{'; $j++);
+        $depth  = 0;
+        $parens = 0;
+        for ($k = $j; $k < $n; $k++) {
+            if ($t[$k] === '{' || is_tok($t[$k], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) $depth++;
+            if ($t[$k] === '}' && --$depth === 0) break;
+            if ($t[$k] === '(') $parens++;
+            if ($t[$k] === ')') $parens--;
+            if (is_tok($t[$k], [T_VARIABLE]) && $t[$k][1] === '$this' && is_tok($t[sig($t, $k, 1)] ?? null, [T_OBJECT_OPERATOR])) {
+                $p = sig($t, sig($t, $k, 1), 1);
+                if (tok_text($t[$p]) === 'slug' && tok_text($t[sig($t, $p, 1)]) === '=') $class['sets_slug'] = true;
+            }
+            if ($depth !== 1 || $parens !== 0) continue;
+            if (is_tok($t[$k], [T_FUNCTION]) && is_tok($t[sig($t, $k, 1)] ?? null, [T_STRING])) {
+                $body = '';
+                for ($b = sig($t, $k, 1) + 1, $d = 0; $b < $n; $b++) {
+                    $body .= tok_text($t[$b]);
+                    if ($t[$b] === '{' || is_tok($t[$b], [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) $d++;
+                    if (($t[$b] === '}' && --$d === 0) || ($t[$b] === ';' && $d === 0)) break;
+                }
+                $class['methods'][strtolower($t[sig($t, $k, 1)][1])] = [$lines[$k], $body];
+            }
+            if (is_tok($t[$k], [T_VARIABLE]) && tok_text($t[sig($t, $k, 1)]) === '=') {
+                $value = [];
+                for ($v = sig($t, sig($t, $k, 1), 1), $d = 0; $v > 0; $v = sig($t, $v, 1)) {
+                    if ($d === 0 && ($t[$v] === ';' || $t[$v] === ',')) break;
+                    if (in_array($t[$v], ['[', '('], true)) $d++;
+                    if (in_array($t[$v], [']', ')'], true)) $d--;
+                    $value[] = $t[$v];
+                }
+                $class['props'][substr($t[$k][1], 1)] = [$lines[$k], $value];
+            }
+        }
+        $classes[strtolower($class['name'])] = $class;
+    }
+    return $cache[$file] = $classes;
+}
+
+function filters_beyond_month (array $value): bool {
+    $rest = array_filter($value, fn ($tok) => literal_value($tok) !== 'publish_month' && !in_array(strtolower(tok_text($tok)), ['[', ']', 'array', '(', ')', ','], true));
+    return (bool) $rest;
+}
+
+function names_publish_month (array $tokens): bool {
+    foreach ($tokens as $i => $tok) if (literal_value($tok) === 'publish_month' && !is_tok($tokens[$i + 1] ?? null, [T_DOUBLE_ARROW])) return true;
+    return false;
+}
+
+// The 0.x admin table hid the months dropdown on every Post_Type whose filters lacked 'publish_month'; 1.0 shows it.
+function plan_post_types (string $root, array $files, array $index): array {
+    $own    = array_flip($files);
+    $hand   = [];
+    $slugs  = [];
+    $listed = [];
+    $missed = [];
+    foreach ($index as $entry) {
+        if (!isset($own[$entry[4] ?? ''])) continue;
+        $class = class_members($entry[4])[strtolower($entry[0])] ?? null;
+        if ($class === null) continue;
+        $relative = substr($entry[4], strlen($root) + 1);
+        $short    = substr(strrchr("\\$entry[0]", '\\'), 1);
+        $is       = is_a_class($entry[0], 'Lattice\Post_Type', $index);
+        if ($is === null && preg_match('/Post_Type$/i', (string) $entry[1])) $hand[$relative][] = [$class['line'], "$short extends {$entry[1]}, whose ancestry leaves every tree the script can read (pass --deps): if it is a Post_Type, check it for the admin table's columns, filters and months dropdown"];
+        if ($is !== true) continue;
+
+        $declares = [];
+        if (isset($class['props']['filters']) && filters_beyond_month($class['props']['filters'][1])) $declares[] = '$filters';
+        foreach (['columns', 'column', 'get_filters'] as $method) if (isset($class['methods'][$method])) $declares[] = "$method()";
+        if ($declares) $hand[$relative][] = [$class['line'], "$short declares " . implode(', ', $declares) . ": Post_Type's admin table leaves in 1.0 and none of them reaches the list screen any more; port them to a Posts_Table"];
+        if ($class['abstract'] || str_contains(basename($entry[4]), '.abstract.')) continue;
+
+        $slug = $filters = $sets = $named = null;
+        for ($name = $entry[0], $hops = 0; $name !== null && $hops < 40; $hops++) {
+            $at      = $index[strtolower($name)];
+            $members = class_members($at[4])[strtolower($name)] ?? null;
+            if ($members !== null) {
+                $slug    ??= $members['props']['slug'] ?? null;
+                $filters ??= $members['props']['filters'] ?? null;
+                $sets    ??= $members['sets_slug'] ? $name : null;
+                if ($named === null && isset($members['methods']['get_filters']) && names_publish_month(token_get_all('<?php ' . $members['methods']['get_filters'][1]))) $named = $name;
+            }
+            if (strtolower($name) === 'lattice\post_type') break;
+            $name = $at[1];
+        }
+        if ($named !== null) { $hand[$relative][] = [$class['line'], "$short: a get_filters() override ($named) names 'publish_month', which kept the months dropdown on its screen: decide by hand whether 1.0 hides it"]; continue; }
+        if ($filters !== null && names_publish_month($filters[1])) continue;
+        $value = $slug === null ? null : literal_value($slug[1][0] ?? null);
+        if ($sets !== null || $value === null || count($slug[1]) !== 1) { $missed[] = [$relative, $class['line'], $short, $sets !== null ? "$sets sets \$this->slug in code" : '$slug is ' . ($slug === null ? 'not declared' : implode('', array_map('tok_text', $slug[1])))]; continue; }
+        $slugs[$value] = true;
+        $listed[]      = [$relative, $class['line']];
+    }
+
+    $generated = [];
+    $target    = null;
+    if ($slugs || $missed) {
+        [$namespace, $prefix, $plugin, $why] = copy_home($root, $files, $index);
+        if ($why === null && $plugin === null) $why = 'no plugin file (a root .php with a Plugin Name header): a theme registers its own';
+        $slugs = array_keys($slugs);
+        sort($slugs);
+        if ($why === null && $slugs) {
+            $target = "{$prefix}lattice-copy/months-dropdown.feature.php";
+            $list = implode(', ', array_map(fn ($slug) => var_export($slug, true), $slugs));
+            $text = "<?php\n\nnamespace $namespace;\n\nclass Months_Dropdown extends \\Lattice\\Feature {\n\n    public function get_hooks () {\n\n        return ['disable_months_dropdown' => 'hide_months_dropdown'];\n\n    }\n\n    public function hide_months_dropdown (\$disable, \$post_type) {\n\n        return in_array(\$post_type, [$list], true) ? true : \$disable;\n\n    }\n\n}\n";
+            if (!file_exists("$root/$target")) {
+                $generated[$target] = [$text, [[1, 'post-type', "new: disable_months_dropdown over $list"]], null];
+                $hand[$target][]    = [1, "hides WordPress's months dropdown on $list, as the 0.x admin table did: 1.0 shows it on every post type, so check the list"];
+            } elseif (file_get_contents("$root/$target") !== $text) {
+                $hand[$target][] = [1, "the months dropdown filter over $list would land here, but a different file is in the way: not overwritten; compare them by hand"];
+            }
+        } elseif ($slugs) {
+            [$at_file, $at_line] = $listed[0];
+            $hand[$at_file][] = [$at_line, 'the 0.x admin table hid WordPress\'s months dropdown on ' . implode(', ', array_map(fn ($slug) => var_export($slug, true), $slugs)) . " and 1.0 shows it; no filter is written ($why): add a disable_months_dropdown filter returning true for them"];
+        }
+        foreach ($missed as [$relative, $line, $short, $what]) $hand[$relative][] = [$line, "$short: $what, so the script cannot name its post type: the 0.x admin table hid WordPress's months dropdown on it and 1.0 shows it; add its slug to " . ($target ?? 'a disable_months_dropdown filter') . ' by hand'];
+    }
+    foreach ($hand as &$edits) usort($edits, fn ($a, $b) => $a[0] <=> $b[0]);
+    return [$generated, $hand];
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Run
 
 $files = consumer_files($root);
@@ -1226,6 +1365,9 @@ $fired = fired_families($files);
 $index = class_index($root, $deps, $framework);
 $swapped = swapped_classes(array_merge([$root], glob("$deps/*", GLOB_ONLYDIR)));
 [$copies, $stylesheets, $planned] = plan_copies($root, $files, $index, $framework);
+[$generated, $post_types] = plan_post_types($root, $files, $index);
+$copies += $generated;
+foreach ($post_types as $relative => $edits) $planned[$relative] = array_merge($planned[$relative] ?? [], $edits);
 $total_rewrites = 0;
 $changed_files  = 0;
 $copied_files   = 0;
@@ -1235,7 +1377,7 @@ foreach (array_merge($files, array_map(fn ($path) => "$root/$path", array_keys($
     $relative = substr($file, strlen($root) + 1);
     $copy     = $copies[$relative] ?? null;
     $source   = $copy[0] ?? file_get_contents($file);
-    $rewrites = $copy ? [['-', 'copies', "new, from {$copy[2]}"], ...$copy[1]] : [];
+    $rewrites = match (true) { !$copy => [], $copy[2] === null => $copy[1], default => [['-', 'copies', "new, from {$copy[2]}"], ...$copy[1]] };
     $hand     = $planned[$relative] ?? [];
     unset($planned[$relative]);
 
@@ -1292,7 +1434,7 @@ foreach (array_merge($files, array_map(fn ($path) => "$root/$path", array_keys($
     echo "$relative\n";
     foreach ($rewrites as [$line, $rule, $what]) printf("  %5s  %-9s %s\n", $line, $rule, preg_replace('/\s+/', ' ', $what));
     $total_rewrites += count(array_filter($rewrites, fn ($rewrite) => $rewrite[1] !== 'copies'));
-    $copy ? $copied_files++ : $changed_files++;
+    $copy && $copy[2] !== null ? $copied_files++ : $changed_files++;
 
     if ($write) {
         $new = '';

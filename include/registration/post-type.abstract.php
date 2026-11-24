@@ -32,8 +32,6 @@ abstract class Post_Type extends Singleton {
     protected $model_class  = false;
     protected $register     = true;
 
-    protected $filters      = [];                               // key => type (taxonomy | acf) || key => [type => $type, name => $name, args => [ ... ], ...] || 'publish_month' (keeps the months dropdown)
-
     //
 
     protected $post_type;
@@ -46,18 +44,9 @@ abstract class Post_Type extends Singleton {
         if ($this->register) $this->add_action('init', [$this, 'register'], 10, 1);
         $this->add_action('template_redirect', [$this, 'instantiate_model'], 10, 1);
 
-        // Admin Table
-        // **Deprecated**
-        // Use the \Lattice\Posts_Table feature instead.
+        // Admin Query
 
         $this->add_action('pre_get_posts', [$this, 'admin_query_wrap'], 10, 1);
-
-        if (method_exists($this, 'columns')) $this->add_filter("manage_{$this->slug}_posts_columns", [$this, 'columns'], 10, 1);
-        if (method_exists($this, 'column'))  $this->add_action("manage_{$this->slug}_posts_custom_column", [$this, 'column'], 10, 2);
-
-        if (!in_array('publish_month', $this->get_filters(), true)) $this->add_filter('disable_months_dropdown', [$this, 'disable_months_dropdown'], 10, 2);
-        $this->add_action('restrict_manage_posts', [$this, 'render_filters'], 10, 1);
-        $this->add_action('pre_get_posts', [$this, 'admin_controller'], 10, 1);
 
         // CRUD
 
@@ -349,213 +338,6 @@ abstract class Post_Type extends Singleton {
 
     //
 
-    protected function get_filters () {
-        
-        return $this->filters;
-        
-    }
-
-    protected function build_filters () {
-
-        if ($filters = $this->get_filters()) foreach ($filters as $key => &$filter) {
-
-            if (!is_array($filter)) $filter = ['type'  => $filter];
-
-            $filter = wp_parse_args($filter, [
-                'type'  => 'taxonomy',
-                'name'  => $key,
-                'args'  => [],
-            ]);
-
-            $filter['args'] = wp_parse_args($filter['args'], [
-                'value_callback' => false,
-                'query_callback' => false,
-            ]);
-
-            switch ($filter['type']) {
-
-                case 'taxonomy':
-
-                    $taxonomy = get_taxonomy($key);
-
-                    if ($taxonomy) $filter['args'] = wp_parse_args($filter['args'], [
-                        'taxonomy'          => $key,
-                        'name'              => "tax[{$filter['name']}]",
-                        'value_field'       => 'term_id',
-                        'hide_empty'        => true,
-                        'hide_if_empty'     => true,
-                        'selected'          => $this->get_filter_request_value('tax', $filter),
-                        'show_option_none'  => "Filter by {$taxonomy->labels->singular_name}",
-                        'option_none_value' => 0,
-                    ]);
-
-                    break;
-
-                case 'acf':
-
-                    $filter['args'] = wp_parse_args($filter['args'], [
-                        'hide_falsy'     => true,
-                        'compare'        => '=',
-                        'label'          => null,
-                        'type'           => null,
-                    ]);
-
-            }
-
-        }
-
-        $this->filters = $filters;
-
-    }
-
-    // The admin filters' one request read: WordPress slashes $_REQUEST, and a non-scalar value is no value for a control that posts one.
-    protected function get_filter_request_value (string $group, array $filter) {
-
-        $value = wp_unslash($_REQUEST[$group][$filter['name']] ?? false);
-
-        return is_scalar($value) ? $value : false;
-
-    }
-
-    public function admin_controller (WP_Query $query) {
-
-        if (!$this->is_main_admin_query($query)) return;
-
-        $this->build_filters();
-
-        if ($this->filters) foreach ($this->filters as $key => $filter) {
-
-            $value = false;
-
-            switch ($filter['type']) {
-
-                case 'taxonomy':
-
-                    if (!get_taxonomy($key)) break;
-
-                    if ($value = $this->get_filter_request_value('tax', $filter)) {
-
-                        if (is_callable($filter['args']['value_callback'])) $value = call_user_func($filter['args']['value_callback'], $value);
-
-                        if (!isset($query->query_vars['tax_query'])) $query->query_vars['tax_query'] = [];
-
-                        $tax_query = [
-                            'taxonomy' => $key,
-                            'field'    => $filter['args']['value_field'] == 'term_id' ? 'id' : $filter['args']['value_field'],
-                            'terms'    => $value,
-                        ];
-
-                        if (is_callable($filter['args']['query_callback'])) $tax_query = call_user_func($filter['args']['query_callback'], $tax_query);
-
-                        $query->query_vars['tax_query'][] = $tax_query;
-
-                    }
-
-                    break;
-
-                case 'acf':
-
-                    if ($value = $this->get_filter_request_value('meta', $filter)) {
-                        
-                        if (is_callable($filter['args']['value_callback'])) $value = call_user_func($filter['args']['value_callback'], $value);
-
-                        if (!isset($query->query_vars['meta_query'])) $query->query_vars['meta_query'] = [];
-
-                        $meta_query = [
-                            'key'     => $key,
-                            'value'   => $value,
-                            'compare' => $filter['args']['compare'],
-                        ];
-
-                        if (is_callable($filter['args']['query_callback'])) $meta_query = call_user_func($filter['args']['query_callback'], $meta_query);
-
-                        $query->query_vars['meta_query'][] = $meta_query;
-
-                    }
-
-                    break;
-
-            }
-
-        }
-
-    }
-
-    public function disable_months_dropdown (bool $disable, string $post_type) {
-
-        return ($post_type == $this->slug) ? true : $disable;
-
-    }
-
-    public function render_filters () {
-
-        if (!$this->is_admin_archive()) return;
-
-        $this->build_filters();
-
-        if (method_exists($this, 'before_render_filters')) $this->before_render_filters();
-
-        if ($this->filters) foreach ($this->filters as $key => $filter) {
-
-            switch ($filter['type']) {
-
-                case 'taxonomy':
-
-                    if (get_taxonomy($key)) wp_dropdown_categories($filter['args']);
-                    
-                    break;
-
-                case 'acf':
-
-                    $current_value = $this->get_filter_request_value('meta', $filter);
-
-                    $post_ids = (new \WP_Query([
-                        'post_type'         => $this->slug,
-                        'post_status'       => array_values(get_post_stati()),   // 'any' skips statuses registered exclude_from_search
-                        'posts_per_page'    => 1,
-                        'fields'            => 'ids',
-                    ]))->get_posts();
-
-                    if (!$post_ids) break;
-                    if (!$field = Custom_Fields::provider()?->get_object($post_ids[0], $key)) break;
-
-                    $label = is_null($filter['args']['label']) ? $field['label'] : $filter['args']['label'];
-
-                    if (isset($field['choices']) && ($options = $field['choices'])) {
-
-                        echo "<select name='meta[" . esc_attr($filter['name']) . "]'>";
-
-                            echo "<option value='0'>Filter by " . esc_html($field['label']) . "</option>";
-
-                            foreach ($options as $value => $option_label) {
-
-                                if ($filter['args']['hide_falsy'] && !$value) continue;
-                                echo "<option value='" . esc_attr($value) . "' " . selected($value, $current_value, false) . ">" . esc_html($option_label) . "</option>";
-
-                            }
-
-                        echo "</select>";
-
-                    } else {
-
-                        $type = is_null($filter['args']['type']) ? 'text' : $filter['args']['type'];
-
-                        echo "<input type='" . esc_attr($type) . "' name='meta[" . esc_attr($filter['name']) . "]' value='" . esc_attr($current_value) . "' placeholder='Filter by " . esc_attr($label) . "'>";
-
-                    }
-
-                    break;
-
-            }
-
-        }
-
-        if (method_exists($this, 'after_render_filters')) $this->after_render_filters();
-
-    }
-
-    //
-
     public function filter_post_data_wrap (array $data, array $postarr, array|object $unsanitized_postarr, bool $update) {
     
         if ($data['post_type'] != $this->slug) return $data;
@@ -642,13 +424,6 @@ abstract class Post_Type extends Singleton {
         global $pagenow, $post_type;
 
         return (is_admin() && ($post_type == $this->slug) && ($pagenow == 'edit.php'));
-
-    }
-
-    protected function is_admin_edit () {
-
-        global $pagenow, $post_type;
-        return (is_admin() && ($post_type == $this->slug) && ($pagenow == 'post.php'));
 
     }
 

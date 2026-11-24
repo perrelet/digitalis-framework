@@ -45,8 +45,6 @@ class Post extends WP_Model {
         'privacy'    => 'wp_page_for_privacy_policy',
     ];
 
-    protected static $post_type_class = false;       // (deprecated) Used when querying the model to get retrieve query vars.
-
     public static function get_global_id () {
 
         if (static::$post_context) {
@@ -172,15 +170,13 @@ class Post extends WP_Model {
 
     public static function get_query_vars (array $args = []) {
 
-        $call = static::$post_type_class . "::get_query_vars";
-        return is_callable($call) ? call_user_func($call) : [];
+        return [];
 
     }
 
     public static function get_admin_query_vars (array $args = []) {
 
-        $call = static::$post_type_class . "::get_admin_query_vars";
-        return is_callable($call) ? call_user_func($call) : [];
+        return [];
 
     }
 
