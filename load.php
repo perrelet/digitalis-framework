@@ -23,7 +23,7 @@ if (defined('DIGITALIS_FRAMEWORK_PATH')) {
 
 if (defined('LATTICE_VERSION')) return;
 
-define('LATTICE_VERSION',       '0.14.0');
+define('LATTICE_VERSION',       '0.15.0');
 define('LATTICE_PATH',          plugin_dir_path( __FILE__ ));
 define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/_features/');
 define('LATTICE_URI',           plugin_dir_url(__FILE__));
