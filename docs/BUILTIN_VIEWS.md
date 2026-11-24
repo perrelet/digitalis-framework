@@ -785,7 +785,6 @@ Data table with automatic header/attribute handling.
 | `last_col` | `bool` | `false` | Last column is header |
 | `last_row` | `bool` | `false` | Last row is footer |
 | `data_labels` | `bool\|string` | `false` | Add data-label attributes: the header cell as text (tags stripped, attribute-escaped) |
-| `data_titles` | `bool\|string` | `false` | Deprecated alias of `data_labels` |
 | `row_classes` | `array` | `[]` | Classes per row |
 | `row_atts` | `array` | `[]` | Attributes per row |
 | `col_classes` | `array` | `[]` | Classes per column |

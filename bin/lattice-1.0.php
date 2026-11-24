@@ -445,7 +445,7 @@ function fired_families (array $files): array {
 
 function markdown_lines (string $source): array {
     $hits = [];
-    $patterns = ['/(?<![\w\\\\])\\\\?Digitalis\\\\{1,2}[A-Za-z_]/', '/\bDIGITALIS_(FRAMEWORK_[A-Z]+|LIBRARY_PATH)\b/', '#Digitalis/(Instantiate|Class|Post_Type|Taxonomy|DB/WPDB|Field_Group/Field|Form/Params)\b#', "/['\"]field['\"]\\s*=>\\s*[\\\\\\w]+::class/", '/::(render|inst)\s*\(/i'];
+    $patterns = ['/(?<![\w\\\\])\\\\?Digitalis\\\\{1,2}[A-Za-z_]/', '/\bDIGITALIS_(FRAMEWORK_[A-Z]+|LIBRARY_PATH)\b/', '#Digitalis/(Instantiate|Class|Post_Type|Taxonomy|DB/WPDB|Field_Group/Field|Form/Params)\b#', "/['\"]field['\"]\\s*=>\\s*[\\\\\\w]+::class/", '/::(render|inst)\s*\(/i', '/[\'"]data_titles[\'"]/'];
     foreach (preg_split('/\R/', $source) as $n => $line) {
         foreach ($patterns as $pattern) if (preg_match($pattern, $line)) { $hits[] = $n + 1; break; }
     }
@@ -969,6 +969,69 @@ function rule_field_hooks (array $t, array $lines, array &$hand): void {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Tables
+
+function rule_tables (array $t, array $lines, array &$out, array &$rewrites, array &$hand, array $index): void {
+    $ns      = '';
+    $uses    = [];
+    $depth   = 0;
+    $classes = [];
+    $pending = null;
+    $arrays  = [];
+    $is_table = fn (?string $class) => is_a_class($class, 'Lattice\\Component\\Table', $index);
+    $array_at = function (int $first) use ($t): ?int {
+        if (tok_text($t[$first] ?? '') === '[') return $first;
+        return is_tok($t[$first] ?? null, [T_ARRAY]) ? sig($t, $first, 1) : null;
+    };
+    for ($i = 0; $i < count($t); $i++) {
+        $tok  = $t[$i];
+        $text = tok_text($tok);
+        if ($text === '{' || is_tok($tok, [T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) { $depth++; if ($pending !== null && $text === '{') { $classes[] = [$pending, $depth]; $pending = null; } }
+        if ($text === '}') { if ($classes && end($classes)[1] === $depth) array_pop($classes); $depth--; }
+        if (is_tok($tok, [T_NAMESPACE]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING, T_NAME_QUALIFIED])) { $ns = $t[sig($t, $i, 1)][1]; $uses = []; }
+        if (is_tok($tok, [T_USE]) && !$classes && tok_text($t[sig($t, $i, 1)] ?? '') !== '(') {
+            for ($j = sig($t, $i, 1); $j > 0 && tok_text($t[$j]) !== ';' && tok_text($t[$j]) !== '{'; $j = sig($t, $j, 1)) {
+                if (!is_tok($t[$j], [T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_STRING]) || is_tok($t[sig($t, $j, -1)], [T_AS])) continue;
+                $full  = ltrim($t[$j][1], '\\');
+                $alias = is_tok($t[sig($t, $j, 1)] ?? null, [T_AS]) ? tok_text($t[sig($t, sig($t, $j, 1), 1)]) : substr(strrchr("\\$full", '\\'), 1);
+                $uses[strtolower($alias)] = $full;
+            }
+        }
+        if (is_tok($tok, [T_CLASS]) && !is_tok($t[sig($t, $i, -1)] ?? null, [T_DOUBLE_COLON, T_NEW]) && is_tok($t[sig($t, $i, 1)] ?? null, [T_STRING])) {
+            $pending = ($ns ? "$ns\\" : '') . $t[sig($t, $i, 1)][1];
+        }
+
+        if (is_tok($tok, [T_VARIABLE]) && $tok[1] === '$defaults' && $classes && end($classes)[1] === $depth && tok_text($t[sig($t, $i, 1)] ?? '') === '=') {
+            if ($is_table(end($classes)[0]) && ($open = $array_at(sig($t, sig($t, $i, 1), 1))) !== null) $arrays[] = [$open, '$defaults'];
+            continue;
+        }
+        $callee = null;
+        if (is_tok($tok, [T_NEW])) $callee = sig($t, $i, 1);
+        elseif (is_tok($tok, [T_DOUBLE_COLON]) && in_array(strtolower(tok_text($t[sig($t, $i, 1)] ?? '')), ['create', 'render'], true)) $callee = sig($t, $i, -1);
+        if ($callee === null || !is_tok($t[$callee] ?? null, [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) continue;
+        $paren = is_tok($tok, [T_NEW]) ? sig($t, $callee, 1) : sig($t, sig($t, $i, 1), 1);
+        if (tok_text($t[$paren] ?? '') !== '(' || !$is_table(canonical_class(qualify(tok_text($t[$callee]), $ns, $uses)))) continue;
+        [$args] = call_args($t, $paren);
+        if ($args && ($open = $array_at(sig($t, $args[0][0] - 1, 1))) !== null) $arrays[] = [$open, is_tok($tok, [T_NEW]) ? 'new ' . tok_text($t[$callee]) . '([...])' : tok_text($t[$callee]) . '::' . tok_text($t[sig($t, $i, 1)]) . '([...])'];
+    }
+
+    $renamed = [];
+    foreach ($arrays as [$open, $where]) {
+        $entries = array_entries($t, $open);
+        if (!($entry = entry_named($entries, 'data_titles'))) continue;
+        if (entry_named($entries, 'data_labels')) { $renamed[$entry['from']] = "'data_titles' beside 'data_labels' in $where: 0.x read 'data_titles' only when 'data_labels' was empty, so drop 'data_titles', or keep its value as 'data_labels' if that one is empty"; continue; }
+        $quote = tok_text($t[$entry['from']])[0];
+        $out[$entry['from']] = "{$quote}data_labels{$quote}";
+        $renamed[$entry['from']] = null;
+        $rewrites[] = [$lines[$entry['from']], 'tables', "'data_titles' -> 'data_labels' in $where"];
+    }
+    foreach ($t as $i => $tok) {
+        if (literal_value($tok) !== 'data_titles' || array_key_exists($i, $renamed) && $renamed[$i] === null) continue;
+        $hand[] = [$lines[$i], $renamed[$i] ?? "'data_titles' outside a Table's \$defaults, constructor, create() or render() array: 1.0 dropped the alias, so where it reaches a Table, write 'data_labels'"];
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Copies
 
 // The stream's base, the same tree UPGRADING.md pastes from, whatever 0.x copy of the framework the consumer carries.
@@ -1424,6 +1487,7 @@ foreach (array_merge($files, array_map(fn ($path) => "$root/$path", array_keys($
         rule_field_hooks($t, $lines, $hand);
         // Before Fields and Render: both blank whole ranges and rebuild them from $out, which would drop or resurrect a later rename.
         rule_lifecycle($t, $lines, $out, $rewrites, $hand, $index);
+        rule_tables($t, $lines, $out, $rewrites, $hand, $index);
         rule_fields($t, $lines, $out, $rewrites, $hand, $index);
         rule_render($t, $lines, $out, $rewrites, $hand, $index, $swapped);
     }

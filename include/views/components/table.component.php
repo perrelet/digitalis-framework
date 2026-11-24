@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Lattice\Component;
 
+use Lattice\Strict;
+
 class Table extends \Lattice\Component {
 
     protected static $template = 'table';
@@ -29,7 +31,14 @@ class Table extends \Lattice\Component {
 
     public function params (array &$p) {
 
-        if (!empty($p['data_titles']) && empty($p['data_labels'])) $p['data_labels'] = $p['data_titles']; // Back-compat: `data_titles` was renamed to `data_labels`
+        if (array_key_exists('data_titles', $p)) {
+
+            $problem = "was given 'data_titles' => " . var_export($p['data_titles'], true) . ", which Table no longer reads.";
+
+            Strict::fail(static::class, $problem, "Table takes 'data_labels': pass 'data_labels' => " . var_export($p['data_titles'], true) . '.');
+            Strict::log_once(static::class, $problem);
+
+        }
 
         $this->generate_col_atts($p);
         $this->generate_row_atts($p);

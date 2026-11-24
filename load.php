@@ -28,7 +28,7 @@ define('LATTICE_PATH',          plugin_dir_path( __FILE__ ));
 define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/_features/');
 define('LATTICE_URI',           plugin_dir_url(__FILE__));
 
-// The lock: every 0.x load.php returns when this is defined.
+// The lock for a 0.x copy from before the Lattice\ rename (0.4.0); later 0.x copies return on LATTICE_VERSION, defined above.
 define('DIGITALIS_FRAMEWORK_VERSION', LATTICE_VERSION);
 
 // Registers languages/ for the 'lattice' domain; since WP 6.7 this only records the path and the .mo loads on first use (eagerly before that; the registry exists since 6.1).
