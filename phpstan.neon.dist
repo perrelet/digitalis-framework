@@ -14,8 +14,6 @@ parameters:
     - bin
     - stubs/trait-users.stub.php
   scanFiles:
-    - compat/digitalis-namespace.php
-    - compat/digitalis-hooks.php
     - stubs/oxygen.stub.php
     - stubs/woocommerce-internal.stub.php
     - stubs/constants.stub.php

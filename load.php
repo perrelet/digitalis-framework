@@ -4,6 +4,23 @@ declare(strict_types=1);
 
 if (PHP_VERSION_ID < 80200) throw new RuntimeException('Lattice needs PHP 8.2 or later; this site runs PHP ' . PHP_VERSION . '.');
 
+// Every 0.x copy defines DIGITALIS_FRAMEWORK_PATH; 1.0 defines only the VERSION lock below.
+if (defined('DIGITALIS_FRAMEWORK_PATH')) {
+
+    $lattice_locked = 'Lattice in ' . __DIR__ . ' did not load: a 0.x framework copy (' . (string) DIGITALIS_FRAMEWORK_VERSION . ') loaded first. Move every plugin and theme on this site to 1.0 together.';
+
+    error_log($lattice_locked);
+
+    add_action('admin_notices', function () use ($lattice_locked) {
+
+        printf('<div class="notice notice-error"><p>%s</p></div>', esc_html($lattice_locked));
+
+    });
+
+    return;
+
+}
+
 if (defined('LATTICE_VERSION')) return;
 
 define('LATTICE_VERSION',       '0.14.0');
@@ -11,7 +28,8 @@ define('LATTICE_PATH',          plugin_dir_path( __FILE__ ));
 define('LATTICE_LIBRARY_PATH',  plugin_dir_path( __FILE__ ) . 'include/_features/');
 define('LATTICE_URI',           plugin_dir_url(__FILE__));
 
-require LATTICE_PATH . 'compat/digitalis-namespace.php';
+// The lock: every 0.x load.php returns when this is defined.
+define('DIGITALIS_FRAMEWORK_VERSION', LATTICE_VERSION);
 
 // Registers languages/ for the 'lattice' domain; since WP 6.7 this only records the path and the .mo loads on first use (eagerly before that; the registry exists since 6.1).
 if (str_starts_with(wp_normalize_path(LATTICE_PATH), wp_normalize_path(trailingslashit(WPMU_PLUGIN_DIR)))) {
@@ -30,7 +48,6 @@ require LATTICE_PATH . 'include/core/autoloader.trait.php';
 require LATTICE_PATH . 'include/core/classmap.final.php';
 require LATTICE_PATH . 'include/core/strict.final.php';
 require LATTICE_PATH . 'include/core/strict-violation.logic-exception.php';
-require LATTICE_PATH . 'compat/digitalis-hooks.php';
 
 // Declared, not instantiated: the framework is a library of base classes, unlike a consuming plugin.
 (new class { use Lattice\Autoloader; })
@@ -40,6 +57,8 @@ require LATTICE_PATH . 'compat/digitalis-hooks.php';
 Lattice\Framework::get_instance();
 
 if (Lattice\Strict::enabled()) Lattice\Query_Manager::strict_hooks();
+
+add_action('wp_loaded', [Lattice\Hook::class, 'audit_legacy_names']);
 
 // WooCommerce fires woocommerce_loaded at plugins_loaded:-1; the did_action branch covers a framework included after that.
 // Bare requires on purpose: a sweep would fire static_init, Customer would tie every User resolution and Order::validate_id calls wc_get_order.

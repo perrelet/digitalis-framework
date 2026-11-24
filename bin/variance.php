@@ -3,12 +3,12 @@
 // fatal a consumer at class-declaration time. `php bin/variance.php [--framework=PATH] [--matrix] CONSUMER_ROOT...`.
 // Pass dependent consumers together (an unresolved namespaced parent is a FATAL, never a silent gap). Exit 1 on a FATAL,
 // 2 on usage. CHECK lines are relations to classes outside every scanned tree (WordPress, WooCommerce, ACF) and never fail.
-// Blind spots: class_alias beyond the Digitalis shim, eval and generated classes, `__call` methods, parameter renames
+// Blind spots: class_alias beyond the 0.x Digitalis shim, eval and generated classes, `__call` methods, parameter renames
 // (named-argument callers only), and everything else PHP reports at compile time, such as two traits colliding.
 PHP_SAPI === 'cli' || exit;
 if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
 
-// Mirrors compat/digitalis-namespace.php; ~/lattice-v1-tests/variance.sh asserts the two lists match.
+// The 0.x shim's order, which consumers not yet through bin/lattice-1.0.php still assume; variance.sh asserts it matches that script's list.
 const SUB_NAMESPACES = ['Component', 'Field', 'DB', 'WP', 'Woo', 'ACF', 'Oxygen'];
 const BUILTIN_TYPES  = ['int', 'float', 'string', 'bool', 'array', 'callable', 'iterable', 'object', 'mixed', 'void', 'null', 'never', 'false', 'true', 'self', 'static', 'parent'];
 
@@ -419,7 +419,7 @@ unset($namespaces['']);
 
 function alias_digitalis (string $name): string { return str_starts_with(strtolower($name), 'digitalis\\') ? 'Lattice\\' . substr($name, 10) : $name; }
 
-// A framework declaration by name, resolved as the compat shim would: Digitalis\X -> Lattice\X, then the sub-namespaces.
+// A framework declaration by name, resolved as the 0.x shim did: Digitalis\X -> Lattice\X, then the sub-namespaces.
 function lookup_framework (string $name): ?array {
     global $fw_decls;
     $aliased = strtolower(alias_digitalis($name));
