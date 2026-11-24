@@ -15,7 +15,7 @@ class Select_Nice extends Select {
 
     public function params (array &$p) {
 
-        $js_var = str_replace("-", "_", (string) ($p['name'] ?? $p['key'])) . "_nice";
+        $js_var = str_replace("-", "_", (string) $p['name']) . "_nice";
 
         $p['js_var'] = $js_var;
         $p['attributes']['data-js-var'] = $js_var;

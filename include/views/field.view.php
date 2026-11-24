@@ -11,7 +11,6 @@ class Field extends Component {
 
     protected static $defaults = [
         'name'              => null,
-        'key'               => null, // deprecated
         'id'                => null,
         'label'             => false,
         'default'           => '',
@@ -51,10 +50,18 @@ class Field extends Component {
 
         $slug = $this->get_class_slug();
 
+        if (array_key_exists('key', $p) && !array_key_exists('key', static::get_defaults())) {
+
+            $problem = "was given 'key' => " . var_export($p['key'], true) . ", which Field no longer reads.";
+
+            Strict::fail(static::class, $problem, "Field takes 'name': pass 'name' => " . var_export($p['key'], true) . '.');
+            Strict::log_once(static::class, $problem);
+
+        }
+
         if (!$p['id']) $p['id'] = ($p['name'] ?? "{$slug}-{$p['view_index']}") . '-field';
         $p['attributes']['data-field-id'] = $p['id'];
 
-        if ($p['key'])  $p['name'] = $p['key'];
         if ($p['name']) $p['attributes']['name'] = $p['name'];
 
         $p['value'] = $this->get_value();

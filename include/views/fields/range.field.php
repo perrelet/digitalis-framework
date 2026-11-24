@@ -25,7 +25,7 @@ class Range extends Input {
         if ($p['show_value']) {
 
             $p['classes'][] = "has-output";
-            $output = ($p['name'] ?? $p['key']) . '_output';
+            $output = $p['name'] . '_output';
 
             $p['attributes']['oninput'] = "this.parentElement.parentElement.querySelector(`[name=\"{$output}\"]`).value=`{$p['value_prefix']}`+this.value+`{$p['value_suffix']}`";
 
@@ -39,7 +39,7 @@ class Range extends Input {
         
         if ($this['show_value']) {
 
-            echo new \Lattice\Element('output', ['name' => ($this['name'] ?? $this['key']) . '_output', 'for' => $this['id']], esc_html($this['value_prefix'] . $this['value'] . $this['value_suffix']));
+            echo new \Lattice\Element('output', ['name' => $this['name'] . '_output', 'for' => $this['id']], esc_html($this['value_prefix'] . $this['value'] . $this['value_suffix']));
 
         }
 

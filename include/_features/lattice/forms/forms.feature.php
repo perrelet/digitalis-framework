@@ -360,7 +360,9 @@ class Lattice_Forms extends Feature {
 
         foreach ($fields as $field) {
 
-            $class = ($field instanceof View) ? get_class($field) : ($field['field'] ?? Input::class);
+            if (!($field instanceof View)) continue;
+
+            $class = get_class($field);
 
             if (is_a($class, Field_Group::class, true)) {
 
@@ -369,7 +371,7 @@ class Lattice_Forms extends Feature {
 
             }
 
-            if (rtrim((string) ($field['name'] ?? $field['key'] ?? ''), '[]') === $name) return $class;
+            if (rtrim((string) ($field['name'] ?? ''), '[]') === $name) return $class;
 
         }
 

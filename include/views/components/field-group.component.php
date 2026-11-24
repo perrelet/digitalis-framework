@@ -6,8 +6,7 @@ namespace Lattice\Component;
 
 use Lattice\View;
 use Lattice\Hook;
-
-use Lattice\Field\Input;
+use Lattice\Strict;
 
 class Field_Group extends \Lattice\Component {
 
@@ -31,27 +30,40 @@ class Field_Group extends \Lattice\Component {
     public function params (array &$p) {
 
         $fields      = $this->get_fields();
-        $p['fields'] = is_array($fields) ? array_map(fn ($field) => ($field instanceof View) ? clone $field : $field, $fields) : $fields;
+        $p['fields'] = [];
 
-        foreach ($p['defaults'] as $key => $default) foreach ($p['fields'] as &$field) {
+        if (is_array($fields)) foreach ($fields as $index => $field) {
+
+            if ($field instanceof View) $p['fields'][$index] = clone $field;
+            else $this->reject_field($index, $field);
+
+        }
+
+        foreach ($p['defaults'] as $key => $default) foreach ($p['fields'] as $field) {
         
-            if (($field['name'] ?? ($field['key']) ?? '') != $key) continue;
+            if (($field['name'] ?? '') != $key) continue;
             $field['default'] = $default;
             break;
 
         }
 
-        if ($p['fields']) foreach ($p['fields'] as &$field) {
-
-            if (!($field instanceof View)) $field = wp_parse_args($field, [
-                'field' => Input::class,
-            ]);
+        foreach ($p['fields'] as $index => $field) {
 
             if ($p['field_params']) $field = $this->apply_field_params($field, $p['field_params']);
 
             $field = Hook::filter('lattice.field_group.field', $field, $p, static::class);
 
+            if (!($field instanceof View)) {
+
+                $this->reject_field($index, $field, ' from the lattice.field_group.field filter');
+                unset($p['fields'][$index]);
+                continue;
+
+            }
+
             if (isset($field['options'])) $field['options'] = $this->get_field_options($field['options'], $field);
+
+            $p['fields'][$index] = $field;
 
         }
 
@@ -76,18 +88,26 @@ class Field_Group extends \Lattice\Component {
 
     }
 
+    protected function reject_field (int|string $index, mixed $field, string $source = '') : void {
+
+        $class   = is_array($field) && is_string($field['field'] ?? null) ? ltrim($field['field'], '\\') : 'Input';
+        $problem = "fields entry " . var_export($index, true) . ' is ' . get_debug_type($field) . "{$source}, not a View, so it is skipped.";
+
+        Strict::fail(static::class, $problem, "Build each field with new: new {$class}([...]).");
+        Strict::log_once(static::class, $problem);
+
+    }
+
     protected function apply_field_params ($field, array $map) {
 
-        $class = ($field instanceof View) ? get_class($field) : $field['field'];
-
-        if (is_a($class, Field_Group::class, true)) {
+        if ($field instanceof Field_Group) {
 
             $field['field_params'] = array_merge((array) ($field['field_params'] ?? []), $map);
             return $field;
 
         }
 
-        $name = rtrim((string) ($field['name'] ?? $field['key'] ?? ''), '[]');
+        $name = rtrim((string) ($field['name'] ?? ''), '[]');
 
         if (($name === '') || !isset($map[$name])) return $field;
 

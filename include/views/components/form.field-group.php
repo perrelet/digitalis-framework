@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Lattice\Component;
 
 use Lattice\Hook;
-use Lattice\View;
 
 class Form extends Field_Group {
 
@@ -48,13 +47,11 @@ class Form extends Field_Group {
 
         foreach ($fields as $field) {
 
-            $class = ($field instanceof View) ? get_class($field) : ($field['field'] ?? '');
+            if ($field instanceof \Lattice\Field\Human_Check) continue;
 
-            if (is_a($class, \Lattice\Field\Human_Check::class, true)) continue;
+            if ($field instanceof \Lattice\Field\Submit) {
 
-            if (is_a($class, \Lattice\Field\Submit::class, true)) {
-
-                if ($field instanceof View) $field = clone $field;
+                $field = clone $field;
                 $field['disabled'] = true;
 
             }

@@ -120,10 +120,10 @@ abstract class Admin_Table extends Feature {
                         if (!$filter['query_callback']) $filter['query_callback'] = [$this, 'query_callback_meta_compare'];
 
                         $filter['args'] = wp_parse_args($filter['args'] ?? [], [
-                            'field' => Input::class,
-                            'key'   => $name,
-                            'wrap'  => false,
+                            'meta_key' => $name,
                         ]);
+
+                        $filter['args']['field'] ??= new (Call::get_class_name(Input::class))();
 
                         $this->prepare_meta_field($filter);
                         $this->_filters[] = $filter;
@@ -132,11 +132,7 @@ abstract class Admin_Table extends Feature {
 
                     case 'field':
 
-                        $filter['args'] = wp_parse_args($filter['args'] ?? [], [
-                            'field' => Input::class,
-                            'key'   => $name,
-                            'wrap'  => false,
-                        ]);
+                        $filter['args']['field'] ??= new (Call::get_class_name(Input::class))();
 
                         $this->_filters[] = $filter;
 
@@ -216,8 +212,7 @@ abstract class Admin_Table extends Feature {
 
     public function prepare_meta_field (&$filter) {
 
-        $field          = &$filter['args'];
-        $field['value'] = $this->get_filter_value($field['key'], $filter);
+        $filter['args']['value'] = $this->get_filter_value($filter['name'], $filter);
 
     }
 
@@ -297,7 +292,7 @@ abstract class Admin_Table extends Feature {
                 if ($terms) foreach ($terms as $term) $options[$term->term_id] = $term->name;
     
                 echo new \Lattice\Field\Select_Nice([
-                    'key'     => $filter['name'],
+                    'name'    => $filter['name'],
                     'wrap'    => false,
                     'options' => $options,
                 ]); 
@@ -320,24 +315,35 @@ abstract class Admin_Table extends Feature {
 
     public function render_meta_filter ($filter) {
 
-        $field_class = $filter['args']['field'];
-
-        if (View::class_error($field_class)) return;
-
-        $class = Call::get_class_name($field_class);
-        echo new $class($filter['args']);
+        $this->render_filter_field($filter, ['value' => $filter['args']['value']]);
     
     }
 
     public function render_field_filter ($filter) {
 
-        $field_class = $filter['args']['field'];
-
-        if (View::class_error($field_class)) return;
-
-        $class = Call::get_class_name($field_class);
-        echo new $class($filter['args']);
+        $this->render_filter_field($filter);
     
+    }
+
+    protected function render_filter_field ($filter, array $params = []) {
+
+        if (!(($field = $filter['args']['field'] ?? null) instanceof View)) {
+
+            $class   = is_string($field) && $field !== '' ? ltrim($field, '\\') : 'Input';
+            $problem = "filter " . var_export($filter['name'], true) . " args 'field' is " . get_debug_type($field) . ', not a View, so the filter is skipped.';
+
+            Strict::fail(static::class, $problem, "Build the field with new: 'field' => new {$class}([...]).");
+            Strict::log_once(static::class, $problem);
+
+            return;
+
+        }
+
+        $field = clone $field;
+        $field->merge_params(['name' => $filter['name'], 'wrap' => false] + $params);
+
+        echo $field;
+
     }
 
     public function before_render_filters () {}
@@ -412,7 +418,7 @@ abstract class Admin_Table extends Feature {
         if ($filter['args']['value'] != $filter['null_value']) {
 
             $qv->add_meta_query([
-                'key'     => $filter['args']['key'] ?? $filter['name'],
+                'key'     => $filter['args']['meta_key'] ?? $filter['name'],
                 'value'   => $filter['args']['value'],
                 'compare' => $filter['compare'],
             ]);
@@ -428,7 +434,7 @@ abstract class Admin_Table extends Feature {
         if ($filter['args']['value'] != $filter['null_value']) {
 
             $qv->add_meta_query([
-                'key'     => $filter['args']['key'] ?? $filter['name'],
+                'key'     => $filter['args']['meta_key'] ?? $filter['name'],
                 'value'   => $filter['args']['value'],
                 'compare' => '=',
             ]);
