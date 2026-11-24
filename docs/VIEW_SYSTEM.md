@@ -62,7 +62,7 @@ class Invoice_View extends View {
 }
 
 // Clean usage
-Invoice_View::render(['order' => 721, 'user' => 1]);
+echo new Invoice_View(['order' => 721, 'user' => 1]);
 ```
 
 ### Key Characteristics
@@ -172,23 +172,6 @@ protected static $skip_inject = ['model_class'];
 ```
 
 `$skip_inject` accumulates up the inheritance chain, so each subclass can add to it without re-listing parent entries. Full antipattern: [Class-name defaults are injected — add to `$skip_inject` to prevent it](./ANTIPATTERNS.md#class-name-defaults-are-injected--add-to-skip_inject-to-prevent-it).
-
-### Instantiate views with `new` — `View::render()` is the legacy static form
-
-**Wrong assumption:** `View::render([...])` is the canonical entry point for rendering a view.
-**Reality:** `View::render()` is supported but not preferred. The framework treats views as objects — instantiate directly with `new`. The `new` form composes uniformly whether you're echoing, casting to string, or storing the view as a value.
-
-```php
-// Supported, but not preferred
-View::render(['param' => 'value']);
-$html = View::render(['param' => 'value'], false);
-
-// ✅ Preferred
-<?= new My_View(['param' => 'value']) ?>
-$html = (string) new My_View(['param' => 'value']);
-```
-
-PHP's `__toString()` is invoked automatically when a view is echoed; the explicit `(string)` cast is only needed when the value is being assigned or passed where the type matters. See [CONVENTIONS — Instantiate views with `new`](./CONVENTIONS.md#instantiate-views-with-new--dont-call-viewrender-statically).
 
 ### A print leaves the view as configured
 
@@ -461,18 +444,6 @@ $skip = static::get_skip_inject_keys();
 
 ## Rendering Methods
 
-### Static `render()`
-
-Factory method for one-line rendering:
-
-```php
-// Render and print
-View::render(['param' => 'value']);
-
-// Render and return HTML
-$html = View::render(['param' => 'value'], false);
-```
-
 ### Instance `print()`
 
 For more control:
@@ -568,7 +539,7 @@ public function params(&$p) {
 
 ### What the framework escapes
 
-The framework escapes what it renders itself: every attribute value that passes through `Attributes` (so every `Element`), attribute names (invalid ones are dropped, strict throws), element tags (`Element::set_tag()` accepts bare element names only; strict throws), the attribute positions in its own field, component and debugger templates and in the admin list filters `Post_Type::render_filters()` prints, and the ids it writes into inline scripts. Content and label slots (`content`, `label`, option labels for radio and checkbox groups, `no_items`, table cells, the `before_*` / `after_*` slots) are HTML by contract, so the caller escapes user data before passing it: `'label' => esc_html($term->name)`. Select option and optgroup labels are the exception and are text, as are the option labels of the admin list filters. Consumer templates escape their own attribute positions; `include_template()` extracts params with `EXTR_SKIP` behind a prefixed local, so a param named `path`, `template` or `return` reaches the template as a variable and cannot redirect the include.
+The framework escapes what it renders itself: every attribute value that passes through `Attributes` (so every `Element`), attribute names (invalid ones are dropped, strict throws), element tags (`Element::set_tag()` accepts bare element names only; strict throws), the attribute positions in its own field, component and debugger templates, and the ids it writes into inline scripts. Content and label slots (`content`, `label`, option labels for radio and checkbox groups, `no_items`, table cells, the `before_*` / `after_*` slots) are HTML by contract, so the caller escapes user data before passing it: `'label' => esc_html($term->name)`. Select option and optgroup labels are the exception and are text. Consumer templates escape their own attribute positions; `include_template()` extracts params with `EXTR_SKIP` behind a prefixed local, so a param named `path`, `template` or `return` reaches the template as a variable and cannot redirect the include.
 
 
 ### Template File Approach
@@ -1518,11 +1489,11 @@ public function before_first() {
 ### View Creation
 
 ```php
-// Static factory (print)
-View::render(['param' => 'value']);
+// Print
+echo new My_View(['param' => 'value']);
 
-// Static factory (return)
-$html = View::render(['param' => 'value'], false);
+// Return the markup
+$html = (string) new My_View(['param' => 'value']);
 
 // Instance
 $view = new My_View(['param' => 'value']);

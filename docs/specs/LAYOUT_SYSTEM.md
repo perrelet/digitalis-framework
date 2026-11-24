@@ -62,14 +62,14 @@ add_filter('template_include', function ($template) {
 ```php
 <?php
 
-Digitalis\App::render();
+Lattice\App::render();
 ```
 
 ---
 
 ## App
 
-`App` extends `Factory` (changed from `Singleton`). Each plugin defines its own App subclass. All Apps share a single cache group (`protected static $cache_group = self::class`) so the base `Digitalis\App` can discover all active plugin Apps via the Factory instance registry.
+`App` extends `Factory` (changed from `Singleton`). Each plugin defines its own App subclass. All Apps share a single cache group (`protected static $cache_group = self::class`) so the base `Lattice\App` can discover all active plugin Apps via the Factory instance registry.
 
 > **Breaking change:** Existing plugin App subclasses extend `Singleton` via `App`. The change to `Factory` alters `get_instance()` behaviour (accepts `$data`, uses `$cache_property`). Existing subclasses should be reviewed to ensure compatibility.
 
@@ -78,7 +78,7 @@ Digitalis\App::render();
 Static method on the base `App`. Lets each registered App participate via `render_app()`, then resolves and renders the page.
 
 ```php
-// Base Digitalis\App
+// Base Lattice\App
 class App extends Factory {
 
     protected static $caclattice/docs/specs/LAYOUT_SYSTEM.mdhe_group = self::class;
@@ -112,7 +112,7 @@ class App extends Factory {
 
 ### Theme call
 
-`Digitalis\App::render()` is called from the theme. The base class coordinates — no plugin-specific knowledge needed.
+`Lattice\App::render()` is called from the theme. The base class coordinates, with no plugin-specific knowledge needed.
 
 ### Multi-plugin
 

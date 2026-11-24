@@ -246,13 +246,13 @@ WooCommerce orders (`shop_order`) stored in HPOS with sync off. Elsewhere the re
 The site's order model carries the version and the unsaved copy; the resource sits beside it:
 
 ```php
-class Order extends \Digitalis\Order {
+class Order extends \Lattice\Order {
 
-    use \Digitalis\Has_Order_Version, \Digitalis\Has_Unsaved_Copies;
+    use \Lattice\Has_Order_Version, \Lattice\Has_Unsaved_Copies;
 
 }
 
-class Order_Resource extends \Digitalis\Order_Model_Resource {
+class Order_Resource extends \Lattice\Order_Model_Resource {
 
     protected static $name        = 'order';
     protected static $model_class = Order::class;
@@ -291,7 +291,7 @@ An edit-screen save is several order saves, so "before" is taken at the first to
 A site subclasses `User_Resource` and registers it, naming any ACF or meta fields it opens and the conditions it declares:
 
 ```php
-class Account_Resource extends \Digitalis\User_Resource {
+class Account_Resource extends \Lattice\User_Resource {
 
     protected static $name = 'account';
 

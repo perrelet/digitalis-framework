@@ -491,18 +491,6 @@ add_filter('lattice.db.wpdb', function($wpdb) {
 });
 ```
 
-### WooCommerce Hooks
-
-```php
-// Filter account page icon
-add_filter('digitalis_woocommerce_account_page_icon', function($icon, $slug, $page) {
-    if ($slug === 'orders') {
-        return 'custom-icon';
-    }
-    return $icon;
-}, 10, 3);
-```
-
 ### Lattice Hooks
 
 Fired with WordPress's own `apply_filters()` and `do_action()`, so the names are used exactly as written.
@@ -544,7 +532,7 @@ The resources hooks are described in [RESOURCES.md](./RESOURCES.md#policy).
 
 ### Legacy names
 
-Before 1.0.0 these fired as `Digitalis/Post_Type/{Class}/Args` and the like. `Hook::filter()` still runs each legacy name through `apply_filters_deprecated()` before the live one, so a callback on the old name keeps working and logs a deprecation; hooks naming a framework class also answer to the pre-rename `Digitalis\` namespace (`Digitalis/Class/Digitalis/User` for `lattice.class.lattice.user`), and the post type hooks answer to both spellings they had (`Digitalis/Post_Type/My_Plugin\Project/Args` and `Digitalis/Post_Type/My_Plugin/Project/Args`). The legacy name is rebuilt from the live one (`/` between the parts, each `_` word capitalised), so a class whose name had capitals beyond the first letter of a word (`SOMM\Dancer` forwards as `Digitalis/Class/Somm/Dancer`) is not forwarded. Move callbacks to the dotted names.
+Through 0.x these fired as `Digitalis/Post_Type/{Class}/Args` and the like. From 1.0 a callback on a legacy name never runs: at `wp_loaded` strict throws once, listing every subscription to a legacy name with its dotted name, and outside strict each is logged once per request. `bin/lattice-1.0.php` rewrites the subscriptions ([UPGRADING.md](./UPGRADING.md#0x-to-10)).
 
 ---
 
@@ -792,7 +780,7 @@ class ACF_Customizations extends Feature {
 |------|------|-------------|
 | `lattice.instantiate` | Filter | All class instantiation (`$instantiation, $class_name, $path`) |
 | `lattice.instantiate.{class}` | Filter | Specific class instantiation (`$instantiation, $path`) |
-| `lattice.class.{class}` | Filter | Class name resolution (`$class_name, $data`); honoured by `View::render()` and `Shortcode::render()` |
+| `lattice.class.{class}` | Filter | Class name resolution (`$class_name, $data`); honoured by the finds (`get_instance()` on a `Factory` or a `Singleton`) and `create()`, a `Route`'s `$view`, `ACF_Block`, `Woo_Account_Page`, `Shortcode` and an admin table's default filter `Input`. `new X` gives X |
 | `lattice.post_type.{class}.args` | Filter | Post type args |
 | `lattice.post_type.{class}.rewrite` | Filter | Post type rewrite (array, or `false`) |
 | `lattice.post_type.{class}.supports` | Filter | Post type supports (array; `[]` or `false` for none) |
@@ -806,7 +794,6 @@ class ACF_Customizations extends Feature {
 | `lattice.keywords.collected` | Filter | The keyword string before `Has_Keywords` filters it (`$keywords, $model`) |
 | `lattice.keywords.updated` | Action | After `Has_Keywords` writes the excerpt (`$model, $keywords`) |
 | `lattice.relationship.partner_updated` | Action | After `Bidirectional_Relationship` writes a partner's field (`$type, $id, $key, $relationship`); `Excerpt_Keywords` rebuilds the partner's keywords on it |
-| `digitalis_woocommerce_account_page_icon` | Filter | Account page icons (`$icon, $slug, $page`) |
 | `lattice.resources.*`, `lattice.journal.keep_days` | Filter | The resources layer's policy hooks: see [Lattice Hooks](#lattice-hooks) and [RESOURCES.md](./RESOURCES.md#policy) |
 | `lattice.iterator.runner`, `lattice.iterator.log_directory` | Filter | The Iterator's background driver (`$runner, $iterator`) and its log directory (`$directory, $iterator`) |
 | `lattice.jobs.ended`, `lattice.jobs.budget`, `lattice.jobs.keep_days` | Action, Filter | The Jobs feature's: after a job ends (`$job, $state`), the worker's seconds (`$budget`), the prune's days (`$days`); see [JOBS.md](./JOBS.md) |
@@ -817,5 +804,4 @@ class ACF_Customizations extends Feature {
 Custom hooks:     digitalis/{feature}/{action}
 Class hooks:      lattice.{class_name}.{method_name}
 Framework hooks:  lattice.{component}.{class}.{property}  (lowercase; a class name's `\` becomes `.`)
-Legacy names:     Digitalis/{Component}/{Class}/{Property}  (forwarded with a deprecation)
 ```

@@ -43,9 +43,9 @@ public function load () {
 
 }
 
-class Offer extends \Digitalis\Post implements \Digitalis\Takes_Proposals {
+class Offer extends \Lattice\Post implements \Lattice\Takes_Proposals {
 
-    use \Digitalis\Has_Version, \Digitalis\Has_Unsaved_Copies, \Digitalis\Has_Proposals;
+    use \Lattice\Has_Version, \Lattice\Has_Unsaved_Copies, \Lattice\Has_Proposals;
 
 }
 ```

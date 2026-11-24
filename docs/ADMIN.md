@@ -79,7 +79,7 @@ class Dashboard_Page extends Admin_Page {
     protected $title = 'Dashboard';
 
     public function callback() {
-        Dashboard_View::render([
+        echo new Dashboard_View([
             'user'  => User::current(),
             'stats' => $this->get_stats(),
         ]);
@@ -558,9 +558,10 @@ class Projects_Table extends Posts_Table {
             'priority' => [
                 'type'           => 'meta',
                 'args'           => [
-                    'field'      => \Lattice\Field\Select::class,
-                    'options'    => ['low' => 'Low', 'medium' => 'Medium', 'high' => 'High'],
-                    'placeholder' => 'Priority',
+                    'field' => new \Lattice\Field\Select([
+                        'options'     => ['low' => 'Low', 'medium' => 'Medium', 'high' => 'High'],
+                        'placeholder' => 'Priority',
+                    ]),
                 ],
                 'query_callback' => [$this, 'filter_by_priority'],
             ],
@@ -570,7 +571,7 @@ class Projects_Table extends Posts_Table {
     public function filter_by_priority(Query_Vars $qv, $filter) {
         if ($filter['args']['value']) {
             $qv->add_meta_query([
-                'key'     => 'priority',
+                'key'     => $filter['args']['meta_key'],
                 'value'   => $filter['args']['value'],
                 'compare' => '=',
             ]);
@@ -588,6 +589,8 @@ class Projects_Table extends Posts_Table {
 | `acf` | ACF field-based filter (uses field choices) |
 | `meta` | Custom meta field filter |
 | `field` | Generic field filter |
+
+A `meta` or `field` filter's `args` take `'field' => new X([...])`, an `Input` when absent. The table names the field after the filter (also the GET parameter), prints it unwrapped and, on a `meta` filter, sets its `value` from the request; strict throws for a `'field'` that is not a View. A `meta` filter's default `query_callback` queries the meta key `args['meta_key']`, defaulting to the filter's name; any `query_callback` reads the request value from `$filter['args']['value']`.
 
 ### Filter Options
 
@@ -670,9 +673,9 @@ class Accounts_Table extends Users_Table {
             'has_projects' => [
                 'type'           => 'field',
                 'args'           => [
-                    'field'   => \Lattice\Field\Select::class,
-                    'key'     => 'has_projects',
-                    'options' => ['' => 'All', '1' => 'Has Projects', '0' => 'No Projects'],
+                    'field' => new \Lattice\Field\Select([
+                        'options' => ['' => 'All', '1' => 'Has Projects', '0' => 'No Projects'],
+                    ]),
                 ],
                 'query_callback' => [$this, 'filter_has_projects'],
             ],

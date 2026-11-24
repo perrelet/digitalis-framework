@@ -2,13 +2,554 @@
 
 What a consumer plugin meets when it moves onto a new framework version. Each section is a checklist: run the site with `WP_DEBUG` (or `LATTICE_STRICT`) on, read every `Strict_Violation` as an instruction, fix, reload. `define('LATTICE_STRICT', false)` turns the checks off while you work through them; do not ship that.
 
+## 0.x to 1.0
+
+1.0 removes the compatibility shims, the members 0.x marked deprecated and the code that becomes the consumers' own, and `bin/lattice-1.0.php` rewrites a consumer onto the result. What it cannot rewrite it lists as hand edits. A site moves as a whole: every plugin and theme on it that carries a framework copy takes 1.0 in one deploy (the lock below).
+
+1. Bring the framework copy to 1.0; its repository keeps 45b11fc, the source of the copies.
+2. Run the script as a dry run, then with `--write` on a clean checkout, then a second dry run that rewrites nothing.
+3. Work through the hand-edit list and the rows below that the script leaves to you.
+4. Move PHP stored in the database (Oxygen code blocks) through the same rules.
+5. Deploy every framework copy on the site together, then run `wp lattice classmap`.
+
+### The promise
+
+Within 1.x a release does not break the documented API: the classes, methods, properties and parameters these docs describe, the hooks in [HOOKS.md](./HOOKS.md), the documented `wp lattice` commands, the `lattice/v1` resource routes and the `LATTICE_*` constants. A break waits for 2.0, with a script of its own. Option names, table layouts and script internals are outside the promise; where their data moves, the framework migrates it itself.
+
+### The script
+
+```
+php framework/bin/lattice-1.0.php CONSUMER_ROOT [--write] [--deps DIR]
+```
+
+- A dry run by default: it prints every rewrite per file (line, rule, what changes), then the hand edits, then a `RESULT` line with the counts.
+- `--write` applies the rewrites and writes the copies. It needs `CONSUMER_ROOT` to be a clean git checkout, so the change can be read with `git diff` and undone; commit or stash first. Then a second dry run (no `--write`) should rewrite nothing. Keep the first run's hand-edit list, since a few entries (default `Input` arrays) stop matching once their neighbours are rewritten.
+- `--deps DIR` is where class ancestry is read for a nested tree that is an empty submodule (somm's views extend `\Eventropy\View`): `DIR/<its name>`, default the root's siblings. The default scans every sibling directory, so pass `--deps` explicitly when the root sits in a home directory or beside other large trees.
+- Exit 0 when nothing is left by hand, 1 when hand edits remain, 2 on a usage error (or when the framework repository lacks the commit the copies come from, 45b11fc: fetch its history).
+- The walk covers the consumer's own `.php`, `.scss` and `.md` files. It stops at a nested repository, a `.gitmodules` path, `vendor/` and `node_modules/`, so a framework submodule is never touched. Names resolve against the framework tree beside the script.
+
+The copies of what leaves the framework and the `Post_Type` months dropdown feature are planned over the whole tree first. Then the rules run over each file, copies included, in order: `Digitalis\` and flat `Lattice\` names, the `DIGITALIS_*` constants, legacy hook names, `::inst(` to `::get_instance(` ([Life cycle](#life-cycle-013-to-014)), the `'field'` shorthand and `key`, static `render()`.
+
+The hand-edit list names the file, the line and the fix: a file declaring `namespace Digitalis` (left untouched); a name with no 1.0 target (`Editor_Manager`, `Commands_Page`, `Util\Media` and the leaving classes below); a `render()` call whose shape it cannot rewrite (a print flag known only at run time, a print whose result is used, `$class::render`, a string callable, `Call::static(..., 'render')`, `parent::render()`) and a rewritten one whose class a `lattice.class` subscription swaps; field arrays where PHP allows no `new` and default `Input` arrays with no `'field'`; an admin filter `'key'` that differs from its filter's name; a callback on `lattice.field_group.field`; a find with a config array (`declare()`); a `Digitalis/...` subscription outside the legacy table that nothing in the tree fires; a `Post_Type` subclass with admin columns or filters; SCSS imports to compile and compare, or left in a dead stylesheet; a copy blocked by a different file at its target; every `.md` line that names a form a rule rewrites (`App::render()` lines among them, which stay as written).
+
+The script walks files only. PHP stored in the database, such as Oxygen code blocks in `ct_template` posts, is exported, rewritten by the same rules, re-signed and re-imported before that site takes 1.0.
+
+Run `wp lattice classmap` after deploying: framework files are gone.
+
+### What leaves
+
+| Was | Now |
+|---|---|
+| Static `View::render()`: `X::render($p)` printed, `X::render($p, false)` returned the markup | `echo new X($p)` and `(string) new X($p)`; `return static::render($p, false)` is `return (string) new static($p)` |
+| A field array in a field list, `['field' => Input::class, 'name' => ...]`, and a field's name passed as `'key'` | `new Input(['name' => ...])`. `Field_Group` takes View entries only: strict throws for any other entry, including one a `lattice.field_group.field` callback returns (outside strict it is skipped and logged once). A field given a `'key'` it does not declare throws "Field takes 'name'" under strict and is logged once outside it |
+| A field array in a property default or class constant, where PHP allows no `new` (hand-listed) | Build the list in a method (`get_fields()`, `params()`) with `new X([...])` |
+| Admin table `'meta'` and `'field'` filters took `args` with `'field' => X::class` and `'key'`, at once the field's name, the GET parameter and the meta key | `args` take `'field' => new X([...])`, an `Input` when absent. The table sets the field's `name` to the filter's name (also the GET parameter), always prints it unwrapped (`wrap => false`) and on a `'meta'` filter sets its `value` from the request. The meta key is `'meta_key'`, defaulting to the filter's name. Strict throws for a `'field'` that is not a View (outside strict the filter is skipped and logged once). `$filter['args']['value']` still reaches a `query_callback` |
+| `View_Route` | `extends Route` with `protected $view = My_View::class` |
+| `Digitalis_Query`, a `WP_Query` subclass | `Query_Vars` and `make_query()`, run through `Query_Manager` ([ANTIPATTERNS.md](./ANTIPATTERNS.md#digitalis_query-is-removed--use-query_vars--query_manager)) |
+| `Post::$post_type_class` sent a model's `get_query_vars()` and `get_admin_query_vars()` to its post type's | Declare them on the model, which a post type with a `$model_class` reads; a leftover property is dead |
+| `Post_Type` drew an admin list table: `$filters`, `get_filters()`, `columns()`, `column()` and their hooks, and it hid WordPress's months dropdown on every post type unless `$filters` named `'publish_month'` | Port columns and filters to a [`Posts_Table`](./ADMIN.md#posts-table) (hand-listed). The months dropdown is WordPress's default again; the script writes `<App dir>/lattice-copy/months-dropdown.feature.php`, a `Months_Dropdown` feature filtering `disable_months_dropdown` for the post types the 0.x table hid it on, and lists it for a look. `admin_query_wrap()` and the model's `get_admin_query_vars()` stay |
+| `include/deprecated/`: `Deprecated_View`, `Deprecated_Component` and the loader traits `Can_Load`, `Has_Components`, `Has_Integrations`, `Has_Post_Types`, `Has_Taxonomies` | `Can_Load` is the consumer's copy, `<App namespace>\Lattice_Copy\Can_Load` ([below](#the-copies)); the rest are hand-listed: extend `View` or `Component`, and let the App's autoloader load the directories |
+| `Theme`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme`, the `woocommerce-clean` navigation template, `assets/js/woo-clean.js`, the template hooks `woocommerce_digitalis_account_navigation_classes`, `woocommerce_digitalis_before_account_navigation_loop` and `digitalis_woocommerce_account_page_icon` and the `$digitalis_styles` global | The consumer's copy ([below](#the-copies)), whose hooks and global work as before; the script re-aims the consumer's `extends` at it |
+| `scss/` (the vendored include-media with it) and the `sassy-variables` filter, which gave Sassy `$digitalis_path` and `$digitalis_uri` | The script copies `scss/` into a `lattice/` directory beside each stylesheet that imports it and re-aims the imports; any other `$digitalis_path` or `$digitalis_uri` use is hand-listed. The copy compiles under scssphp 1.x (Sassy before 3.0) only: scssphp 2 and dart-sass reject its `@import` inside `@if` |
+| A `Digitalis\X` name resolved to `Lattice\X` through a lazy `class_alias` (`compat/`), and a flat `Lattice\X` to its sub-namespace | Write the name where it lives (`Lattice\Component\Table`); the script resolves each as the alias did: `Lattice\X`, then `Component`, `Field`, `DB`, `WP`, `Woo`, `ACF`, `Oxygen` |
+| `DIGITALIS_FRAMEWORK_VERSION`, `DIGITALIS_FRAMEWORK_PATH`, `DIGITALIS_FRAMEWORK_URI`, `DIGITALIS_LIBRARY_PATH` | `LATTICE_VERSION`, `LATTICE_PATH`, `LATTICE_URI`, `LATTICE_LIBRARY_PATH`. `DIGITALIS_FRAMEWORK_VERSION` is still defined, as the lock; read `LATTICE_VERSION` |
+| A callback on a legacy hook name (`Digitalis/Class/...`, `Digitalis/Instantiate/...`, `Digitalis/Post_Type/...`, `Digitalis/Taxonomy/...`, `Digitalis/DB/WPDB`, `Digitalis/Field_Group/Field`, `Digitalis/Form/Params`) ran beside the dotted one with a deprecation | It never runs: subscribe to the dotted name ([HOOKS.md](./HOOKS.md#framework-hooks-summary)). At `wp_loaded` strict throws once, listing every such subscription with its `lattice.` name; outside strict each is logged once per request. A consumer's own `Digitalis/...` names are untouched |
+| A 0.x copy returns from its `load.php` when another copy loaded first: since the `Lattice\` rename (during 0.4.0) on `LATTICE_VERSION`, before it on `DIGITALIS_FRAMEWORK_VERSION`, which `compat/` defined | 1.0's `load.php` defines both, so any 0.x copy loaded after 1.0 stays out. 1.0 itself stands down when `DIGITALIS_FRAMEWORK_PATH` is defined (a 0.x copy loaded first): it logs the cause with `error_log`, shows an admin notice and returns, and the consumers written for 1.0 then fatal. Move the whole site |
+| `X::render()` resolved X through `lattice.class.{x}`, so a subscription swapped the class | `new X` gives X. The seams that take a class resolve it through `lattice.class` before `new`: a `Route`'s `$view`, `ACF_Block`, `Woo_Account_Page`, `Shortcode` and an admin table's default filter `Input`, besides the finds (`get_instance()` on a `Factory` or a `Singleton`) and `create()`. `Meta_Box` and `Profile_Section` build their `$view` unswapped. Where a call site needs the swap, resolve first: `$class = Call::get_class_name(X::class); echo new $class($p);` |
+
+Still silent when a site misses the script: a swapped view built with `new`, the months dropdown, an SCSS import (a compile shows it) and PHP stored in the database.
+
+### The copies
+
+The script writes these from the framework at 45b11fc (0.14.0), the last tree that held them, so every consumer owns the same code. Below, `My_Plugin` stands for the namespace of the consumer's App subclass, whose file sits in `include/`, and `my-plugin.php` for its plugin file; the script derives both and places the copies beside the App file. The navigation template and `woo-clean.js` are copied verbatim: `git -C framework show 45b11fc:templates/woocommerce-clean/myaccount/navigation.php` to `templates/lattice-copy/woocommerce-clean/myaccount/navigation.php`, and `git -C framework show 45b11fc:assets/js/woo-clean.js` to `assets/js/lattice-copy/woo-clean.js`.
+
+`include/lattice-copy/theme.abstract.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace My_Plugin\Lattice_Copy;
+
+use \WP_Styles;
+abstract class Theme {
+
+    protected $actions = [
+        'wp_enqueue_scripts'    => 'style',
+        'after_setup_theme'     => 'theme_supports',
+    ];
+
+    public static function get_auto_instantiation () { return true; }
+    
+    public function __construct () {
+
+        foreach ($this->actions as $action => $method) if (is_callable([$this, $method])) add_action($action, [$this, $method]);
+
+        if (method_exists($this, 'init')) $this->init();
+
+    }
+
+    //
+
+    public function theme_supports () {
+
+        // ..
+
+    }
+
+    // Consider removing / depreciating:
+
+    protected $url;
+    protected $path;
+
+    public function set_location ($url, $path) {
+
+        $this->url = $url;
+        $this->path = $path;
+
+    }
+
+    public function get_url () {
+
+        return $this->url;
+
+    }
+
+    public function get_path () {
+
+        return $this->path;
+
+    }
+
+    //
+
+    public function enqueue_style_last ($handle, $src, $deps = [], $version = false) {
+
+        if (defined('SHOW_CT_BUILDER') && !defined('OXYGEN_IFRAME')) return; // Oxygen's builder window; Theme leaves with the vendor-out pass.
+
+        global $digitalis_styles;
+
+        if (is_null($digitalis_styles)) {
+
+            $digitalis_styles = new WP_Styles();
+
+            add_action('wp_head', function () {
+
+                global $digitalis_styles;
+                $digitalis_styles->do_items();
+    
+            }, PHP_INT_MAX);
+
+        }
+
+        $digitalis_styles->add($handle, $src, $deps, $version);
+        $digitalis_styles->enqueue($handle);
+    
+    }
+
+    //
+
+    public function add_modules_attribute ($tag, $handle, $src) {
+
+        if (strpos($handle, '-module')) $tag = str_replace("<script", "<script type='module'", $tag);
+
+        return $tag;
+
+    }
+
+}
+```
+
+`include/lattice-copy/~woocommerce/woocommerce-theme.abstract.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace My_Plugin\Lattice_Copy;
+
+use Lattice\Woo_Account_Page;
+
+abstract class Woocommerce_Theme extends Theme {
+
+    public function __construct() {
+
+        add_filter('woocommerce_locate_template', [$this, 'woocommerce_locate_template'], 1, 3);
+        add_filter('woocommerce_account_menu_item_classes', [$this, 'account_menu_item_classes'], 10, 2);
+
+        parent::__construct();
+        
+    }
+
+    public function woocommerce_locate_template ($template, $template_name, $template_path) {
+
+        if (!$this->path) return $template;
+
+        $template_directory = trailingslashit($this->path) . 'woocommerce/';
+        $path = $template_directory . $template_name;
+
+        return file_exists($path) ? $path : $template;
+    
+    }
+
+    public function account_menu_item_classes ($classes, $endpoint) {
+
+        //jprint($endpoint);
+
+        if ($page = Woo_Account_Page::get_page($endpoint)) {
+
+            if ($parent_slug = $page->get_parent()) {
+
+                $classes[] = 'has-parent';
+
+            }
+
+        }
+
+        return $classes;
+
+    }
+
+    // OPTIONAL FEATURES
+
+    protected function normal_field_descriptions () {
+
+        add_filter('woocommerce_form_field', function ($field, $key, $args, $value) {
+
+            return str_replace('<span class="description"', '<span class="normal-description"', $field);
+
+        }, PHP_INT_MAX, 4);
+
+    }
+
+}
+```
+
+`include/lattice-copy/~woocommerce/woocommerce-clean-theme.abstract.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace My_Plugin\Lattice_Copy;
+
+use Lattice\Woo_Account_Page;
+
+abstract class Woocommerce_Clean_Theme extends Woocommerce_Theme {
+
+    protected $do_account_icons = true;
+    protected $do_wrap_elements = true;
+    protected $do_modify_fields = true;
+    protected $do_modify_cart   = true;
+
+    protected $icon_library = 'iconoir';
+    protected $template_overrides = [];
+
+    protected $page_icons = [
+        'dashboard'                  => 'profile-circle',
+        'orders'                     => 'cube',
+        'downloads'                  => 'download',
+        'edit-address'               => 'home-alt-slim-horiz',
+        'payment-methods'            => 'card-shield',
+        'edit-account'               => 'key',
+        'customer-logout'            => 'log-out',
+        'subscriptions'              => 'clock-rotate-right',
+        'subaccounts'                => 'community',
+        'user-switching-switch-back' => 'long-arrow-up-left',
+    ];
+
+    protected $default_page_icon = 'circle';
+
+    public function __construct() {
+
+        add_filter('woocommerce_locate_template', [$this, 'locate_clean_template'], 10, 3);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_woo_clean_scripts']);
+
+        if ($this->do_account_icons) $this->account_menu_icons();
+        if ($this->do_wrap_elements) $this->wrap_woocommerce_elements();
+        if ($this->do_modify_fields) $this->modify_fields();
+        if ($this->do_modify_cart) $this->modify_cart();
+
+        parent::__construct();
+        
+    }
+
+    //
+
+    public function locate_clean_template ($template, $template_name, $template_path) {
+
+        if (in_array($template_name, $this->template_overrides)) return dirname(__DIR__, 3) . '/templates/lattice-copy/woocommerce-clean/' . $template_name;
+
+        return $template;
+
+    }
+
+    //
+
+    public function enqueue_woo_clean_scripts () {
+
+        if ($this->do_account_icons) wp_enqueue_script('woo-clean', plugin_dir_url(dirname(__DIR__, 3) . '/my-plugin.php') . 'assets/js/lattice-copy/woo-clean.js', [], LATTICE_VERSION);
+
+    }
+
+    //
+
+    public function account_menu_icons () {
+
+        $this->template_overrides[] = 'myaccount/navigation.php';
+
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_account_menu_icons']);
+        add_filter('woocommerce_account_menu_items', [$this, 'account_menu_items_add_icons'], PHP_INT_MAX);
+
+        add_action('woocommerce_digitalis_account_navigation_classes', [$this, 'account_navigation_classes']);
+        add_action('woocommerce_digitalis_before_account_navigation_loop', [$this, 'before_account_navigation_loop']);
+        
+        
+    }
+
+    public function enqueue_account_menu_icons () {
+
+        if (!is_account_page()) return;
+
+        switch ($this->icon_library) {
+
+            case 'iconoir':
+                wp_enqueue_style('iconoir-icons', 'https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css');
+                break;
+
+        }
+
+    }
+
+    public function account_menu_items_add_icons ($items) {
+
+        if ($items) foreach ($items as $slug => $title) {
+
+            $icon = $this->default_page_icon;;
+            if (isset($this->page_icons[$slug])) $icon = $this->page_icons[$slug];
+            if ($page = Woo_Account_Page::get_page($slug)) if ($page->get_icon()) $icon = $page->get_icon();
+            $icon = apply_filters('digitalis_woocommerce_account_page_icon', $icon, $slug, $page);
+
+            if (!$icon) continue;
+
+            switch ($this->icon_library) {
+
+                case 'iconoir':
+                    $items[$slug] = "<i class='iconoir-{$icon}'></i><span>{$title}</span>";
+                    break;
+
+            }
+
+        }
+
+        return $items;
+
+    }
+
+    public function account_navigation_classes () {
+        
+        if (isset($_COOKIE['woo_clean_ui'])) {
+
+            $state = json_decode(html_entity_decode(stripslashes($_COOKIE['woo_clean_ui'])), true);
+            echo ($state['account_nav'] ?? false) ? '' : 'collapse';
+        
+        }
+        
+    }
+
+    public function before_account_navigation_loop () {
+        
+        $onclick = "const nav = this.closest(`nav`); nav.classList.toggle(`collapse`); woo_clean.save();";
+
+        echo "<div class='nav-controls'>";
+        echo "<i data-action='collapse-menu' class='control iconoir-xmark' onclick='{$onclick}'></i>";
+        echo "<i data-action='expand-menu' class='control iconoir-fast-arrow-right' onclick='{$onclick}'></i>";
+        echo "</div>";
+        
+    }
+
+    //
+
+    protected function wrap_woocommerce_elements () {
+
+        add_action('woocommerce_checkout_before_customer_details', function () { echo "<div class='customer-details-wrap'><div class='before-customer-details-wrap'>"; }, PHP_INT_MIN);
+        add_action('woocommerce_checkout_before_customer_details', function () { echo "</div><!-- .before-customer-details-wrap -->"; }, PHP_INT_MAX);
+
+        add_action('woocommerce_checkout_after_customer_details', function () { echo "<div class='after-customer-details-wrap'>"; }, PHP_INT_MIN);
+        add_action('woocommerce_checkout_after_customer_details', function () { echo "</div><!-- .after-customer-details-wrap --></div><!-- .after-customer-details-wrap -->"; }, PHP_INT_MAX);
+
+        add_action('woocommerce_checkout_before_order_review_heading', function () { echo "<div class='checkout-order-review-wrap'>"; });
+        add_action('woocommerce_checkout_after_order_review', function () { echo "</div><!-- .checkout-order-review-wrap -->"; });
+
+    }
+
+    protected function modify_fields () {
+
+        add_filter('woocommerce_form_field', function ($field, $key, $args, $value) {
+
+            return str_replace("woocommerce-input-wrapper", "woocommerce-input-wrapper woocommerce-input-wrapper-{$args['type']}", $field);
+
+        }, 10, 4);
+
+        add_filter('woocommerce_form_field_radio', function ($field, $key, $args, $value) {
+
+            /* $field = str_replace("&lt;", "<", $field);
+            $field = str_replace("&gt;", ">", $field);
+            $field = str_replace("&quot;", '"', $field); */
+
+            return htmlspecialchars_decode($field, ENT_QUOTES);
+
+        }, 10, 4);
+
+    }
+
+    protected function modify_cart() {
+
+        add_filter('woocommerce_quantity_input_type', [$this, 'quantity_input_type'], PHP_INT_MAX);
+
+    }
+
+    public function quantity_input_type ($type) {
+
+        return $type;
+
+    }
+
+}
+```
+
+`include/lattice-copy/can-load.trait.php`:
+
+```php
+<?php
+
+namespace My_Plugin\Lattice_Copy;
+
+use Lattice\Hook;
+
+trait Can_Load {
+
+    protected $object_groups = [];
+
+    public function autoload ($group_key, $dir_path, $ext = 'php', $instantiate = true) {
+
+        foreach (glob($dir_path . '/*.' . $ext) as $path) {
+
+            $this->load_class($group_key, $path, $instantiate);
+
+        }
+
+        return $this->get_object_group($group_key);
+
+    }
+
+    public function load_class ($group_key, $file_path, $instantiate = true) {
+
+        if (!is_file($file_path)) return false;
+
+        include $file_path;
+
+        if ($instantiate !== false) {
+         
+            if (!$class_name = $this->extract_class_name($file_path)) return false;
+            if (!Hook::filter(['lattice', 'instantiate', ltrim($class_name, '\\')], true, $file_path)) return false;
+
+            if (!isset($this->object_groups[$group_key])) $this->object_groups[$group_key] = [];
+
+            if ($instantiate === true) {
+
+                $this->object_groups[$group_key][$class_name] = new $class_name();
+
+            } else {
+
+                $call = $class_name . "::" . $instantiate;
+                if (is_callable($call)) $this->object_groups[$group_key][$class_name] = call_user_func($call);
+
+            }
+
+            
+
+        }
+
+        return true;
+
+    }
+
+    public function get_object_groups () {
+
+        return $this->object_groups;
+
+    }
+
+    public function get_object_group ($group_key) {
+
+        return isset($this->object_groups[$group_key]) ? $this->object_groups[$group_key] : null;
+
+    }
+
+    public function get_object ($group_key, $class_name) {
+
+        if (!isset($this->object_groups[$group_key]) || !isset($this->object_groups[$group_key][$class_name])) return null;
+
+        return $this->object_groups[$group_key][$class_name];
+
+    }
+
+    //
+
+    protected function extract_class_name ($file) {
+
+        // https://stackoverflow.com/questions/7153000/get-class-name-from-file
+
+        $fp = fopen($file, 'r');
+        $class = $namespace = $buffer = '';
+        $i = 0;
+        while (!$class) {
+            if (feof($fp)) break;
+
+            $buffer .= fread($fp, 512);
+            $tokens = token_get_all($buffer);
+
+            if (strpos($buffer, '{') === false) continue;
+
+            for (;$i<count($tokens);$i++) {
+                if ($tokens[$i][0] === T_NAMESPACE) {
+                    for ($j=$i+1;$j<count($tokens); $j++) {
+                        if ($tokens[$j][0] === T_STRING) {
+                            $namespace .= '\\'.$tokens[$j][1];
+                        } else if ($tokens[$j] === '{' || $tokens[$j] === ';') {
+                            break;
+                        }
+                    }
+                }
+
+                if ($tokens[$i][0] === T_CLASS) {
+                    for ($j=$i+1;$j<count($tokens);$j++) {
+                        if ($tokens[$j] === '{') {
+                            $class = $tokens[$i+2][1];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $namespace ? $namespace . "\\" . $class : $class;
+
+    }
+
+}
+```
+
 ## v1: the first strict boot
 
 Strict mode (`LATTICE_STRICT`, default `WP_DEBUG`) throws `Strict_Violation` at documented mistakes. Boot audits run during the autoload walk and list every problem in one exception; render checks throw at the offending call. Messages read `Class (dir/file.php): problem. Fix.` A walk aborted by a throw drops the violations it had queued; what was thrown is the finding.
 
-The namespace is `Lattice\`, one sub-namespace per family (`Lattice\Component\Form`, `Lattice\Field\Input`, `Lattice\DB\Table`). Every `Digitalis\…` name a consumer writes resolves through `compat/digitalis-namespace.php`, a lazy `class_alias` that covers classes, interfaces and traits, and the four `DIGITALIS_*` constants are defined beside the `LATTICE_*` ones, so nothing has to move to boot. Write `Lattice\` in new code; the aliases go at 2.0.
+The namespace is `Lattice\`, one sub-namespace per family (`Lattice\Component\Form`, `Lattice\Field\Input`, `Lattice\DB\Table`). Through 0.x every `Digitalis\…` name resolved through `compat/digitalis-namespace.php`, a lazy `class_alias` over classes, interfaces and traits, and the four `DIGITALIS_*` constants stood beside the `LATTICE_*` ones. 1.0 removes both; the script rewrites a consumer's names ([0.x to 1.0](#0x-to-10)).
 
-Framework hooks fire under lowercase dot-delimited names (`lattice.post_type.{class}.args` for `Digitalis/Post_Type/{Class}/Args`; the table in [HOOKS.md](./HOOKS.md#framework-hooks-summary)). `Hook::filter()` runs the legacy `Digitalis/...` name through `apply_filters_deprecated()` before the live one, so a callback on the old name keeps working and logs a deprecation; move it to the dotted name.
+Framework hooks fire under lowercase dot-delimited names (`lattice.post_type.{class}.args` for `Digitalis/Post_Type/{Class}/Args`; the table in [HOOKS.md](./HOOKS.md#framework-hooks-summary)). Through 0.x `Hook::filter()` also ran the legacy `Digitalis/...` name through `apply_filters_deprecated()`. From 1.0 a callback on a legacy name never runs, and strict reports it at `wp_loaded`; move it to the dotted name.
 
 ### Requirements
 
@@ -129,11 +670,11 @@ Run `wp lattice classmap` after deploying: the map is valid only for the exact f
 
 ### WooCommerce
 
-The eleven framework WooCommerce classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme` and the `Is_Woo_Customer`, `Has_Order_Version` and `Has_WC_Data` traits) are declared when `woocommerce_loaded` fires, or at once if it already has; they used to be required on every site. Without WooCommerce they do not exist.
+The nine framework WooCommerce classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page` and the `Is_Woo_Customer`, `Has_Order_Version` and `Has_WC_Data` traits; `Woocommerce_Theme` and `Woocommerce_Clean_Theme` loaded this way until 1.0 made them the consumer's copy) are declared when `woocommerce_loaded` fires, or at once if it already has; they used to be required on every site. Without WooCommerce they do not exist.
 
 | Violation | Mechanical fix |
 |---|---|
-| A reference to one of the eleven that PHP resolves at boot outside a `~woocommerce/` directory (the `Digitalis\` alias now covers traits too, so `use \Digitalis\Is_Woo_Customer` resolves once the trait is declared): `extends`, a trait `use` or a static call in a plain `Integration`'s `run()` (fatal `Class "Digitalis\X" not found` at `plugins_loaded`, on every request type including wp-admin, on a site without WooCommerce) | Move the file under `~woocommerce/`, or make the integration a `Plugin_Integration` with `$plugin = 'woocommerce'` (a directory or a basename; `Plugins::is_active()` matches both) |
+| A reference to one of the nine that PHP resolves at boot outside a `~woocommerce/` directory (`use \Lattice\Is_Woo_Customer` resolves once the trait is declared): `extends`, a trait `use` or a static call in a plain `Integration`'s `run()` (fatal `Class "Lattice\X" not found` at `plugins_loaded`, on every request type including wp-admin, on a site without WooCommerce) | Move the file under `~woocommerce/`, or make the integration a `Plugin_Integration` with `$plugin = 'woocommerce'` (a directory or a basename; `Plugins::is_active()` matches both) |
 | A `Woo_Account_Page` subclass declares `$capability` as something other than a capability name or an empty value (`false`, `null`, `''`, each an open page); `'0'` counts as no name (checked at boot) | Declare a capability name such as `'read'`, or false for an open page |
 
 Deactivating WooCommerce on a site with such references now takes the site down until they move; `wp plugin activate woocommerce --skip-plugins=<your-plugin>` is the escape. The two gates use different signals: the framework listens for `woocommerce_loaded`, a consumer's `~woocommerce/` checks the active-plugin list for a `woocommerce/` directory, so WooCommerce loaded from `mu-plugins/` or a renamed directory satisfies only the first.
@@ -142,8 +683,8 @@ Measured on the live consumers before release: no site runs without WooCommerce,
 
 | Plugin | Files | What |
 |---|---|---|
-| courses | 5 | `front.theme.php` extends `Woocommerce_Clean_Theme`; `order.order.php`, `order-item.model.php` extend `Order`, `Order_Item`; `user.user.php` uses `Is_Woo_Customer`; `integrations/woocommerce.integration.php` calls `Woo_Account_Page::hide_page()` from a plain `Integration` |
-| somm | 3 | `front.class.php` extends `Woocommerce_Clean_Theme`; `dancer.user.php` uses `Is_Woo_Customer`; `integrations/woocommerce.integration.php` calls `Woo_Account_Page::hide_page()` |
+| courses | 5 | `front.theme.php` extends `Woocommerce_Clean_Theme` (from 1.0 its own copy, which the script puts under `lattice-copy/~woocommerce/`); `order.order.php`, `order-item.model.php` extend `Order`, `Order_Item`; `user.user.php` uses `Is_Woo_Customer`; `integrations/woocommerce.integration.php` calls `Woo_Account_Page::hide_page()` from a plain `Integration` |
+| somm | 3 | `front.class.php` extends `Woocommerce_Clean_Theme` (its own copy from 1.0, as for courses); `dancer.user.php` uses `Is_Woo_Customer`; `integrations/woocommerce.integration.php` calls `Woo_Account_Page::hide_page()` |
 | eventropy | 1 | `user.user.php` uses `Is_Woo_Customer` |
 | d-pace, mycelium, study-hub | 0 | |
 
@@ -153,7 +694,7 @@ A cached `Order` or `Order_Item` now follows saves of its id by other objects: a
 
 ### Analysis
 
-PHPStan runs in CI (`.github/workflows/phpstan.yml`) at level 0 over the whole tree (`phpstan.neon.dist`) and at level 5 over everything but `include/deprecated` (level 0 until the deprecation pass removes it) and `bin/` (a development tool, analysed at level 0 only) (`phpstan.level5.neon`, through `phpstan.level5.ci.neon` for the workers); the local commands are CONTRIBUTING item 7. The runtime constants the analysis cannot see are declared in `stubs/constants.stub.php` (scanned like the Oxygen stub, never run: the WordPress time, cookie and endpoint constants, `ABSPATH`, `WP_DEBUG`, the two plugin directories, `LATTICE_PATH` and `LATTICE_URI`; the site-varying ones are typed, not valued, through `dynamicConstantNames`). The clean runs (level 0 first, then level 5 per directory) fixed things a consumer would have met on its first `v1` request, or could have:
+PHPStan runs in CI (`.github/workflows/phpstan.yml`) at level 0 over the whole tree (`phpstan.neon.dist`) and at level 5 over everything but `bin/` (a development tool, analysed at level 0 only) and the feature templates (`include/_features/*/templates/*`) (`phpstan.level5.neon`, through `phpstan.level5.ci.neon` for the workers); the local commands are CONTRIBUTING item 7. The runtime constants the analysis cannot see are declared in `stubs/constants.stub.php` (scanned like the Oxygen stub, never run: the WordPress time, cookie and endpoint constants, `ABSPATH`, `WP_DEBUG`, the two plugin directories, `LATTICE_PATH` and `LATTICE_URI`; the site-varying ones are typed, not valued, through `dynamicConstantNames`). The clean runs (level 0 first, then level 5 per directory) fixed things a consumer would have met on its first `v1` request, or could have:
 
 | Was | Now |
 |---|---|
@@ -233,13 +774,13 @@ The views (`include/views`, 46 files) declare it with casts and guards that keep
 
 The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it with no edit: a theme's `script_loader_tag` arguments are strings from WordPress, and the db layer's `: string`/`: int` returns answer the `$slug`, `$version`, `$base_name` and `$scope` a consumer declares, as every consumer writes them.
 
-`load.php` and the two `compat/` shims (3 files) declare it with no edit, which closes the pass: every file under `include/`, with `load.php` and `compat/`, now declares it; `templates/`, `bin/` and `include/deprecated/` stay coercive.
+`load.php` and the two `compat/` shims (3 files) declared it with no edit, which closed the pass: every file under `include/`, with `load.php`, declares it; `templates/` and `bin/` stay coercive (`compat/` and `include/deprecated/` left at 1.0).
 
 | Was | Now |
 |---|---|
 | `add_hooks()` given a list (`['init']`: an int key where the hook name goes, from `get_hooks()` or a direct call) registered the entry on a hook named `0` when the class had a method of that name, or refused it as a callback | Refused as a hook name: a strict violation naming the key in strict mode, `false` and one log line in production, never a `TypeError` |
 | A `value_callback` closure (or a Debug `expand` callable) declared with a typed parameter (`function (int $v)`) received the value coerced (`'3'` as `3`) | Receives it as is, since the view calls it directly from a strict file: a closure typed narrower than the value throws a `TypeError`; type it `mixed` or `int\|string`, or cast inside |
-| The framework's files ran coercive: a call it made into PHP or WordPress with a `'3'` where an int was asked coerced silently | Every file under `include/`, with `load.php` and `compat/`, declares `strict_types`: a consumer's calls into the framework are unaffected (the caller's file governs its own calls), the framework's own calls pass exact scalar types, a Schema's `$version` is an int and a Table's `$slug` a string, as every consumer writes them; `templates/` stay coercive, so a consumer copying a framework template copies its casts |
+| The framework's files ran coercive: a call it made into PHP or WordPress with a `'3'` where an int was asked coerced silently | Every file under `include/`, with `load.php`, declares `strict_types`: a consumer's calls into the framework are unaffected (the caller's file governs its own calls), the framework's own calls pass exact scalar types, a Schema's `$version` is an int and a Table's `$slug` a string, as every consumer writes them; `templates/` stay coercive, so a consumer copying a framework template copies its casts |
 | A post holding one invalid UTF-8 byte sequence had its excerpt rewritten to `''` by `Excerpt_Keywords` (each `/u` `preg_replace()` in `filter_keywords()` answered null for the whole text) | `filter_keywords()` scrubs its input first (`mb_scrub()`, where mbstring is loaded) and writes the keywords from the valid words; re-save such a post to regenerate its excerpt |
 | `Checkbox_Group::get_value()` with no value (no request value, a null or `false` default) answered `['']`, one empty selection | Answers `[]`; a comma-separated or array value splits or is kept as before, and the hidden `null_value` input's `'0'` still arrives as `['0']` |
 | An `Updater` whose feed decoded to a number or bool fatal'd at `property_exists()`, and one decoding to a string warned reading `->version`, on every `plugins_api` and update-transient filter | `request()` answers `false` for a feed that is not an object, so no update is offered and the plugin screen renders |
@@ -252,7 +793,7 @@ The rest of `include/` (hooks 4, db 11, `_cli` 1, functions.php) declares it wit
 | `Visitor::get_session_id()` generated a fresh id on every call within the request that set the cookie, so two readers in one cookieless request disagreed | The generated id is written to `$_COOKIE['digitalis_sid']` and every later call answers it |
 | `Visitor::set_cookie_js()` wrote the raw value into `document.cookie`, so a value holding `;` set cookie attributes and one holding a space or non-ASCII was truncated or mangled by the browser | The value is `rawurlencode()`d (encoded like `setcookie()`, with `%20` for a space); PHP decodes it on the next request as before, and a JS reader decodes with `decodeURIComponent()` |
 | `HTML_REST_API::rest_pre_serve_request()` ignored `$served`, so a response another `rest_pre_serve_request` filter had already served was served a second time on an HTML path | Answers `$served` unchanged when it is already true |
-| The `woocommerce-clean` account navigation template echoed each menu label raw where core's template escapes it | `esc_html()` on the label, as `myaccount/navigation.php` in WooCommerce does |
+| The `woocommerce-clean` account navigation template echoed each menu label raw where core's template escapes it | `esc_html()` on the label, as `myaccount/navigation.php` in WooCommerce does; from 1.0 the template is the consumer's copy, which carries the fix |
 | `Visitor::get_ip()` believed any `X-Forwarded-For`, `Client-IP` or `CF-Connecting-IP` header, so a direct request chose its own address | A forwarded header counts only when `REMOTE_ADDR` is a trusted proxy (Cloudflare's ranges, loopback and the private networks); the rightmost `X-Forwarded-For` hop that is not itself a trusted proxy (the leftmost when every hop is trusted), then `Client-IP`; `CF-Connecting-IP` is not read, since a plain proxy passes a forged one through; `lattice/visitor/trusted_proxies` filters the list; otherwise `REMOTE_ADDR` |
 | `Visitor::get_session_id()` set its cookie without `SameSite` and answered whatever the cookie held | The cookie goes through `set_cookie()`: `SameSite=Lax`, `HttpOnly`, the day-long expiry and the `$_COOKIE` write-back as before; a cookie that is not a 32-character hex id is replaced, and the cookie name follows `$cookie_prefix` (`somm_sid` on somm, which overrides the prefix). Cookies remain UI state: unsigned, and nothing that authorises may trust one |
 | `Commands_Page` ran arbitrary admin commands over GET with the nonce in the URL | Removed, with its `docs/ADMIN.md` section; no consumer extends it. A consumer that still does keeps its own copy or drops the page |

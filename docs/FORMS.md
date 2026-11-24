@@ -19,7 +19,7 @@ public function load () {
 A route that judges a form extends `Form_Route` (shipped by `lattice/forms`, as `Job` is by `lattice/jobs`). Its `$args`, in WordPress's REST schema, are the rules:
 
 ```php
-class Signup_Route extends \Digitalis\Form_Route {
+class Signup_Route extends \Lattice\Form_Route {
 
     protected $namespace  = 'my-plugin/v1';
     protected $route      = 'signup';

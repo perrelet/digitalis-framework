@@ -8,7 +8,7 @@ Patterns that look correct but are wrong in this framework. Each entry explains 
 
 ### Route reads a fixed contract and strict mode enforces it
 
-`Route` reads `$namespace` (with the version: `'my-plugin/v1'`), `$route`, `$definition` (the arguments to `register_rest_route`, `['methods' => 'POST']` for a non-GET route), `$args` (its `'args'` map; override public `get_args()` when computed), `$view`, `$format`, `$handler` and `$require_nonce`. It calls `permission(WP_REST_Request $request)` and the handler, `callback()` by default; params come from `$request->get_param()`. Strict mode throws at boot for a `$method`, `$methods` or `$version` property, a `permission_callback()` method and the old `Deprecated_Route` API (`$rest_args`, `$html_prefix`, `get_params()`, `get_rest_args()`, `register_api_routes()`), and at the call for `$this->get_param()`. Redeclaring a config property as static is a PHP compile error, not a silent slot; the same holds for `ACF_Block`.
+`Route` reads `$namespace` (with the version: `'my-plugin/v1'`), `$route`, `$definition` (the arguments to `register_rest_route`, `['methods' => 'POST']` for a non-GET route), `$args` (its `'args'` map; override public `get_args()` when computed), `$view`, `$format`, `$handler` and `$require_nonce`. It calls `permission(WP_REST_Request $request)` and the handler, `callback()` by default; params come from `$request->get_param()`. Strict mode throws at boot for a `$method`, `$methods` or `$version` property, a `permission_callback()` method and the old route API (`$rest_args`, `$html_prefix`, `get_params()`, `get_rest_args()`, `register_api_routes()`), and at the call for `$this->get_param()`. Redeclaring a config property as static is a PHP compile error, not a silent slot; the same holds for `ACF_Block`.
 
 ```php
 // ❌ Nothing here reaches register_rest_route
@@ -220,16 +220,6 @@ protected static $defaults = [
 // ✅
 protected static $defaults    = ['model_class' => Order::class];
 protected static $skip_inject = ['model_class'];
-```
-
-### Don't render views via a dynamically resolved class name stored in a static property
-
-```php
-// ❌
-static::$view::render([...]);
-
-// ✅
-My_View::render([...]);
 ```
 
 ### Only render markup from the render phase

@@ -82,7 +82,6 @@ framework/
 │
 ├── templates/             # PHP template files
 ├── assets/                # Static assets (CSS, JS, images)
-├── scss/                  # SCSS stylesheets
 └── load.php               # Bootstrap entry point
 ```
 
@@ -249,13 +248,13 @@ class Invoice_View extends View {
 }
 
 // Usage
-Invoice_View::render(['order' => 721, 'user' => 1]);
+echo new Invoice_View(['order' => 721, 'user' => 1]);
 ```
 
 **Rendering:**
 ```php
-// Static factory
-View::render(['param' => 'value']);
+// Echo
+echo new My_View(['param' => 'value']);
 
 // Direct instantiation
 $view = new My_View(['param' => 'value']);
@@ -792,11 +791,11 @@ Front-end rendering (theme calls App::render()):
 
 `load.php` is short and does not list classes:
 
-1. **Constants** defined (`LATTICE_VERSION`, `LATTICE_PATH`, `LATTICE_LIBRARY_PATH`, `LATTICE_URI`)
-2. **Compatibility shim** loaded (`compat/digitalis-namespace.php`: legacy constants and a lazy `Digitalis\` alias loader)
+1. **Lock**: when a 0.x framework copy loaded first (it defines `DIGITALIS_FRAMEWORK_PATH`), this one stands down with an `error_log` line and an admin notice
+2. **Constants** defined (`LATTICE_VERSION`, `LATTICE_PATH`, `LATTICE_LIBRARY_PATH`, `LATTICE_URI`), then `DIGITALIS_FRAMEWORK_VERSION`: a 0.x copy loaded later returns on `LATTICE_VERSION` (since the `Lattice\` rename during 0.4.0) or on `DIGITALIS_FRAMEWORK_VERSION` (before it)
 3. **Bootstrap** required explicitly: `Utility`, `Hook`, the `Autoloader` trait and `Classmap`, the four things `autoload()` reaches for before a sweep can run
 4. **One sweep** of `include/` with instantiation off: every declaration is read (or taken from `.classmap.php` when present and current), a lazy loader is registered, and each file is included once. The framework is a library of base classes, so nothing is constructed; singletons come up on first `get_instance()`
-5. **Gated**: the eleven WooCommerce files in `integrations/_woocommerce/` are required when `woocommerce_loaded` fires (WooCommerce raises it at `plugins_loaded` priority -1), or at once if it already has. Without WooCommerce they are never declared. The directory carries the `_` prefix so the sweep never reaches it: `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`.
+5. **Gated**: the nine WooCommerce files in `integrations/_woocommerce/` are required when `woocommerce_loaded` fires (WooCommerce raises it at `plugins_loaded` priority -1), or at once if it already has. Without WooCommerce they are never declared. The directory carries the `_` prefix so the sweep never reaches it: `Model::static_init()` would otherwise register `Order` and `Customer` for class resolution, and `Order::validate_id()` calls `wc_get_order()`.
 
 ### App boot lifecycle (`plugins_loaded` hook)
 
@@ -976,7 +975,7 @@ class Projects_Account_Page extends Woo_Account_Page {
         $account = $user->get_account();
         $projects = $account->get_projects();
 
-        View::render('account/projects', [
+        echo new Account_Projects_View([
             'projects' => $projects,
             'account'  => $account,
         ]);
@@ -1079,7 +1078,7 @@ class Box_Link_Widget extends View {
 }
 
 // Usage in account dashboard
-Box_Link_Widget::render([
+echo new Box_Link_Widget([
     'title'    => 'Active Projects',
     'icon'     => 'folder',
     'href'     => wc_get_account_endpoint_url('projects'),

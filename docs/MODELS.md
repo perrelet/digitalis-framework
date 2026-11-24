@@ -1092,9 +1092,9 @@ $post->delete_meta('_custom_key');
 Two core traits a model needs to become a resource ([RESOURCES.md](./RESOURCES.md)); either is useful alone.
 
 ```php
-class Offer extends \Digitalis\Post {
+class Offer extends \Lattice\Post {
 
-    use \Digitalis\Has_Version, \Digitalis\Has_Unsaved_Copies;
+    use \Lattice\Has_Version, \Lattice\Has_Unsaved_Copies;
 
     public function forget_derived () : void { $this->flush(); }
 

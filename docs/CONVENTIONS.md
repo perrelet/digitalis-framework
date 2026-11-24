@@ -22,19 +22,13 @@ Wrong: `// Finds the account by its id and returns it, or null when there is non
 
 ## Views
 
-### Instantiate views with `new` — don't call `View::render()` statically
+### Render a view by building it with `new`
 
-`View::render()` is supported for backwards compatibility, but the preferred form is object instantiation. Views are objects — treat them as such. The `new` form is consistent whether you're echoing, assigning, or passing a view as a value.
+A view is an object: `new` builds it, and echoing it or casting it to a string renders it.
 
 ```php
-// Supported, but not preferred
-<?= View::render([...]) ?>
-<?= View::render([...], false) ?>
-
-// Preferred — instantiate directly
 <?= new My_View([...]) ?>
 
-// When you need a string explicitly
 $html = (string) new My_View([...]);
 ```
 
@@ -57,28 +51,17 @@ Buffering markup with `ob_start()` inside `params()` is a lifecycle bypass — s
 
 ## Field_Group Fields
 
-### Instantiate field objects with `new` — don't use the array `'field'` shorthand
+### `Field_Group` takes field objects
 
-`Field_Group` accepts fields as either associative arrays (with a `'field'` key naming the class) or as instantiated objects. The array shorthand is supported for backwards compatibility; the preferred form is direct instantiation.
+Each entry in `fields` is a field built with `new`, named by `name`. Strict throws for an array entry (outside strict it is skipped and logged once) and for a `'key'` the field does not declare.
 
 ```php
-// Supported, but not preferred
-[
-    'field'       => \Lattice\Field\Input::class,
-    'name'        => 'first_name',
-    'label'       => 'First Name',
-    'type'        => 'text',
-],
-
-// Preferred — instantiate directly
 new \Lattice\Field\Input([
     'name'        => 'first_name',
     'label'       => 'First Name',
     'type'        => 'text',
 ]),
 ```
-
-Direct instantiation makes the type explicit, is consistent with how views are instantiated, and avoids the indirection of a string class reference inside an array.
 
 ---
 

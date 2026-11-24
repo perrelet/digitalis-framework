@@ -830,7 +830,7 @@ add_filter('lattice.instantiate.lattice.my_feature', '__return_false');
 // Conditional instantiation
 add_filter('lattice.instantiate', function($instantiation, $class, $path) {
     // Skip all classes in a specific directory
-    if (strpos($path, '/deprecated/') !== false) {
+    if (strpos($path, '/legacy/') !== false) {
         return false;
     }
     return $instantiation;

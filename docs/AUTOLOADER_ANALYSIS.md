@@ -375,10 +375,10 @@ The `extract_class_name()` method uses PHP's tokenizer to reliably extract class
 
 ```php
 // Global filter (all classes)
-apply_filters('Digitalis/Instantiate/', $instantiation, $class_name, $path);
+Hook::filter('lattice.instantiate', $instantiation, $class_name, $path);
 
-// Class-specific filter
-apply_filters('Digitalis/Instantiate/Namespace/Class_Name', $instantiation, $path);
+// Class-specific filter: lattice.instantiate.namespace.class_name
+Hook::filter(['lattice', 'instantiate', $class_name], $instantiation, $path);
 ```
 
 These filters enable:

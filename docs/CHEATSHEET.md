@@ -239,7 +239,7 @@ class Invoice_View extends View {
 
 **Usage:**
 ```php
-Invoice_View::render(['order' => 721, 'user' => 1]);
+echo new Invoice_View(['order' => 721, 'user' => 1]);
 
 // Or
 echo new Invoice_View(['order' => $order_id]);
@@ -826,7 +826,7 @@ class Project_Card_Shortcode extends Shortcode {
 }
 ```
 
-**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])` (through the `lattice.class.lattice.project_card` filter, as `View::render()` does; a swapped class's `$defaults` gate the atts).
+**Usage:** `[project-card project="42"]` → renders `new Project_Card(['project' => 42])` (through the `lattice.class.lattice.project_card` filter; a swapped class's `$defaults` gate the atts).
 
 ---
 

@@ -2,7 +2,7 @@
 
 OOP WordPress plugin framework. Auto-loads PHP files by name suffix, routes instances through a Factory/Singleton system, wraps WP entities (Post, User, Term) and WC entities (Order, Customer), and provides a View system for rendering.
 
-**Namespace:** `Lattice\`, one sub-namespace per family (`Lattice\Component`, `Lattice\Field`, `Lattice\DB`, `Lattice\WP`, `Lattice\Woo`, `Lattice\ACF`, `Lattice\Oxygen`). A `Digitalis\…` name still resolves through `compat/digitalis-namespace.php` (a lazy `class_alias` over classes, interfaces and traits, the `DIGITALIS_*` constants defined beside the `LATTICE_*` ones), so an unmoved consumer boots; new code writes `Lattice\`. Framework files live in `include/`. Plugin files mirror this structure.
+**Namespace:** `Lattice\`, one sub-namespace per family (`Lattice\Component`, `Lattice\Field`, `Lattice\DB`, `Lattice\WP`, `Lattice\Woo`, `Lattice\ACF`, `Lattice\Oxygen`). A 0.x consumer moves onto 1.0 with `bin/lattice-1.0.php` ([UPGRADING.md](./docs/UPGRADING.md#0x-to-10)). Framework files live in `include/`. Plugin files mirror this structure.
 
 ---
 
@@ -30,7 +30,7 @@ This primer is a map, not the territory. Before adding files or editing framewor
 |------|--------------------|
 | [docs/AUTOLOADER.md](./docs/AUTOLOADER.md) | Every `*.php` under `include/` is loaded and its class read from source. Two names change behaviour: `.abstract.` suppresses instantiation, `_dir/` skips the directory. Get those wrong and something you did not mean to run runs on every request, silently. |
 | [docs/ANTIPATTERNS.md](./docs/ANTIPATTERNS.md) | Catalogue of code that looks right but isn't (static-vs-instance properties on `Route`/`ACF_Block`, `query()` chaining that doesn't exist, markup emitted from `params()`, etc.). |
-| [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. `new My_View([...])` over `My_View::render([...])`). |
+| [docs/CONVENTIONS.md](./docs/CONVENTIONS.md) | Preferred syntax where multiple forms are valid (e.g. a `$layout` override over a `Layout` subclass). |
 | [docs/VIEW_SYSTEM.md](./docs/VIEW_SYSTEM.md) | Most application code is Views. Read its **Common Confusions** — `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$merge` accumulates like every other inherited static. |
 | [docs/MODELS.md](./docs/MODELS.md) | Read its **Common Confusions** — `query()` returns a plain array not a builder, `$model->save()` over `wp_update_*`, wrap named keys in model methods. |
 
@@ -46,7 +46,7 @@ For copy-paste skeletons of common primitives (`Post_Type`, `Taxonomy`, `View` w
 
 ### What gets auto-included
 
-Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed. The framework's own `include/integrations/_woocommerce/` is outside the sweep: its eleven classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page`, `Woocommerce_Theme`, `Woocommerce_Clean_Theme` and the traits `Is_Woo_Customer`, `Has_Order_Version` and `Has_WC_Data`) are declared only once `woocommerce_loaded` fires, so a site without WooCommerce never has them.
+Files in `include/` and subdirectories (recursive), every `*.php` file. Parents resolve on demand through `spl_autoload_register`, so files are walked in collection order and no load order is computed. The framework's own `include/integrations/_woocommerce/` is outside the sweep: its nine classes (`Customer`, `Order`, `Order_Item`, `Order_Status`, `Product_Type`, `Woo_Account_Page` and the traits `Is_Woo_Customer`, `Has_Order_Version` and `Has_WC_Data`) are declared only once `woocommerce_loaded` fires, so a site without WooCommerce never has them.
 
 ### What fires on include
 
@@ -65,7 +65,7 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 ### Strict mode
 
-`LATTICE_STRICT` (default: `WP_DEBUG`) makes the framework throw `Strict_Violation` at the moment a documented mistake is made. The message names the class, the file, the problem and the fix. A violation is an instruction to follow, not an error to route around; load-time audits list every problem in a walk at once, runtime checks throw at the offending call. The View lifecycle checks are tabled at [VIEW_SYSTEM.md#strict-mode](./docs/VIEW_SYSTEM.md#strict-mode); a consumer's first strict boot is walked through in [docs/UPGRADING.md](./docs/UPGRADING.md).
+`LATTICE_STRICT` (default: `WP_DEBUG`) makes the framework throw `Strict_Violation` at the moment a documented mistake is made. The message names the class, the file, the problem and the fix. A violation is an instruction to follow, not an error to route around; load-time audits list every problem in a walk at once, runtime checks throw at the offending call. The View lifecycle checks are tabled at [VIEW_SYSTEM.md#strict-mode](./docs/VIEW_SYSTEM.md#strict-mode); a consumer's first strict boot is walked through in [docs/UPGRADING.md](./docs/UPGRADING.md). At `wp_loaded` strict also throws for a callback hooked to a 0.x `Digitalis/...` hook name, which never fires, naming its `lattice.` name (outside strict, one log line per name per request).
 
 ### Critical DON'Ts for include/ files
 
@@ -79,9 +79,9 @@ Concrete classes (not `abstract` keyword, not `.abstract.` in filename). Via `Cl
 
 ### Boundaries
 
-`include/core`, `models`, `views`, `routing`, `query` and `registration` never name an ACF, WooCommerce or page-builder symbol: no `get_field()`, `acf_*()`, `wc_*()`, `WC_*`, `WooCommerce`, `Automattic\WooCommerce`, Oxygen or Bricks. ACF reaches the models only through `Field_Provider` (see `Custom_Fields`); ACF-specific views and features live in `include/integrations/acf/` and `include/_features/`. `php bin/boundaries.php` enforces it (tokenizer-based, exit 1 with file and line); CI runs it on pushes to `main` and `v1` and on every pull request. PHPStan runs in CI too: level 0 over the whole tree (`phpstan.neon.dist`) and level 5 over all of it but `include/deprecated` and `bin/` (`phpstan.level5.neon`, through `phpstan.level5.ci.neon` for the workers; CONTRIBUTING item 7 has the local commands): a class referenced from a sub-namespace without a `use` is a fatal the sweep never sees, and level 0 catches it. `php bin/variance.php <consumer roots>` (not in CI: it needs the consumers) reports every consumer override of a framework method or property and any that the tree as it stands would fatal at class-declaration time; run it before and after changing a non-final signature.
+`include/core`, `models`, `views`, `routing`, `query` and `registration` never name an ACF, WooCommerce or page-builder symbol: no `get_field()`, `acf_*()`, `wc_*()`, `WC_*`, `WooCommerce`, `Automattic\WooCommerce`, Oxygen or Bricks. ACF reaches the models only through `Field_Provider` (see `Custom_Fields`); ACF-specific views and features live in `include/integrations/acf/` and `include/_features/`. `php bin/boundaries.php` enforces it (tokenizer-based, exit 1 with file and line); CI runs it on pushes to `main` and `v1` and on every pull request. PHPStan runs in CI too: level 0 over the whole tree (`phpstan.neon.dist`) and level 5 over all of it but `bin/` and the feature templates (`phpstan.level5.neon`, through `phpstan.level5.ci.neon` for the workers; CONTRIBUTING item 7 has the local commands): a class referenced from a sub-namespace without a `use` is a fatal the sweep never sees, and level 0 catches it. `php bin/variance.php <consumer roots>` (not in CI: it needs the consumers) reports every consumer override of a framework method or property and any that the tree as it stands would fatal at class-declaration time; run it before and after changing a non-final signature.
 
-Every file under `include/`, with `load.php` and `compat/`, declares `strict_types` (CODING_STANDARDS `### Strict types`; `templates/`, `bin/` and `include/deprecated/` stay coercive): a call it makes into PHP, WordPress or a typed framework method passes the exact type asked for, cast or guarded at the call site, and a consumer's calls into it are unaffected; `call_user_func*` stays unqualified so that injected and hooked callbacks keep coercion.
+Every file under `include/`, with `load.php`, declares `strict_types` (CODING_STANDARDS `### Strict types`; `templates/` and `bin/` stay coercive): a call it makes into PHP, WordPress or a typed framework method passes the exact type asked for, cast or guarded at the call site, and a consumer's calls into it are unaffected; `call_user_func*` stays unqualified so that injected and hooked callbacks keep coercion.
 
 For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 
@@ -123,11 +123,10 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `User_Role` | `Singleton` | Custom user role + capabilities | yes |
 | `Woo_Account_Page` | `Factory` | WC `/my-account/` endpoint | yes |
 
-### Theme & Misc Objects
+### Misc Objects
 
 | Class | Extends | Purpose | Auto |
 |-------|---------|---------|:----:|
-| `Theme` | — | Front-end hook registrar; auto-wires `style()` → `wp_enqueue_scripts`, `theme_supports()` → `after_setup_theme`, `init()` on construct | yes |
 | `Service` | `Factory` | Instantiable service/value object; auto-instantiation off by default | |
 | `Options` | `Model` | WordPress options proxy with field support; `Options::get()`, `add()`, `update()`; `protected static $prefix`/`$acf_prefix` for namespacing. Singleton-shaped (extract_id → 0); also serves as the parent for option-page repeater `ACF_Row` subclasses (uses `Has_Fields`, `get_wp_meta_type='option'`, provider id `'option'`) | yes |
 | `Custom_Fields` | — | Registry for the one `Field_Provider` behind the model field accessors (`Has_Fields` on Post, User, Term, Comment, Options): `register()`, `provider()` (null until the provider is available), `available()` | |
@@ -197,7 +196,7 @@ For full details: [docs/AUTOLOADER.md](./docs/AUTOLOADER.md)
 | `Lattice_Change_Sets` | `Feature` | A held list of the layer's calls, applied by its author: several records and types, conflicts per field, a walk that stops and goes on, undo. Load with `load_feature('lattice/change-sets')`. See [CHANGE_SETS.md](./docs/CHANGE_SETS.md) | no |
 | `Lattice_Human_Check` | `Feature` | A field that proves a person: an argument `'human' => ['human_check' => 'signup', 'costly' => true]` on a `Form_Route` checks the visitor's token with a provider (Turnstile; others are a `Human_Check_Provider` named by `lattice.human_check.provider`), the form drawing its widget through `Field\Human_Check`. Keys through `lattice.human_check.keys`. Load with `load_feature('lattice/human-check')`, which loads `lattice/forms`. See [FORMS.md](./docs/FORMS.md) | no |
 | `Lattice_Forms` | `Feature` | Forms that check themselves: a route extending `Form_Route` checks its `$args` the form's way for every client (every problem at once, empty as missing, `when`, costly rules last), and a `Form` given `route` and `id` posts to its own page and draws the result, htmx an enhancement. Load with `load_feature('lattice/forms')` before `parent::load()`. See [FORMS.md](./docs/FORMS.md) | no |
-| `Proposals` | `Feature` | Changes held for review: a change set offered through the API, or a draft copy of a published record, with a review screen and approval through the layer. A moderated type is a resource whose model uses `Has_Proposals` and implements `Takes_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `lattice/change-sets`, and `Stored_Markup` where a model is moderated; reach it with `Proposals::inst('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
+| `Proposals` | `Feature` | Changes held for review: a change set offered through the API, or a draft copy of a published record, with a review screen and approval through the layer. A moderated type is a resource whose model uses `Has_Proposals` and implements `Takes_Proposals`; load with `load_feature('lattice/proposals')`, which brings `lattice/resources` and `lattice/change-sets`, and `Stored_Markup` where a model is moderated; reach it with `Proposals::get_instance('proposals')`. See [PROPOSALS.md](./docs/PROPOSALS.md) | no |
 | `ACF\Focal_Point` | `Feature` | Per-image focal point on attachments. Re-crops hard-cropped derivatives around it; emits `--focal-x`/`--focal-y` on soft-cropped ones, consumed as `object-position: var(--focal-x, 50%) var(--focal-y, 50%)`. `load_feature('acf/acf-focal-point.feature.php')` | no |
 
 ### REST, Blocks & Shortcodes
@@ -320,7 +319,7 @@ $post->duplicate(array $overrides = [], string|array $exclude_meta = []): static
 ### View
 
 ```php
-My_View::render(mixed $params = [], bool $print = true): string   // the framework casts $params (array); pass an array
+echo new My_View(mixed $params = []);   // pass an array; __toString() renders, (string) new My_View([...]) gives the markup
 ```
 
 ```php
@@ -544,12 +543,6 @@ Auto-specificity sums: context weight (10–40 from `$context_weights`, using th
 **`Query_Profile` subclasses register themselves when walked.**
 A concrete subclass in a directory the app walks is instantiated by the autoloader and registers; strict throws at `wp_loaded` for any declared subclass that has not (an `.abstract.`-named or `_dir/` file, a manual `require`). Strict also throws on `execute()` of an already-applied query and on `_profiles` / `_suppress` set on the main query.
 
-**Section vertical rhythm is `--section-py`, not a fixed `$sec-py`.**
-`.ct-section > .ct-section-inner-wrap { padding-block: var(--section-py, $sec-py) }` (`scss/core-classes.scss`). Because it's a custom property it cascades, so a template retunes every section with one declaration on its wrapper, and any single section can override it. `.merge` divides *whatever the template chose* rather than a constant — without that, a template with a tighter baseline would find `.merge` widening its gaps. Defaults to `$sec-py`, so untouched sections are unchanged. Note Oxygen writes per-section padding as `#section-X-Y > .ct-section-inner-wrap` (specificity 1,0,1,0), which still wins over this baseline.
-
-**`.merge` describes the join, not the section — it reaches forward.**
-`.ct-section.merge` halves its own `padding-bottom` *and* the `padding-top` of the next `.ct-section`, via `.merge + .ct-section .ct-section-inner-wrap` — whatever classes that next section carries. So tagging one section affects two, and a section following a merged one is pulled in whether it wants to be or not. Note the second selector is a **descendant**, so a nested `.ct-section-inner-wrap` inside the following section is also hit.
-
 **Use `static::` not `self::` for inherited static calls.**
 `self::` binds at definition time and breaks in subclasses.
 
@@ -585,7 +578,7 @@ The cached instance state may still hold pre-change values, and a full `save()` 
 **Content and label params are HTML by contract; attribute values, names and tags are escaped by the framework.**
 Escape user data before it becomes a `content`, `label` or cell param (`esc_html($term->name)`); `Attributes` escapes values and rejects unrenderable names, `Element` rejects non-element tags (strict throws for both). See [VIEW_SYSTEM.md#what-the-framework-escapes](./docs/VIEW_SYSTEM.md#what-the-framework-escapes).
 
-**Quick reference for the four view-system traps** — `parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out, `new My_View()` over `View::render()` — at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
+**Quick reference for the three view-system traps** (`parent::params($p)` is mandatory, class-string `$defaults` are auto-injected, `$skip_inject` is the DI opt-out) at [VIEW_SYSTEM.md#common-confusions](./docs/VIEW_SYSTEM.md#common-confusions).
 
 **`App::$path` is the App-subclass file's directory, not the plugin root.**
 `App::__construct()` reflects `static::class` to derive `$this->path`. Move `my-plugin.app.php` from `<plugin>/` to `<plugin>/include/` and the autoload root shifts with it. See [AUTOLOADER.md#common-confusions](./docs/AUTOLOADER.md#common-confusions).
@@ -617,11 +610,11 @@ Preferred patterns where more than one syntax is valid. Full details in [docs/CO
 **Framework strings use the `lattice` domain; your nouns go through `$text_domain`.**
 Registrar labels compose `sprintf(__('Add New %s', 'lattice'), __($this->singular, $this->text_domain))`, so set `$text_domain` on your post types, taxonomies, meta boxes and profile sections and translate only the nouns. See [docs/CODING_STANDARDS.md#i18n](./docs/CODING_STANDARDS.md#i18n).
 
-**Instantiate views with `new` — don't call `View::render()` statically.**
-`View::render()` is supported but not preferred. Use `<?= new My_View([...]) ?>` for echoing and `(string) new My_View([...])` when a string is needed explicitly.
+**Render a view by building it with `new`.**
+`<?= new My_View([...]) ?>` echoes it; `(string) new My_View([...])` gives the markup as a string.
 
-**Instantiate `Field_Group` fields with `new` — don't use the array `'field'` shorthand.**
-`['field' => Input::class, 'name' => '...']` is supported but not preferred. Use `new \Lattice\Field\Input(['name' => '...'])` directly.
+**`Field_Group` takes field objects.**
+Each entry is a field built with `new`: `new \Lattice\Field\Input(['name' => '...'])`. A field takes `name`; strict throws for an array entry and for a `'key'` the field does not declare.
 
 ---
 

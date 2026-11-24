@@ -284,7 +284,7 @@ class Product_Archive extends Post_Archive {
 }
 
 // Usage
-Product_Archive::render([
+echo new Product_Archive([
     'query_vars' => [
         'post_type'      => 'product',
         'posts_per_page' => 12,
@@ -328,7 +328,7 @@ Inherits from Archive, plus:
 #### Usage
 
 ```php
-Post_Archive::render([
+echo new Post_Archive([
     'query_vars' => [
         'post_type'      => 'project',
         'posts_per_page' => 10,
@@ -380,7 +380,7 @@ Renders progress UI for batch processing iterators.
 $iterator = new CSV_Import_Iterator($file);
 
 // During iteration
-Iterator_UI::render(['iterator' => $iterator]);
+echo new Iterator_UI(['iterator' => $iterator]);
 
 // Shows progress: "Processing 45 of 1000..."
 ```
@@ -454,17 +454,15 @@ class Product_Filters extends Query_Filters {
 
     public function get_fields() {
         return [
-            [
-                'field'   => Select::class,
+            new Select([
                 'name'    => 'category',
                 'label'   => 'Category',
                 'options' => $this->get_category_options(),
-            ],
-            [
-                'field' => Input::class,
+            ]),
+            new Input([
                 'name'  => 'search',
                 'label' => 'Search',
-            ],
+            ]),
         ];
     }
 }
@@ -598,13 +596,13 @@ class Card extends Component {
 **Namespace:** `Lattice\Component\Field_Group`
 **File:** `include/views/components/field-group.component.php`
 
-Renders a group of form fields together. A field given as a view object is drawn as a copy, so the same object can be given to any number of groups and reads the same afterwards.
+Renders a group of form fields together. Each field is a view built with `new` (strict throws for any other entry; outside strict it is skipped and logged once) and is drawn as a copy, so the same object can be given to any number of groups and reads the same afterwards.
 
 #### Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `fields` | `array` | `[]` | Field definitions |
+| `fields` | `array` | `[]` | Field views |
 | `defaults` | `array` | `[]` | Default values by field name |
 | `label` | `string\|false` | `false` | Group label |
 | `id` | `string\|false` | `false` | Group ID |
@@ -615,25 +613,22 @@ Renders a group of form fields together. A field given as a view object is drawn
 #### Usage
 
 ```php
-Field_Group::render([
+echo new Field_Group([
     'id'     => 'user-settings',
     'fields' => [
-        [
-            'field' => Input::class,
+        new Input([
             'name'  => 'first_name',
             'label' => 'First Name',
-        ],
-        [
-            'field' => Input::class,
+        ]),
+        new Input([
             'name'  => 'last_name',
             'label' => 'Last Name',
-        ],
-        [
-            'field'   => Select::class,
+        ]),
+        new Select([
             'name'    => 'role',
             'label'   => 'Role',
             'options' => ['admin' => 'Admin', 'user' => 'User'],
-        ],
+        ]),
     ],
     'defaults' => [
         'first_name' => 'John',
@@ -642,17 +637,16 @@ Field_Group::render([
 ]);
 ```
 
-#### Field Definition Format
+#### Field Parameters
 
 ```php
-[
-    'field'      => Input::class,  // Field class (default: Input)
+new Input([
     'name'       => 'field_name',   // Field name attribute
     'label'      => 'Field Label',  // Label text
     'default'    => '',             // Default value
     'options'    => [],             // For select/radio/checkbox
     // ... any other field parameters
-]
+])
 ```
 
 ---
@@ -677,16 +671,16 @@ Inherits from Field_Group, plus:
 #### Usage
 
 ```php
-Form::render([
+echo new Form([
     'id'     => 'contact-form',
     'method' => 'post',
     'action' => admin_url('admin-post.php'),
     'fields' => [
-        ['name' => 'action', 'field' => Hidden::class, 'value' => 'submit_contact'],
-        ['name' => 'name', 'label' => 'Name'],
-        ['name' => 'email', 'label' => 'Email', 'type' => 'email'],
-        ['name' => 'message', 'field' => Textarea::class, 'label' => 'Message'],
-        ['field' => Submit::class, 'text' => 'Send Message'],
+        new Hidden(['name' => 'action', 'value' => 'submit_contact']),
+        new Input(['name' => 'name', 'label' => 'Name']),
+        new Input(['name' => 'email', 'label' => 'Email', 'type' => 'email']),
+        new Textarea(['name' => 'message', 'label' => 'Message']),
+        new Submit(['text' => 'Send Message']),
     ],
 ]);
 ```
@@ -723,7 +717,7 @@ Component pre-configured for HTMX interactions.
 ```php
 use Lattice\Component\HTMX;
 
-HTMX::render([
+echo new HTMX([
     'content' => 'Load More',
     'url'     => '/api/posts?page=2',
     'target'  => '#posts-container',
@@ -765,7 +759,7 @@ Simple link component.
 ```php
 use Lattice\Component\Link;
 
-Link::render([
+echo new Link([
     'href'    => '/products',
     'content' => 'View Products',
     'classes' => ['nav-link'],
@@ -803,7 +797,7 @@ Data table with automatic header/attribute handling.
 ```php
 use Lattice\Component\Table;
 
-Table::render([
+echo new Table([
     'rows' => [
         ['Name', 'Email', 'Role'],           // Header row
         ['John', 'john@example.com', 'Admin'],
@@ -1049,7 +1043,7 @@ Standard text input field.
 ```php
 use Lattice\Field\Input;
 
-Input::render([
+echo new Input([
     'name'        => 'email',
     'label'       => 'Email Address',
     'type'        => 'email',
@@ -1057,7 +1051,7 @@ Input::render([
     'required'    => true,
 ]);
 
-Input::render([
+echo new Input([
     'name'      => 'password',
     'label'     => 'Password',
     'type'      => 'password',
@@ -1087,7 +1081,7 @@ Multi-line text input.
 ```php
 use Lattice\Field\Textarea;
 
-Textarea::render([
+echo new Textarea([
     'name'        => 'description',
     'label'       => 'Description',
     'rows'        => 5,
@@ -1119,7 +1113,7 @@ Dropdown select field.
 use Lattice\Field\Select;
 
 // Simple options
-Select::render([
+echo new Select([
     'name'    => 'country',
     'label'   => 'Country',
     'options' => [
@@ -1132,7 +1126,7 @@ Select::render([
 ]);
 
 // Option groups
-Select::render([
+echo new Select([
     'name'    => 'city',
     'label'   => 'City',
     'options' => [
@@ -1183,7 +1177,7 @@ Enhanced select with search (uses Nice Select 2 library).
 ```php
 use Lattice\Field\Select_Nice;
 
-Select_Nice::render([
+echo new Select_Nice([
     'name'    => 'user',
     'label'   => 'Select User',
     'options' => $user_options,  // Large list
@@ -1215,12 +1209,12 @@ Single checkbox field.
 ```php
 use Lattice\Field\Checkbox;
 
-Checkbox::render([
+echo new Checkbox([
     'name'  => 'agree_terms',
     'label' => 'I agree to the terms and conditions',
 ]);
 
-Checkbox::render([
+echo new Checkbox([
     'name'          => 'subscribe',
     'label'         => 'Subscribe to newsletter',
     'checked_value' => 'yes',
@@ -1251,7 +1245,7 @@ Multiple checkboxes for multi-select.
 ```php
 use Lattice\Field\Checkbox_Group;
 
-Checkbox_Group::render([
+echo new Checkbox_Group([
     'name'    => 'categories',
     'label'   => 'Categories',
     'options' => [
@@ -1263,7 +1257,7 @@ Checkbox_Group::render([
 ]);
 
 // With "Select All"
-Checkbox_Group::render([
+echo new Checkbox_Group([
     'name'       => 'permissions',
     'label'      => 'Permissions',
     'options'    => [
@@ -1307,7 +1301,7 @@ Radio button group for single selection.
 ```php
 use Lattice\Field\Radio;
 
-Radio::render([
+echo new Radio([
     'name'    => 'size',
     'label'   => 'Size',
     'options' => [
@@ -1351,12 +1345,12 @@ Hidden input field.
 ```php
 use Lattice\Field\Hidden;
 
-Hidden::render([
+echo new Hidden([
     'name'  => 'action',
     'value' => 'submit_form',
 ]);
 
-Hidden::render([
+echo new Hidden([
     'name'  => 'nonce',
     'value' => wp_create_nonce('my_action'),
 ]);
@@ -1382,7 +1376,7 @@ Multiple hidden fields from key-value data.
 ```php
 use Lattice\Field\Hidden_Group;
 
-Hidden_Group::render([
+echo new Hidden_Group([
     'data' => [
         'action'   => 'process_order',
         'order_id' => 123,
@@ -1414,7 +1408,7 @@ Button element.
 ```php
 use Lattice\Field\Button;
 
-Button::render([
+echo new Button([
     'text'    => 'Click Me',
     'classes' => ['btn', 'btn-primary'],
     'attributes' => [
@@ -1444,7 +1438,7 @@ Form submit button.
 ```php
 use Lattice\Field\Submit;
 
-Submit::render([
+echo new Submit([
     'text'    => 'Save Changes',
     'classes' => ['btn-success'],
 ]);
@@ -1473,7 +1467,7 @@ Numeric input with min/max/step.
 ```php
 use Lattice\Field\Number;
 
-Number::render([
+echo new Number([
     'name'    => 'quantity',
     'label'   => 'Quantity',
     'min'     => 1,
@@ -1482,7 +1476,7 @@ Number::render([
     'default' => 1,
 ]);
 
-Number::render([
+echo new Number([
     'name'    => 'price',
     'label'   => 'Price',
     'min'     => 0,
@@ -1515,7 +1509,7 @@ Range slider with optional value display.
 ```php
 use Lattice\Field\Range;
 
-Range::render([
+echo new Range([
     'name'         => 'volume',
     'label'        => 'Volume',
     'min'          => 0,
@@ -1525,7 +1519,7 @@ Range::render([
     'value_suffix' => '%',
 ]);
 
-Range::render([
+echo new Range([
     'name'         => 'price_range',
     'label'        => 'Max Price',
     'min'          => 0,
@@ -1556,13 +1550,13 @@ File upload input.
 ```php
 use Lattice\Field\File;
 
-File::render([
+echo new File([
     'name'   => 'document',
     'label'  => 'Upload Document',
     'accept' => ['.pdf', '.doc', '.docx'],
 ]);
 
-File::render([
+echo new File([
     'name'     => 'images',
     'label'    => 'Upload Images',
     'accept'   => ['image/*'],
@@ -1590,7 +1584,7 @@ Native HTML5 date input.
 ```php
 use Lattice\Field\Date;
 
-Date::render([
+echo new Date([
     'name'    => 'birth_date',
     'label'   => 'Date of Birth',
     'default' => '1990-01-01',
@@ -1626,7 +1620,7 @@ Enhanced date picker (uses Vanilla JS Datepicker).
 ```php
 use Lattice\Field\Date_Picker;
 
-Date_Picker::render([
+echo new Date_Picker([
     'name'        => 'event_date',
     'label'       => 'Event Date',
     'date_picker' => [
@@ -1662,7 +1656,7 @@ Date range picker with start and end dates.
 ```php
 use Lattice\Field\Date_Range;
 
-Date_Range::render([
+echo new Date_Range([
     'name'          => 'booking',
     'label'         => 'Booking Dates',
     'default_start' => date('Y-m-d'),
@@ -1745,17 +1739,17 @@ use Lattice\Component\Menu;
 
 ```php
 // Text input
-Input::render(['name' => 'email', 'label' => 'Email', 'type' => 'email']);
+echo new Input(['name' => 'email', 'label' => 'Email', 'type' => 'email']);
 
 // Select dropdown
-Select::render(['name' => 'role', 'label' => 'Role', 'options' => [...]]);
+echo new Select(['name' => 'role', 'label' => 'Role', 'options' => [...]]);
 
 // Textarea
-Textarea::render(['name' => 'bio', 'label' => 'Biography', 'rows' => 5]);
+echo new Textarea(['name' => 'bio', 'label' => 'Biography', 'rows' => 5]);
 
 // Checkbox
-Checkbox::render(['name' => 'agree', 'label' => 'I agree']);
+echo new Checkbox(['name' => 'agree', 'label' => 'I agree']);
 
 // Submit button
-Submit::render(['text' => 'Save']);
+echo new Submit(['text' => 'Save']);
 ```

@@ -49,7 +49,7 @@ One class per `*.job.php` file, under `include/`. The autoloader runs `static_in
 
 ```php
 // One step.
-class Notify_Owner extends \Digitalis\Job {
+class Notify_Owner extends \Lattice\Job {
 
     protected static $type    = 'example/notify-owner';
     protected static $tries   = 5;
@@ -69,7 +69,7 @@ class Notify_Owner extends \Digitalis\Job {
 Notify_Owner::dispatch(['user' => 5, 'project' => 9], at: $when, key: 'project:9', expires: $deadline);
 
 // Many steps.
-class Reindex_Posts extends \Digitalis\Job {
+class Reindex_Posts extends \Lattice\Job {
 
     protected static $type = 'search/reindex';
 

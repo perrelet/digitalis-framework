@@ -16,7 +16,7 @@ The query system now consists of three collaborating classes:
 
 - **`Query_Profile`** — A `Factory`-based class that self-registers with `Query_Manager` on construction. Each profile declares when it applies (via `$mode`, `$post_type`, `$post_status`, `$role`, `$context`, and a `condition()` method) and what it does (via `apply()` for query var changes, and SQL-level `$mods` closures for `posts_clauses`).
 
-**`Digitalis_Query`** (the old `WP_Query` subclass) is now marked for deprecation. Use `Query_Vars::make_query()` to produce a plain `WP_Query` and `Query_Manager::get_instance()->execute()` to run it with profiles applied.
+**`Digitalis_Query`** (the old `WP_Query` subclass) was removed at 1.0. Use `Query_Vars::make_query()` to produce a plain `WP_Query` and `Query_Manager::get_instance()->execute()` to run it with profiles applied.
 
 The core design shift is from a build-and-execute model tied to a single object to a **separate concerns model**: vars are built in `Query_Vars`, execution is dispatched through `Query_Manager`, and cross-cutting concerns (ordering, filtering, SQL joins) live in dedicated `Query_Profile` classes.
 
@@ -458,7 +458,7 @@ The tradeoff is configuration complexity. Developers need to understand modes, t
 
 ## 10. Next Steps / Open Items
 
-1. **`Digitalis_Query` removal** — Now marked for deprecation. Callers should migrate to `Query_Vars::make_query()` + `Query_Manager::execute()`.
+1. **`Digitalis_Query` removal**: done at 1.0. Callers use `Query_Vars::make_query()` + `Query_Manager::execute()`.
 
 2. **Add relation methods to `Query_Vars`** — `set_meta_relation('OR')` / `set_tax_relation('OR')` still not present. Currently requires `$qv->merge(['meta_query' => ['relation' => 'OR']], true)`.
 

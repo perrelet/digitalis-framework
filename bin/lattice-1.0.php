@@ -5,6 +5,7 @@
 // The walk stops at nested repositories, .gitmodules paths, vendor/ and node_modules/. Names resolve against the framework
 // tree beside this script; the shim's order, the constants and the legacy hooks are embedded, since compat/ leaves in 1.0.
 // An empty nested tree (an uninitialised submodule) is read for class ancestry from DIR/<its name>, default the root's siblings.
+// The default scans every sibling directory, so pass --deps when the root sits in a home directory or beside other large trees.
 // What leaves the framework for the consumer to own (the theme chain, Can_Load, scss/) is copied from the framework repository at COPY_SOURCE.
 PHP_SAPI === 'cli' || exit;
 if (PHP_VERSION_ID < 80200) { fwrite(STDERR, "PHP 8.2+ required\n"); exit(2); }
@@ -83,7 +84,7 @@ if ($write) {
 }
 
 function usage (string $message): never {
-    fwrite(STDERR, "$message\nUsage: php bin/lattice-1.0.php CONSUMER_ROOT [--write] [--deps DIR]\n");
+    fwrite(STDERR, "$message\nUsage: php bin/lattice-1.0.php CONSUMER_ROOT [--write] [--deps DIR]\n--deps defaults to the root's siblings, every one of which is scanned: pass it when the root sits in a home directory.\n");
     exit(2);
 }
 

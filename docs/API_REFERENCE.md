@@ -353,11 +353,8 @@ abstract class Post_Type extends Singleton
 | `$position` | `int` | `5` | Menu position |
 | `$model_class` | `string\|false` | `false` | Model class for `call_model()` and `instantiate_model()` |
 | `$register` | `bool` | `true` | Register the post type on `init` |
-| `$filters` | `array` | `[]` | Admin list filters, `key => 'taxonomy'` or `'acf'`, or `key => ['type' => ..., 'name' => ..., 'args' => [...]]` (the shape is described under the table); a bare `'publish_month'` value (`$filters = ['publish_month']`) keeps WordPress's months dropdown, which is disabled otherwise. Deprecated with the admin-table block: use `Posts_Table` (ADMIN.md) |
 
 Supports, visibility and hierarchy are not properties: `get_supports()` and `get_args()` return them.
-
-A `$filters` key is the taxonomy slug or the ACF field name (the meta key the clause reads); `name` is the request parameter the control posts under (`tax[name]` / `meta[name]`) and defaults to the key; a falsy posted value (the select's none option) queues no clause. `args` holds the callbacks (`value_callback` transforms the posted value, `query_callback` the assembled `tax_query` or `meta_query` clause before it is queued; each takes and returns that one argument) and the type's options. For `'taxonomy'` they are the `wp_dropdown_categories()` arguments (`value_field` defaults to `term_id`, `hide_empty` and `hide_if_empty` to `true`, `show_option_none` to "Filter by {the taxonomy's singular_name}"). For `'acf'` they are `hide_falsy` (`true`: the select offers no choice whose value is `0` or `''`), `compare` (`'='`), and for a field without `choices`, which renders a text input where a field with them renders a select, `label` (its placeholder, the field's unless set) and `type` (`'text'` unless set); the field object is read from one post of the type (the newest not trashed, whose ACF reference resolves the name), so an empty type renders no `'acf'` control.
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
@@ -367,11 +364,7 @@ A `$filters` key is the taxonomy slug or the ACF field name (the meta key the cl
 | `remove_support()` | `protected remove_support(string $support): void` | Drop a feature from the list before registration, whether given as a value (`'title'`) or as a key with arguments (`'editor' => [...]`); the list it leaves is reindexed |
 | `get_labels()` | `protected get_labels(array $labels): array` | Override to change the default labels |
 | `filter_args()` | `protected filter_args(array &$args): void` | Last look at the assembled args before `register_post_type()` |
-| `get_filters()` | `protected get_filters(): array` | Override to compute `$filters`; called at switch-on and by each `build_filters()` (`admin_controller()` and `render_filters()`), so from the second build `$this->filters`, what the default returns, already holds the parsed entries: an override extending `parent::get_filters()` receives them, one returning its own array is parsed afresh each build |
-| `get_filter_request_value()` | `protected get_filter_request_value(string $group, array $filter): string\|false` | The request value an admin filter's control posted (`$group` is `'tax'` or `'meta'`), unslashed; a non-scalar value is `false` |
 | `call_model()` | `public call_model(string $method, mixed $default = [], array $args = []): mixed` | Calls static `$method` on `$model_class`, then static on the post type's class, then on the instance; `$default` when none has it |
-| `columns()` | `public columns(array $columns): array` | Modifies admin columns |
-| `column()` | `public column(string $column, int $post_id): void` | Renders column content |
 | `get_query_vars()` | `public get_query_vars(): array` | Returns custom query vars |
 
 ---
@@ -538,7 +531,7 @@ abstract class View implements ArrayAccess
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `render()` | `static render(mixed $params = [], bool $print = true): string` | Renders view; `$params` is cast `(array)`, so pass an array |
+| `__construct()` | `public __construct(mixed $params = [])` | Configures the view; pass an array. Echoing it or casting it to a string renders it (`__toString()`) |
 | `class_error()` | `static class_error(mixed $view, ?string $owner = null): ?string` | The problem with a `$view` property (not a string, not a `View` subclass, abstract or without a public constructor), or `null`; `$owner` is named in the text |
 | `print()` | `public print(bool $return = false): string` | Outputs HTML |
 | `get_template_path()` | `public get_template_path(): string` | Returns full template path |
@@ -642,7 +635,7 @@ Invoice_Route::get_instance();
 | `check_nonce()` | `public check_nonce(WP_REST_Request $request): true\|WP_Error` | Validates the first valid nonce among the candidates `collect_nonce_candidates()` gathers (headers, query string, body, request param); 401 with none, 403 with none valid. |
 | `respond()` | `protected respond(mixed $response): WP_REST_Response` | Wraps response in `rest_ensure_response()`. |
 | `is_this_route()` | `public is_this_route(WP_REST_Request $request): bool` | True if the request's path matches this route's pattern, as the REST server matched it; `false` for a route with no `$route`. |
-| `render_view()` | `public render_view(string $view, array $params): string` | Calls `View::render($params, false)`. |
+| `render_view()` | `public render_view(string $view, array $params)` | Resolves `$view` through `lattice.class` and returns `(string) new $class($params)`. |
 | `add_query_params()` | `public add_query_params(string $url, array $query_params = []): string` | Appends query params via `add_query_arg()`. |
 
 **Dependency injection in args:**
@@ -1184,7 +1177,7 @@ class Dashboard_Account_Page extends Woo_Account_Page {
         $account = $user->get_account();
 
         // Render dashboard widgets
-        Widget_Grid::render([
+        echo new Widget_Grid([
             'columns' => 12,
             'widgets' => [
                 ['class' => Box_Link_Widget::class, 'params' => [
@@ -1264,10 +1257,10 @@ class Project_Status_Route extends Route {
         $project->set_meta('_status', $new_status);
 
         // Returns rendered HTML for HTMX swap
-        return Project_Status_View::render([
+        return (string) new Project_Status_View([
             'project' => $project,
             'status'  => $new_status,
-        ], false);
+        ]);
     }
 }
 ```

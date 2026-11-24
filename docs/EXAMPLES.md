@@ -42,7 +42,7 @@ class Dashboard_Account_Page extends Woo_Account_Page {
             <div class="widget-grid" style="--columns: 12">
                 <?php
                 // Projects widget
-                Box_Link_Widget::render([
+                echo new Box_Link_Widget([
                     'title'    => 'Projects',
                     'icon'     => 'folder',
                     'href'     => wc_get_account_endpoint_url('projects'),
@@ -51,7 +51,7 @@ class Dashboard_Account_Page extends Woo_Account_Page {
                 ]);
 
                 // Orders widget
-                Box_Link_Widget::render([
+                echo new Box_Link_Widget([
                     'title'    => 'Orders',
                     'icon'     => 'shopping-bag',
                     'href'     => wc_get_account_endpoint_url('orders'),
@@ -60,7 +60,7 @@ class Dashboard_Account_Page extends Woo_Account_Page {
                 ]);
 
                 // Invoices widget
-                Box_Link_Widget::render([
+                echo new Box_Link_Widget([
                     'title'   => 'Invoices',
                     'icon'    => 'file-text',
                     'href'    => wc_get_account_endpoint_url('invoices'),
@@ -261,10 +261,10 @@ class Approve_Estimate_Route extends Route {
         $order->get_wc_order()->update_status('approved');
 
         // Return HTML for HTMX swap
-        return Order_Status_Badge::render([
+        return (string) new Order_Status_Badge([
             'status' => 'approved',
             'label'  => 'Approved',
-        ], false);
+        ]);
     }
 }
 
@@ -308,7 +308,7 @@ class Order_Status_Badge extends View {
 </button>
 
 <span id="order-status-<?= $order->get_id() ?>">
-    <?php Order_Status_Badge::render(['status' => 'estimate', 'label' => 'Estimate']); ?>
+    <?php echo new Order_Status_Badge(['status' => 'estimate', 'label' => 'Estimate']); ?>
 </span>
 ```
 
@@ -415,7 +415,7 @@ class Widget_Grid extends View {
             <?php foreach ($this['widgets'] as $widget): ?>
                 <?php
                 $class = $widget['class'] ?? Box_Link_Widget::class;
-                $class::render($widget['params'] ?? []);
+                echo new $class($widget['params'] ?? []);
                 ?>
             <?php endforeach; ?>
         </div>
@@ -519,10 +519,10 @@ $event->set_meta('_event_date', '2024-06-15');
 $event->save();
 
 // Render view
-Event_Card::render(['event' => $event]);
+echo new Event_Card(['event' => $event]);
 
 // Get HTML string
-$html = Event_Card::render(['event' => $event], false);
+$html = (string) new Event_Card(['event' => $event]);
 
 // Check custom permission
 $user = User::current();

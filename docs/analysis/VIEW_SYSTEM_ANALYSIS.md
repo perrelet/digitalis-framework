@@ -43,7 +43,7 @@ class Invoice_View extends View {
     }
 }
 
-Invoice_View::render(['order' => 721, 'user' => 1]);
+echo new Invoice_View(['order' => 721, 'user' => 1]);
 ```
 
 ---
@@ -250,7 +250,7 @@ public function view() {
 // DANGEROUS - infinite recursion
 public function params(&$p) {
     // Calls another view that calls back to this one
-    $p['preview'] = My_View::render(['item' => $p['item']], false);
+    $p['preview'] = (string) new My_View(['item' => $p['item']]);
 }
 ```
 
@@ -408,7 +408,7 @@ public function get_template_path() {
 public static function render_many(array $items, $param_key = 'item') {
     $output = '';
     foreach ($items as $item) {
-        $output .= static::render([$param_key => $item], false);
+        $output .= (string) new static([$param_key => $item]);
     }
     return $output;
 }
@@ -436,7 +436,7 @@ class Card extends View {
 }
 
 // Usage
-Card::render([
+echo new Card([
     'slots' => [
         'header' => '<h2>Title</h2>',
         'body'   => fn() => echo "Dynamic content",
@@ -678,12 +678,10 @@ For simple one-off templates, raw PHP may be more appropriate.
 ### Print Flow
 
 ```
-View::render($params)
+new View($params)
     │
-    └── new View($params)
-        │
-        ├── set_params(get_defaults())
-        └── merge_params($params)
+    ├── set_params(get_defaults())
+    └── merge_params($params)
 
 $view->print()
     │
