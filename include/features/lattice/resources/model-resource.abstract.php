@@ -416,6 +416,13 @@ abstract class Model_Resource extends Singleton {
 
     }
 
+    // ACF's required fields wait for get_required_status(); these apply to every create.
+    public function get_create_problems (array $values) : array {
+
+        return [];
+
+    }
+
     public function clear_record_cache ($id) : void {
 
         if ($this->get_post_type() && is_numeric($id)) clean_post_cache((int) $id);

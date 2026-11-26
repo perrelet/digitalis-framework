@@ -263,7 +263,7 @@ class Resources extends Service {
         if ($refusal = $this->refuse_credential($resource, null, 'create', $values, $input)) return $refusal;
         if ($refusal = $this->refuse_value_needs($resource, null, $values))                 return $refusal;
 
-        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'));
+        array_push($problems, ...$this->check_why($input, $via), ...$this->check_required($resource, null, $values, 'draft'), ...$resource->get_create_problems($values));
 
         if ($problems) return $this->invalid($problems);
 
